@@ -1,0 +1,10 @@
+* @bitlhk
+
+# 首轮评审完成后，由各能力负责人补充对应 GitHub 账号：
+# /contracts/context/       @architecture-owner @knowledge-owner
+# /contracts/action/        @architecture-owner @security-owner
+# /contracts/approval/      @architecture-owner @security-owner
+# /contracts/evidence/      @architecture-owner @security-owner
+# /profiles/                @architecture-owner
+# /integrations/            @runtime-integration-owner
+# /engineering/             @builder-owner
