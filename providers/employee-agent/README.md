@@ -39,7 +39,13 @@ new EmployeeAgentWealthProvider.Config(
 );
 ```
 
-不得把 `INTERNAL_API_KEY`、签名密钥或固定 Token 写入 Solution、Domain Pack、构建输入或代码仓。Token 的签发由 EA Runtime Integration 或受信任宿主负责。
+Java Runtime 可以直接使用：
+
+```text
+integrations/employee-agent-java
+```
+
+其中 `EaRuntimeTokenSupplier` 已按 EA 现有签名合同实现每请求动态签发。不得把 `INTERNAL_API_KEY`、签名密钥或固定 Token 写入 Solution、Domain Pack、构建输入或代码仓。
 
 ## 边界
 

@@ -35,17 +35,18 @@ Employee Agent
 
 - EA 财富访前上下文与 Skill 契约定向测试 `33/33` 通过；
 - Java Reference Provider 已将 `wealth.previsit-context.query` 映射到 EA MCP，并通过本地协议、身份、降级、拒绝和凭据不泄露测试；
+- Java `EaRuntimeTokenSupplier` 生成的短时 Token 已通过 EA TypeScript 验签器，身份 Claims 与 Platform Tools Audience 一致；
 - `finance-skill-eval` 财富管理回放 `4/4` 完成；
 - 有专业 Skill 的右侧在两项财富任务中均胜出；
 - Harness 示例绑定只映射语义能力，不复制 EA 的 Twenty CRM、客户权限、Token 签发或 Runtime 逻辑；
-- 当前未宣称 Java Provider 已对远端 EA 完成真实 Token 联调。
+- 当前未宣称 Java Provider 已使用真实 Adoption 对远端 EA 完成业务数据联调。
 
 ## Builder 就绪
 
 - `solution-build-input.v1.schema.json` 通过 JSON Schema 2020-12 校验；
 - 两个 Wealth Domain Pack 和 EA Host Binding 均可被 YAML 解析；
 - 首个 Builder 输入固定使用已在线验证的 Java 面客链路；
-- 第二个 Builder 输入使用员工辅助 Pack 与 EA Reference Provider，不在 Builder 中模拟客户归属或签发 Runtime Token。
+- 第二个 Builder 输入使用员工辅助 Pack、EA Reference Provider 与 Java EA Integration，不在 Builder 中模拟客户归属或接触签名密钥。
 
 ## 结论
 

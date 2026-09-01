@@ -16,6 +16,7 @@
         <module>packages/java/core</module>
         <module>providers/non-ai-banking</module>
         <module>providers/employee-agent</module>
+        <module>integrations/employee-agent-java</module>
     </modules>
 
     <properties>

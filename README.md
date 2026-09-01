@@ -59,6 +59,8 @@ Provider SPI 只提供两个入口：
 
 员工辅助侧新增 `providers/employee-agent` 参考 Provider，将 `wealth.previsit-context.query` 映射到 EA 已有 `prepare_wealth_previsit_context`。它通过宿主提供的一次性 Runtime Token 调用 EA，不复制 EA 的权限、客户归属和财富上下文装配。
 
+`integrations/employee-agent-java` 提供 Java Runtime 的动态 Token 签发，并已通过 EA TypeScript 验签器的跨语言验证。该实现仍在 Integration 层，Core 主代码不包含 EA 类型或协议。
+
 ## 文档入口
 
 - [简化版总体架构](docs/finance-agent-harness-architecture-v1.md)
@@ -81,6 +83,7 @@ finance-agent-harness/
 ├── contracts/                       # 四个运行合同和一个轻量构建输入
 ├── packages/java/                   # V1 Java Core 和 Provider SPI
 ├── integrations/openjiuwen-java/    # OpenJiuwen Integration
+├── integrations/employee-agent-java/ # EA Java Runtime 身份 Integration
 ├── providers/non-ai-banking/        # 首个参考 Provider Adapter
 ├── providers/employee-agent/        # EA 财富访前宿主兼容 Provider
 ├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用

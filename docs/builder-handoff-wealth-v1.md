@@ -49,7 +49,7 @@ examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 
 Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，不要求 Builder 自身改写为 Java。
 
-员工辅助样例还需要生成一个 `RuntimeTokenSupplier` 接口绑定点。Builder 只生成配置占位和 Host Wiring，不签发 Token、不写入 `INTERNAL_API_KEY`，也不把任何凭据写进 Lock 或 Report。真实 Token 由 EA Runtime Integration 或部署环境的受信任 Token Broker 按调用签发。
+员工辅助样例的 `templateRef` 提供通用 OpenJiuwen Host Bridge，`integrationRef` 另外安装 `finance-integration-employee-agent-java`，将其中的 `EaRuntimeTokenSupplier` 注入 `EmployeeAgentWealthProvider`。Builder 只生成环境变量占位和 Host Wiring，不签发 Token、不写入 `INTERNAL_API_KEY`，也不把任何凭据写进 Lock 或 Report。真实签名密钥由部署环境的 Secret Manager 注入，Integration 按调用生成一次性 Token。
 
 ## 最小输出
 
@@ -83,6 +83,7 @@ Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，
 - `wealth.previsit-context.query` 映射到 `prepare_wealth_previsit_context`；
 - `customerRef` 映射为 `customer_id`；
 - 只允许 `EMPLOYEE` Principal；
+- Java Integration 与 EA 使用相同的 `runtimeId / agentId / adoptId / audience` 身份合同；
 - EA `isError`、JSON-RPC Error 和认证失败均映射为 Canonical Failure；
 - 构建产物和报告中不得出现 Runtime Token。
 
@@ -90,4 +91,4 @@ Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，
 
 Finance Harness 维护合同、Provider、Domain Pack、参考输入和验收案例。Builder 维护输入解析、模板装配、代码生成、锁文件和构建报告。Builder 不修改 Harness Core，也不自行发明财富 SOP。
 
-建议 Builder 先完成面客侧目标，再用同一构建后端装配员工辅助侧目标。第二个目标已经具备 Pack、Host Binding、Provider 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption、Runtime 身份和一次性 Token；不得在 Builder 中模拟员工权限或客户归属。
+建议 Builder 先完成面客侧目标，再用同一构建后端装配员工辅助侧目标。第二个目标已经具备 Pack、Host Binding、Provider、Java Token Integration 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption 和对应签名密钥；不得在 Builder 中模拟员工权限或客户归属。
