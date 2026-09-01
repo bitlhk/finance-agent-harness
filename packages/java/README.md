@@ -1,13 +1,13 @@
-# Java Packages
+# Java Core
 
-Java SDK 是 V1 一等交付，用于手机银行和银行 Java 应用。
+Java 是简化版 V1 的唯一 Core 实现语言。
 
-计划包含：
+首版包含：
 
-- Schema 生成类型和验证；
-- Canonical JSON 和 Digest；
-- FinanceAction / ApprovalGrant helper；
-- OpenJiuwen Java Host Adapter contract；
-- Conformance Runner。
+- 四个合同的 Java 类型和严格校验；
+- `FinanceProvider` SPI；
+- Query/Task 调用辅助；
+- `EvidenceReceiptV1` 生成；
+- Contract 与 Adapter 测试。
 
-Java 与 TypeScript 必须消费同一 Fixture，不能单独维护一套合同。
+Java Core 不依赖 OpenJiuwen；OpenJiuwen 类型只允许出现在 `integrations/openjiuwen-java`。

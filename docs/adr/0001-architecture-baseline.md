@@ -4,6 +4,8 @@
 
 日期：2026-09-01
 
+> V1 实施范围已由 [ADR-0004](0004-simplified-v1-implementation.md) 简化。本 ADR 保留长期架构边界，不再代表首版全部交付项。
+
 ## Context
 
 岗位智能体、手机银行、Builder 和 Skill Eval 已经分别实现部分金融 Context、动作控制、确认、证据、专业 Skill 和评测能力。继续在各应用内部独立演进会产生重复且不兼容的实现。

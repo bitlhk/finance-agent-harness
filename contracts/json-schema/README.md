@@ -1,27 +1,22 @@
 # Canonical Contracts
 
-本目录将存放 Finance Agent Harness 的 JSON Schema 2020-12 公共合同。
+本目录存放语言无关的 JSON Schema 2020-12 合同。
 
-V1 计划：
+简化版 V1 只有四个：
 
 ```text
-principal/finance-principal.v1.schema.json
-context/finance-context-pack.v1.schema.json
-action/finance-action.v1.schema.json
-policy/finance-policy-decision.v1.schema.json
-approval/finance-approval-grant.v1.schema.json
-evidence/finance-evidence-receipt.v1.schema.json
-runtime/runtime-capability-profile.v1.schema.json
+context/finance-context.v1.schema.json
+capability/capability-request.v1.schema.json
+capability/capability-result.v1.schema.json
+evidence/evidence-receipt.v1.schema.json
 ```
 
 约束：
 
 - 对象默认拒绝未知字段；
-- 所有引用显式版本化；
+- 所有合同显式版本化；
 - 时间统一使用 RFC 3339；
-- 金额必须显式货币和精度；
-- 需要摘要的对象使用 RFC 8785 JCS + SHA-256；
-- 每个 Schema 同时提供正向和负向 Fixture；
-- TypeScript 和 Java 必须通过同一 Conformance Vector。
+- 每个 Schema 提供正向和负向 Fixture；
+- 不引用 OpenJiuwen、手机银行或 non-ai-banking 私有类型。
 
-首轮评审不在文档 PR 中提前冻结完整字段，避免未经应用验证形成过度设计。Walking Skeleton 将以最小真实场景逐项补齐。
+Principal、Profile、Policy、Approval 和 Runtime Capability 暂不作为独立 V1 合同。只有真实链路证明四个合同无法表达时，才通过 ADR 增加。

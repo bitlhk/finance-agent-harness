@@ -1,14 +1,15 @@
-# Enterprise Provider Adapters
+# Provider Adapters
 
-Provider Contract 定义 Finance Harness 如何获取金融事实和执行金融能力。Provider Adapter 处理不同银行的系统差异。
+Provider Adapter 负责把 Harness 标准请求连接到银行业务系统。
 
-V1 Provider：
+V1 只实现 `non-ai-banking`：
 
-- Customer；
-- Portfolio；
-- Product；
-- Policy / Knowledge；
-- Advisory Request；
-- Follow-up。
+```text
+non-ai-banking/
+├── query
+├── session-and-error-mapping
+├── task-preflight-confirm-submit
+└── evidence-mapping
+```
 
-Core 不直接连接数据库或保存银行凭证。
+银行后端是认证、权限、风险、幂等和业务状态的权威来源。Adapter 不复制这些规则。

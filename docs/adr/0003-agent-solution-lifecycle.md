@@ -4,6 +4,8 @@
 
 日期：2026-09-01
 
+> 本 ADR 的生命周期方向继续保留，但 Manifest、Preflight、Builder 和局部优化平台不再属于简化版 V1，见 [ADR-0004](0004-simplified-v1-implementation.md)。
+
 ## Context
 
 架构评审提出两条关联意见：

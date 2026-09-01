@@ -1,215 +1,132 @@
-# V1 范围与实施路线
+# V1 范围与快速实施路线
 
-状态：`Proposed`
+状态：`Implementation Ready`
 
 ## 1. V1 目标
 
-用 3 至 4 周完成一个可以演示、可以验证、可以继续扩展的 Finance Agent Harness V1：
+用 7 至 10 个工作日完成一个可以运行、演示和继续提炼的 Finance Agent Harness V1。
 
-1. 同一套 Core Contract 被岗位智能体和手机银行消费；
-2. 同一客户与政策快照在员工辅助和客户自服务 Profile 下返回不同合法结果；
-3. TypeScript 和 Java 对关键合同产生一致判断和摘要；
-4. 现场能够展示手机银行发起客户需求，岗位智能体承接并形成专业建议和跟进；
-5. 所有公共能力都有 Fixture、Conformance 和 Evidence，不靠口头证明。
+只证明三件事：
+
+1. 手机银行通过 Java Harness 查询 `non-ai-banking`；
+2. 手机银行通过同一 Harness 完成一次需要确认的模拟办理；
+3. 从 EA 提取的 Wealth Domain Pack 可以消费同一 Provider，形成专业财富建议。
 
 ## 2. V1 范围
 
-### Runtime
+### Runtime 与应用
 
-- OpenJiuwen 企业版远程形态；
-- OpenJiuwen Java 内嵌形态。
+- Runtime：OpenJiuwen Java；
+- 首个消费者：Mobile Banking；
+- 第二消费者：最小财富参考助手；
+- EA TypeScript 直接接入：Java 合同稳定后增量推进。
 
-### Applications
+### Core
 
-- Employee Agent；
-- Mobile Banking Agent。
+- `FinanceContextV1`；
+- `CapabilityRequestV1`；
+- `CapabilityResultV1`；
+- `EvidenceReceiptV1`；
+- `FinanceProvider.query`；
+- `FinanceProvider.executeTask`。
 
-### Profiles
+### Integration 与 Provider
 
-- `employee-assisted`；
-- `customer-self-service`。
+- OpenJiuwen Java Integration；
+- non-ai-banking Provider Adapter；
+- 一条 Query；
+- 一条确认 Task。
 
 ### Domain
 
-- Wealth Management。
+- Wealth Domain Pack 最小版；
+- 一份 Skill；
+- 三份核心 SOP；
+- 一组固定财富案例与评测引用。
 
-### Core and Integration Contracts
+## 3. 明确不做
 
-- FinancePrincipalV1；
-- FinanceContextPackV1；
-- FinanceActionV1；
-- FinancePolicyDecisionV1；
-- FinanceApprovalGrantV1；
-- FinanceEvidenceReceiptV1；
-- RuntimeCapabilityProfileV1。
+- 独立 Harness 服务；
+- 独立 Policy 或 Approval Engine；
+- TS/Python Core；
+- Builder、Manifest、Lock、Preflight 平台；
+- 自动优化和自动发布；
+- 完整 Knowledge 或 Security 产品；
+- 全量替换手机银行现有执行框架；
+- 保险、投研、风控 Domain Pack。
 
-### Providers
+## 4. 快速节奏
 
-- Customer；
-- Portfolio；
-- Product；
-- Policy / Knowledge；
-- Advisory Request；
-- Follow-up。
+### D1-D2：合同与包装边界
 
-### Control
+交付：
 
-- Context Projection；
-- Before Side Effect；
-- Allow / Deny / Require Approval / Require Step Up；
-- Approval 参数绑定、过期和一次性使用；
+- 四个 JSON Schema；
+- Java DTO 与 `FinanceProvider` SPI；
+- 手机银行现有对象到 Harness 对象的映射表；
+- 首批 Contract Fixture。
+
+验收：合同不引用 OpenJiuwen、手机银行 Agent ID 或 non-ai HTTP 类型。
+
+### D3-D4：只读查询
+
+交付：
+
+- `non-ai-banking` Provider Adapter；
+- 将现有 `UpstreamHttpQueryAdapter` 包装到 `query`；
+- `account.balance.query` Live Smoke；
 - Evidence Receipt。
 
-### Solution Lifecycle
+验收：返回模拟银行账户事实，带来源、数据时间、requestId 和 traceId。
 
-- AgentSolutionManifestV1 最小合同；
-- EnvironmentCapabilityProfileV1；
-- DeploymentPreflightReportV1；
-- 手工或 CLI 完成一次财富 Solution 装配；
-- 发布前 1 至 3 轮局部优化；
-- 冻结留出集验收和 SolutionLock。
-
-## 3. V1 不做
-
-- 第二个 Agent Runtime；
-- 中央 Harness 服务；
-- Builder 自动装配；
-- 保险、投研和风控完整 Domain Pack；
-- 自动收集 Bad Case 并修改 Skill；
-- 自动发布；
-- 生产在线学习和自主进化；
-- 通用中间件平台；
-- 全量迁移两个应用；
-- 通用知识平台和通用安全平台。
-
-## 4. 四周节奏
-
-### Week 1：Walking Skeleton
-
-目标：合同可解析，TS/Java 可以消费同一 Fixture。
+### D5-D6：确认办理
 
 交付：
 
-- Monorepo 和 CI；
-- 六个 Core Contract 的最小 Schema；
-- RuntimeCapabilityProfile Schema；
-- AgentSolutionManifest、EnvironmentCapabilityProfile 和 Preflight 最小 Schema；
-- JCS + SHA-256 测试向量；
-- TypeScript Reference Validator；
-- Java Validator Spike；
-- 第一组正向和负向 Fixture；
-- EA / Mobile 字段映射草图。
+- 将现有 `BankingTaskAdapter` 包装到 `executeTask`；
+- 一条 R2 模拟任务；
+- 确认前不提交，确认后只提交一次；
+- 状态和错误映射测试。
 
-验收：
+优先选择预约或渠道偏好，不使用资金交易作为第一条办理用例。
 
-- TS 和 Java 对同一 Fixture 给出相同校验结果和摘要；
-- 不依赖 EA 或手机银行即可运行 Conformance。
-
-### Week 2：Context、Knowledge、Action 和 Approval
-
-目标：两个真实应用开始 Shadow 接入。
-
-并行工作：
-
-- Knowledge Owner：Current / Expired / Conflict / Missing Policy Fixture；
-- Security Owner：Action / Approval / Replay / Tamper Fixture；
-- EA：将现有 Context 和 Receipt 映射到 Contract；
-- Mobile：将用户 Context、Capability、确认和幂等映射到 Contract；
-- Integration Lead：冻结 OpenJiuwen 生命周期事件。
-
-验收：
-
-- 两个应用不改变现有用户行为即可输出 Shadow Evidence；
-- Employee / Customer Context Projection 可对比；
-- Approval 过期、篡改和重放被一致拒绝。
-
-### Week 3：跨渠道财富闭环
-
-目标：跑通 V1 演示故事。
+### D7-D8：财富能力
 
 交付：
 
-- Mobile `CREATE_ADVISORY_REQUEST`；
-- EA 获取咨询请求与员工侧客户 Context；
-- Wealth Domain Pack 最小版本；
-- Follow-up 写入确认；
-- 两端 FinanceEvidenceReceipt；
-- Provider 超时和降级处理。
+- 从 EA 复制并清理财富 Skill/SOP 专业资产；
+- `domain-packs/wealth`；
+- 最小财富参考助手；
+- 客户、资产和产品查询映射。
 
-验收：
+验收：输出客户约束、组合方向、产品映射理由和下一步，而不是只返回产品清单。
 
-- 同一客户、同一政策快照、不同 Profile 的字段与动作差异符合预期；
-- 两端 Evidence 使用同一 Schema；
-- 手机银行不泄漏员工侧字段；
-- EA 不绕过客户归属和写入确认。
-
-### Week 4：评测、加固与冻结
-
-目标：把“能跑”变成“可证明”。
+### D9-D10：复跑与演示
 
 交付：
 
-- finance-skill-eval 对接示例；
-- Cross-language Conformance 完整报告；
-- OpenJiuwen Runtime Capability 实测结果；
-- Environment Preflight 与 Binding 报告；
-- Initial Candidate 的局部优化和冻结留出集结果；
-- Bad Case 和安全回归；
-- 演示脚本和 Architecture V1 Final；
-- V1 Release Candidate。
+- Contract、Adapter、Live Smoke 汇总；
+- `finance-skill-eval` 财富对照结果引用；
+- 演示脚本；
+- V1 复盘和后续差距清单。
 
-验收：
+## 5. Definition of Done
 
-- 演示可重复；
-- 合同、Fixture、实现和 Evidence 可追溯；
-- Preflight 和发布前优化过程可重复；
-- 无 Blocker 级跨 Profile 泄漏或 Approval 绕过；
-- V1 非目标没有被偷偷加入范围。
+1. 四个合同有严格 Schema、Java 类型和正反 Fixture；
+2. Query 与 Task Adapter 定向测试通过；
+3. 部署环境只读链路可重复运行；
+4. 模拟办理确认链路无重复提交；
+5. Evidence 能说明调用能力、Provider、来源和最终状态；
+6. Wealth Domain Pack 至少完成一个专业财富任务；
+7. 手机银行原有入口和体验不变；
+8. 文档没有把 Simulator 表述为生产系统。
 
-## 5. 前十个工作日任务
+## 6. 完成 V1 后再决定
 
-| 日期 | Architecture / Integration | Knowledge | Security | Builder | Applications |
-|---|---|---|---|---|---|
-| D1-D2 | Repo、ADR、Schema Skeleton | Review Context Schema | Review Action Schema | Review AssetRef 需求 | EA/Mobile 映射清单 |
-| D3-D5 | Contract + Fixture Runner | Knowledge Fixtures | Approval Fixtures | 压测 Manifest 最小字段 | EA Context Shadow |
-| D6-D8 | OpenJiuwen Lifecycle | Provider Contract | Action Interceptor | 反馈 Composition Gap | Mobile Java Mapping |
-| D9-D10 | Cross-language Conformance | Policy Snapshot | Replay/Tamper | V1.2 Proposal | 第一条双应用链路 |
+- 是否将现有 EA 直接接入 Harness；
+- 是否提升 Profile、Policy、Approval 为独立合同；
+- 是否让 Builder 消费 Domain Pack 和 Provider Contract；
+- 是否增加保险作为第二个 Domain Pack；
+- 是否开始 V1.2 Solution Composition。
 
-## 6. V1 Definition of Done
-
-1. 六个 Core Contract 有 Strict Schema、文档和版本；
-2. TypeScript 和 Java 消费同一 Fixture 并得到一致结果；
-3. OpenJiuwen 远程和 Java 内嵌两种形态各通过最低能力验证；
-4. EA 与手机银行跑通同一客户的跨渠道财富故事；
-5. Employee / Customer Profile 无字段越界；
-6. 一个写操作经过 Decision、Approval、Execute、Evidence 完整链路；
-7. finance-skill-eval 能读取 Evidence 并完成一次对照评测；
-8. Builder 能解释如何消费 V1 合同，V1.2 范围已冻结；
-9. 财富 Solution 在发布前完成至少一轮局部优化，并由冻结留出集独立验收；
-10. Preflight 能明确报告必要 Runtime、中间件和 Provider 是否具备；
-11. 所有 Blocker 已关闭，剩余风险进入 ADR 或 Roadmap；
-12. 文档、代码和演示均可由非原作者重复运行。
-
-## 7. 后续路线
-
-### V1.2：Assembly Proof
-
-- AssetRef；
-- SolutionManifest / SolutionLock 完整资产解析；
-- Builder 接入；
-- 财富 Solution 可重复装配；
-- 保险 Domain Pack 作为第二个装配样例。
-
-### V1.5：Engineering Plane
-
-- Provider Toolkit；
-- Pack Authoring；
-- Policy Simulator；
-- Sandbox；
-- Finance Engineering Agent 的自然语言入口候选。
-
-### V2：Cross-Runtime Proof
-
-- 选择 AgentScope、DeepAgents 或银行自研 Runtime 之一；
-- 实现第二个 Runtime Integration；
-- 用同一 Contract、Profile、Domain Pack 和 Conformance 证明 Runtime-neutral。
+决策依据是 V1 的真实差距，不根据长期架构图提前开发。

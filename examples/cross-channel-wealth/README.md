@@ -1,14 +1,12 @@
-# Cross-channel Wealth Example
+# Wealth Reuse Example
 
-本示例是 V1 主验证场景：同一客户陈明先通过手机银行发起财富咨询请求，再由岗位智能体中的财富经理承接。
+本示例用于简化版 V1 的第二阶段验证：从 Employee Agent 提取财富 Skill、SOP 和评测案例，让一个最小财富参考助手消费与手机银行相同的 Harness Core 和 `non-ai-banking` Provider。
 
 它用于证明：
 
-- 同一个 Finance Core 服务两个应用；
-- 同一 Customer / Policy Snapshot 在两个 Profile 下正确投影；
-- Mobile Java 与 EA TypeScript 消费同一合同；
-- 客户确认与员工确认均使用 ApprovalGrant；
-- 两端输出同一 Evidence Schema；
-- Wealth Domain Pack 带来可观察的专业价值。
+- Harness 不只是手机银行内部重构；
+- 同一金融事实可以支持客户查询和财富专业分析；
+- Domain Pack 承载专业 Know-how，Core 不承载财富话术；
+- `finance-skill-eval` 可以比较无 Skill、旧 Skill 和 Wealth Domain Pack。
 
-实现和 Fixture 将在 Walking Skeleton 阶段加入。
+V1 不要求同步重构现有 EA TypeScript Runtime。EA 直接 Integration 在 Java 合同稳定后增加。

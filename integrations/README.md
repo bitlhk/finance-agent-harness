@@ -1,17 +1,14 @@
 # Runtime Integrations
 
-Runtime Integration 把 Finance Agent Harness 的金融语义映射到具体 Agent Runtime 生命周期。
+Runtime Integration 负责把 Finance Harness 接入 Agent Runtime。
 
-V1：
+V1 只实现：
 
 ```text
-runtimes/openjiuwen/
-├── runtime-contract/
-├── enterprise-remote/
-│   ├── ea-ts-host-adapter/
-│   └── python-runtime-bridge/
-└── java-embedded/
-    └── mobile-java-host-adapter/
+openjiuwen-java/
+├── capability-request-mapper
+├── capability-result-mapper
+└── evidence-mapper
 ```
 
-Integration 负责事件和类型翻译，不实现第二套 Finance Policy。
+Integration 只做生命周期与类型转换，不实现银行 Policy。Employee Agent 的 TypeScript Integration 在 Java 链路稳定后增加。

@@ -1,15 +1,12 @@
 # Conformance
 
-Conformance 用于证明不同语言、Runtime Integration、Profile 和 Provider 对同一公共合同具有一致行为。
+简化版 V1 的验证范围：
 
-V1 至少包含：
+- 四个 JSON Schema 的正负 Fixture；
+- Java DTO 与 Schema 一致；
+- Query Adapter 映射；
+- Task Adapter 的确认、幂等和错误状态映射；
+- 部署环境 Live Smoke；
+- Evidence 必要字段完整性。
 
-- JSON Schema 正负 Fixture；
-- RFC 8785 JCS + SHA-256 测试向量；
-- Approval 过期、篡改、重放和主体不匹配；
-- Context 过期、冲突和缺失；
-- Employee / Customer Projection；
-- Provider 超时和部分失败；
-- TypeScript / Java 一致性报告。
-
-Conformance 从 Week 1 开始，不是开发结束后的补充测试。
+V1 不要求 TypeScript/Java 双实现、跨 Runtime、Profile 投影或独立 Approval 重放测试。对应验证在相关能力真正进入实现时增加。

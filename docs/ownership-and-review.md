@@ -1,103 +1,56 @@
-# 职责与架构评审规则
+# 职责与快速评审规则
 
 ## 1. 评审目的
 
-本轮不是追求全员共识或把文档润色到完美，而是完成一次短周期 Architecture Alignment：
+本轮只确认简化版 V1 能否开工，不评审长期蓝图是否完美。
 
-- 是否存在阻止开工的架构问题；
-- 每位负责人是否认可自己负责的合同和边界；
-- 是否接受第一阶段交付；
-- 是否有人提出明确、更小且可验证的替代方案。
+评审人只回答：
 
-## 2. 评审范围
+1. 是否存在阻止手机银行 Query/Task 提炼的 Blocker？
+2. 四个合同是否包含了不应进入 Core 的应用或银行私有字段？
+3. 是否可以在现有部署环境重复验证？
 
-建议只邀请以下 5 个接口人：
+评审窗口不超过 1 个工作日。
 
-- Architecture / Contract Owner；
-- Mobile Owner；
-- Knowledge Owner；
-- Security Owner；
-- Builder Owner。
+## 2. V1 Ownership
 
-必要时增加 OpenJiuwen Runtime 接口人。不做大范围群体评审。
-
-评审窗口：2 个工作日。
-
-## 3. 评审方式
-
-所有意见直接写在 Architecture PR：
-
-- 小修改使用 GitHub Suggestion；
-- 架构替代方案单独提交 PR 或 ADR；
-- 不直接修改主文档；
-- 不把意见分散到聊天、邮件和多个副本文档中。
-
-意见标签：
-
-- `[BLOCKER]`：不解决不能开工或合入；
-- `[CONCERN]`：需要明确取舍、边界或风险；
-- `[SUGGESTION]`：不影响开工，可进入后续优化；
-- `[QUESTION]`：需要补充解释。
-
-## 4. 每位评审人只需回答三个问题
-
-1. 是否存在 Blocker？
-2. 与自己相关的 Contract、边界和 Owner 是否合理？
-3. 是否接受自己的首个交付及时间点？
-
-## 5. 合入条件
-
-- 所有 `[BLOCKER]` 已关闭或转为明确 ADR；
-- Knowledge、Security、Mobile、Builder Owner 确认边界；
-- 没有因为评审扩大 V1 Scope；
-- V1 Demo Story 不变；
-- Walking Skeleton 可以继续并行推进。
-
-合入后状态：`Architecture Baseline / Approved for Implementation`。
-
-## 6. Ownership
-
-| Owner | 核心所有权 | 首个交付 |
+| Owner | 所有权 | 首个交付 |
 |---|---|---|
-| Architecture / Contract | 总架构、Schema、Profile、ADR、兼容和 V1 验收 | Contract Skeleton + Review Closure |
-| Context & Knowledge | Context / Knowledge Contract、Authority、Freshness、Provenance、Provider | 5 组 Policy / Knowledge Fixture |
-| Action & Security | Action、Decision、Approval、Evidence、安全边界 | 6 组 Approval / Tamper / Replay Fixture |
-| Runtime Integration | 生命周期合同、RuntimeCapabilityProfile、TS/Java 语义一致 | OpenJiuwen Lifecycle Mapping |
-| EA Adapter | EA TS Host、Shadow Evidence、企业版 Python Bridge 协同 | EA Context Shadow |
-| Mobile Adapter | Java Host、Invocation Context、确认/恢复/幂等 | Mobile Action Mapping |
-| Builder / Engineering | Contract 消费验证，V1.2 Manifest / Lock | AssetRef Gap Report |
-| Domain & Eval | Wealth Pack、Golden Case、Eval Pack、专家 Rubric | Cross-channel Wealth Eval |
-| CI / Conformance | Schema Bundle、测试向量、跨语言一致性 | TS/Java Fixture Runner |
+| Architecture / Contract | 四个 Schema、边界、ADR 和验收 | Contract Skeleton |
+| Java Core | DTO、Provider SPI、Evidence | Java Core Tests |
+| Mobile / Integration | OpenJiuwen Java 映射、入口体验不变 | Balance Query Smoke |
+| Provider | non-ai-banking Query/Task 映射 | Query + Confirm Task |
+| Domain & Eval | Wealth Pack、Golden Case、专业对照 | Wealth Reuse Result |
 
-人数不足时可以一人兼任多个 Owner，但每个目录和合同只能有一个最终 Owner。
+人数不足时可以一人兼任多个 Owner。
 
-## 7. 公共能力准入
+Knowledge、Security 和 Builder 同事可以 Review 相关边界，但 V1 不要求他们各自建设独立子系统。
 
-声称属于 Finance Agent Harness 的公共能力，至少满足以下之一：
+## 3. 公共能力准入
 
-- 被 EA 与手机银行两个真实消费者验证；
-- 通过两个 Consumer 级 Conformance Adapter；
-- 有 ADR 说明为什么暂时只有一个消费者，以及退出条件。
+首版代码进入 Core 必须满足：
 
-从现有应用抽取的代码默认仍是候选，不能因为“通用看起来不错”就进入 Core。
+- 不依赖手机银行 Agent ID、UI 或对话话术；
+- 不依赖 OpenJiuwen 私有类型；
+- 不包含 non-ai-banking 地址和凭证；
+- 有一个真实消费者和对应测试；
+- 能说明第二个消费者的合理使用方式。
 
-## 8. PR 最小要求
+V1 允许先有手机银行一个真实消费者；Wealth Domain Pack 负责在第二阶段证明复用。稳定公共合同最终仍应由两个消费者验证。
 
-涉及合同或行为变更的 PR 应同时包含：
+## 4. PR 最小要求
 
-- Contract / Schema；
+涉及合同或行为变更的 PR 应包含：
+
+- Schema 或接口变更；
 - 正向 Fixture；
 - 至少一个负向 Fixture；
-- 参考实现或 Adapter；
-- Conformance 结果；
-- 兼容性说明；
-- 必要的 ADR 或文档更新。
+- Adapter 或调用示例；
+- 验证结果；
+- 必要的兼容性说明。
 
-## 9. 决策权
+## 5. 决策原则
 
-- Contract 由 Architecture Owner 与对应领域 Owner 共同批准；
-- Profile 由 Architecture Owner 批准，应用 Owner 提供验证；
-- Runtime Lifecycle 由 Integration Owner 批准；
-- 银行私有 Policy 和 Provider 配置由具体项目拥有；
-- 应用 UI、用户流程和 Host Wiring 由应用团队拥有；
-- Builder 不得自行修改稳定 Core Contract，需通过本仓 PR。
+> 从真实链路提炼，不从长期架构图生成代码。
+
+如果新抽象没有被当前 Query、Task 或 Wealth 场景使用，不进入 V1。

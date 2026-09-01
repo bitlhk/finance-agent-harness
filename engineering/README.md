@@ -1,17 +1,7 @@
 # Engineering Plane
 
-Engineering Plane 是构建期能力，不进入生产请求热路径。
+Engineering Plane 是长期构建期能力，不进入生产请求热路径。
 
-V1 只实现最小合同、CLI 验证和 Builder 消费验证。V1.2 计划实现：
+简化版 V1 不实现 Builder、SolutionManifest、SolutionLock 或自动优化平台，只要求代码、Fixture 和演示可以由非原作者复跑。
 
-- AssetRef；
-- SolutionManifest；
-- SolutionLock；
-- Deterministic Composition；
-- Builder Adapter；
-- Pack / Provider Toolkit；
-- Conformance 和 Sandbox 集成。
-
-AI 可以提出 Candidate，但 Builder 必须确定性构建，Eval 独立验证，Human Review 决定发布。
-
-V1 同时定义最小 AgentSolutionManifest、EnvironmentCapabilityProfile 和 DeploymentPreflightReport，并用手工或 CLI 完成一次发布前局部优化。完整 Builder UI、通用插件和自动优化平台不属于 V1。
+手机银行和 Wealth Domain Pack 证明公共合同稳定后，再由 Builder 团队基于这些真实合同开展 V1.2 Solution Composition。Builder 可以继续使用 Python，生成或装配 Java 产物并不要求 Builder 与 Runtime 使用相同语言。

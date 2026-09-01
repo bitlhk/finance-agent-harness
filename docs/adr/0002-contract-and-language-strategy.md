@@ -4,6 +4,8 @@
 
 日期：2026-09-01
 
+> V1 改为 Java-first，跨语言实现后置，见 [ADR-0004](0004-simplified-v1-implementation.md)。本 ADR 保留 Canonical Contract 的长期语言策略。
+
 ## Context
 
 当前应用和 Runtime 涉及三种主要语言：
