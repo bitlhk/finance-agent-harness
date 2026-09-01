@@ -26,6 +26,18 @@
 政策快照：固定版本
 ```
 
+在进入两个应用前，演示一次最小构建流程：
+
+1. 读取财富 AgentSolutionManifest；
+2. 展示它要求的 Knowledge、Data、Skill、Connector、Runtime 和 Middleware；
+3. 用 EnvironmentCapabilityProfile 匹配 EA 与手机银行环境；
+4. Preflight 显示 Ready、Degraded 或缺失项；
+5. 在 Sandbox 对 Initial Candidate 运行固定任务；
+6. 展示一次局部 Skill / Context 优化前后的结果；
+7. 冻结为可发布的 SolutionLock。
+
+该过程可以先使用 CLI 或轻量页面，不要求 V1 建成完整可视化 Builder。
+
 ## 4. 第一幕：手机银行客户自服务
 
 客户在手机银行说：
@@ -84,11 +96,12 @@
 - 新 Wealth Domain Pack；
 - 同一模型、同一数据快照下的专业判断差异。
 
-## 7. 现场要讲清楚的三句话
+## 7. 现场要讲清楚的四句话
 
 1. 同一个金融 Core，可以服务员工和客户两种应用；
 2. 同一客户数据因为 Profile 不同，展示和允许的动作自然不同；
 3. Builder 后续只需组合 Runtime、Profile、Domain Pack 和 Provider，就能快速装配财富、保险等新 Solution。
+4. Solution 不假设客户环境已经具备所有中间件，部署前会明确要求、匹配能力并报告缺口。
 
 ## 8. 演示成功标准
 
@@ -97,6 +110,8 @@
 - 手机银行无法看到员工字段；
 - 两次写动作分别有独立 ApprovalGrant；
 - A/B 财富方案金额闭合、流动性分类正确、产品映射有依据；
+- Initial Candidate 经过至少一次发布前局部优化，并用独立留出案例验证提升；
+- Preflight 可以准确指出缺失的 Runtime、中间件或 Provider 能力；
 - 任一步失败时能够展示明确降级和 Evidence，不出现无响应。
 
 ## 9. Secondary Demo

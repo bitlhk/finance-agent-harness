@@ -33,7 +33,7 @@
 
 - Wealth Management。
 
-### Core Contracts
+### Core and Integration Contracts
 
 - FinancePrincipalV1；
 - FinanceContextPackV1；
@@ -60,6 +60,15 @@
 - Approval 参数绑定、过期和一次性使用；
 - Evidence Receipt。
 
+### Solution Lifecycle
+
+- AgentSolutionManifestV1 最小合同；
+- EnvironmentCapabilityProfileV1；
+- DeploymentPreflightReportV1；
+- 手工或 CLI 完成一次财富 Solution 装配；
+- 发布前 1 至 3 轮局部优化；
+- 冻结留出集验收和 SolutionLock。
+
 ## 3. V1 不做
 
 - 第二个 Agent Runtime；
@@ -68,6 +77,8 @@
 - 保险、投研和风控完整 Domain Pack；
 - 自动收集 Bad Case 并修改 Skill；
 - 自动发布；
+- 生产在线学习和自主进化；
+- 通用中间件平台；
 - 全量迁移两个应用；
 - 通用知识平台和通用安全平台。
 
@@ -82,6 +93,7 @@
 - Monorepo 和 CI；
 - 六个 Core Contract 的最小 Schema；
 - RuntimeCapabilityProfile Schema；
+- AgentSolutionManifest、EnvironmentCapabilityProfile 和 Preflight 最小 Schema；
 - JCS + SHA-256 测试向量；
 - TypeScript Reference Validator；
 - Java Validator Spike；
@@ -140,6 +152,8 @@
 - finance-skill-eval 对接示例；
 - Cross-language Conformance 完整报告；
 - OpenJiuwen Runtime Capability 实测结果；
+- Environment Preflight 与 Binding 报告；
+- Initial Candidate 的局部优化和冻结留出集结果；
 - Bad Case 和安全回归；
 - 演示脚本和 Architecture V1 Final；
 - V1 Release Candidate。
@@ -148,6 +162,7 @@
 
 - 演示可重复；
 - 合同、Fixture、实现和 Evidence 可追溯；
+- Preflight 和发布前优化过程可重复；
 - 无 Blocker 级跨 Profile 泄漏或 Approval 绕过；
 - V1 非目标没有被偷偷加入范围。
 
@@ -170,16 +185,17 @@
 6. 一个写操作经过 Decision、Approval、Execute、Evidence 完整链路；
 7. finance-skill-eval 能读取 Evidence 并完成一次对照评测；
 8. Builder 能解释如何消费 V1 合同，V1.2 范围已冻结；
-9. 所有 Blocker 已关闭，剩余风险进入 ADR 或 Roadmap；
-10. 文档、代码和演示均可由非原作者重复运行。
+9. 财富 Solution 在发布前完成至少一轮局部优化，并由冻结留出集独立验收；
+10. Preflight 能明确报告必要 Runtime、中间件和 Provider 是否具备；
+11. 所有 Blocker 已关闭，剩余风险进入 ADR 或 Roadmap；
+12. 文档、代码和演示均可由非原作者重复运行。
 
 ## 7. 后续路线
 
 ### V1.2：Assembly Proof
 
 - AssetRef；
-- SolutionManifest；
-- SolutionLock；
+- SolutionManifest / SolutionLock 完整资产解析；
 - Builder 接入；
 - 财富 Solution 可重复装配；
 - 保险 Domain Pack 作为第二个装配样例。

@@ -2,7 +2,7 @@
 
 Finance Agent Harness 是面向金融 Agent 的行业能力与工程底座。
 
-它不替代 Agent Runtime，也不是某个具体金融应用。它通过统一的金融合同、Profile、领域能力包、Runtime Integration、Provider Adapter、证据和评测机制，帮助岗位智能体、手机银行智能体及其他金融应用更快构建、验证和复用专业能力。
+它不替代 Agent Runtime，也不是某个具体金融应用。它通过统一的金融合同、Profile、领域能力包、Runtime Integration、Provider Adapter、证据和评测机制，帮助岗位智能体、手机银行智能体及其他金融应用更快构建、验证、集成和持续改进可复用的 Agent 业务组件。
 
 > Core 定义金融共性，Profile 表达主体关系，Integration 适配 Agent Runtime，Provider Adapter 适配银行系统。
 
@@ -28,6 +28,7 @@ Finance Agent Harness 是面向金融 Agent 的行业能力与工程底座。
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0001：架构基线](docs/adr/0001-architecture-baseline.md)
 - [ADR-0002：合同与语言策略](docs/adr/0002-contract-and-language-strategy.md)
+- [ADR-0003：Agent 业务组件生命周期与环境要求](docs/adr/0003-agent-solution-lifecycle.md)
 
 ## 仓库结构
 
