@@ -23,10 +23,16 @@ Canonical Schema：
 contracts/json-schema/solution/solution-build-input.v1.schema.json
 ```
 
-首个样例：
+面客侧样例：
 
 ```text
 examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json
+```
+
+员工辅助侧样例：
+
+```text
+examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 ```
 
 输入只描述逻辑组合：Runtime 模板、Profile、Domain Pack、Provider、模型引用和 Eval Pack。不得写入模型密钥、银行凭据、部署拓扑或大段 Runtime 私有配置。
@@ -42,6 +48,8 @@ examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json
 7. 输出 Candidate、`solution-lock.json` 和 `build-report.json`。
 
 Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，不要求 Builder 自身改写为 Java。
+
+员工辅助样例还需要生成一个 `RuntimeTokenSupplier` 接口绑定点。Builder 只生成配置占位和 Host Wiring，不签发 Token、不写入 `INTERNAL_API_KEY`，也不把任何凭据写进 Lock 或 Report。真实 Token 由 EA Runtime Integration 或部署环境的受信任 Token Broker 按调用签发。
 
 ## 最小输出
 
@@ -70,8 +78,16 @@ Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，
 - 模型配置可用时，能够回答“帮我看看当前资产结构和近期需要关注什么”；
 - 使用 `finance-skill-eval` 对照有 Pack 与无 Pack 的专业输出。
 
+员工辅助目标额外要求：
+
+- `wealth.previsit-context.query` 映射到 `prepare_wealth_previsit_context`；
+- `customerRef` 映射为 `customer_id`；
+- 只允许 `EMPLOYEE` Principal；
+- EA `isError`、JSON-RPC Error 和认证失败均映射为 Canonical Failure；
+- 构建产物和报告中不得出现 Runtime Token。
+
 ## 分工
 
 Finance Harness 维护合同、Provider、Domain Pack、参考输入和验收案例。Builder 维护输入解析、模板装配、代码生成、锁文件和构建报告。Builder 不修改 Harness Core，也不自行发明财富 SOP。
 
-第二个 Builder 目标是 `wealth-employee-assisted`，但应在 EA Host Binding 和客户经理事实 Provider 验证完成后接入；不要在首个构建后端中模拟员工权限或客户归属。
+建议 Builder 先完成面客侧目标，再用同一构建后端装配员工辅助侧目标。第二个目标已经具备 Pack、Host Binding、Provider 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption、Runtime 身份和一次性 Token；不得在 Builder 中模拟员工权限或客户归属。

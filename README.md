@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Simplified V1 In Progress · Cross-Application Wealth & Builder Handoff Ready`
+`Simplified V1 In Progress · Two Wealth Build Targets Contract-ready`
 
 V1 按两个连续阶段推进：
 
@@ -57,6 +57,8 @@ Provider SPI 只提供两个入口：
 
 第三项优先验证专业资产复用，不要求 V1 同时重构 Employee Agent 的 TypeScript Runtime。现有 EA 的直接 Integration 在 Java 骨架稳定后增量接入。
 
+员工辅助侧新增 `providers/employee-agent` 参考 Provider，将 `wealth.previsit-context.query` 映射到 EA 已有 `prepare_wealth_previsit_context`。它通过宿主提供的一次性 Runtime Token 调用 EA，不复制 EA 的权限、客户归属和财富上下文装配。
+
 ## 文档入口
 
 - [简化版总体架构](docs/finance-agent-harness-architecture-v1.md)
@@ -80,6 +82,7 @@ finance-agent-harness/
 ├── packages/java/                   # V1 Java Core 和 Provider SPI
 ├── integrations/openjiuwen-java/    # OpenJiuwen Integration
 ├── providers/non-ai-banking/        # 首个参考 Provider Adapter
+├── providers/employee-agent/        # EA 财富访前宿主兼容 Provider
 ├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用
 ├── conformance/                      # 合同与 Adapter 验证
 ├── examples/mobile-banking/          # 首个消费者

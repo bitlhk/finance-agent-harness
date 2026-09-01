@@ -10,7 +10,7 @@
 
 1. 手机银行通过 Java Harness 查询 `non-ai-banking`；
 2. 手机银行通过同一 Harness 完成一次需要确认的模拟办理；
-3. 从 EA 提取的 Wealth Domain Pack 可以消费同一 Provider，形成专业财富建议。
+3. 从 EA 提取的 Wealth Domain Pack 可以消费同一 Core 合同，并通过员工侧 Provider 形成专业财富访前建议。
 
 ## 2. V1 范围
 
@@ -34,6 +34,7 @@
 
 - OpenJiuwen Java Integration；
 - non-ai-banking Provider Adapter；
+- Employee Agent 财富访前 Reference Provider；
 - 一条 Query；
 - 一条确认 Task。
 
@@ -100,8 +101,9 @@
 - `domain-packs/wealth`；
 - 最小财富参考助手；
 - 客户、资产和产品查询映射。
+- 员工辅助语义能力到 EA 财富访前 MCP 的映射。
 
-验收：输出客户约束、组合方向、产品映射理由和下一步，而不是只返回产品清单。
+验收：面客侧输出客户约束、组合方向和下一步；员工侧输出访前核心矛盾、关键问题和面谈目标，而不是只复述客户资料。
 
 ### D9-D10：复跑与演示
 
