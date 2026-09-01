@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "finance-context.v1",
+  "requestId": "req-demo-001",
+  "traceId": "trace-demo-001",
+  "principalId": "customer-demo-001",
+  "principalType": "CUSTOMER",
+  "channel": "mobile-banking",
+  "purpose": "ACCOUNT_SERVICE",
+  "subjectRef": "customer-demo-001",
+  "sessionRef": "session-demo-001",
+  "authenticationLevel": "BASIC",
+  "scopes": ["account:read"]
+}

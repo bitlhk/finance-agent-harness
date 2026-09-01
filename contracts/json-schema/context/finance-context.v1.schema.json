@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.dev/contracts/context/finance-context.v1.schema.json",
+  "title": "FinanceContextV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "traceId",
+    "principalId",
+    "principalType",
+    "channel",
+    "purpose",
+    "authenticationLevel",
+    "scopes"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "finance-context.v1" },
+    "requestId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "principalId": { "type": "string", "minLength": 1 },
+    "principalType": {
+      "enum": ["CUSTOMER", "EMPLOYEE", "SYSTEM"]
+    },
+    "channel": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string", "minLength": 1 },
+    "subjectRef": { "type": "string", "minLength": 1 },
+    "sessionRef": { "type": "string", "minLength": 1 },
+    "authenticationLevel": {
+      "enum": ["UNKNOWN", "BASIC", "STRONG"]
+    },
+    "scopes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  }
+}

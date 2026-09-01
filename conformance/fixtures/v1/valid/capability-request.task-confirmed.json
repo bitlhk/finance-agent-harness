@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "capability-request.v1",
+  "capabilityId": "channel.elder-mode.update",
+  "operation": "TASK",
+  "context": {
+    "schemaVersion": "finance-context.v1",
+    "requestId": "req-demo-002",
+    "traceId": "trace-demo-002",
+    "principalId": "customer-demo-001",
+    "principalType": "CUSTOMER",
+    "channel": "mobile-banking",
+    "purpose": "CHANNEL_PREFERENCE",
+    "subjectRef": "customer-demo-001",
+    "sessionRef": "session-demo-001",
+    "authenticationLevel": "BASIC",
+    "scopes": ["channel-preference:write"]
+  },
+  "parameters": { "enabled": true, "version": 7 },
+  "idempotencyKey": "idem-demo-002",
+  "taskRef": "task-demo-002",
+  "continuation": {
+    "preflightId": "preflight-demo-002",
+    "payloadHash": "sha256:demo"
+  },
+  "confirmation": {
+    "confirmed": true,
+    "confirmationText": "确认提交",
+    "confirmedAt": "2026-09-01T01:00:03Z"
+  }
+}

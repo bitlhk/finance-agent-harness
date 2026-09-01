@@ -10,3 +10,5 @@
 - Evidence 必要字段完整性。
 
 V1 不要求 TypeScript/Java 双实现、跨 Runtime、Profile 投影或独立 Approval 重放测试。对应验证在相关能力真正进入实现时增加。
+
+首批正反样例位于 `fixtures/v1`，由 Java Core 测试直接读取，避免文档样例与实际类型漂移。

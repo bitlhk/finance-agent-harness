@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.dev/contracts/capability/capability-result.v1.schema.json",
+  "title": "CapabilityResultV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "traceId",
+    "status",
+    "content",
+    "data",
+    "missingInputs",
+    "nextActions",
+    "sourceSystem",
+    "asOf"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "capability-result.v1" },
+    "requestId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": [
+        "COMPLETED",
+        "NEED_USER",
+        "NEED_CONFIRMATION",
+        "PROCESSING",
+        "FAILED",
+        "UNKNOWN"
+      ]
+    },
+    "content": { "type": "string" },
+    "data": { "type": "object" },
+    "missingInputs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nextActions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "sourceSystem": { "type": "string", "minLength": 1 },
+    "asOf": { "type": "string", "format": "date-time" },
+    "task": { "$ref": "#/$defs/taskState" },
+    "error": { "$ref": "#/$defs/failure" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "FAILED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["error"],
+        "properties": {
+          "error": { "$ref": "#/$defs/failure" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "taskState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskRef", "status", "confirmationRequired", "continuation"],
+      "properties": {
+        "taskRef": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "confirmationRequired": { "type": "boolean" },
+        "continuation": { "type": "object" }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failureClass", "sourceCode", "retryable", "message", "fieldErrors"],
+      "properties": {
+        "failureClass": { "type": "string", "minLength": 1 },
+        "sourceCode": { "type": "string", "minLength": 1 },
+        "retryable": { "type": "boolean" },
+        "message": { "type": "string", "minLength": 1 },
+        "fieldErrors": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

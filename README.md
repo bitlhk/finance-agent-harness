@@ -56,6 +56,7 @@ Provider SPI 只提供两个入口：
 - [简化版总体架构](docs/finance-agent-harness-architecture-v1.md)
 - [V1 范围与快速路线](docs/v1-scope-and-roadmap.md)
 - [V1 演示故事](docs/v1-demo-story.md)
+- [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
 - [ADR-0001：长期架构基线](docs/adr/0001-architecture-baseline.md)

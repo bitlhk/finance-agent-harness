@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "capability-result.v1",
+  "requestId": "req-demo-001",
+  "traceId": "trace-demo-001",
+  "status": "COMPLETED",
+  "content": "账户余额查询已完成。",
+  "data": {
+    "accounts": [
+      {
+        "accountId": "acct-demo-001",
+        "accountName": "演示账户",
+        "availableBalance": 12580.50,
+        "currency": "CNY"
+      }
+    ]
+  },
+  "missingInputs": [],
+  "nextActions": [],
+  "sourceSystem": "account-core-simulator",
+  "asOf": "2026-09-01T01:00:00Z"
+}
