@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class NonAiBankingProvider implements FinanceProvider {
     public static final String PROVIDER_ID = "non-ai-banking-reference";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
+    public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
 
     private final Client client;
 
@@ -42,32 +43,71 @@ public final class NonAiBankingProvider implements FinanceProvider {
             return localFailure(request, "INVALID_INPUT", "QUERY_OPERATION_REQUIRED", false,
                     "query requires operation QUERY", List.of("USE_QUERY_OPERATION"));
         }
-        if (!ACCOUNT_BALANCE_QUERY.equals(request.capabilityId())) {
-            return localFailure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
-                    "unsupported query capability: " + request.capabilityId(), List.of("CHECK_CAPABILITY_ID"));
-        }
-
         try {
-            Map<String, String> query = new LinkedHashMap<>();
-            copyQueryParameter(request.parameters(), query, "page");
-            copyQueryParameter(request.parameters(), query, "pageSize");
-            Response response = client.get("/api/v1/accounts", query, request.context());
-            return new CapabilityResultV1(
-                    CapabilityResultV1.SCHEMA_VERSION,
-                    request.context().requestId(),
-                    request.context().traceId(),
-                    CapabilityResultV1.Status.COMPLETED,
-                    "账户余额查询已完成。",
-                    response.data(),
-                    List.of(),
-                    List.of(),
-                    response.sourceSystem(),
-                    response.asOf(),
-                    null,
-                    null);
+            return switch (request.capabilityId()) {
+                case ACCOUNT_BALANCE_QUERY -> accountBalance(request);
+                case WEALTH_CUSTOMER_CONTEXT_QUERY -> wealthCustomerContext(request);
+                default -> localFailure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
+                        "unsupported query capability: " + request.capabilityId(),
+                        List.of("CHECK_CAPABILITY_ID"));
+            };
         } catch (ProviderFailure failure) {
             return upstreamFailure(request, failure);
         }
+    }
+
+    private CapabilityResultV1 accountBalance(CapabilityRequestV1 request) {
+        Map<String, String> query = new LinkedHashMap<>();
+        copyQueryParameter(request.parameters(), query, "page");
+        copyQueryParameter(request.parameters(), query, "pageSize");
+        Response response = client.get("/api/v1/accounts", query, request.context());
+        return completed(request, "账户余额查询已完成。", response.data(),
+                response.sourceSystem(), response.asOf());
+    }
+
+    private CapabilityResultV1 wealthCustomerContext(CapabilityRequestV1 request) {
+        Response aggregate = client.get("/api/v1/wealth/aggregate", Map.of(), request.context());
+        Response riskAssessment = client.get("/api/v1/finance/risk-assessment", Map.of(), request.context());
+        Instant oldestSourceAsOf = aggregate.asOf().isBefore(riskAssessment.asOf())
+                ? aggregate.asOf()
+                : riskAssessment.asOf();
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("wealthAggregate", aggregate.data());
+        data.put("riskAssessment", riskAssessment.data());
+        data.put("sourceSnapshots", List.of(
+                sourceSnapshot("WEALTH_AGGREGATE", aggregate),
+                sourceSnapshot("RISK_ASSESSMENT", riskAssessment)));
+        data.put("assembledAt", Instant.now().toString());
+        return completed(request, "财富客户上下文查询已完成。", data,
+                "non-ai-banking-wealth-context", oldestSourceAsOf);
+    }
+
+    private static Map<String, Object> sourceSnapshot(String section, Response response) {
+        return Map.of(
+                "section", section,
+                "sourceSystem", response.sourceSystem(),
+                "asOf", response.asOf().toString());
+    }
+
+    private static CapabilityResultV1 completed(
+            CapabilityRequestV1 request,
+            String content,
+            Map<String, Object> data,
+            String sourceSystem,
+            Instant asOf) {
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                CapabilityResultV1.Status.COMPLETED,
+                content,
+                data,
+                List.of(),
+                List.of(),
+                sourceSystem,
+                asOf,
+                null,
+                null);
     }
 
     @Override

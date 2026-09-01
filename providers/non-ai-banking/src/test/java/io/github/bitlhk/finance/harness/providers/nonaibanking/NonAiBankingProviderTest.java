@@ -33,6 +33,8 @@ class NonAiBankingProviderTest {
     private NonAiBankingProvider provider;
     private final AtomicInteger sessionHits = new AtomicInteger();
     private final AtomicInteger accountHits = new AtomicInteger();
+    private final AtomicInteger wealthAggregateHits = new AtomicInteger();
+    private final AtomicInteger riskAssessmentHits = new AtomicInteger();
     private final AtomicReference<String> observedSession = new AtomicReference<>();
     private final AtomicReference<String> observedRequestId = new AtomicReference<>();
     private final AtomicReference<String> observedTraceId = new AtomicReference<>();
@@ -69,6 +71,29 @@ class NonAiBankingProviderTest {
                      "data":{"accounts":[{"accountId":"acct-001","availableBalance":12580.50,
                      "currency":"CNY"}],"recentTransactions":{},"stale":false,"nextPageToken":null},
                      "asOf":"2026-09-01T01:00:01Z","sourceSystem":"account-core-simulator","error":null}
+                    """);
+        });
+        server.createContext("/api/v1/wealth/aggregate", exchange -> {
+            wealthAggregateHits.incrementAndGet();
+            writeJson(exchange, 200, """
+                    {"requestId":"req-wealth","traceId":"trace-wealth","status":"SUCCESS",
+                     "data":{"overview":{"totalAssets":1000000.00,"netAssets":920000.00,"currency":"CNY"},
+                     "holdings":[{"holdingId":"fund-001","productType":"FUND","marketValue":600000.00}],
+                     "riskExposure":{"topHoldingRatio":0.60,"concentrationStatus":"HIGH"},
+                     "events":[{"eventId":"event-001","eventType":"MATURITY","eventDate":"2026-09-10",
+                     "title":"理财到期","amount":300000.00,"currency":"CNY"}],
+                     "dataQuality":{"status":"READY","tradeEligible":true}},
+                     "asOf":"2026-09-01T01:00:03Z","sourceSystem":"wealth-aggregate-simulator","error":null}
+                    """);
+        });
+        server.createContext("/api/v1/finance/risk-assessment", exchange -> {
+            riskAssessmentHits.incrementAndGet();
+            writeJson(exchange, 200, """
+                    {"requestId":"req-risk","traceId":"trace-risk","status":"SUCCESS",
+                     "data":{"assessmentVersion":"risk-v2","riskLevel":"C3","status":"VALID",
+                     "assessedOn":"2026-03-01","expiresOn":"2027-03-01",
+                     "sourceSystem":"suitability-simulator-v2"},
+                     "asOf":"2026-09-01T01:00:02Z","sourceSystem":"suitability-simulator","error":null}
                     """);
         });
         server.start();
@@ -114,6 +139,25 @@ class NonAiBankingProviderTest {
         assertEquals("ACCOUNT_DENIED", result.error().sourceCode());
         assertEquals(List.of("account access denied"), result.error().fieldErrors());
         assertEquals(List.of("CHECK_AUTHORIZATION"), result.nextActions());
+    }
+
+    @Test
+    void wealthCustomerContextCombinesAuthoritativeSnapshotsWithoutRecommendationLogic() {
+        CapabilityResultV1 result = provider.query(wealthRequest());
+
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals("non-ai-banking-wealth-context", result.sourceSystem());
+        assertTrue(result.data().get("wealthAggregate") instanceof Map<?, ?> aggregate
+                && aggregate.get("riskExposure") instanceof Map<?, ?>);
+        assertTrue(result.data().get("riskAssessment") instanceof Map<?, ?> risk
+                && "VALID".equals(risk.get("status")));
+        assertTrue(result.data().get("sourceSnapshots") instanceof List<?> snapshots
+                && snapshots.size() == 2);
+        assertFalse(result.data().containsKey("recommendedProducts"));
+        assertFalse(result.data().containsKey("targetAllocation"));
+        assertEquals(1, sessionHits.get());
+        assertEquals(1, wealthAggregateHits.get());
+        assertEquals(1, riskAssessmentHits.get());
     }
 
     @Test
@@ -166,6 +210,19 @@ class NonAiBankingProviderTest {
                 null);
     }
 
+    private static CapabilityRequestV1 wealthRequest() {
+        return new CapabilityRequestV1(
+                CapabilityRequestV1.SCHEMA_VERSION,
+                NonAiBankingProvider.WEALTH_CUSTOMER_CONTEXT_QUERY,
+                CapabilityRequestV1.Operation.QUERY,
+                wealthContext(),
+                Map.of(),
+                null,
+                "wealth-diagnosis-001",
+                Map.of(),
+                null);
+    }
+
     private static FinanceContextV1 context() {
         return new FinanceContextV1(
                 FinanceContextV1.SCHEMA_VERSION,
@@ -179,6 +236,21 @@ class NonAiBankingProviderTest {
                 "session-contract-001",
                 FinanceContextV1.AuthenticationLevel.BASIC,
                 Set.of("account:read"));
+    }
+
+    private static FinanceContextV1 wealthContext() {
+        return new FinanceContextV1(
+                FinanceContextV1.SCHEMA_VERSION,
+                "request-wealth-001",
+                "trace-wealth-001",
+                "customer-demo-001",
+                FinanceContextV1.PrincipalType.CUSTOMER,
+                "mobile-banking",
+                "WEALTH_DIAGNOSIS",
+                "customer-demo-001",
+                "session-wealth-001",
+                FinanceContextV1.AuthenticationLevel.BASIC,
+                Set.of("wealth:read"));
     }
 
     private static void writeJson(HttpExchange exchange, int status, String body) throws IOException {

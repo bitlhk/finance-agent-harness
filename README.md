@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Simplified V1 In Progress · D3-D4 Query Complete`
+`Simplified V1 In Progress · Wealth Vertical Slice In Progress`
 
 V1 按两个连续阶段推进：
 
@@ -47,7 +47,13 @@ Provider SPI 只提供两个入口：
 
 1. 手机银行通过 Harness 完成一条真实只读查询；
 2. 手机银行通过 Harness 完成一条需要确认的模拟办理；
-3. Wealth Domain Pack 使用同一 Context、Provider 和 Evidence 形成专业财富建议。
+3. Wealth Domain Pack 使用同一 Context、Provider 和 Evidence 形成专业财富诊断。
+
+当前财富切片先完成客户资产诊断，不在 Harness Core 中写财富推荐规则：
+
+- `wealth.customer-context.query` 由 Provider 组合财富聚合与风险测评事实；
+- `domain-packs/wealth/customer-self-service` 负责财富诊断 SOP；
+- 具体产品推荐留待银行提供 `eligibleProducts` 后由后续 Skill 完成。
 
 第三项优先验证专业资产复用，不要求 V1 同时重构 Employee Agent 的 TypeScript Runtime。现有 EA 的直接 Integration 在 Java 骨架稳定后增量接入。
 
