@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "capability-result.v1",
+  "requestId": "req-demo-failed",
+  "traceId": "trace-demo-failed",
+  "status": "FAILED",
+  "content": "暂时无法完成查询。",
+  "data": {},
+  "missingInputs": [],
+  "nextActions": ["CHECK_AUTHORIZATION"],
+  "sourceSystem": "non-ai-banking",
+  "asOf": "2026-09-01T01:00:00Z",
+  "error": {
+    "failureClass": "NOT_AUTHORIZED",
+    "sourceCode": "ACCOUNT_DENIED",
+    "retryable": false,
+    "message": "account access denied",
+    "fieldErrors": ["account access denied"]
+  }
+}

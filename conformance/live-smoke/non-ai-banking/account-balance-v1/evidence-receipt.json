@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "evidence-receipt.v1",
+  "receiptId": "receipt-3c25aad8-b74d-4a42-87d7-ad28cf537cd0",
+  "requestId": "request-live-f988c70c-9ef0-412a-ba2c-0c107767ca1a",
+  "traceId": "trace-live-f988c70c-9ef0-412a-ba2c-0c107767ca1a",
+  "capabilityId": "account.balance.query",
+  "operation": "QUERY",
+  "providerId": "non-ai-banking-reference",
+  "sourceSystem": "account-core-simulator",
+  "resultStatus": "COMPLETED",
+  "startedAt": "2026-09-01T13:18:15.414705047Z",
+  "finishedAt": "2026-09-01T13:18:15.800659968Z"
+}

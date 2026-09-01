@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Simplified V1 Implementation Ready`
+`Simplified V1 In Progress · D3-D4 Query Complete`
 
 V1 按两个连续阶段推进：
 
@@ -59,6 +59,7 @@ Provider SPI 只提供两个入口：
 - [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
+- [ADR-0005：安装与语言分发策略](docs/adr/0005-installation-and-language-distribution.md)
 - [ADR-0001：长期架构基线](docs/adr/0001-architecture-baseline.md)
 - [ADR-0002：合同与语言策略](docs/adr/0002-contract-and-language-strategy.md)
 - [ADR-0003：Agent 业务组件生命周期](docs/adr/0003-agent-solution-lifecycle.md)

@@ -1,5 +1,7 @@
 package io.github.bitlhk.finance.harness.core;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,7 +22,7 @@ final class ContractChecks {
     }
 
     static <K, V> Map<K, V> immutableMap(Map<K, V> value) {
-        return value == null ? Map.of() : Map.copyOf(value);
+        return value == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(value));
     }
 
     static <T> List<T> immutableList(List<T> value) {

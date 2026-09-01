@@ -28,6 +28,7 @@ class ContractFixtureTest {
         assertRoundTrip("capability-request.query.json", CapabilityRequestV1.class);
         assertRoundTrip("capability-request.task-confirmed.json", CapabilityRequestV1.class);
         assertRoundTrip("capability-result.completed.json", CapabilityResultV1.class);
+        assertRoundTrip("capability-result.failed.json", CapabilityResultV1.class);
         assertRoundTrip("capability-result.need-confirmation.json", CapabilityResultV1.class);
         assertRoundTrip("evidence-receipt.query.json", EvidenceReceiptV1.class);
     }
@@ -64,6 +65,53 @@ class ContractFixtureTest {
     }
 
     @Test
+    void evidenceFactoryBindsRequestResultAndProvider() throws IOException {
+        CapabilityRequestV1 request = JSON.readValue(
+                validFixture("capability-request.query.json").toFile(), CapabilityRequestV1.class);
+        CapabilityResultV1 result = JSON.readValue(
+                validFixture("capability-result.completed.json").toFile(), CapabilityResultV1.class);
+        Instant startedAt = Instant.parse("2026-09-01T00:59:59Z");
+        Instant finishedAt = Instant.parse("2026-09-01T01:00:00Z");
+
+        EvidenceReceiptV1 receipt = EvidenceReceipts.from(
+                request, result, "provider-demo", startedAt, finishedAt);
+
+        assertEquals(request.capabilityId(), receipt.capabilityId());
+        assertEquals(result.sourceSystem(), receipt.sourceSystem());
+        assertEquals(result.status(), receipt.resultStatus());
+        assertEquals("provider-demo", receipt.providerId());
+        assertTrue(JSON.readTree(JSON.writeValueAsString(receipt)).path("startedAt").isTextual());
+    }
+
+    @Test
+    void evidenceFactoryRejectsMismatchedRequestIdentity() throws IOException {
+        CapabilityRequestV1 request = JSON.readValue(
+                validFixture("capability-request.query.json").toFile(), CapabilityRequestV1.class);
+        CapabilityResultV1 fixture = JSON.readValue(
+                validFixture("capability-result.completed.json").toFile(), CapabilityResultV1.class);
+        CapabilityResultV1 mismatched = new CapabilityResultV1(
+                fixture.schemaVersion(),
+                "different-request",
+                fixture.traceId(),
+                fixture.status(),
+                fixture.content(),
+                fixture.data(),
+                fixture.missingInputs(),
+                fixture.nextActions(),
+                fixture.sourceSystem(),
+                fixture.asOf(),
+                fixture.task(),
+                fixture.error());
+
+        assertThrows(IllegalArgumentException.class, () -> EvidenceReceipts.from(
+                request,
+                mismatched,
+                "provider-demo",
+                Instant.parse("2026-09-01T00:59:59Z"),
+                Instant.parse("2026-09-01T01:00:00Z")));
+    }
+
+    @Test
     void schemasAreStrictTopLevelJsonObjects() throws IOException {
         List<Path> schemas;
         try (Stream<Path> files = Files.walk(ROOT.resolve("contracts/json-schema"))) {
@@ -86,6 +134,7 @@ class ContractFixtureTest {
                 validFixture("capability-request.query.json").toFile(), CapabilityRequestV1.class);
         CapabilityResultV1 expected = JSON.readValue(
                 validFixture("capability-result.completed.json").toFile(), CapabilityResultV1.class);
+        assertTrue(expected.data().containsKey("nextPageToken"));
         FinanceProvider provider = new FinanceProvider() {
             @Override
             public CapabilityResultV1 query(CapabilityRequestV1 actual) {

@@ -68,12 +68,12 @@ public record CapabilityResultV1(
             String sourceCode,
             boolean retryable,
             String message,
-            Map<String, String> fieldErrors) {
+            List<String> fieldErrors) {
         public Failure {
             failureClass = ContractChecks.requiredText(failureClass, "error.failureClass");
             sourceCode = ContractChecks.requiredText(sourceCode, "error.sourceCode");
             message = ContractChecks.requiredText(message, "error.message");
-            fieldErrors = ContractChecks.immutableMap(fieldErrors);
+            fieldErrors = ContractChecks.immutableList(fieldErrors);
         }
     }
 }

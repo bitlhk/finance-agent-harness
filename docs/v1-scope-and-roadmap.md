@@ -1,6 +1,6 @@
 # V1 范围与快速实施路线
 
-状态：`Implementation Ready`
+状态：`In Progress · D3-D4 Complete`
 
 ## 1. V1 目标
 
@@ -69,6 +69,8 @@
 验收：合同不引用 OpenJiuwen、手机银行 Agent ID 或 non-ai HTTP 类型。
 
 ### D3-D4：只读查询
+
+状态：`Complete`
 
 交付：
 

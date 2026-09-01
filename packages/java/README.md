@@ -1,6 +1,6 @@
 # Java Core
 
-Java 是简化版 V1 的唯一 Core 实现语言。
+Java 是简化版 V1 的首个 Core 参考实现语言。
 
 首版包含：
 

@@ -14,7 +14,7 @@ ADR-0001 至 ADR-0003 建立了完整长期架构，包括六类 Core Contract�
 
 ## Decision
 
-1. V1 以 Java 为唯一 Core 实现语言；
+1. Java 是 V1 首个参考实现，V1 只交付 Java SDK；Canonical JSON Schema 保持语言无关；
 2. 手机银行是首个消费者；
 3. OpenJiuwen Java 是首个 Runtime Integration；
 4. `non-ai-banking` 是首个 Reference Provider；

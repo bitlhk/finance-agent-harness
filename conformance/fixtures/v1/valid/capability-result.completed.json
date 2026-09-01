@@ -12,7 +12,8 @@
         "availableBalance": 12580.50,
         "currency": "CNY"
       }
-    ]
+    ],
+    "nextPageToken": null
   },
   "missingInputs": [],
   "nextActions": [],
