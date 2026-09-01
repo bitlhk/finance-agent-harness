@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Simplified V1 In Progress · Two Wealth Build Targets Contract-ready`
+`Runtime Plane V1 Complete · Isolated Deployment Pending`
 
 V1 按两个连续阶段推进：
 
@@ -48,6 +48,13 @@ Provider SPI 只提供两个入口：
 1. 手机银行通过 Harness 完成一条真实只读查询；
 2. 手机银行通过 Harness 完成一条需要确认的模拟办理；
 3. 面客与员工辅助 Wealth Domain Pack 使用同一 Core 合同和 Evidence 语义，消费各自宿主的 Provider。
+
+当前已验证：
+
+- `account.balance.query` 真实只读查询；
+- `wealth.customer-context.query` 面客财富诊断；
+- `wealth.previsit-context.query` 员工辅助财富访前上下文；
+- `channel.preferences.update` 预检、确认、单次提交与重复确认幂等。
 
 当前财富切片先完成客户资产诊断，不在 Harness Core 中写财富推荐规则：
 

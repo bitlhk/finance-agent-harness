@@ -35,9 +35,14 @@ class NonAiBankingProviderTest {
     private final AtomicInteger accountHits = new AtomicInteger();
     private final AtomicInteger wealthAggregateHits = new AtomicInteger();
     private final AtomicInteger riskAssessmentHits = new AtomicInteger();
+    private final AtomicInteger taskCreateHits = new AtomicInteger();
+    private final AtomicInteger taskConfirmHits = new AtomicInteger();
+    private final AtomicInteger taskSubmitHits = new AtomicInteger();
     private final AtomicReference<String> observedSession = new AtomicReference<>();
     private final AtomicReference<String> observedRequestId = new AtomicReference<>();
     private final AtomicReference<String> observedTraceId = new AtomicReference<>();
+    private final AtomicReference<String> observedPreflightBody = new AtomicReference<>();
+    private final AtomicReference<String> taskStatus = new AtomicReference<>("CREATED");
 
     @BeforeEach
     void startServer() throws IOException {
@@ -95,6 +100,44 @@ class NonAiBankingProviderTest {
                      "sourceSystem":"suitability-simulator-v2"},
                      "asOf":"2026-09-01T01:00:02Z","sourceSystem":"suitability-simulator","error":null}
                     """);
+        });
+        server.createContext("/api/v1/preferences/channel", exchange -> writeJson(exchange, 200, """
+                {"requestId":"req-preference","traceId":"trace-preference","status":"SUCCESS",
+                 "data":{"language":"zh-CN","largeTextEnabled":false,"screenReaderEnabled":false,
+                 "accessibilityMode":false,"defaultAccountId":"acct-002","version":4},
+                 "asOf":"2026-09-01T01:00:04Z","sourceSystem":"preference-simulator","error":null}
+                """));
+        server.createContext("/api/v1/capabilities/channel.preferences.update/preflight", exchange -> {
+            observedPreflightBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            writeJson(exchange, 200, """
+                    {"requestId":"req-preflight","traceId":"trace-preflight","status":"SUCCESS",
+                     "data":{"preflightId":"pf-pref-001","capabilityId":"channel.preferences.update",
+                     "capabilityVersion":"2.1.0","riskLevel":"R2","canSubmit":true,
+                     "summary":"将开启大字模式。","requiredConfirmations":["核对渠道偏好","明确确认保存"]},
+                     "asOf":"2026-09-01T01:00:05Z","sourceSystem":"policy-simulator","error":null}
+                    """);
+        });
+        server.createContext("/api/v1/tasks", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if ("/api/v1/tasks".equals(path)) {
+                taskCreateHits.incrementAndGet();
+                taskStatus.set("CREATED");
+                writeTask(exchange, 202, "CREATED", false);
+                return;
+            }
+            if (path.endsWith("/confirm")) {
+                taskConfirmHits.incrementAndGet();
+                taskStatus.set("CONFIRMED");
+                writeTask(exchange, 200, "CONFIRMED", false);
+                return;
+            }
+            if (path.endsWith("/submit")) {
+                taskSubmitHits.incrementAndGet();
+                taskStatus.set("COMPLETED");
+                writeTask(exchange, 200, "COMPLETED", true);
+                return;
+            }
+            writeTask(exchange, 200, taskStatus.get(), "COMPLETED".equals(taskStatus.get()));
         });
         server.start();
         URI baseUri = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
@@ -197,6 +240,81 @@ class NonAiBankingProviderTest {
         assertFalse(receipt.receiptId().isBlank());
     }
 
+    @Test
+    void channelPreferenceTaskStopsAtConfirmationAndPreservesBankTaskState() {
+        CapabilityResultV1 result = provider.executeTask(taskRequest(
+                Map.of("largeTextEnabled", true),
+                "idem-channel-pref-001",
+                null,
+                Map.of(),
+                null));
+
+        assertEquals(CapabilityResultV1.Status.NEED_CONFIRMATION, result.status());
+        assertNotNull(result.task());
+        assertEquals("task-pref-001", result.task().taskRef());
+        assertTrue(result.task().confirmationRequired());
+        assertEquals("idem-channel-pref-001", result.task().continuation().get("idempotencyKey"));
+        assertTrue(observedPreflightBody.get().contains("\"largeTextEnabled\":true"));
+        assertTrue(observedPreflightBody.get().contains("\"language\":\"zh-CN\""));
+        assertTrue(observedPreflightBody.get().contains("\"version\":4"));
+        assertEquals(1, taskCreateHits.get());
+        assertEquals(0, taskConfirmHits.get());
+        assertEquals(0, taskSubmitHits.get());
+    }
+
+    @Test
+    void confirmedChannelPreferenceTaskSubmitsOnceAndRepeatedResumeIsIdempotent() {
+        CapabilityResultV1 started = provider.executeTask(taskRequest(
+                Map.of("largeTextEnabled", true),
+                "idem-channel-pref-002",
+                null,
+                Map.of(),
+                null));
+        CapabilityRequestV1.Confirmation confirmation = new CapabilityRequestV1.Confirmation(
+                true,
+                "确认保存渠道偏好",
+                Instant.parse("2026-09-01T01:00:06Z"));
+
+        CapabilityResultV1 completed = provider.executeTask(taskRequest(
+                Map.of(),
+                "idem-channel-pref-002",
+                started.task().taskRef(),
+                started.task().continuation(),
+                confirmation));
+        CapabilityResultV1 replayed = provider.executeTask(taskRequest(
+                Map.of(),
+                "idem-channel-pref-002",
+                started.task().taskRef(),
+                started.task().continuation(),
+                confirmation));
+
+        assertEquals(CapabilityResultV1.Status.COMPLETED, completed.status());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, replayed.status());
+        assertEquals("COMPLETED", completed.task().status());
+        assertEquals(1, taskConfirmHits.get());
+        assertEquals(1, taskSubmitHits.get());
+    }
+
+    @Test
+    void channelPreferenceTaskRequiresTaskOperationAndIdempotency() {
+        CapabilityRequestV1 wrongOperation = new CapabilityRequestV1(
+                CapabilityRequestV1.SCHEMA_VERSION,
+                NonAiBankingProvider.CHANNEL_PREFERENCES_UPDATE,
+                CapabilityRequestV1.Operation.QUERY,
+                channelContext(),
+                Map.of("largeTextEnabled", true),
+                "idem-wrong-operation",
+                null,
+                Map.of(),
+                null);
+        CapabilityResultV1 missingIdempotency = provider.executeTask(taskRequest(
+                Map.of("largeTextEnabled", true), null, null, Map.of(), null));
+
+        assertEquals("TASK_OPERATION_REQUIRED", provider.executeTask(wrongOperation).error().sourceCode());
+        assertEquals("IDEMPOTENCY_KEY_REQUIRED", missingIdempotency.error().sourceCode());
+        assertEquals(0, taskCreateHits.get());
+    }
+
     private static CapabilityRequestV1 request(Map<String, Object> parameters) {
         return new CapabilityRequestV1(
                 CapabilityRequestV1.SCHEMA_VERSION,
@@ -221,6 +339,24 @@ class NonAiBankingProviderTest {
                 "wealth-diagnosis-001",
                 Map.of(),
                 null);
+    }
+
+    private static CapabilityRequestV1 taskRequest(
+            Map<String, Object> parameters,
+            String idempotencyKey,
+            String taskRef,
+            Map<String, Object> continuation,
+            CapabilityRequestV1.Confirmation confirmation) {
+        return new CapabilityRequestV1(
+                CapabilityRequestV1.SCHEMA_VERSION,
+                NonAiBankingProvider.CHANNEL_PREFERENCES_UPDATE,
+                CapabilityRequestV1.Operation.TASK,
+                channelContext(),
+                parameters,
+                idempotencyKey,
+                taskRef,
+                continuation,
+                confirmation);
     }
 
     private static FinanceContextV1 context() {
@@ -251,6 +387,37 @@ class NonAiBankingProviderTest {
                 "session-wealth-001",
                 FinanceContextV1.AuthenticationLevel.BASIC,
                 Set.of("wealth:read"));
+    }
+
+    private static FinanceContextV1 channelContext() {
+        return new FinanceContextV1(
+                FinanceContextV1.SCHEMA_VERSION,
+                "request-channel-001",
+                "trace-channel-001",
+                "customer-demo-001",
+                FinanceContextV1.PrincipalType.CUSTOMER,
+                "mobile-banking",
+                "CHANNEL_SETTINGS",
+                "customer-demo-001",
+                "session-channel-001",
+                FinanceContextV1.AuthenticationLevel.BASIC,
+                Set.of("channel:write"));
+    }
+
+    private static void writeTask(
+            HttpExchange exchange,
+            int httpStatus,
+            String status,
+            boolean includeResult) throws IOException {
+        String result = includeResult
+                ? ",\"result\":{\"language\":\"zh-CN\",\"largeTextEnabled\":true,\"version\":5}"
+                : "";
+        writeJson(exchange, httpStatus, """
+                {"requestId":"req-task","traceId":"trace-task","status":"SUCCESS",
+                 "data":{"taskId":"task-pref-001","capabilityId":"channel.preferences.update",
+                 "status":"%s","operation":"SUBMIT"%s},
+                 "asOf":"2026-09-01T01:00:07Z","sourceSystem":"task-store-simulator","error":null}
+                """.formatted(status, result));
     }
 
     private static void writeJson(HttpExchange exchange, int status, String body) throws IOException {

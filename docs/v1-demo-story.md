@@ -36,7 +36,8 @@ Mobile Banking
 
 ## 3. 第二幕：需要确认的办理
 
-选择低风险模拟任务，例如网点预约或渠道偏好更新。
+进入渠道设置，修改语言或大字模式。当前 V1 使用统一能力
+`channel.preferences.update`。
 
 用户先提出办理请求，系统返回待确认摘要；用户确认后再提交。
 
@@ -46,7 +47,7 @@ Mobile Banking
 preflight
 → NEED_CONFIRMATION
 → 用户确认
-→ submit once
+→ submit once（重复确认不重复提交）
 → COMPLETED
 → EvidenceReceipt
 ```

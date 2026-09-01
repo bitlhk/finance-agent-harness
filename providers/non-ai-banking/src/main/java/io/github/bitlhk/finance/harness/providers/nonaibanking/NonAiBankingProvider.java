@@ -22,13 +22,26 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 /** Reference Provider Adapter for the non-ai-banking simulator. */
 public final class NonAiBankingProvider implements FinanceProvider {
     public static final String PROVIDER_ID = "non-ai-banking-reference";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
     public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
+    public static final String CHANNEL_PREFERENCES_UPDATE = "channel.preferences.update";
+
+    private static final Set<String> CHANNEL_PREFERENCE_PARAMETERS = Set.of(
+            "action",
+            "language",
+            "largeTextEnabled",
+            "screenReaderEnabled",
+            "accessibilityMode",
+            "defaultAccountId",
+            "version");
+    private static final Pattern TASK_REF = Pattern.compile("[A-Za-z0-9._:-]{1,160}");
 
     private final Client client;
 
@@ -113,8 +126,244 @@ public final class NonAiBankingProvider implements FinanceProvider {
     @Override
     public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
         Objects.requireNonNull(request, "request");
-        return localFailure(request, "PERMANENT_FAILURE", "TASK_NOT_IMPLEMENTED", false,
-                "task execution is not implemented in this provider version", List.of("USE_QUERY"));
+        if (request.operation() != CapabilityRequestV1.Operation.TASK) {
+            return localFailure(request, "INVALID_INPUT", "TASK_OPERATION_REQUIRED", false,
+                    "executeTask requires operation TASK", List.of("USE_TASK_OPERATION"));
+        }
+        if (!CHANNEL_PREFERENCES_UPDATE.equals(request.capabilityId())) {
+            return localFailure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
+                    "unsupported task capability: " + request.capabilityId(),
+                    List.of("CHECK_CAPABILITY_ID"));
+        }
+        try {
+            return request.taskRef() == null
+                    ? startChannelPreferenceUpdate(request)
+                    : resumeChannelPreferenceUpdate(request);
+        } catch (ProviderFailure failure) {
+            return upstreamFailure(request, failure);
+        } catch (RuntimeException failure) {
+            return localFailure(request, "TEMPORARY_FAILURE", "PROVIDER_CONTRACT_FAILURE", false,
+                    "provider could not map the bank task response", List.of("CHECK_PROVIDER"));
+        }
+    }
+
+    private CapabilityResultV1 startChannelPreferenceUpdate(CapabilityRequestV1 request) {
+        if (request.confirmation() != null && request.confirmation().confirmed()) {
+            return localFailure(request, "INVALID_INPUT", "TASK_REF_REQUIRED_FOR_CONFIRMATION", false,
+                    "confirmation can only resume an existing task", List.of("START_TASK_FIRST"));
+        }
+        if (request.idempotencyKey() == null) {
+            return localFailure(request, "INVALID_INPUT", "IDEMPOTENCY_KEY_REQUIRED", false,
+                    "channel preference update requires an idempotency key",
+                    List.of("PROVIDE_IDEMPOTENCY_KEY"));
+        }
+
+        Response current = client.get("/api/v1/preferences/channel", Map.of(), request.context());
+        Map<String, Object> parameters = new LinkedHashMap<>();
+        copyAllowedParameters(current.data(), parameters);
+        copyAllowedParameters(request.parameters(), parameters);
+
+        Response preflight = client.post(
+                "/api/v1/capabilities/" + CHANNEL_PREFERENCES_UPDATE + "/preflight",
+                parameters,
+                request.context());
+        if (!Boolean.TRUE.equals(preflight.data().get("canSubmit"))) {
+            return new CapabilityResultV1(
+                    CapabilityResultV1.SCHEMA_VERSION,
+                    request.context().requestId(),
+                    request.context().traceId(),
+                    CapabilityResultV1.Status.NEED_USER,
+                    text(preflight.data().get("summary"), "办理条件未满足，请补充信息后重试。"),
+                    Map.of("preflight", preflight.data()),
+                    List.of(),
+                    List.of("UPDATE_TASK_INPUT"),
+                    preflight.sourceSystem(),
+                    preflight.asOf(),
+                    null,
+                    null);
+        }
+
+        String preflightId = requiredDataText(preflight.data(), "preflightId");
+        Map<String, Object> createBody = new LinkedHashMap<>();
+        createBody.put("capabilityId", CHANNEL_PREFERENCES_UPDATE);
+        createBody.put("operation", "SUBMIT");
+        createBody.put("preflightId", preflightId);
+        createBody.put("idempotencyKey", request.idempotencyKey());
+        createBody.put("parameters", parameters);
+        Response created = client.post("/api/v1/tasks", createBody, request.context());
+        String taskRef = requiredDataText(created.data(), "taskId");
+
+        Map<String, Object> continuation = new LinkedHashMap<>();
+        continuation.put("preflightId", preflightId);
+        continuation.put("idempotencyKey", request.idempotencyKey());
+        copyIfPresent(preflight.data(), continuation, "capabilityVersion");
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("summary", text(preflight.data().get("summary"), "将更新渠道展示偏好。"));
+        data.put("requiredConfirmations", list(preflight.data().get("requiredConfirmations")));
+        data.put("proposedParameters", Map.copyOf(parameters));
+
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.NEED_CONFIRMATION,
+                "请确认后更新渠道展示偏好。",
+                data,
+                created,
+                taskRef,
+                text(created.data().get("status"), "CREATED"),
+                true,
+                continuation,
+                List.of("CONFIRM_TASK"));
+    }
+
+    private CapabilityResultV1 resumeChannelPreferenceUpdate(CapabilityRequestV1 request) {
+        if (!TASK_REF.matcher(request.taskRef()).matches()) {
+            return localFailure(request, "INVALID_INPUT", "TASK_REF_INVALID", false,
+                    "taskRef does not match the provider task identity contract",
+                    List.of("CHECK_TASK_REF"));
+        }
+        Response observed = client.get("/api/v1/tasks/" + request.taskRef(), Map.of(), request.context());
+        String capabilityId = text(observed.data().get("capabilityId"), "");
+        if (!capabilityId.isBlank() && !CHANNEL_PREFERENCES_UPDATE.equals(capabilityId)) {
+            return localFailure(request, "INVALID_INPUT", "TASK_CAPABILITY_MISMATCH", false,
+                    "taskRef belongs to a different capability", List.of("CHECK_TASK_REF"));
+        }
+        String status = text(observed.data().get("status"), "UNKNOWN").toUpperCase();
+        if ("COMPLETED".equals(status)) {
+            return completedTask(request, observed);
+        }
+        if ("CANCELLED".equals(status) || "FAILED".equals(status)) {
+            return localFailure(request, "PERMANENT_FAILURE", "TASK_" + status, false,
+                    "bank task is " + status.toLowerCase(), List.of("START_NEW_TASK"));
+        }
+        if ("CREATED".equals(status)) {
+            CapabilityRequestV1.Confirmation confirmation = request.confirmation();
+            if (confirmation == null || !confirmation.confirmed()) {
+                return taskResult(
+                        request,
+                        CapabilityResultV1.Status.NEED_CONFIRMATION,
+                        "请确认后更新渠道展示偏好。",
+                        Map.of("task", observed.data()),
+                        observed,
+                        request.taskRef(),
+                        status,
+                        true,
+                        request.continuation(),
+                        List.of("CONFIRM_TASK"));
+            }
+            observed = client.post(
+                    "/api/v1/tasks/" + request.taskRef() + "/confirm",
+                    Map.of("confirmationText", confirmation.confirmationText()),
+                    request.context());
+            status = text(observed.data().get("status"), "CONFIRMED").toUpperCase();
+        }
+        if ("CONFIRMED".equals(status)) {
+            Response submitted = client.post(
+                    "/api/v1/tasks/" + request.taskRef() + "/submit",
+                    Map.of(),
+                    request.context());
+            String submittedStatus = text(submitted.data().get("status"), "UNKNOWN").toUpperCase();
+            if ("COMPLETED".equals(submittedStatus)) {
+                return completedTask(request, submitted);
+            }
+            return taskResult(
+                    request,
+                    CapabilityResultV1.Status.PROCESSING,
+                    "渠道偏好更新已提交，正在处理。",
+                    Map.of("task", submitted.data()),
+                    submitted,
+                    request.taskRef(),
+                    submittedStatus,
+                    false,
+                    request.continuation(),
+                    List.of("CHECK_TASK_STATUS"));
+        }
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.PROCESSING,
+                "渠道偏好更新正在处理。",
+                Map.of("task", observed.data()),
+                observed,
+                request.taskRef(),
+                status,
+                false,
+                request.continuation(),
+                List.of("CHECK_TASK_STATUS"));
+    }
+
+    private static CapabilityResultV1 completedTask(CapabilityRequestV1 request, Response response) {
+        String taskRef = text(response.data().get("taskId"), request.taskRef());
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.COMPLETED,
+                "渠道展示偏好已更新。",
+                Map.of("task", response.data()),
+                response,
+                taskRef,
+                "COMPLETED",
+                false,
+                request.continuation(),
+                List.of());
+    }
+
+    private static CapabilityResultV1 taskResult(
+            CapabilityRequestV1 request,
+            CapabilityResultV1.Status resultStatus,
+            String content,
+            Map<String, Object> data,
+            Response response,
+            String taskRef,
+            String taskStatus,
+            boolean confirmationRequired,
+            Map<String, Object> continuation,
+            List<String> nextActions) {
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                resultStatus,
+                content,
+                data,
+                List.of(),
+                nextActions,
+                response.sourceSystem(),
+                response.asOf(),
+                new CapabilityResultV1.TaskState(
+                        taskRef,
+                        taskStatus,
+                        confirmationRequired,
+                        continuation),
+                null);
+    }
+
+    private static void copyAllowedParameters(Map<String, Object> source, Map<String, Object> target) {
+        for (String field : CHANNEL_PREFERENCE_PARAMETERS) {
+            if (source.containsKey(field) && source.get(field) != null) {
+                target.put(field, source.get(field));
+            }
+        }
+    }
+
+    private static void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String field) {
+        Object value = source.get(field);
+        if (value != null && !String.valueOf(value).isBlank()) {
+            target.put(field, value);
+        }
+    }
+
+    private static String requiredDataText(Map<String, Object> data, String field) {
+        String value = text(data.get(field), "");
+        if (value.isBlank()) {
+            throw new IllegalStateException("upstream response missing " + field);
+        }
+        return value;
+    }
+
+    private static String text(Object value, String fallback) {
+        return value == null || String.valueOf(value).isBlank() ? fallback : String.valueOf(value);
+    }
+
+    private static List<?> list(Object value) {
+        return value instanceof List<?> items ? List.copyOf(items) : List.of();
     }
 
     private static void copyQueryParameter(
@@ -134,7 +383,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 context.requestId(),
                 context.traceId(),
                 CapabilityResultV1.Status.FAILED,
-                "暂时无法完成查询，请按提示处理后重试。",
+                "暂时无法完成请求，请按提示处理后重试。",
                 Map.of(),
                 List.of(),
                 failure.nextActions(),
@@ -264,6 +513,27 @@ public final class NonAiBankingProvider implements FinanceProvider {
             }
         }
 
+        private Response post(String path, Object body, FinanceContextV1 context) {
+            try {
+                ensureSession(context);
+                HttpResponse<String> response = sendPost(path, body, context, sessionId.get());
+                if (response.statusCode() == 401) {
+                    sessionId.set(null);
+                    ensureSession(context);
+                    response = sendPost(path, body, context, sessionId.get());
+                }
+                return parse(response, context);
+            } catch (ProviderFailure failure) {
+                throw failure;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw transportFailure(context, "REQUEST_INTERRUPTED", "upstream request interrupted");
+            } catch (Exception exception) {
+                throw transportFailure(context, "UPSTREAM_TRANSPORT",
+                        "upstream request failed: " + safeMessage(exception));
+            }
+        }
+
         private void ensureSession(FinanceContextV1 context) throws Exception {
             if (sessionId.get() != null && !sessionId.get().isBlank()) {
                 return;
@@ -298,6 +568,20 @@ public final class NonAiBankingProvider implements FinanceProvider {
             return http.send(requestBuilder(path + encodeQuery(query), context)
                             .header(SESSION_HEADER, session)
                             .GET()
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        }
+
+        private HttpResponse<String> sendPost(
+                String path,
+                Object body,
+                FinanceContextV1 context,
+                String session) throws Exception {
+            return http.send(requestBuilder(path, context)
+                            .header(SESSION_HEADER, session)
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(
+                                    JSON.writeValueAsString(body), StandardCharsets.UTF_8))
                             .build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         }

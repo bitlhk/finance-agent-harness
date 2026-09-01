@@ -1,6 +1,6 @@
 # V1 范围与快速实施路线
 
-状态：`In Progress · D3-D4 Complete`
+状态：`Runtime Plane V1 Complete · Isolated Deployment Pending`
 
 ## 1. V1 目标
 
@@ -84,16 +84,21 @@
 
 ### D5-D6：确认办理
 
+状态：`Complete`
+
 交付：
 
-- 将现有 `BankingTaskAdapter` 包装到 `executeTask`；
-- 一条 R2 模拟任务；
+- `NonAiBankingProvider.executeTask` 对接模拟银行原生任务协议；
+- OpenJiuwen `FinanceHarnessTaskAdapter` 负责多轮确认和 Checkpoint 映射；
+- `channel.preferences.update` 一条 R2 模拟任务；
 - 确认前不提交，确认后只提交一次；
 - 状态和错误映射测试。
 
 优先选择预约或渠道偏好，不使用资金交易作为第一条办理用例。
 
 ### D7-D8：财富能力
+
+状态：`Complete`
 
 交付：
 
@@ -106,6 +111,8 @@
 验收：面客侧输出客户约束、组合方向和下一步；员工侧输出访前核心矛盾、关键问题和面谈目标，而不是只复述客户资料。
 
 ### D9-D10：复跑与演示
+
+状态：`In Progress`
 
 交付：
 
