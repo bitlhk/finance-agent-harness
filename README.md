@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Simplified V1 In Progress · Wealth Vertical Slice In Progress`
+`Simplified V1 In Progress · Cross-Application Wealth & Builder Handoff Ready`
 
 V1 按两个连续阶段推进：
 
@@ -47,7 +47,7 @@ Provider SPI 只提供两个入口：
 
 1. 手机银行通过 Harness 完成一条真实只读查询；
 2. 手机银行通过 Harness 完成一条需要确认的模拟办理；
-3. Wealth Domain Pack 使用同一 Context、Provider 和 Evidence 形成专业财富诊断。
+3. 面客与员工辅助 Wealth Domain Pack 使用同一 Core 合同和 Evidence 语义，消费各自宿主的 Provider。
 
 当前财富切片先完成客户资产诊断，不在 Harness Core 中写财富推荐规则：
 
@@ -63,6 +63,8 @@ Provider SPI 只提供两个入口：
 - [V1 范围与快速路线](docs/v1-scope-and-roadmap.md)
 - [V1 演示故事](docs/v1-demo-story.md)
 - [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
+- [Builder 财富场景交接](docs/builder-handoff-wealth-v1.md)
+- [跨应用财富验证记录](examples/cross-channel-wealth/verification.md)
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
 - [ADR-0005：安装与语言分发策略](docs/adr/0005-installation-and-language-distribution.md)
@@ -74,11 +76,11 @@ Provider SPI 只提供两个入口：
 
 ```text
 finance-agent-harness/
-├── contracts/                       # 四个语言无关合同
+├── contracts/                       # 四个运行合同和一个轻量构建输入
 ├── packages/java/                   # V1 Java Core 和 Provider SPI
 ├── integrations/openjiuwen-java/    # OpenJiuwen Integration
 ├── providers/non-ai-banking/        # 首个参考 Provider Adapter
-├── domain-packs/wealth/              # 财富 Skill、SOP 和评测引用
+├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用
 ├── conformance/                      # 合同与 Adapter 验证
 ├── examples/mobile-banking/          # 首个消费者
 └── docs/                             # 架构、路线和 ADR
@@ -92,8 +94,8 @@ finance-agent-harness/
 - 不实现独立 Policy Engine；
 - 不复制银行的授权、适当性和交易规则；
 - 不同时维护 TypeScript、Java、Python 三套 Core；
-- 不建设 Builder、Solution Manifest 或自动优化平台；
+- 不在本仓实现 Builder、完整 Solution Manifest 或自动优化平台；
 - 不重做知识平台、模型网关和通用安全平台；
 - 不全量迁移手机银行或 Employee Agent。
 
-长期设计仍保留 Profile、Builder、多 Runtime、跨语言 Conformance 和持续改进方向，但不作为 V1 开工前置条件。
+V1 只为外部 Builder 提供一个最小构建输入和已验证资产引用。长期设计仍保留 Profile、多 Runtime、跨语言 Conformance 和持续改进方向，但不作为 V1 开工前置条件。

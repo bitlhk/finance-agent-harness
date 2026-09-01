@@ -23,3 +23,16 @@ Mobile Banking / OpenJiuwen Java
 Provider 只返回可追溯事实；资产结构、流动性、集中度和关键问题的判断由 Wealth Domain Pack 完成。当前没有 `eligibleProducts`，因此不生成具体产品推荐或确定性配置比例。
 
 V1 不要求同步重构现有 EA TypeScript Runtime。下一步是在同一财富事实合同上增加 `employee-assisted` Pack，用客户经理访前诊断验证跨渠道复用。
+
+## 客户经理侧
+
+`domain-packs/wealth/employee-assisted` 已提炼 EA `wealth-manager-assistant@2.1.5` 的访前诊断主链。示例绑定将语义能力 `wealth.previsit-context.query` 映射到 EA 已有的 `prepare_wealth_previsit_context`，不复制 EA 的客户权限、Twenty CRM 或 Runtime 治理实现。
+
+两侧共享的是 Finance Harness 请求与证据语义以及财富专业方法，不要求共享同一个银行 Provider：
+
+```text
+customer-self-service -> non-ai-banking Provider
+employee-assisted     -> EA Customer/Portfolio Provider
+```
+
+Builder 首个目标仍使用已经在线验证的 `customer-self-service` Java 链路；客户经理目标在 EA Provider Binding 验证后追加。

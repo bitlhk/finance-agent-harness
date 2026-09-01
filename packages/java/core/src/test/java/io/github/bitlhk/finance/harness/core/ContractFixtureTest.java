@@ -118,7 +118,7 @@ class ContractFixtureTest {
             schemas = files.filter(path -> path.getFileName().toString().endsWith(".schema.json"))
                     .toList();
         }
-        assertEquals(4, schemas.size());
+        assertEquals(5, schemas.size());
         for (Path schema : schemas) {
             JsonNode root = JSON.readTree(schema.toFile());
             assertEquals("https://json-schema.org/draft/2020-12/schema", root.path("$schema").asText());
@@ -126,6 +126,26 @@ class ContractFixtureTest {
             assertFalse(root.path("additionalProperties").asBoolean(true), schema.toString());
             assertTrue(root.path("required").isArray(), schema.toString());
         }
+    }
+
+    @Test
+    void solutionBuildInputKeepsCompositionReferencesAndSecretsOut() throws IOException {
+        JsonNode input = JSON.readTree(ROOT.resolve(
+                "examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json").toFile());
+
+        assertEquals("finance-agent-solution-build.v1", input.path("schemaVersion").asText());
+        assertEquals("openjiuwen", input.path("runtime").path("family").asText());
+        assertEquals("java", input.path("runtime").path("language").asText());
+        assertEquals("customer-self-service", input.path("profileRef").path("id").asText());
+        assertEquals("wealth-customer-self-service",
+                input.path("domainPackRefs").path(0).path("id").asText());
+        assertEquals("non-ai-banking-reference",
+                input.path("providerRefs").path(0).path("id").asText());
+        assertTrue(input.path("modelRef").asText().startsWith("env://"));
+        String serialized = JSON.writeValueAsString(input).toLowerCase();
+        assertFalse(serialized.contains("apikey"));
+        assertFalse(serialized.contains("password"));
+        assertFalse(serialized.contains("secret"));
     }
 
     @Test
