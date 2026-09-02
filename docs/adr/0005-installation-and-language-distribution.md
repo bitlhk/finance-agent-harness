@@ -23,9 +23,17 @@
 ```text
 Canonical Schema Bundle
 ├── Maven: finance-harness-core
+├── Maven: finance-harness-openjiuwen-java
 ├── PyPI: finance-agent-harness      # 有 Python Consumer 后实现
 └── JSON/HTTP Adapter                # 混合语言时实现
 ```
+
+Java V1 的两个安装单元分别承担不同职责：
+
+- `finance-harness-core`：Canonical Contract 的 Java 类型与 Provider SPI；
+- `finance-harness-openjiuwen-java`：OpenJiuwen 宿主调用到 Core Contract 的通用 Bridge。
+
+具体应用的任务对象、Agent ID、Spring 装配和 UI 状态不进入上述安装单元；它们由消费端薄 Host Adapter 负责。
 
 Builder 可以继续使用 Python。它消费 Schema、配置和资产引用，生成或装配 Java/Python Solution；Builder 的实现语言不决定产物语言。
 

@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Runtime Plane V1 Complete · Isolated Deployment Pending`
+`Runtime Plane V1 Verified · Installable OpenJiuwen Java Bridge Available`
 
 V1 按两个连续阶段推进：
 
@@ -56,6 +56,8 @@ Provider SPI 只提供两个入口：
 - `wealth.previsit-context.query` 员工辅助财富访前上下文；
 - `channel.preferences.update` 预检、确认、单次提交与重复确认幂等。
 
+OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过依赖该模块消费 Harness，应用仓仅保留原生任务类型的薄映射；公共 Integration 不再由手机银行代码定义。
+
 当前财富切片先完成客户资产诊断，不在 Harness Core 中写财富推荐规则：
 
 - `wealth.customer-context.query` 由 Provider 组合财富聚合与风险测评事实；
@@ -99,7 +101,7 @@ finance-agent-harness/
 └── docs/                             # 架构、路线和 ADR
 ```
 
-目录可以按实施逐步创建，不要求在第一笔代码中一次补齐。
+Java V1 可通过 `mvn install` 安装到本机 Maven 仓库。当前以 Maven 模块发布，后续是否进入私有制品库由真实交付环境决定，不建设中央 Harness 服务。
 
 ## V1 不做
 

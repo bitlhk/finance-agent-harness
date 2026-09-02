@@ -1,6 +1,6 @@
 # V1 范围与快速实施路线
 
-状态：`Runtime Plane V1 Complete · Isolated Deployment Pending`
+状态：`Runtime Plane V1 Verified · Installable Integration Complete`
 
 ## 1. V1 目标
 
@@ -112,7 +112,7 @@
 
 ### D9-D10：复跑与演示
 
-状态：`In Progress`
+状态：`Complete`
 
 交付：
 
@@ -120,6 +120,12 @@
 - `finance-skill-eval` 财富对照结果引用；
 - 演示脚本；
 - V1 复盘和后续差距清单。
+
+补充完成：
+
+- OpenJiuwen Java Bridge 从手机银行应用代码中抽离为独立 Maven 模块；
+- 手机银行改为消费公共模块，只保留 Host 类型映射；
+- 本地隔离环境完成账户查询、财富诊断和确认办理三条回归。
 
 ## 5. Definition of Done
 

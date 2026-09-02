@@ -14,6 +14,7 @@
 
     <modules>
         <module>packages/java/core</module>
+        <module>integrations/openjiuwen-java</module>
         <module>providers/non-ai-banking</module>
         <module>providers/employee-agent</module>
         <module>integrations/employee-agent-java</module>
