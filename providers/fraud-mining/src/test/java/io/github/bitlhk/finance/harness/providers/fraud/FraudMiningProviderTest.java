@@ -1,0 +1,126 @@
+package io.github.bitlhk.finance.harness.providers.fraud;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
+import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
+import io.github.bitlhk.finance.harness.core.FinanceContextV1;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class FraudMiningProviderTest {
+    private HttpServer server;
+    private FraudMiningProvider provider;
+
+    @BeforeEach
+    void startServer() throws IOException {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/v1/samples", exchange -> {
+            String query = exchange.getRequestURI().getRawQuery();
+            if (query != null && query.contains("keyword=upstream-error")) {
+                writeJson(exchange, 500, "{\"code\":500,\"message\":\"failed\",\"data\":null}");
+                return;
+            }
+            if (query != null && query.contains("keyword=fraud-001")) {
+                writeJson(exchange, 200, """
+                        {"code":200,"message":"success","data":{"items":[
+                          {"id":17,"cino":"fraud-001","label":1,"match_status":"matched",
+                           "match_confidence":0.91,"prediction_result":"fraud","prediction_score":0.78,
+                           "created_at":"2026-09-02T02:00:00"}],"total":1,"page":1,"page_size":20}}
+                        """);
+                return;
+            }
+            writeJson(exchange, 200,
+                    "{\"code\":200,\"message\":\"success\",\"data\":{\"items\":[],\"total\":0,\"page\":1,\"page_size\":20}}");
+        });
+        server.start();
+        provider = new FraudMiningProvider(new FraudMiningProvider.Config(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(2)));
+    }
+
+    @AfterEach
+    void stopServer() {
+        if (server != null) {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void matchedIncidentProducesExplicitBlockDecisionWithoutLeakingRawFeatures() {
+        CapabilityResultV1 result = provider.query(request("fraud-001"));
+
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals("BLOCK", result.data().get("decision"));
+        assertEquals("KNOWN_FRAUD_INCIDENT_MATCH", result.data().get("reasonCode"));
+        assertEquals(true, result.data().get("knownRiskMatch"));
+        assertEquals(List.of("BLOCK_TRANSFER", "REFER_FRAUD_REVIEW"), result.nextActions());
+        assertFalse(result.data().toString().contains("feature"));
+    }
+
+    @Test
+    void noMatchAllowsTheBankToContinueItsNormalPreflight() {
+        CapabilityResultV1 result = provider.query(request("normal-001"));
+
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals("ALLOW", result.data().get("decision"));
+        assertEquals(false, result.data().get("knownRiskMatch"));
+        assertEquals(List.of("CONTINUE_PREFLIGHT"), result.nextActions());
+    }
+
+    @Test
+    void upstreamFailureIsNeverMappedToNormalOrAllow() {
+        CapabilityResultV1 result = provider.query(request("upstream-error"));
+
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("FRAUD_SERVICE_UNAVAILABLE", result.error().sourceCode());
+        assertTrue(result.error().retryable());
+        assertFalse(result.data().containsKey("decision"));
+    }
+
+    private CapabilityRequestV1 request(String subjectRef) {
+        return new CapabilityRequestV1(
+                CapabilityRequestV1.SCHEMA_VERSION,
+                FraudMiningProvider.TRANSFER_RISK_ASSESS,
+                CapabilityRequestV1.Operation.QUERY,
+                new FinanceContextV1(
+                        FinanceContextV1.SCHEMA_VERSION,
+                        "request-fraud-001",
+                        "trace-fraud-001",
+                        "customer-demo-001",
+                        FinanceContextV1.PrincipalType.CUSTOMER,
+                        "MOBILE",
+                        "TRANSFER",
+                        "customer-demo-001",
+                        "session-demo",
+                        FinanceContextV1.AuthenticationLevel.STRONG,
+                        java.util.Set.of("fraud:read")),
+                Map.of("accountRef", subjectRef),
+                null,
+                null,
+                Map.of(),
+                null);
+    }
+
+    private static void writeJson(HttpExchange exchange, int status, String body) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(status, bytes.length);
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(bytes);
+        }
+    }
+}

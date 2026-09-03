@@ -149,6 +149,9 @@ class OpenJiuwenFinanceBridgeTest {
 
         assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, query.status());
         assertEquals("UPSTREAM_503", query.errorCode());
+        assertEquals("FAILED", query.data().get("resultStatus"));
+        assertEquals("UPSTREAM_503", query.data().get("sourceCode"));
+        assertEquals(true, query.data().get("retryable"));
         assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, task.status());
         assertEquals("FINANCE_HARNESS_ERROR", task.errorCode());
         assertFalse(task.content().contains("secret"));

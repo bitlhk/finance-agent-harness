@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +39,7 @@ class NonAiBankingProviderTest {
     private final AtomicInteger taskCreateHits = new AtomicInteger();
     private final AtomicInteger taskConfirmHits = new AtomicInteger();
     private final AtomicInteger taskSubmitHits = new AtomicInteger();
+    private final AtomicBoolean riskAssessmentUnavailable = new AtomicBoolean();
     private final AtomicReference<String> observedSession = new AtomicReference<>();
     private final AtomicReference<String> observedRequestId = new AtomicReference<>();
     private final AtomicReference<String> observedTraceId = new AtomicReference<>();
@@ -93,6 +95,16 @@ class NonAiBankingProviderTest {
         });
         server.createContext("/api/v1/finance/risk-assessment", exchange -> {
             riskAssessmentHits.incrementAndGet();
+            if (riskAssessmentUnavailable.get()) {
+                writeJson(exchange, 503, """
+                        {"requestId":"req-risk","traceId":"trace-risk","status":"FAILED",
+                         "data":null,"asOf":"2026-09-01T01:00:02Z","sourceSystem":"suitability-simulator",
+                         "error":{"failureClass":"TEMPORARY_FAILURE","sourceCode":"RISK_SERVICE_UNAVAILABLE",
+                         "retryable":true,"fieldErrors":["risk assessment unavailable"],
+                         "nextActions":["REFRESH_RISK_ASSESSMENT"]}}
+                        """);
+                return;
+            }
             writeJson(exchange, 200, """
                     {"requestId":"req-risk","traceId":"trace-risk","status":"SUCCESS",
                      "data":{"assessmentVersion":"risk-v2","riskLevel":"C3","status":"VALID",
@@ -196,11 +208,30 @@ class NonAiBankingProviderTest {
                 && "VALID".equals(risk.get("status")));
         assertTrue(result.data().get("sourceSnapshots") instanceof List<?> snapshots
                 && snapshots.size() == 2);
+        assertTrue(result.data().get("readiness") instanceof Map<?, ?> readiness
+                && "READY".equals(readiness.get("status")));
+        assertTrue(result.data().get("aggregation") instanceof Map<?, ?> aggregation
+                && "PARALLEL".equals(aggregation.get("mode")));
         assertFalse(result.data().containsKey("recommendedProducts"));
         assertFalse(result.data().containsKey("targetAllocation"));
         assertEquals(1, sessionHits.get());
         assertEquals(1, wealthAggregateHits.get());
         assertEquals(1, riskAssessmentHits.get());
+    }
+
+    @Test
+    void wealthContextDegradesToPartialWhenOptionalRiskAssessmentIsUnavailable() {
+        riskAssessmentUnavailable.set(true);
+
+        CapabilityResultV1 result = provider.query(wealthRequest());
+
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals(List.of("riskAssessment"), result.missingInputs());
+        assertEquals(List.of("REFRESH_RISK_ASSESSMENT"), result.nextActions());
+        assertTrue(result.data().get("readiness") instanceof Map<?, ?> readiness
+                && "PARTIAL".equals(readiness.get("status")));
+        assertTrue(result.data().get("riskAssessment") instanceof Map<?, ?> risk && risk.isEmpty());
+        assertFalse(result.data().containsKey("recommendedProducts"));
     }
 
     @Test

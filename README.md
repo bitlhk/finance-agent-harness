@@ -54,7 +54,9 @@ Provider SPI 只提供两个入口：
 - `account.balance.query` 真实只读查询；
 - `wealth.customer-context.query` 面客财富诊断；
 - `wealth.previsit-context.query` 员工辅助财富访前上下文；
-- `channel.preferences.update` 预检、确认、单次提交与重复确认幂等。
+- `channel.preferences.update` 预检、确认、单次提交与重复确认幂等；
+- `transfer.internal.create` 反诈预检、确认提交、处理中和未知结果查证；
+- 财富上下文必需/可选数据并行汇聚，以及 `READY/PARTIAL` 降级结果。
 
 OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过依赖该模块消费 Harness，应用仓仅保留原生任务类型的薄映射；公共 Integration 不再由手机银行代码定义。
 
@@ -81,6 +83,7 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
 - [ADR-0005：安装与语言分发策略](docs/adr/0005-installation-and-language-distribution.md)
+- [ADR-0006：金融能力执行原语与演进边界](docs/adr/0006-finance-capability-execution-primitives.md)
 - [ADR-0001：长期架构基线](docs/adr/0001-architecture-baseline.md)
 - [ADR-0002：合同与语言策略](docs/adr/0002-contract-and-language-strategy.md)
 - [ADR-0003：Agent 业务组件生命周期](docs/adr/0003-agent-solution-lifecycle.md)
@@ -94,8 +97,10 @@ finance-agent-harness/
 ├── integrations/openjiuwen-java/    # OpenJiuwen Integration
 ├── integrations/employee-agent-java/ # EA Java Runtime 身份 Integration
 ├── providers/non-ai-banking/        # 首个参考 Provider Adapter
+├── providers/fraud-mining/          # 外部反诈能力参考 Provider
 ├── providers/employee-agent/        # EA 财富访前宿主兼容 Provider
 ├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用
+├── domain-packs/anti-fraud/          # 反诈能力说明、映射与评测资产
 ├── conformance/                      # 合同与 Adapter 验证
 ├── examples/mobile-banking/          # 首个消费者
 └── docs/                             # 架构、路线和 ADR

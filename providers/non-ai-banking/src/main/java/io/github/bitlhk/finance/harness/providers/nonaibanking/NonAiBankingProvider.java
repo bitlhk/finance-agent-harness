@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -32,6 +34,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
     public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
     public static final String CHANNEL_PREFERENCES_UPDATE = "channel.preferences.update";
+    public static final String TRANSFER_INTERNAL_CREATE = "transfer.internal.create";
 
     private static final Set<String> CHANNEL_PREFERENCE_PARAMETERS = Set.of(
             "action",
@@ -41,6 +44,11 @@ public final class NonAiBankingProvider implements FinanceProvider {
             "accessibilityMode",
             "defaultAccountId",
             "version");
+    private static final Set<String> TRANSFER_PARAMETERS = Set.of(
+            "fromAccountId",
+            "beneficiaryId",
+            "amount",
+            "purpose");
     private static final Pattern TASK_REF = Pattern.compile("[A-Za-z0-9._:-]{1,160}");
 
     private final Client client;
@@ -79,20 +87,70 @@ public final class NonAiBankingProvider implements FinanceProvider {
     }
 
     private CapabilityResultV1 wealthCustomerContext(CapabilityRequestV1 request) {
-        Response aggregate = client.get("/api/v1/wealth/aggregate", Map.of(), request.context());
-        Response riskAssessment = client.get("/api/v1/finance/risk-assessment", Map.of(), request.context());
-        Instant oldestSourceAsOf = aggregate.asOf().isBefore(riskAssessment.asOf())
+        CompletableFuture<Response> aggregateFuture = CompletableFuture.supplyAsync(
+                () -> client.get("/api/v1/wealth/aggregate", Map.of(), request.context()));
+        CompletableFuture<Response> riskFuture = CompletableFuture.supplyAsync(
+                () -> client.get("/api/v1/finance/risk-assessment", Map.of(), request.context()));
+
+        Response aggregate = joinRequired(aggregateFuture);
+        Response riskAssessment = joinOptional(riskFuture);
+        Instant oldestSourceAsOf = riskAssessment == null || aggregate.asOf().isBefore(riskAssessment.asOf())
                 ? aggregate.asOf()
                 : riskAssessment.asOf();
+        String readiness = riskAssessment == null ? "PARTIAL" : "READY";
+        List<String> missingInputs = riskAssessment == null ? List.of("riskAssessment") : List.of();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("wealthAggregate", aggregate.data());
-        data.put("riskAssessment", riskAssessment.data());
-        data.put("sourceSnapshots", List.of(
-                sourceSnapshot("WEALTH_AGGREGATE", aggregate),
-                sourceSnapshot("RISK_ASSESSMENT", riskAssessment)));
+        data.put("riskAssessment", riskAssessment == null ? Map.of() : riskAssessment.data());
+        List<Map<String, Object>> snapshots = new ArrayList<>();
+        snapshots.add(sourceSnapshot("WEALTH_AGGREGATE", aggregate));
+        snapshots.add(riskAssessment == null
+                ? Map.of("section", "RISK_ASSESSMENT", "status", "UNAVAILABLE")
+                : sourceSnapshot("RISK_ASSESSMENT", riskAssessment));
+        data.put("sourceSnapshots", List.copyOf(snapshots));
+        data.put("readiness", Map.of(
+                "status", readiness,
+                "requiredAvailable", List.of("wealthAggregate"),
+                "optionalAvailable", riskAssessment == null ? List.of() : List.of("riskAssessment"),
+                "missing", missingInputs));
+        data.put("aggregation", Map.of(
+                "mode", "PARALLEL",
+                "joinPolicy", "ALL_REQUIRED",
+                "required", List.of("wealthAggregate"),
+                "optional", List.of("riskAssessment")));
         data.put("assembledAt", Instant.now().toString());
-        return completed(request, "财富客户上下文查询已完成。", data,
-                "non-ai-banking-wealth-context", oldestSourceAsOf);
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                CapabilityResultV1.Status.COMPLETED,
+                riskAssessment == null
+                        ? "财富客户上下文已部分完成，风险测评暂不可用。"
+                        : "财富客户上下文查询已完成。",
+                data,
+                missingInputs,
+                riskAssessment == null ? List.of("REFRESH_RISK_ASSESSMENT") : List.of(),
+                "non-ai-banking-wealth-context",
+                oldestSourceAsOf,
+                null,
+                null);
+    }
+
+    private static Response joinRequired(CompletableFuture<Response> future) {
+        try {
+            return future.join();
+        } catch (CompletionException exception) {
+            if (exception.getCause() instanceof ProviderFailure failure) throw failure;
+            throw exception;
+        }
+    }
+
+    private static Response joinOptional(CompletableFuture<Response> future) {
+        try {
+            return future.join();
+        } catch (CompletionException exception) {
+            return null;
+        }
     }
 
     private static Map<String, Object> sourceSnapshot(String section, Response response) {
@@ -130,12 +188,18 @@ public final class NonAiBankingProvider implements FinanceProvider {
             return localFailure(request, "INVALID_INPUT", "TASK_OPERATION_REQUIRED", false,
                     "executeTask requires operation TASK", List.of("USE_TASK_OPERATION"));
         }
-        if (!CHANNEL_PREFERENCES_UPDATE.equals(request.capabilityId())) {
+        if (!CHANNEL_PREFERENCES_UPDATE.equals(request.capabilityId())
+                && !TRANSFER_INTERNAL_CREATE.equals(request.capabilityId())) {
             return localFailure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
                     "unsupported task capability: " + request.capabilityId(),
                     List.of("CHECK_CAPABILITY_ID"));
         }
         try {
+            if (TRANSFER_INTERNAL_CREATE.equals(request.capabilityId())) {
+                return request.taskRef() == null
+                        ? startTransfer(request)
+                        : resumeTransfer(request);
+            }
             return request.taskRef() == null
                     ? startChannelPreferenceUpdate(request)
                     : resumeChannelPreferenceUpdate(request);
@@ -145,6 +209,268 @@ public final class NonAiBankingProvider implements FinanceProvider {
             return localFailure(request, "TEMPORARY_FAILURE", "PROVIDER_CONTRACT_FAILURE", false,
                     "provider could not map the bank task response", List.of("CHECK_PROVIDER"));
         }
+    }
+
+    private CapabilityResultV1 startTransfer(CapabilityRequestV1 request) {
+        if (request.confirmation() != null && request.confirmation().confirmed()) {
+            return localFailure(request, "INVALID_INPUT", "TASK_REF_REQUIRED_FOR_CONFIRMATION", false,
+                    "confirmation can only resume an existing task", List.of("START_TASK_FIRST"));
+        }
+        if (request.idempotencyKey() == null) {
+            return localFailure(request, "INVALID_INPUT", "IDEMPOTENCY_KEY_REQUIRED", false,
+                    "transfer requires an idempotency key", List.of("PROVIDE_IDEMPOTENCY_KEY"));
+        }
+        CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+        if (authentication != null) return authentication;
+
+        Map<String, Object> parameters = copyParameters(request.parameters(), TRANSFER_PARAMETERS);
+        Response preflight = client.post(
+                "/api/v1/capabilities/" + TRANSFER_INTERNAL_CREATE + "/preflight",
+                parameters,
+                request.context());
+        if (!Boolean.TRUE.equals(preflight.data().get("canSubmit"))) {
+            return new CapabilityResultV1(
+                    CapabilityResultV1.SCHEMA_VERSION,
+                    request.context().requestId(),
+                    request.context().traceId(),
+                    CapabilityResultV1.Status.NEED_USER,
+                    text(preflight.data().get("summary"), "转账办理条件未满足。"),
+                    Map.of("preflight", preflight.data()),
+                    List.of(),
+                    List.of("UPDATE_TASK_INPUT"),
+                    preflight.sourceSystem(),
+                    preflight.asOf(),
+                    null,
+                    null);
+        }
+
+        String preflightId = requiredDataText(preflight.data(), "preflightId");
+        Map<String, Object> createBody = new LinkedHashMap<>();
+        createBody.put("capabilityId", TRANSFER_INTERNAL_CREATE);
+        createBody.put("operation", "SUBMIT");
+        createBody.put("preflightId", preflightId);
+        createBody.put("idempotencyKey", request.idempotencyKey());
+        createBody.put("parameters", parameters);
+        Response created = client.post("/api/v1/tasks", createBody, request.context());
+        String taskRef = requiredDataText(created.data(), "taskId");
+
+        Map<String, Object> continuation = new LinkedHashMap<>();
+        continuation.put("preflightId", preflightId);
+        continuation.put("idempotencyKey", request.idempotencyKey());
+        copyIfPresent(preflight.data(), continuation, "capabilityVersion");
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("summary", text(preflight.data().get("summary"), "将发起一笔行内转账。"));
+        data.put("requiredConfirmations", list(preflight.data().get("requiredConfirmations")));
+        data.put("proposedParameters", Map.copyOf(parameters));
+        copyIfPresent(preflight.data(), data, "transferBinding");
+
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.NEED_CONFIRMATION,
+                "请核对转账摘要并回复「确认提交」。",
+                data,
+                created,
+                taskRef,
+                text(created.data().get("status"), "CREATED"),
+                true,
+                continuation,
+                List.of("CONFIRM_TASK"));
+    }
+
+    private CapabilityResultV1 resumeTransfer(CapabilityRequestV1 request) {
+        if (!TASK_REF.matcher(request.taskRef()).matches()) {
+            return localFailure(request, "INVALID_INPUT", "TASK_REF_INVALID", false,
+                    "taskRef does not match the provider task identity contract", List.of("CHECK_TASK_REF"));
+        }
+        Response observed = client.get("/api/v1/tasks/" + request.taskRef(), Map.of(), request.context());
+        String capabilityId = text(observed.data().get("capabilityId"), "");
+        if (!capabilityId.isBlank() && !TRANSFER_INTERNAL_CREATE.equals(capabilityId)) {
+            return localFailure(request, "INVALID_INPUT", "TASK_CAPABILITY_MISMATCH", false,
+                    "taskRef belongs to a different capability", List.of("CHECK_TASK_REF"));
+        }
+        String status = text(observed.data().get("status"), "UNKNOWN").toUpperCase();
+        if ("COMPLETED".equals(status)) return completedTransferTask(request, observed);
+        if ("FAILED_FINAL".equals(status) || "FAILED".equals(status) || "CANCELLED".equals(status)) {
+            return failedTransferTask(request, observed, status);
+        }
+        if ("UNKNOWN".equals(status)
+                || Boolean.TRUE.equals(request.continuation().get("submitOutcomeUnknown"))) {
+            CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+            if (authentication != null) return authentication;
+            Response reconciled = client.post(
+                    "/api/v1/tasks/" + request.taskRef() + "/reconcile", Map.of(), request.context());
+            String reconciledStatus = text(reconciled.data().get("status"), "UNKNOWN").toUpperCase();
+            if ("COMPLETED".equals(reconciledStatus)) return completedTransferTask(request, reconciled);
+            if ("FAILED_FINAL".equals(reconciledStatus) || "FAILED".equals(reconciledStatus)
+                    || "CANCELLED".equals(reconciledStatus)) {
+                return failedTransferTask(request, reconciled, reconciledStatus);
+            }
+            return taskResult(
+                    request,
+                    CapabilityResultV1.Status.UNKNOWN,
+                    "转账提交结果仍待查证，请勿重复提交。",
+                    Map.of("task", reconciled.data()),
+                    reconciled,
+                    request.taskRef(),
+                    reconciledStatus,
+                    false,
+                    unknownContinuation(request.continuation()),
+                    List.of("RECONCILE_TASK", "CONTACT_HUMAN"));
+        }
+        if ("CREATED".equals(status)) {
+            CapabilityRequestV1.Confirmation confirmation = request.confirmation();
+            if (confirmation == null || !confirmation.confirmed()) {
+                return taskResult(
+                        request,
+                        CapabilityResultV1.Status.NEED_CONFIRMATION,
+                        "请核对转账摘要并回复「确认提交」。",
+                        Map.of("task", observed.data()),
+                        observed,
+                        request.taskRef(),
+                        status,
+                        true,
+                        request.continuation(),
+                        List.of("CONFIRM_TASK"));
+            }
+            observed = client.post(
+                    "/api/v1/tasks/" + request.taskRef() + "/confirm",
+                    Map.of("confirmationText", confirmation.confirmationText()),
+                    request.context());
+            status = text(observed.data().get("status"), "CONFIRMED").toUpperCase();
+        }
+        if ("CONFIRMED".equals(status)) {
+            CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+            if (authentication != null) return authentication;
+            Response submitted;
+            try {
+                submitted = client.post(
+                        "/api/v1/tasks/" + request.taskRef() + "/submit", Map.of(), request.context());
+            } catch (ProviderFailure failure) {
+                if (!failure.retryable()) throw failure;
+                return unknownTransferAfterSubmit(request, failure);
+            }
+            String submittedStatus = text(submitted.data().get("status"), "UNKNOWN").toUpperCase();
+            if ("COMPLETED".equals(submittedStatus)) return completedTransferTask(request, submitted);
+            CapabilityResultV1.Status resultStatus = "UNKNOWN".equals(submittedStatus)
+                    ? CapabilityResultV1.Status.UNKNOWN
+                    : CapabilityResultV1.Status.PROCESSING;
+            return taskResult(
+                    request,
+                    resultStatus,
+                    resultStatus == CapabilityResultV1.Status.UNKNOWN
+                            ? "转账提交结果未知，请先查证，勿重复提交。"
+                            : "转账已提交，正在处理。",
+                    Map.of("task", submitted.data()),
+                    submitted,
+                    request.taskRef(),
+                    submittedStatus,
+                    false,
+                    resultStatus == CapabilityResultV1.Status.UNKNOWN
+                            ? unknownContinuation(request.continuation())
+                            : request.continuation(),
+                    resultStatus == CapabilityResultV1.Status.UNKNOWN
+                            ? List.of("RECONCILE_TASK")
+                            : List.of("CHECK_TASK_STATUS"));
+        }
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.PROCESSING,
+                "转账正在处理。",
+                Map.of("task", observed.data()),
+                observed,
+                request.taskRef(),
+                status,
+                false,
+                request.continuation(),
+                List.of("CHECK_TASK_STATUS"));
+    }
+
+    private CapabilityResultV1 ensureTransferAuthentication(CapabilityRequestV1 request) {
+        if (client.strongAuthenticationAvailable()) return null;
+        if (client.hasStepUpCode()) {
+            client.stepUp(request.context());
+            return null;
+        }
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                CapabilityResultV1.Status.NEED_USER,
+                "该转账需要先完成强认证。",
+                Map.of("waitReason", "STEP_UP_AUTHENTICATION"),
+                List.of("strongAuthentication"),
+                List.of("STEP_UP_AUTHENTICATION"),
+                "non-ai-banking",
+                Instant.now(),
+                null,
+                null);
+    }
+
+    private static CapabilityResultV1 completedTransferTask(
+            CapabilityRequestV1 request,
+            Response response) {
+        String taskRef = text(response.data().get("taskId"), request.taskRef());
+        return taskResult(
+                request,
+                CapabilityResultV1.Status.COMPLETED,
+                "行内转账已完成。",
+                Map.of("task", response.data()),
+                response,
+                taskRef,
+                "COMPLETED",
+                false,
+                request.continuation(),
+                List.of());
+    }
+
+    private static CapabilityResultV1 unknownTransferAfterSubmit(
+            CapabilityRequestV1 request,
+            ProviderFailure failure) {
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                CapabilityResultV1.Status.UNKNOWN,
+                "转账提交结果未知，请先查证，勿重复提交。",
+                Map.of("taskRef", request.taskRef()),
+                List.of(),
+                List.of("RECONCILE_TASK", "CONTACT_HUMAN"),
+                failure.sourceSystem(),
+                failure.asOf(),
+                new CapabilityResultV1.TaskState(
+                        request.taskRef(), "UNKNOWN", false,
+                        unknownContinuation(request.continuation())),
+                new CapabilityResultV1.Failure(
+                        "RESULT_UNKNOWN", failure.sourceCode(), false,
+                        "transfer submission outcome is unknown", failure.fieldErrors()));
+    }
+
+    private static Map<String, Object> unknownContinuation(Map<String, Object> continuation) {
+        Map<String, Object> values = new LinkedHashMap<>(continuation);
+        values.put("submitOutcomeUnknown", true);
+        return Map.copyOf(values);
+    }
+
+    private static CapabilityResultV1 failedTransferTask(
+            CapabilityRequestV1 request,
+            Response response,
+            String status) {
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(),
+                request.context().traceId(),
+                CapabilityResultV1.Status.FAILED,
+                "行内转账未完成。",
+                Map.of("task", response.data()),
+                List.of(),
+                List.of("CONTACT_HUMAN"),
+                response.sourceSystem(),
+                response.asOf(),
+                new CapabilityResultV1.TaskState(
+                        request.taskRef(), status, false, request.continuation()),
+                new CapabilityResultV1.Failure(
+                        "PERMANENT_FAILURE", "TASK_" + status, false,
+                        "bank task is " + status.toLowerCase(), List.of()));
     }
 
     private CapabilityResultV1 startChannelPreferenceUpdate(CapabilityRequestV1 request) {
@@ -343,6 +669,18 @@ public final class NonAiBankingProvider implements FinanceProvider {
         }
     }
 
+    private static Map<String, Object> copyParameters(
+            Map<String, Object> source,
+            Set<String> allowed) {
+        Map<String, Object> target = new LinkedHashMap<>();
+        for (String field : allowed) {
+            if (source.containsKey(field) && source.get(field) != null) {
+                target.put(field, source.get(field));
+            }
+        }
+        return target;
+    }
+
     private static void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String field) {
         Object value = source.get(field);
         if (value != null && !String.valueOf(value).isBlank()) {
@@ -383,7 +721,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 context.requestId(),
                 context.traceId(),
                 CapabilityResultV1.Status.FAILED,
-                "暂时无法完成请求，请按提示处理后重试。",
+                fallback(failure.getMessage(), "暂时无法完成请求，请按提示处理后重试。"),
                 Map.of(),
                 List.of(),
                 failure.nextActions(),
@@ -437,6 +775,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
         private final String channel;
         private final String appVersion;
         private final Duration timeout;
+        private final String stepUpCode;
 
         public Config(
                 URI baseUri,
@@ -446,6 +785,18 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 String channel,
                 String appVersion,
                 Duration timeout) {
+            this(baseUri, loginName, loginSecret, deviceId, channel, appVersion, timeout, null);
+        }
+
+        public Config(
+                URI baseUri,
+                String loginName,
+                String loginSecret,
+                String deviceId,
+                String channel,
+                String appVersion,
+                Duration timeout,
+                String stepUpCode) {
             this.baseUri = normalizeBaseUri(Objects.requireNonNull(baseUri, "baseUri"));
             this.loginName = requiredText(loginName, "loginName");
             this.loginSecret = requiredText(loginSecret, "loginSecret");
@@ -456,6 +807,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 throw new IllegalArgumentException("timeout must be positive");
             }
             this.timeout = timeout;
+            this.stepUpCode = stepUpCode == null || stepUpCode.isBlank() ? null : stepUpCode.trim();
         }
 
         public static Config simulator(URI baseUri, String loginName, String loginSecret) {
@@ -486,6 +838,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
         private final Config config;
         private final HttpClient http;
         private final AtomicReference<String> sessionId = new AtomicReference<>();
+        private volatile boolean strongAuthentication;
 
         private Client(Config config) {
             this.config = config;
@@ -498,6 +851,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 HttpResponse<String> response = sendGet(path, query, context, sessionId.get());
                 if (response.statusCode() == 401) {
                     sessionId.set(null);
+                    strongAuthentication = false;
                     ensureSession(context);
                     response = sendGet(path, query, context, sessionId.get());
                 }
@@ -519,6 +873,7 @@ public final class NonAiBankingProvider implements FinanceProvider {
                 HttpResponse<String> response = sendPost(path, body, context, sessionId.get());
                 if (response.statusCode() == 401) {
                     sessionId.set(null);
+                    strongAuthentication = false;
                     ensureSession(context);
                     response = sendPost(path, body, context, sessionId.get());
                 }
@@ -534,7 +889,24 @@ public final class NonAiBankingProvider implements FinanceProvider {
             }
         }
 
-        private void ensureSession(FinanceContextV1 context) throws Exception {
+        private boolean hasStepUpCode() {
+            return config.stepUpCode != null;
+        }
+
+        private boolean strongAuthenticationAvailable() {
+            return strongAuthentication;
+        }
+
+        private synchronized void stepUp(FinanceContextV1 context) {
+            if (strongAuthentication) return;
+            if (!hasStepUpCode()) {
+                throw new IllegalStateException("step-up code is not configured");
+            }
+            post("/api/v1/sessions/step-up", Map.of("verificationCode", config.stepUpCode), context);
+            strongAuthentication = true;
+        }
+
+        private synchronized void ensureSession(FinanceContextV1 context) throws Exception {
             if (sessionId.get() != null && !sessionId.get().isBlank()) {
                 return;
             }

@@ -96,10 +96,22 @@ preflight
 
 ## 7. 暂不展示
 
-- Builder 自动生成 Agent；
 - 多 Runtime；
 - Profile/Policy 配置中心；
 - 自动 Skill 优化；
 - 生产审计认证。
 
 这些能力在 V1 证明有复用需求后再逐步增加。
+
+## 8. 可选扩展示例
+
+### 8.1 银行侧反诈阻断
+
+手机银行已经可以调用 `non-ai-banking` 转账任务，并由银行侧 `TransferRiskProvider` 在预检阶段
+消费反诈结果。转账入口通过公共 `FinanceHarnessTaskAdapter` 和 `NonAiBankingProvider` 映射
+预检、确认、提交、处理中及未知结果查证，银行后端仍保留最终放行权。
+
+### 8.2 Builder 构建期消费
+
+外部 Builder 已可以消费 `solution-build-input.v1`，生成财富 Candidate、锁定资产版本并输出构建
+报告。Builder 是构建期消费者，不进入生产 Runtime 热路径；是否现场展示根据演示时间决定。

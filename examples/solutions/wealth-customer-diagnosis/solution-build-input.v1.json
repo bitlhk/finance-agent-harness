@@ -5,8 +5,8 @@
   "runtime": {
     "family": "openjiuwen",
     "language": "java",
-    "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@3efdee286d4cc45d2e02a0f3ad13e30be79103b0#agents/domain-runtime",
-    "integrationRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@3efdee286d4cc45d2e02a0f3ad13e30be79103b0#framework/finance-harness-openjiuwen"
+    "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@f89c9fb2215dc4ebca169f676f96fac2d18b0e8c#agents/domain-runtime",
+    "integrationRef": "repo://integrations/openjiuwen-java"
   },
   "profileRef": {
     "id": "customer-self-service",

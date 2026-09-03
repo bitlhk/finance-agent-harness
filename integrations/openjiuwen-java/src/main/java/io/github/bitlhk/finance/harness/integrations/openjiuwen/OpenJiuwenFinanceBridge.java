@@ -247,8 +247,22 @@ public final class OpenJiuwenFinanceBridge {
         if (flattenBusinessData) data.putAll(businessData);
         data.put("requestId", result.requestId());
         data.put("traceId", result.traceId());
+        data.put("resultStatus", result.status().name());
+        data.put("missingInputs", result.missingInputs());
+        data.put("nextActions", result.nextActions());
         data.put("sourceSystem", result.sourceSystem());
         data.put("asOf", result.asOf().toString());
+        if (result.task() != null) {
+            data.put("taskState", Map.of(
+                    "taskRef", result.task().taskRef(),
+                    "status", result.task().status(),
+                    "confirmationRequired", result.task().confirmationRequired()));
+        }
+        if (result.error() != null) {
+            data.put("sourceCode", result.error().sourceCode());
+            data.put("failureClass", result.error().failureClass());
+            data.put("retryable", result.error().retryable());
+        }
         data.put("harness", Map.of(
                 "adapter", ADAPTER_ID,
                 "providerId", receipt.providerId(),

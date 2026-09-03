@@ -147,3 +147,17 @@
 - 是否开始 V1.2 Solution Composition。
 
 决策依据是 V1 的真实差距，不根据长期架构图提前开发。
+
+## 7. V1 后续增量状态
+
+以下内容不改变 V1 的历史范围，但已作为增量验证推进：
+
+- 外部 Builder 已消费 `solution-build-input.v1`，完成 Candidate、资产锁定和构建报告；
+- `fraud-mining` 已形成独立参考 Provider 和 Anti-fraud Domain Pack；
+- `non-ai-banking` 已在转账预检中接入银行侧反诈 Provider；
+- 手机银行反诈转账已切换到公共 `FinanceHarnessTaskAdapter`，覆盖预检、确认、提交和未知结果查证；
+- 财富上下文已验证必需/可选数据并行汇聚和 `READY/PARTIAL` 结果；
+- EA 员工辅助财富已完成协议、身份和回放验证，真实远端 Adoption 仍待部署凭据。
+
+执行状态、等待、恢复、并行和部分结果的后续合同边界见
+[`ADR-0006`](adr/0006-finance-capability-execution-primitives.md)。

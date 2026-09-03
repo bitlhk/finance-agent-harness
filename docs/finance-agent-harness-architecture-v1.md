@@ -197,9 +197,13 @@ public interface FinanceProvider {
 
 `executeTask` 不等于直接执行交易，它消费 Provider 已有的预检、确认、提交和查询协议。Provider 返回 `NEED_CONFIRMATION` 时，Runtime 负责向用户展示并在下一轮带回确认。
 
+等待、恢复、并行读取和结果未知的增量语义见
+[`ADR-0006：金融能力执行原语与演进边界`](adr/0006-finance-capability-execution-primitives.md)。
+Core 只定义可交换语义，不实现工作流调度、事件总线或银行业务状态机。
+
 ## 7. 从手机银行提取什么
 
-第一批以 `sync/20260901-local` 为事实来源：
+第一批以 `sync/20260903-local`（`faf47f5`，已合入 `main@f89c9fb`）为事实来源：
 
 | 现有资产 | V1 去向 | 处理方式 |
 |---|---|---|

@@ -2,9 +2,11 @@
 
 状态：`Baseline Mapped`
 
-参考分支：`mobile-banking-3.0@sync/20260901-local`
+参考分支：`mobile-banking-3.0@sync/20260903-local`
 
-参考提交：`845dd26e72ae41119ffeaa24426f54d2bf9cf037`
+参考提交：`faf47f535ce0ccc33b8ec04f19c8fd79e7693be7`
+
+主线合并提交：`f89c9fb2215dc4ebca169f676f96fac2d18b0e8c`
 
 ## 1. 原则
 
@@ -71,6 +73,6 @@ Provider 负责调用查询、preflight、task create、confirm、submit、cance
 5. 生成 `EvidenceReceiptV1`；
 6. 通过后再决定哪些手机银行代码迁入 Harness 仓。
 
-## 6. 不确定项
+## 6. 部署边界
 
-部署环境的精确源码提交尚未由发布系统证明。`845dd26` 是当前远端最新同步分支和映射基线，正式接线前应由手机银行负责人确认部署版本，或在部署信息中补充 commit SHA。
+Harness 以 `sync/20260903-local` 作为当前代码映射基线。手机银行部署仍由应用团队管理；正式环境发布记录应单独保留部署 commit SHA，不由 Harness 仓推断或修改运行环境。

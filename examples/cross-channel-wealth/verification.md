@@ -1,6 +1,6 @@
 # 跨应用财富验证记录
 
-验证日期：2026-09-01
+验证日期：2026-09-03
 
 ## 面客侧
 
@@ -23,12 +23,12 @@ OpenJiuwen Java
 ## 员工辅助侧
 
 ```text
-Employee Agent
+OpenJiuwen Java 财富参考 Agent
+  -> employee-assisted Wealth Pack
+  -> wealth.previsit-context.query
+  -> employee-agent Reference Provider
   -> prepare_wealth_previsit_context
   -> EA 客户画像、持仓与制度 Provider
-  -> wealth-manager-assistant@2.1.5
-  -> employee-agent Reference Provider
-  -> employee-assisted Wealth Pack
 ```
 
 结果：

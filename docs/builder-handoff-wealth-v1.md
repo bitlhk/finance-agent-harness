@@ -41,7 +41,7 @@ examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 
 1. 校验输入 Schema；
 2. 解析 `templateRef` 和 `integrationRef`；
-3. 安装 Harness Maven 依赖；
+3. 安装 Harness Core 与 `integrations/openjiuwen-java` Maven 依赖；
 4. 将 Domain Pack 安装到模板约定的 Skill 目录；
 5. 生成 Provider 与模型的环境变量模板，不生成真实密钥；
 6. 执行编译、资产测试和 Provider Smoke；
@@ -91,4 +91,4 @@ Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，
 
 Finance Harness 维护合同、Provider、Domain Pack、参考输入和验收案例。Builder 维护输入解析、模板装配、代码生成、锁文件和构建报告。Builder 不修改 Harness Core，也不自行发明财富 SOP。
 
-建议 Builder 先完成面客侧目标，再用同一构建后端装配员工辅助侧目标。第二个目标已经具备 Pack、Host Binding、Provider、Java Token Integration 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption 和对应签名密钥；不得在 Builder 中模拟员工权限或客户归属。
+Builder 已完成面客和员工辅助两个 Candidate 的资产解析、编译、启动、锁文件和构建报告验证。员工辅助目标已经具备 Pack、Host Binding、Provider、Java Token Integration 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption 和对应签名密钥；不得在 Builder 中模拟员工权限或客户归属。
