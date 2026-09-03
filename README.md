@@ -113,6 +113,7 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 - [金融能力扩展路线](docs/domain-capability-roadmap-v1.md)
 - [跨应用财富验证记录](examples/cross-channel-wealth/verification.md)
 - [OpenJiuwen 财富访前真实链路验证](docs/verification/2026-09-03-openjiuwen-wealth-previsit-live-smoke.md)
+- [转账风险审核 Domain Skill 真实 A/B 验证](docs/verification/2026-09-03-risk-review-domain-skill-live-ab.md)
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
 - [ADR-0005：安装与语言分发策略](docs/adr/0005-installation-and-language-distribution.md)

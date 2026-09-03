@@ -22,6 +22,7 @@
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
+        <module>examples/solutions/openjiuwen-risk-review</module>
     </modules>
 
     <properties>
