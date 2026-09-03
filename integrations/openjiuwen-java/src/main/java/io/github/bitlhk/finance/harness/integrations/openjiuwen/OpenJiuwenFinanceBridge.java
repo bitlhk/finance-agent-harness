@@ -45,6 +45,7 @@ public final class OpenJiuwenFinanceBridge {
             "cancel",
             "reconcile",
             "verificationCode",
+            "financeTaskHandle",
             "_confirmation",
             "_cancel",
             "_reconcile");

@@ -2,7 +2,8 @@ package io.github.bitlhk.finance.harness.integrations.employeeagent;
 
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
-import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentWealthProvider;
+import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentRuntimeIdentity;
+import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentRuntimeTokenSupplier;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,8 +22,9 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /** Issues one short-lived EA runtime identity token for each managed MCP request. */
-public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider.RuntimeTokenSupplier {
+public final class EaRuntimeTokenSupplier implements EmployeeAgentRuntimeTokenSupplier {
     public static final String PLATFORM_TOOLS_AUDIENCE = "urn:ea:internal-mcp:platform-tools";
+    public static final String CUSTOMER_CONTEXT_AUDIENCE = "urn:ea:internal-mcp:customer-context";
     public static final String DEFAULT_SECRET_ENVIRONMENT_VARIABLE = "INTERNAL_RUNTIME_TOKEN_SECRET";
     public static final String DEFAULT_TTL_ENVIRONMENT_VARIABLE = "INTERNAL_RUNTIME_TOKEN_TTL_SECONDS";
 
@@ -34,7 +36,7 @@ public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider
     private static final Pattern AGENT_ID = Pattern.compile("[A-Za-z0-9._:-]{3,160}");
     private static final Pattern ADOPT_ID = Pattern.compile("lgj-[A-Za-z0-9_-]{3,60}");
 
-    private final EmployeeAgentWealthProvider.RuntimeIdentity identity;
+    private final EmployeeAgentRuntimeIdentity identity;
     private final String audience;
     private final SecretSupplier secretSupplier;
     private final long ttlSeconds;
@@ -42,7 +44,7 @@ public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider
     private final Supplier<String> jtiSupplier;
 
     public EaRuntimeTokenSupplier(
-            EmployeeAgentWealthProvider.RuntimeIdentity identity,
+            EmployeeAgentRuntimeIdentity identity,
             String audience,
             SecretSupplier secretSupplier,
             Duration ttl) {
@@ -51,7 +53,7 @@ public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider
     }
 
     EaRuntimeTokenSupplier(
-            EmployeeAgentWealthProvider.RuntimeIdentity identity,
+            EmployeeAgentRuntimeIdentity identity,
             String audience,
             SecretSupplier secretSupplier,
             Duration ttl,
@@ -66,10 +68,19 @@ public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider
     }
 
     public static EaRuntimeTokenSupplier platformToolsFromEnvironment(
-            EmployeeAgentWealthProvider.RuntimeIdentity identity) {
+            EmployeeAgentRuntimeIdentity identity) {
         return new EaRuntimeTokenSupplier(
                 identity,
                 PLATFORM_TOOLS_AUDIENCE,
+                environmentSecret(DEFAULT_SECRET_ENVIRONMENT_VARIABLE),
+                environmentTtl(DEFAULT_TTL_ENVIRONMENT_VARIABLE));
+    }
+
+    public static EaRuntimeTokenSupplier customerContextFromEnvironment(
+            EmployeeAgentRuntimeIdentity identity) {
+        return new EaRuntimeTokenSupplier(
+                identity,
+                CUSTOMER_CONTEXT_AUDIENCE,
                 environmentSecret(DEFAULT_SECRET_ENVIRONMENT_VARIABLE),
                 environmentTtl(DEFAULT_TTL_ENVIRONMENT_VARIABLE));
     }
@@ -144,8 +155,8 @@ public final class EaRuntimeTokenSupplier implements EmployeeAgentWealthProvider
         return Base64.getUrlEncoder().withoutPadding().encodeToString(json);
     }
 
-    private static EmployeeAgentWealthProvider.RuntimeIdentity validateIdentity(
-            EmployeeAgentWealthProvider.RuntimeIdentity identity) {
+    private static EmployeeAgentRuntimeIdentity validateIdentity(
+            EmployeeAgentRuntimeIdentity identity) {
         if (!RUNTIME_ID.matcher(identity.runtimeId()).matches()) {
             throw new IllegalArgumentException("runtimeId does not match the EA runtime identity contract");
         }

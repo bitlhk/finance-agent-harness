@@ -39,6 +39,7 @@ class EmployeeAgentWealthProviderTest {
     private final AtomicReference<String> observedAgentId = new AtomicReference<>();
     private final AtomicReference<String> observedAdoptId = new AtomicReference<>();
     private final AtomicReference<String> observedSessionId = new AtomicReference<>();
+    private final AtomicReference<String> observedProtocol = new AtomicReference<>();
 
     @BeforeEach
     void startServer() throws IOException {
@@ -47,7 +48,7 @@ class EmployeeAgentWealthProviderTest {
         server.start();
         provider = new EmployeeAgentWealthProvider(new EmployeeAgentWealthProvider.Config(
                 URI.create("http://127.0.0.1:" + server.getAddress().getPort()),
-                new EmployeeAgentWealthProvider.RuntimeIdentity(
+                new EmployeeAgentRuntimeIdentity(
                         "finance-harness-test", "jiuwen_lgj-wealth", "lgj-wealth"),
                 context -> {
                     tokenRequests.incrementAndGet();
@@ -81,6 +82,7 @@ class EmployeeAgentWealthProviderTest {
         assertEquals("jiuwen_lgj-wealth", observedAgentId.get());
         assertEquals("lgj-wealth", observedAdoptId.get());
         assertEquals("session-wealth-001", observedSessionId.get());
+        assertEquals("HTTP/1.1", observedProtocol.get());
 
         JsonNode body = observedBody.get();
         assertEquals("tools/call", body.path("method").asText());
@@ -181,6 +183,7 @@ class EmployeeAgentWealthProviderTest {
 
     private void handleMcp(HttpExchange exchange) throws IOException {
         hits.incrementAndGet();
+        observedProtocol.set(exchange.getProtocol());
         observedAuthorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
         observedAgentId.set(exchange.getRequestHeaders().getFirst("X-Linggan-Agent-Id"));
         observedAdoptId.set(exchange.getRequestHeaders().getFirst("X-Agent-Adopt-Id"));

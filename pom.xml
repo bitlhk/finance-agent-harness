@@ -14,11 +14,14 @@
 
     <modules>
         <module>packages/java/core</module>
+        <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>providers/non-ai-banking</module>
         <module>providers/fraud-mining</module>
         <module>providers/employee-agent</module>
         <module>integrations/employee-agent-java</module>
+        <module>examples/solutions/openjiuwen-retail-banking</module>
+        <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
     </modules>
 
     <properties>
@@ -26,6 +29,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <jackson.version>2.20.1</jackson.version>
         <junit.version>5.14.1</junit.version>
+        <openjiuwen.core.version>0.1.13</openjiuwen.core.version>
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.surefire.version>3.5.4</maven.surefire.version>
     </properties>

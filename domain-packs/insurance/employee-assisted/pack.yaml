@@ -1,0 +1,21 @@
+schemaVersion: finance-domain-pack.v1
+packId: insurance-employee-assisted
+version: 0.1.0
+profile: employee-assisted
+capabilities:
+  - insurance.customer-context.query
+skills:
+  - directory: insurance-previsit-diagnosis
+    entry: skills/insurance-previsit-diagnosis/SKILL.md
+scope:
+  - 车险续保或保障回顾访前诊断
+  - 已确认、可能和待核实保障缺口
+  - 首轮关键问题与沟通目标
+  - 报价或专业复核前的下一步
+outOfScope:
+  - 正式报价与承保结论
+  - 具体产品责任与免责认定
+  - 投保、缴费、保全、理赔或投诉结案
+sourceReferences:
+  - employee-agent/auto-insurance-advisor@1.2.5
+  - employee-agent/insurance-advisor-reference-role-pack/IA-GT-01

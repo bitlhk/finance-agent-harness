@@ -6,7 +6,8 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
-import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
+import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
+import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -29,8 +30,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 /** Reference Provider Adapter for the non-ai-banking simulator. */
-public final class NonAiBankingProvider implements FinanceProvider {
+public final class NonAiBankingProvider implements DescribedFinanceProvider {
     public static final String PROVIDER_ID = "non-ai-banking-reference";
+    public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
     public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
     public static final String CHANNEL_PREFERENCES_UPDATE = "channel.preferences.update";
@@ -55,6 +57,23 @@ public final class NonAiBankingProvider implements FinanceProvider {
 
     public NonAiBankingProvider(Config config) {
         this.client = new Client(Objects.requireNonNull(config, "config"));
+    }
+
+    @Override
+    public ProviderDescriptorV1 descriptor() {
+        return new ProviderDescriptorV1(
+                ProviderDescriptorV1.SCHEMA_VERSION,
+                PROVIDER_ID,
+                PROVIDER_VERSION,
+                List.of(
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                ACCOUNT_BALANCE_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                WEALTH_CUSTOMER_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                CHANNEL_PREFERENCES_UPDATE, CapabilityRequestV1.Operation.TASK),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                TRANSFER_INTERNAL_CREATE, CapabilityRequestV1.Operation.TASK)));
     }
 
     @Override

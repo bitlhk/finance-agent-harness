@@ -33,6 +33,32 @@ Java V1 的两个安装单元分别承担不同职责：
 - `finance-harness-core`：Canonical Contract 的 Java 类型与 Provider SPI；
 - `finance-harness-openjiuwen-java`：OpenJiuwen 宿主调用到 Core Contract 的通用 Bridge。
 
+金融工具本身以 Capability Pack 作为构建期安装资产：
+
+```text
+Capability Pack
+  = capabilityId
+  + Runtime toolName
+  + description / inputSchema
+  + QUERY | TASK
+  + requiredScopes
+  + usage prompt
+```
+
+Capability Pack 不包含银行规则和连接信息。安装时必须同时提供：
+
+```text
+OpenJiuwen Agent
++ OpenJiuwen Integration
++ Capability Pack
++ FinanceProvider Binding
++ FinanceContext defaults
+```
+
+Integration 将 Pack 转换为 OpenJiuwen 原生 `ToolCard` / `LocalFunction`，并把调用映射为 Canonical Finance Contract。干净 Runtime 不因依赖 Core 而自动获得工具。
+
+`OpenJiuwenSolutionAssembler` 是验证上述合同的薄装配入口，不是完整 Builder。它解析 `solution.yaml` 中的 `repo://` Pack 引用、执行安装并输出 `solution-lock.json`；外部 Builder 仍负责模板生成、依赖解析、打包和发布。
+
 具体应用的任务对象、Agent ID、Spring 装配和 UI 状态不进入上述安装单元；它们由消费端薄 Host Adapter 负责。
 
 Builder 可以继续使用 Python。它消费 Schema、配置和资产引用，生成或装配 Java/Python Solution；Builder 的实现语言不决定产物语言。

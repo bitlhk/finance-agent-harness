@@ -20,6 +20,13 @@
       "source": "repo://domain-packs/wealth/employee-assisted"
     }
   ],
+  "capabilityPackRefs": [
+    {
+      "id": "wealth-manager-previsit",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/wealth-manager-previsit"
+    }
+  ],
   "providerRefs": [
     {
       "id": "employee-agent-reference",

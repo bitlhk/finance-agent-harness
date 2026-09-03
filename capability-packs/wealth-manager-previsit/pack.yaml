@@ -1,0 +1,25 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-manager-previsit
+version: 0.1.0
+systemPrompt: |
+  当用户要求为指定客户准备访前材料时，先调用 wealth_previsit_context_query 获取当前员工
+  有权使用的客户、持仓、风险测评、近期事件和制度事实。不得根据客户姓名或历史印象猜测。
+  工具返回后，按照已安装的财富访前诊断 Skill 形成核心矛盾、首轮关键问题和面谈目标；
+  当前上下文不足时明确缺口，不直接生成正式产品推荐。
+capabilities:
+  - capabilityId: wealth.previsit-context.query
+    toolName: wealth_previsit_context_query
+    name: 财富客户访前上下文
+    description: 获取当前财富经理有权使用的客户访前事实、数据状态和制度摘要。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required:
+        - customerRef
+      properties:
+        customerRef:
+          type: string
+          description: 客户标识，例如 C005；必须来自用户请求或已核验上下文。
+    requiredScopes:
+      - wealth:previsit:read

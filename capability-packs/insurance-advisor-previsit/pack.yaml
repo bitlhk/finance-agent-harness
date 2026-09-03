@@ -1,0 +1,25 @@
+schemaVersion: finance-capability-pack.v1
+packId: insurance-advisor-previsit
+version: 0.1.0
+systemPrompt: |
+  当保险顾问为指定客户准备保障回顾或续保访前材料时，先调用
+  insurance_customer_context_query 获取当前岗位和保险服务用途允许使用的客户事实。
+  工具返回后，依据已安装的保险访前诊断 Skill 区分已确认缺口、可能缺口和待核实事项。
+  当前能力只提供客户上下文，不提供报价、核保结论、正式产品条款或交易执行。
+capabilities:
+  - capabilityId: insurance.customer-context.query
+    toolName: insurance_customer_context_query
+    name: 保险客户上下文
+    description: 获取当前保险顾问在保险服务用途下可使用的客户画像及来源状态。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required:
+        - customerRef
+      properties:
+        customerRef:
+          type: string
+          description: 已选择且经过授权核验的稳定客户标识。
+    requiredScopes:
+      - insurance:customer:read

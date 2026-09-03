@@ -2,8 +2,9 @@
 
 简化版 V1 的验证范围：
 
-- 四个 JSON Schema 的正负 Fixture；
+- 运行合同与构建合同的 JSON Fixture；
 - Java DTO 与 Schema 一致；
+- Provider 描述、能力覆盖和统一结果行为；
 - OpenJiuwen Bridge 的 Query 映射；
 - OpenJiuwen Bridge 的确认、续办、幂等和错误状态映射；
 - Consumer Host Adapter 的本地类型映射；
@@ -24,7 +25,8 @@ Runtime Integration
   -> integrations/openjiuwen-java 测试 Query、Task、Checkpoint 和 Evidence
 
 Provider
-  -> providers/non-ai-banking 测试银行协议和错误转换
+  -> ProviderConformanceKit 测试描述、请求标识、状态和续办结构
+  -> 各 providers/* 测试银行协议和错误转换
 
 Consumer
   -> 手机银行测试 Host 类型映射、路由与会话续办
@@ -40,3 +42,11 @@ mvn test
 ```
 
 Consumer 测试仍在对应应用仓执行。Conformance 验证公共合同和可观察行为，不要求应用使用同一种内部类型。
+
+银行 Provider 可在自己的测试中直接调用：
+
+```java
+ProviderConformanceKit.verify(provider, cases);
+```
+
+该 Kit 只检查 Harness 接口一致性，不判断银行自己的风控或产品规则是否正确。

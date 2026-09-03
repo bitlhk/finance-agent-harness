@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Runtime Plane V1 Verified · Installable OpenJiuwen Java Bridge Available`
+`Runtime Plane V1 Verified · Provider Conformance and Multi-domain Assembly Available`
 
 V1 按两个连续阶段推进：
 
@@ -18,18 +18,34 @@ V1 按两个连续阶段推进：
 ## V1 架构
 
 ```text
-Mobile Banking Application
-          ↓
-OpenJiuwen Runtime
-          ↓
-OpenJiuwen Integration
-          ↓
-Finance Harness Java Core
-          ↓
-non-ai-banking Provider Adapter
-          ↓
-non-ai-banking Simulator
+Mobile Banking                 Wealth Manager Agent
+       \                              /
+        +------ OpenJiuwen Runtime --+
+                        ↓
+             OpenJiuwen Integration
+                        ↓
+              Finance Harness Core
+                        ↓
+       non-ai-banking / Employee Agent Providers
+                        ↓
+           Banking Simulator / Employee Agent
 ```
+
+对于新建 Agent，已经支持一条更直接的装配链：
+
+```text
+solution.yaml
+    ↓
+Capability Pack + Provider Binding
+    ↓
+OpenJiuwen Java Integration
+    ↓
+Runtime 原生 ToolCard / LocalFunction
+    ↓
+Finance Contract / Provider / Evidence
+```
+
+干净 OpenJiuwen Agent 不会自动获得任何金融能力。只有 `solution.yaml` 显式引用 Capability Pack 后，Integration 才注册工具及其使用提示；卸载 Pack 后工具随即消失。
 
 Java Core 首版只定义四个公共对象：
 
@@ -43,6 +59,8 @@ Provider SPI 只提供两个入口：
 - `query`：无副作用金融查询；
 - `executeTask`：消费银行后端已有的预检、确认、提交和状态协议。
 
+Provider 另用 `finance-provider.v1` 声明实际支持的能力。装配器在向 Runtime 注册工具前核验 Capability Pack 与 Provider，通用 `ProviderConformanceKit` 用固定测试向量检查请求标识、统一状态和续办结构。
+
 ## 首版证明
 
 1. 手机银行通过 Harness 完成一条真实只读查询；
@@ -51,12 +69,18 @@ Provider SPI 只提供两个入口：
 
 当前已验证：
 
+- `retail-banking-basics` 可声明式安装到未预置金融工具的 OpenJiuwen Java Agent；
+- 安装回执与 `solution-lock.json` 可追溯 Pack、Integration、Provider、能力和内容摘要；
+- Pack 卸载后，Agent 与 Runtime 均不再暴露对应工具；
 - `account.balance.query` 真实只读查询；
 - `wealth.customer-context.query` 面客财富诊断；
 - `wealth.previsit-context.query` 员工辅助财富访前上下文；
+- `insurance.customer-context.query` 保险顾问只读客户上下文与访前诊断装配；
 - `channel.preferences.update` 预检、确认、单次提交与重复确认幂等；
 - `transfer.internal.create` 反诈预检、确认提交、处理中和未知结果查证；
 - 财富上下文必需/可选数据并行汇聚，以及 `READY/PARTIAL` 降级结果。
+
+员工辅助财富场景已进一步通过真实模型与真实 EA 接口验证：干净 OpenJiuwen 同时安装 Domain Pack 和 Capability Pack，模型自主选择财富访前工具，Harness 使用短期签名身份调用 EA，并消费 EA 返回的可验证降级结果。当前测试 Adoption 未取得客户数据源授权，因此该次证据证明的是完整调用链和安全降级，不冒充客户专属 `READY` 验收。
 
 OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过依赖该模块消费 Harness，应用仓仅保留原生任务类型的薄映射；公共 Integration 不再由手机银行代码定义。
 
@@ -70,6 +94,8 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 
 员工辅助侧新增 `providers/employee-agent` 参考 Provider，将 `wealth.previsit-context.query` 映射到 EA 已有 `prepare_wealth_previsit_context`。它通过宿主提供的一次性 Runtime Token 调用 EA，不复制 EA 的权限、客户归属和财富上下文装配。
 
+同一个 EA Provider 模块还提供保险顾问只读映射：`insurance.customer-context.query` 调用 EA 的 `get_customer_profile`，保险专业判断来自独立 Domain Pack。它证明扩展业务域不需要修改 Harness Core。
+
 `integrations/employee-agent-java` 提供 Java Runtime 的动态 Token 签发，并已通过 EA TypeScript 验签器的跨语言验证。该实现仍在 Integration 层，Core 主代码不包含 EA 类型或协议。
 
 ## 文档入口
@@ -79,7 +105,10 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 - [V1 演示故事](docs/v1-demo-story.md)
 - [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
 - [Builder 财富场景交接](docs/builder-handoff-wealth-v1.md)
+- [Provider 接入规范](docs/provider-integration-v1.md)
+- [金融能力扩展路线](docs/domain-capability-roadmap-v1.md)
 - [跨应用财富验证记录](examples/cross-channel-wealth/verification.md)
+- [OpenJiuwen 财富访前真实链路验证](docs/verification/2026-09-03-openjiuwen-wealth-previsit-live-smoke.md)
 - [职责与评审规则](docs/ownership-and-review.md)
 - [ADR-0004：简化版 V1 实施基线](docs/adr/0004-simplified-v1-implementation.md)
 - [ADR-0005：安装与语言分发策略](docs/adr/0005-installation-and-language-distribution.md)
@@ -98,11 +127,14 @@ finance-agent-harness/
 ├── integrations/employee-agent-java/ # EA Java Runtime 身份 Integration
 ├── providers/non-ai-banking/        # 首个参考 Provider Adapter
 ├── providers/fraud-mining/          # 外部反诈能力参考 Provider
-├── providers/employee-agent/        # EA 财富访前宿主兼容 Provider
+├── providers/employee-agent/        # EA 财富与保险宿主兼容 Provider
+├── capability-packs/                # 可安装的金融工具语义、Schema 和 Smoke
 ├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用
+├── domain-packs/insurance/           # 保险顾问访前 Skill 与业务边界
 ├── domain-packs/anti-fraud/          # 反诈能力说明、映射与评测资产
 ├── conformance/                      # 合同与 Adapter 验证
-├── examples/mobile-banking/          # 首个消费者
+├── examples/mobile-banking/          # 首个应用消费者
+├── examples/solutions/               # Builder/装配输入与干净 Runtime 示例
 └── docs/                             # 架构、路线和 ADR
 ```
 
@@ -114,8 +146,8 @@ Java V1 可通过 `mvn install` 安装到本机 Maven 仓库。当前以 Maven �
 - 不实现独立 Policy Engine；
 - 不复制银行的授权、适当性和交易规则；
 - 不同时维护 TypeScript、Java、Python 三套 Core；
-- 不在本仓实现 Builder、完整 Solution Manifest 或自动优化平台；
+- 不在本仓实现完整 Builder、通用 Solution Manifest 或自动优化平台；
 - 不重做知识平台、模型网关和通用安全平台；
 - 不全量迁移手机银行或 Employee Agent。
 
-V1 只为外部 Builder 提供一个最小构建输入和已验证资产引用。长期设计仍保留 Profile、多 Runtime、跨语言 Conformance 和持续改进方向，但不作为 V1 开工前置条件。
+V1 只为外部 Builder 提供一个最小构建输入、已验证资产引用和 OpenJiuwen Java 薄装配入口。长期设计仍保留 Profile、多 Runtime、跨语言 Conformance 和持续改进方向，但不作为 V1 开工前置条件。

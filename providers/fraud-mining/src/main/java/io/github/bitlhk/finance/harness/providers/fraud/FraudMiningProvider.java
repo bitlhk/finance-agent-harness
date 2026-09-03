@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
-import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
+import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
+import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -23,8 +24,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Maps the fraud-mining service into a runtime-neutral transfer-risk capability. */
-public final class FraudMiningProvider implements FinanceProvider {
+public final class FraudMiningProvider implements DescribedFinanceProvider {
     public static final String PROVIDER_ID = "fraud-mining-reference";
+    public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String TRANSFER_RISK_ASSESS = "fraud.transfer-risk.assess";
 
     private final Config config;
@@ -35,6 +37,16 @@ public final class FraudMiningProvider implements FinanceProvider {
         this.config = Objects.requireNonNull(config, "config");
         this.http = HttpClient.newBuilder().connectTimeout(config.timeout()).build();
         this.json = HarnessJson.mapper();
+    }
+
+    @Override
+    public ProviderDescriptorV1 descriptor() {
+        return new ProviderDescriptorV1(
+                ProviderDescriptorV1.SCHEMA_VERSION,
+                PROVIDER_ID,
+                PROVIDER_VERSION,
+                List.of(new ProviderDescriptorV1.CapabilitySupport(
+                        TRANSFER_RISK_ASSESS, CapabilityRequestV1.Operation.QUERY)));
     }
 
     @Override

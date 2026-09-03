@@ -1,0 +1,2 @@
+# A clean Agent should discover and invoke the installed account query capability.
+请查询我的账户余额，并说明数据来自哪里。

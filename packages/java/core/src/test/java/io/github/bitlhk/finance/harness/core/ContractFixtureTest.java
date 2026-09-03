@@ -31,6 +31,7 @@ class ContractFixtureTest {
         assertRoundTrip("capability-result.failed.json", CapabilityResultV1.class);
         assertRoundTrip("capability-result.need-confirmation.json", CapabilityResultV1.class);
         assertRoundTrip("evidence-receipt.query.json", EvidenceReceiptV1.class);
+        assertRoundTrip("provider-descriptor.json", ProviderDescriptorV1.class);
     }
 
     @Test
@@ -118,7 +119,7 @@ class ContractFixtureTest {
             schemas = files.filter(path -> path.getFileName().toString().endsWith(".schema.json"))
                     .toList();
         }
-        assertEquals(5, schemas.size());
+        assertEquals(8, schemas.size());
         for (Path schema : schemas) {
             JsonNode root = JSON.readTree(schema.toFile());
             assertEquals("https://json-schema.org/draft/2020-12/schema", root.path("$schema").asText());
@@ -146,6 +147,20 @@ class ContractFixtureTest {
         assertFalse(serialized.contains("apikey"));
         assertFalse(serialized.contains("password"));
         assertFalse(serialized.contains("secret"));
+    }
+
+    @Test
+    void insuranceBuildInputSelectsDomainCapabilityAndProviderWithoutChangingCore() throws IOException {
+        JsonNode input = JSON.readTree(ROOT.resolve(
+                "examples/solutions/insurance-advisor-previsit/solution-build-input.v1.json").toFile());
+
+        assertEquals("insurance-employee-assisted",
+                input.path("domainPackRefs").path(0).path("id").asText());
+        assertEquals("insurance-advisor-previsit",
+                input.path("capabilityPackRefs").path(0).path("id").asText());
+        assertEquals("employee-agent-insurance-reference",
+                input.path("providerRefs").path(0).path("id").asText());
+        assertEquals("openjiuwen", input.path("runtime").path("family").asText());
     }
 
     @Test

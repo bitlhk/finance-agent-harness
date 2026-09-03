@@ -6,7 +6,8 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
-import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
+import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
+import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -23,8 +24,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Reference adapter from the canonical wealth capability to Employee Agent Platform MCP. */
-public final class EmployeeAgentWealthProvider implements FinanceProvider {
+public final class EmployeeAgentWealthProvider implements DescribedFinanceProvider {
     public static final String PROVIDER_ID = "employee-agent-reference";
+    public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String WEALTH_PREVISIT_CONTEXT_QUERY = "wealth.previsit-context.query";
     public static final String HOST_TOOL = "prepare_wealth_previsit_context";
 
@@ -37,7 +39,20 @@ public final class EmployeeAgentWealthProvider implements FinanceProvider {
 
     public EmployeeAgentWealthProvider(Config config) {
         this.config = Objects.requireNonNull(config, "config");
-        this.http = HttpClient.newBuilder().connectTimeout(config.timeout()).build();
+        this.http = HttpClient.newBuilder()
+                .connectTimeout(config.timeout())
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+    }
+
+    @Override
+    public ProviderDescriptorV1 descriptor() {
+        return new ProviderDescriptorV1(
+                ProviderDescriptorV1.SCHEMA_VERSION,
+                PROVIDER_ID,
+                PROVIDER_VERSION,
+                List.of(new ProviderDescriptorV1.CapabilitySupport(
+                        WEALTH_PREVISIT_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY)));
     }
 
     @Override
@@ -319,23 +334,10 @@ public final class EmployeeAgentWealthProvider implements FinanceProvider {
         return value == null || value.isBlank() ? exception.getClass().getSimpleName() : value;
     }
 
-    @FunctionalInterface
-    public interface RuntimeTokenSupplier {
-        String tokenFor(FinanceContextV1 context) throws Exception;
-    }
-
-    public record RuntimeIdentity(String runtimeId, String agentId, String adoptId) {
-        public RuntimeIdentity {
-            runtimeId = requiredText(runtimeId, "runtimeId");
-            agentId = requiredText(agentId, "agentId");
-            adoptId = requiredText(adoptId, "adoptId");
-        }
-    }
-
     public record Config(
             URI baseUri,
-            RuntimeIdentity runtimeIdentity,
-            RuntimeTokenSupplier runtimeTokenSupplier,
+            EmployeeAgentRuntimeIdentity runtimeIdentity,
+            EmployeeAgentRuntimeTokenSupplier runtimeTokenSupplier,
             Duration timeout) {
         public Config {
             baseUri = normalizeBaseUri(Objects.requireNonNull(baseUri, "baseUri"));

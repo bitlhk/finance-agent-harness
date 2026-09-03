@@ -5,7 +5,7 @@ description: >-
   识别本次拜访的真实触发点、核心矛盾和最关键的待确认问题。
 version: 0.1.0
 license: Apache-2.0
-allowed-tools: wealth-previsit-context-query
+allowed-tools: wealth_previsit_context_query
 metadata:
   capabilityId: skill.wealth.previsit-diagnosis
   profile: employee-assisted
@@ -20,7 +20,7 @@ metadata:
 
 ## 工作步骤
 
-1. 调用 `wealth-previsit-context-query`，获取当前财富经理有权使用的客户事实、数据时间和制度摘要。
+1. 调用 `wealth_previsit_context_query`，获取当前财富经理有权使用的客户事实、数据时间和制度摘要。
 2. 区分已核验事实、待验证假设、缺失信息和冲突信息。原始业务码没有机构映射时保留原值。
 3. 找到“为什么是现在”的触发事件，例如产品到期、资金用途变化、风险感受变化或历史事项待推进。
 4. 识别一项最影响本次决策的核心矛盾，例如收益诉求与资金期限、风险等级与实际金额回撤感受之间的冲突。

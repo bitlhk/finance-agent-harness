@@ -1,0 +1,26 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: openjiuwen-retail-banking-demo
+displayName: OpenJiuwen 零售银行助手
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.13
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: customer-self-service
+  version: 0.1.0
+  source: repo://profiles
+domainPackRefs: []
+capabilityPackRefs:
+  - id: retail-banking-basics
+    version: 0.1.0
+    source: repo://capability-packs/retail-banking-basics
+providerRefs:
+  - id: non-ai-banking-reference
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/non-ai-banking
+modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: retail-banking-basics-smoke
+  version: 0.1.0
+  source: repo://capability-packs/retail-banking-basics/smoke-cases.yaml

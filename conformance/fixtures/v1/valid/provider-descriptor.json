@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "finance-provider.v1",
+  "providerId": "reference-bank",
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "capabilityId": "account.balance.query",
+      "operation": "QUERY"
+    },
+    {
+      "capabilityId": "transfer.internal.create",
+      "operation": "TASK"
+    }
+  ]
+}

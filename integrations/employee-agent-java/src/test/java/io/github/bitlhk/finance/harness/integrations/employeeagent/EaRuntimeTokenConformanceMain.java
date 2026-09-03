@@ -1,7 +1,7 @@
 package io.github.bitlhk.finance.harness.integrations.employeeagent;
 
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
-import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentWealthProvider;
+import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentRuntimeIdentity;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -14,8 +14,8 @@ public final class EaRuntimeTokenConformanceMain {
 
     public static void main(String[] args) throws Exception {
         String secret = requiredEnvironment("EA_TOKEN_CONFORMANCE_SECRET");
-        EmployeeAgentWealthProvider.RuntimeIdentity identity =
-                new EmployeeAgentWealthProvider.RuntimeIdentity(
+        EmployeeAgentRuntimeIdentity identity =
+                new EmployeeAgentRuntimeIdentity(
                         "openjiuwen-java",
                         "jiuwen_lgj-wealth",
                         "lgj-wealth");

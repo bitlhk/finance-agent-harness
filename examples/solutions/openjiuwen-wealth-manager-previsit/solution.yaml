@@ -1,0 +1,29 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: openjiuwen-wealth-manager-previsit-demo
+displayName: OpenJiuwen 财富经理访前助手
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.13
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: employee-assisted
+  version: 0.1.0
+  source: repo://profiles
+domainPackRefs:
+  - id: wealth-employee-assisted
+    version: 0.1.0
+    source: repo://domain-packs/wealth/employee-assisted
+capabilityPackRefs:
+  - id: wealth-manager-previsit
+    version: 0.1.0
+    source: repo://capability-packs/wealth-manager-previsit
+providerRefs:
+  - id: employee-agent-reference
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/employee-agent
+modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: wealth-management
+  version: 0.2.3
+  source: git+https://github.com/bitlhk/finance-skill-eval.git@e960d2e#packs/finance/wealth-management

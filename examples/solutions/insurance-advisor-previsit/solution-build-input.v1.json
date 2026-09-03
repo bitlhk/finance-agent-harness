@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "finance-agent-solution-build.v1",
+  "solutionId": "insurance-advisor-previsit-demo",
+  "displayName": "保险顾问访前助手",
+  "runtime": {
+    "family": "openjiuwen",
+    "language": "java",
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+    "integrationRef": "repo://integrations/openjiuwen-java"
+  },
+  "profileRef": {
+    "id": "employee-assisted",
+    "version": "0.1.0",
+    "source": "repo://profiles"
+  },
+  "domainPackRefs": [
+    {
+      "id": "insurance-employee-assisted",
+      "version": "0.1.0",
+      "source": "repo://domain-packs/insurance/employee-assisted"
+    }
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "insurance-advisor-previsit",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/insurance-advisor-previsit"
+    }
+  ],
+  "providerRefs": [
+    {
+      "id": "employee-agent-insurance-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "source": "repo://providers/employee-agent"
+    }
+  ],
+  "modelRef": "env://FINANCE_AGENT_MODEL",
+  "evaluationPackRef": {
+    "id": "insurance-advisor-reference",
+    "version": "1.2.5",
+    "source": "git+https://github.com/bitlhk/employee-agent.git@8943a8bc57a6f263a88b1cf1034428ee4e591e85#examples/insurance-advisor-reference-role-pack/eval"
+  }
+}

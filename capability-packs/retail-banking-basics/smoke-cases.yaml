@@ -1,0 +1,18 @@
+schemaVersion: finance-capability-smoke.v1
+packId: retail-banking-basics
+cases:
+  - caseId: RB-QUERY-001
+    toolName: account_balance_query
+    arguments: {}
+    expectedStatus: COMPLETED
+  - caseId: RB-TASK-001
+    toolName: transfer_internal_create
+    arguments:
+      fromAccountId: acct-001
+      beneficiaryId: bene-002
+      amount: 0.01
+      purpose: Finance Harness install smoke
+    expectedFirstStatus: NEED_USER
+    resumeWith:
+      confirmationText: 确认提交
+    expectedFinalStatus: COMPLETED

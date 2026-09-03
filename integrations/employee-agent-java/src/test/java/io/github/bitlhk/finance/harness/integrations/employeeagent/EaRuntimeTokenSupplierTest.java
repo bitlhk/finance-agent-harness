@@ -3,7 +3,7 @@ package io.github.bitlhk.finance.harness.integrations.employeeagent;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
-import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentWealthProvider;
+import io.github.bitlhk.finance.harness.providers.employeeagent.EmployeeAgentRuntimeIdentity;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.Mac;
@@ -70,6 +70,20 @@ class EaRuntimeTokenSupplierTest {
     }
 
     @Test
+    void signsCustomerContextAudienceForInsuranceProvider() throws Exception {
+        EaRuntimeTokenSupplier supplier = new EaRuntimeTokenSupplier(
+                identity(),
+                EaRuntimeTokenSupplier.CUSTOMER_CONTEXT_AUDIENCE,
+                secret(),
+                Duration.ofSeconds(60),
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                () -> "irt_insurance_001");
+
+        assertEquals(EaRuntimeTokenSupplier.CUSTOMER_CONTEXT_AUDIENCE,
+                payload(supplier.tokenFor(context())).path("aud").asText());
+    }
+
+    @Test
     void boundsTtlToEaMinimumAndMaximum() throws Exception {
         String minimum = deterministic(Duration.ofSeconds(1), "irt_min").tokenFor(context());
         String maximum = deterministic(Duration.ofSeconds(900), "irt_max").tokenFor(context());
@@ -88,7 +102,7 @@ class EaRuntimeTokenSupplierTest {
 
         assertThrows(IllegalStateException.class, () -> weak.tokenFor(context()));
         assertThrows(IllegalArgumentException.class, () -> new EaRuntimeTokenSupplier(
-                new EmployeeAgentWealthProvider.RuntimeIdentity("java-runtime", "agent-wealth", "invalid-adopt"),
+                new EmployeeAgentRuntimeIdentity("java-runtime", "agent-wealth", "invalid-adopt"),
                 EaRuntimeTokenSupplier.PLATFORM_TOOLS_AUDIENCE,
                 secret(),
                 Duration.ofSeconds(60)));
@@ -108,8 +122,8 @@ class EaRuntimeTokenSupplierTest {
         return () -> SECRET.getBytes(StandardCharsets.UTF_8);
     }
 
-    private static EmployeeAgentWealthProvider.RuntimeIdentity identity() {
-        return new EmployeeAgentWealthProvider.RuntimeIdentity(
+    private static EmployeeAgentRuntimeIdentity identity() {
+        return new EmployeeAgentRuntimeIdentity(
                 "openjiuwen-java", "jiuwen_lgj-wealth", "lgj-wealth");
     }
 

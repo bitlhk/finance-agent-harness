@@ -19,6 +19,22 @@ solution/solution-build-input.v1.schema.json
 
 它只描述 Runtime 模板、Profile、Domain Pack、Provider、模型引用和 Eval Pack，不进入生产请求热路径，也不是完整的 Solution Manifest。
 
+可安装能力通过下面的构建期合同描述：
+
+```text
+capability/capability-pack.v1.schema.json
+```
+
+Capability Pack 只发布工具语义、输入 Schema、调用类型和最小 Scope。它不包含银行地址、凭据、客户数据或业务判定规则。Runtime Integration 将它转换为本地 Tool，Provider Binding 决定调用哪套银行系统。
+
+Provider 通过下面的构建期合同声明它真正实现的标准能力：
+
+```text
+provider/provider-descriptor.v1.schema.json
+```
+
+装配时必须满足 `Capability Pack 要求 ⊆ Provider 声明`。业务参数和银行内部规则仍由 Provider 后面的银行系统定义，不进入该描述文件。
+
 约束：
 
 - 对象默认拒绝未知字段；

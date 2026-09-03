@@ -35,7 +35,15 @@ examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json
 examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 ```
 
-输入只描述逻辑组合：Runtime 模板、Profile、Domain Pack、Provider、模型引用和 Eval Pack。不得写入模型密钥、银行凭据、部署拓扑或大段 Runtime 私有配置。
+输入只描述逻辑组合：Runtime 模板、Profile、Domain Pack、Capability Pack、Provider、模型引用和 Eval Pack。不得写入模型密钥、银行凭据、部署拓扑或大段 Runtime 私有配置。
+
+需要向干净 Runtime 发布工具时，通过 `capabilityPackRefs` 引用安装资产。参考输入：
+
+```text
+examples/solutions/openjiuwen-retail-banking/solution.yaml
+```
+
+`domainPackRefs` 提供专业 SOP，`capabilityPackRefs` 提供 Runtime 可见工具，二者职责不同；Builder 不应从 SOP 文本猜测工具定义。
 
 ## Builder 首版职责
 
@@ -43,9 +51,10 @@ examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 2. 解析 `templateRef` 和 `integrationRef`；
 3. 安装 Harness Core 与 `integrations/openjiuwen-java` Maven 依赖；
 4. 将 Domain Pack 安装到模板约定的 Skill 目录；
-5. 生成 Provider 与模型的环境变量模板，不生成真实密钥；
-6. 执行编译、资产测试和 Provider Smoke；
-7. 输出 Candidate、`solution-lock.json` 和 `build-report.json`。
+5. 将 Capability Pack 交给 Runtime Integration 注册为原生工具；
+6. 生成 Provider 与模型的环境变量模板，不生成真实密钥；
+7. 执行编译、资产测试、工具安装/卸载和 Provider Smoke；
+8. 输出 Candidate、`solution-lock.json` 和 `build-report.json`。
 
 Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，不要求 Builder 自身改写为 Java。
 
@@ -91,4 +100,4 @@ Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，
 
 Finance Harness 维护合同、Provider、Domain Pack、参考输入和验收案例。Builder 维护输入解析、模板装配、代码生成、锁文件和构建报告。Builder 不修改 Harness Core，也不自行发明财富 SOP。
 
-Builder 已完成面客和员工辅助两个 Candidate 的资产解析、编译、启动、锁文件和构建报告验证。员工辅助目标已经具备 Pack、Host Binding、Provider、Java Token Integration 和测试合同，但真实 EA 联调仍要求部署环境提供有效 Adoption 和对应签名密钥；不得在 Builder 中模拟员工权限或客户归属。
+Builder 已完成面客和员工辅助两个 Candidate 的资产解析、编译、启动、锁文件和构建报告验证。员工辅助资产也已完成真实模型到 EA 的在线调用：模型可自主选择由 Capability Pack 安装的财富访前工具，Java Provider 使用短期签名身份调用 EA，并正确消费 EA 的业务降级结果。当前测试 Adoption 没有客户数据源授权，因此客户专属 `READY` 结果仍需使用银行或 EA 提供的有效授权身份验收；不得在 Builder 中模拟员工权限或客户归属。

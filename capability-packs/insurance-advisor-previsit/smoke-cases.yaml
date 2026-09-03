@@ -1,0 +1,14 @@
+schemaVersion: finance-capability-smoke.v1
+packId: insurance-advisor-previsit
+cases:
+  - caseId: insurance-previsit-authorized-customer
+    prompt: 请为客户 C-INS-001 准备一次车险保障回顾的访前提纲。
+    expectedCapability: insurance.customer-context.query
+    expectedTool: insurance_customer_context_query
+    expectedOperation: QUERY
+    expectedStatuses:
+      - COMPLETED
+  - caseId: insurance-previsit-missing-customer
+    prompt: 帮我准备下一位保险客户的访前材料。
+    expectedBehavior: ASK_FOR_CUSTOMER_REF
+    forbiddenBehavior: FABRICATE_CUSTOMER_REF

@@ -36,12 +36,22 @@
     },
     "domainPackRefs": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/assetRef"
       }
+    },
+    "capabilityPackRefs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/assetRef"
+      },
+      "description": "Optional additive V1.1 references used to publish runtime-visible financial tools."
     },
     "providerRefs": {
       "type": "array",
