@@ -1,0 +1,45 @@
+schemaVersion: finance-capability-pack.v1
+packId: risk-review-basics
+version: 0.1.0
+systemPrompt: |
+  你可以使用已安装的金融能力查询账户事实并评估已知涉诈风险。
+  使用 account_balance_query 获取账户事实，使用 fraud_transfer_risk_assess 获取反诈系统结论。
+  必须区分“命中已知风险”“未命中已知风险”和“风险系统不可用”；未命中不等于绝对安全。
+  不得编造风险信号，也不得代替银行系统或审核人员作出最终处置。
+capabilities:
+  - capabilityId: account.balance.query
+    toolName: account_balance_query
+    name: 账户余额查询
+    description: 查询当前主体有权查看的账户事实，为风险审核提供账户上下文。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        accountId:
+          type: string
+          description: 待审核付款账户标识。
+    requiredScopes:
+      - account:read
+  - capabilityId: fraud.transfer-risk.assess
+    toolName: fraud_transfer_risk_assess
+    name: 转账涉诈风险查询
+    description: 查询银行反诈系统对账户或客户的已知涉诈风险结论与证据。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        accountRef:
+          type: string
+          description: 待评估账户标识。
+        customerRef:
+          type: string
+          description: 待评估客户标识；账户标识缺失时使用。
+      anyOf:
+        - required:
+            - accountRef
+        - required:
+            - customerRef
+    requiredScopes:
+      - fraud-risk:read

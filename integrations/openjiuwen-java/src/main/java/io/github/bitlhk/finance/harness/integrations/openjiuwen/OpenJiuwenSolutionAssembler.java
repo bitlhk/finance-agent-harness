@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -77,12 +78,8 @@ public final class OpenJiuwenSolutionAssembler {
                     "CAPABILITY_PACK", ref.id(), ref.version(), ref.source(), sha256(packFile)));
         }
         validateCapabilityCoverage(loadedDomainPacks, loadedCapabilityPacks);
-        ProviderRef providerRef = providerFor(spec);
-        FinanceProvider provider = providers.get(providerRef.id());
-        if (provider == null) {
-            throw new IllegalArgumentException("Provider binding is missing: " + providerRef.id());
-        }
-        validateProviderBinding(providerRef, provider, loadedCapabilityPacks);
+        Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> providerBindings =
+                resolveProviderBindings(spec, providers, loadedCapabilityPacks);
 
         List<OpenJiuwenDomainPackInstaller.Installation> domainInstallations = new ArrayList<>();
         List<OpenJiuwenCapabilityInstaller.Installation> installations = new ArrayList<>();
@@ -92,7 +89,7 @@ public final class OpenJiuwenSolutionAssembler {
             }
             for (FinanceCapabilityPackV1 pack : loadedCapabilityPacks) {
                 installations.add(installer.install(
-                        agent, provider, providerRef.id(), defaults, pack, simulated));
+                        agent, providerBindings, defaults, pack, simulated));
             }
         } catch (RuntimeException exception) {
             closeCapabilityReverse(installations);
@@ -149,45 +146,98 @@ public final class OpenJiuwenSolutionAssembler {
         }
     }
 
-    private static ProviderRef providerFor(SolutionSpec spec) {
-        if (spec.providerRefs().size() != 1) {
-            throw new IllegalArgumentException(
-                    "V1 assembler requires exactly one Provider binding per solution");
-        }
-        return spec.providerRefs().getFirst();
-    }
-
-    private static void validateProviderBinding(
-            ProviderRef providerRef,
-            FinanceProvider provider,
+    private static Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> resolveProviderBindings(
+            SolutionSpec spec,
+            Map<String, FinanceProvider> providers,
             List<FinanceCapabilityPackV1> capabilityPacks) {
-        if (!(provider instanceof DescribedFinanceProvider described)) {
-            throw new IllegalArgumentException(
-                    "Declarative Solution requires a described Provider: " + providerRef.id());
+        if (spec.providerRefs().isEmpty()) {
+            throw new IllegalArgumentException("At least one Provider reference is required");
         }
-        ProviderDescriptorV1 descriptor = described.descriptor();
-        if (!providerRef.id().equals(descriptor.providerId())) {
-            throw new IllegalArgumentException(
-                    "Provider reference id does not match descriptor: " + providerRef.id());
+        Map<String, ProviderRef> references = new LinkedHashMap<>();
+        Map<String, DescribedFinanceProvider> describedProviders = new LinkedHashMap<>();
+        for (ProviderRef providerRef : spec.providerRefs()) {
+            if (references.putIfAbsent(providerRef.id(), providerRef) != null) {
+                throw new IllegalArgumentException("Duplicate Provider reference: " + providerRef.id());
+            }
+            FinanceProvider provider = providers.get(providerRef.id());
+            if (provider == null) {
+                throw new IllegalArgumentException("Provider binding is missing: " + providerRef.id());
+            }
+            if (!(provider instanceof DescribedFinanceProvider described)) {
+                throw new IllegalArgumentException(
+                        "Declarative Solution requires a described Provider: " + providerRef.id());
+            }
+            ProviderDescriptorV1 descriptor = described.descriptor();
+            if (!providerRef.id().equals(descriptor.providerId())) {
+                throw new IllegalArgumentException(
+                        "Provider reference id does not match descriptor: " + providerRef.id());
+            }
+            if (!providerRef.version().equals(descriptor.version())) {
+                throw new IllegalArgumentException(
+                        "Provider reference version does not match descriptor: " + providerRef.id());
+            }
+            describedProviders.put(providerRef.id(), described);
         }
-        if (!providerRef.version().equals(descriptor.version())) {
-            throw new IllegalArgumentException(
-                    "Provider reference version does not match descriptor: " + providerRef.id());
-        }
-        Set<String> unsupported = new LinkedHashSet<>();
+
+        Map<String, CapabilityRequestV1.Operation> requiredCapabilities = new LinkedHashMap<>();
         for (FinanceCapabilityPackV1 pack : capabilityPacks) {
             for (FinanceCapabilityPackV1.Capability capability : pack.capabilities()) {
                 CapabilityRequestV1.Operation operation = CapabilityRequestV1.Operation.valueOf(
                         capability.operation().name());
-                if (!descriptor.supports(capability.capabilityId(), operation)) {
-                    unsupported.add(capability.capabilityId() + ":" + operation);
+                if (requiredCapabilities.putIfAbsent(capability.capabilityId(), operation) != null) {
+                    throw new IllegalArgumentException(
+                            "Capability is declared by more than one installed pack: "
+                                    + capability.capabilityId());
                 }
             }
         }
-        if (!unsupported.isEmpty()) {
+
+        Set<String> unknownBindings = new LinkedHashSet<>(spec.capabilityBindings().keySet());
+        unknownBindings.removeAll(requiredCapabilities.keySet());
+        if (!unknownBindings.isEmpty()) {
             throw new IllegalArgumentException(
-                    "Provider does not implement installed capabilities: " + unsupported);
+                    "Capability bindings reference capabilities that are not installed: " + unknownBindings);
         }
+
+        boolean explicitBindingsRequired = references.size() > 1;
+        Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> resolved = new LinkedHashMap<>();
+        Set<String> usedProviders = new LinkedHashSet<>();
+        for (Map.Entry<String, CapabilityRequestV1.Operation> capability : requiredCapabilities.entrySet()) {
+            String providerId = spec.capabilityBindings().get(capability.getKey());
+            if (providerId == null && !explicitBindingsRequired) {
+                providerId = references.keySet().iterator().next();
+            }
+            if (providerId == null) {
+                throw new IllegalArgumentException(
+                        "Multiple Providers require an explicit binding for capability: "
+                                + capability.getKey());
+            }
+            ProviderRef reference = references.get(providerId);
+            if (reference == null) {
+                throw new IllegalArgumentException(
+                        "Capability binding references an unknown Provider: " + providerId);
+            }
+            DescribedFinanceProvider described = describedProviders.get(providerId);
+            ProviderDescriptorV1 descriptor = described.descriptor();
+            if (!descriptor.supports(capability.getKey(), capability.getValue())) {
+                throw new IllegalArgumentException(
+                        "Provider does not implement installed capability: "
+                                + providerId + " -> " + capability.getKey() + ":" + capability.getValue());
+            }
+            usedProviders.add(providerId);
+            resolved.put(capability.getKey(), new OpenJiuwenCapabilityInstaller.ProviderBinding(
+                    providerId,
+                    reference.version(),
+                    described));
+        }
+
+        Set<String> unusedProviders = new LinkedHashSet<>(references.keySet());
+        unusedProviders.removeAll(usedProviders);
+        if (!unusedProviders.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Provider references are not used by any capability: " + unusedProviders);
+        }
+        return Map.copyOf(resolved);
     }
 
     private static void validate(SolutionSpec spec) {
@@ -265,12 +315,14 @@ public final class OpenJiuwenSolutionAssembler {
             List<AssetRef> domainPackRefs,
             List<AssetRef> capabilityPackRefs,
             List<ProviderRef> providerRefs,
+            Map<String, String> capabilityBindings,
             String modelRef,
             AssetRef evaluationPackRef) {
         private SolutionSpec {
             domainPackRefs = domainPackRefs == null ? List.of() : List.copyOf(domainPackRefs);
             capabilityPackRefs = capabilityPackRefs == null ? List.of() : List.copyOf(capabilityPackRefs);
             providerRefs = providerRefs == null ? List.of() : List.copyOf(providerRefs);
+            capabilityBindings = capabilityBindings == null ? Map.of() : Map.copyOf(capabilityBindings);
         }
     }
 

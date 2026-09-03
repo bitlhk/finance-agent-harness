@@ -8,7 +8,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Runtime Plane V1 Verified · Provider Conformance and Multi-domain Assembly Available`
+`Runtime Plane V1 Verified · Multi-provider and Multi-domain Assembly Available`
 
 V1 按两个连续阶段推进：
 
@@ -36,7 +36,7 @@ Mobile Banking                 Wealth Manager Agent
 ```text
 solution.yaml
     ↓
-Capability Pack + Provider Binding
+Capability Pack + Per-capability Provider Binding
     ↓
 OpenJiuwen Java Integration
     ↓
@@ -46,6 +46,8 @@ Finance Contract / Provider / Evidence
 ```
 
 干净 OpenJiuwen Agent 不会自动获得任何金融能力。只有 `solution.yaml` 显式引用 Capability Pack 后，Integration 才注册工具及其使用提示；卸载 Pack 后工具随即消失。
+
+一个 Solution 可以组合多个 Provider。`capabilityBindings` 明确每项金融能力由哪个 Provider 提供；装配器在启动前检查缺失、重复、错误和不支持的绑定，并把实际 Provider 及版本逐项写入 `solution-lock.json`。单 Provider 方案保持兼容。
 
 Java Core 首版只定义四个公共对象：
 
@@ -76,6 +78,7 @@ Provider 另用 `finance-provider.v1` 声明实际支持的能力。装配器在
 - `wealth.customer-context.query` 面客财富诊断；
 - `wealth.previsit-context.query` 员工辅助财富访前上下文；
 - `insurance.customer-context.query` 保险顾问只读客户上下文与访前诊断装配；
+- `account.balance.query` 与 `fraud.transfer-risk.assess` 跨 Provider 装配的内部风险审核助手；
 - `channel.preferences.update` 预检、确认、单次提交与重复确认幂等；
 - `transfer.internal.create` 反诈预检、确认提交、处理中和未知结果查证；
 - 财富上下文必需/可选数据并行汇聚，以及 `READY/PARTIAL` 降级结果。
@@ -105,6 +108,7 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 - [V1 演示故事](docs/v1-demo-story.md)
 - [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
 - [Builder 财富场景交接](docs/builder-handoff-wealth-v1.md)
+- [Builder 多 Provider 装配交接](docs/builder-handoff-multi-provider-v1.md)
 - [Provider 接入规范](docs/provider-integration-v1.md)
 - [金融能力扩展路线](docs/domain-capability-roadmap-v1.md)
 - [跨应用财富验证记录](examples/cross-channel-wealth/verification.md)
@@ -129,9 +133,11 @@ finance-agent-harness/
 ├── providers/fraud-mining/          # 外部反诈能力参考 Provider
 ├── providers/employee-agent/        # EA 财富与保险宿主兼容 Provider
 ├── capability-packs/                # 可安装的金融工具语义、Schema 和 Smoke
+├── catalog/                         # Builder 可读取的最小静态资产目录
 ├── domain-packs/wealth/              # 面客与员工辅助财富 Skill、SOP 和评测引用
 ├── domain-packs/insurance/           # 保险顾问访前 Skill 与业务边界
-├── domain-packs/anti-fraud/          # 反诈能力说明、映射与评测资产
+├── domain-packs/risk/                # 内部风险审核方法与业务输出结构
+├── domain-packs/anti-fraud/          # 面客转账反诈能力边界
 ├── conformance/                      # 合同与 Adapter 验证
 ├── examples/mobile-banking/          # 首个应用消费者
 ├── examples/solutions/               # Builder/装配输入与干净 Runtime 示例

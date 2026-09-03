@@ -37,6 +37,8 @@ examples/solutions/wealth-manager-previsit/solution-build-input.v1.json
 
 输入只描述逻辑组合：Runtime 模板、Profile、Domain Pack、Capability Pack、Provider、模型引用和 Eval Pack。不得写入模型密钥、银行凭据、部署拓扑或大段 Runtime 私有配置。
 
+Builder 可从 `catalog/finance-assets.v1.json` 读取当前可选资产。多 Provider Solution 必须使用 `capabilityBindings` 明确每项能力的 Provider，详见 `docs/builder-handoff-multi-provider-v1.md`。
+
 需要向干净 Runtime 发布工具时，通过 `capabilityPackRefs` 引用安装资产。参考输入：
 
 ```text

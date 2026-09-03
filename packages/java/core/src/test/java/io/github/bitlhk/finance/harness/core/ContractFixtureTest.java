@@ -164,6 +164,20 @@ class ContractFixtureTest {
     }
 
     @Test
+    void riskReviewBuildInputBindsCapabilitiesAcrossMultipleProviders() throws IOException {
+        JsonNode input = JSON.readTree(ROOT.resolve(
+                "examples/solutions/risk-review/solution-build-input.v1.json").toFile());
+
+        assertEquals(2, input.path("providerRefs").size());
+        assertEquals("non-ai-banking-reference",
+                input.path("capabilityBindings").path("account.balance.query").asText());
+        assertEquals("fraud-mining-reference",
+                input.path("capabilityBindings").path("fraud.transfer-risk.assess").asText());
+        assertEquals("risk-review-internal-control",
+                input.path("domainPackRefs").path(0).path("id").asText());
+    }
+
+    @Test
     void providerSpiKeepsQueryAndTaskAsSeparateEntrypoints() throws IOException {
         CapabilityRequestV1 request = JSON.readValue(
                 validFixture("capability-request.query.json").toFile(), CapabilityRequestV1.class);

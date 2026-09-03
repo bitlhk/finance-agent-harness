@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "finance-asset-catalog.v1",
+  "catalogVersion": "0.1.0",
+  "runtimeIntegrations": [
+    {
+      "id": "openjiuwen-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "OpenJiuwen Java Integration",
+      "source": "repo://integrations/openjiuwen-java"
+    },
+    {
+      "id": "employee-agent-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "Employee Agent Java Host Integration",
+      "source": "repo://integrations/employee-agent-java"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "customer-self-service",
+      "version": "0.1.0",
+      "displayName": "客户自服务",
+      "source": "repo://profiles"
+    },
+    {
+      "id": "employee-assisted",
+      "version": "0.1.0",
+      "displayName": "员工辅助",
+      "source": "repo://profiles"
+    },
+    {
+      "id": "internal-control",
+      "version": "0.1.0",
+      "displayName": "内部审核",
+      "source": "repo://profiles"
+    }
+  ],
+  "domainPacks": [
+    {
+      "id": "wealth-customer-self-service",
+      "version": "0.1.0",
+      "displayName": "客户财富诊断",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/wealth/customer-self-service"
+    },
+    {
+      "id": "wealth-employee-assisted",
+      "version": "0.1.0",
+      "displayName": "财富经理访前诊断",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/wealth/employee-assisted"
+    },
+    {
+      "id": "insurance-employee-assisted",
+      "version": "0.1.0",
+      "displayName": "保险顾问访前诊断",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/insurance/employee-assisted"
+    },
+    {
+      "id": "risk-review-internal-control",
+      "version": "0.1.0",
+      "displayName": "转账风险审核",
+      "profile": "internal-control",
+      "source": "repo://domain-packs/risk/internal-control"
+    },
+    {
+      "id": "transfer-anti-fraud",
+      "version": "0.1.0",
+      "displayName": "面客转账反诈",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/anti-fraud"
+    }
+  ],
+  "capabilityPacks": [
+    {
+      "id": "retail-banking-basics",
+      "version": "0.1.0",
+      "displayName": "零售银行基础能力",
+      "source": "repo://capability-packs/retail-banking-basics"
+    },
+    {
+      "id": "wealth-manager-previsit",
+      "version": "0.1.0",
+      "displayName": "财富经理访前能力",
+      "source": "repo://capability-packs/wealth-manager-previsit"
+    },
+    {
+      "id": "insurance-advisor-previsit",
+      "version": "0.1.0",
+      "displayName": "保险顾问访前能力",
+      "source": "repo://capability-packs/insurance-advisor-previsit"
+    },
+    {
+      "id": "risk-review-basics",
+      "version": "0.1.0",
+      "displayName": "转账风险审核基础能力",
+      "source": "repo://capability-packs/risk-review-basics"
+    }
+  ],
+  "providers": [
+    {
+      "id": "non-ai-banking-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "灵感银行参考 Provider",
+      "source": "repo://providers/non-ai-banking",
+      "capabilities": [
+        "account.balance.query",
+        "transfer.internal.create"
+      ]
+    },
+    {
+      "id": "fraud-mining-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "反诈风险参考 Provider",
+      "source": "repo://providers/fraud-mining",
+      "capabilities": [
+        "fraud.transfer-risk.assess"
+      ]
+    },
+    {
+      "id": "employee-agent-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "岗位智能体财富参考 Provider",
+      "source": "repo://providers/employee-agent",
+      "capabilities": [
+        "wealth.previsit-context.query"
+      ]
+    },
+    {
+      "id": "employee-agent-insurance-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "岗位智能体保险参考 Provider",
+      "source": "repo://providers/employee-agent",
+      "capabilities": [
+        "insurance.customer-context.query"
+      ]
+    }
+  ],
+  "evalPacks": [
+    {
+      "id": "wealth-management",
+      "version": "0.2.3",
+      "displayName": "财富管理评测包",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/wealth-management"
+    },
+    {
+      "id": "investment-research",
+      "version": "0.1.0",
+      "displayName": "投研助手评测包",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/investment-research"
+    },
+    {
+      "id": "risk-review",
+      "version": "1.0.0",
+      "displayName": "转账风险审核评测包",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/risk-review"
+    }
+  ]
+}

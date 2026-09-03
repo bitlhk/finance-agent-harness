@@ -8,6 +8,7 @@ import com.openjiuwen.core.runner.base.TagMatchStrategy;
 import com.openjiuwen.core.singleagent.BaseAgent;
 import com.openjiuwen.core.singleagent.agents.ReActAgent;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
+import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 
 import java.time.Instant;
@@ -35,13 +36,26 @@ public final class OpenJiuwenCapabilityInstaller {
             OpenJiuwenFinanceBridge.InvocationDefaults defaults,
             FinanceCapabilityPackV1 pack,
             boolean simulated) {
+        String providerVersion = provider instanceof DescribedFinanceProvider described
+                ? described.descriptor().version()
+                : "unresolved";
+        Map<String, ProviderBinding> bindings = new LinkedHashMap<>();
+        pack.capabilities().forEach(capability -> bindings.put(
+                capability.capabilityId(),
+                new ProviderBinding(providerId, providerVersion, provider)));
+        return install(agent, bindings, defaults, pack, simulated);
+    }
+
+    public Installation install(
+            BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+            FinanceCapabilityPackV1 pack,
+            boolean simulated) {
         Objects.requireNonNull(agent, "agent");
         Objects.requireNonNull(pack, "pack");
+        Objects.requireNonNull(providerBindings, "providerBindings");
         String agentId = agent.getCard().getId();
-        Set<String> capabilityIds = new LinkedHashSet<>();
-        pack.capabilities().forEach(capability -> capabilityIds.add(capability.capabilityId()));
-        OpenJiuwenFinanceBridge bridge = new OpenJiuwenFinanceBridge(
-                provider, providerId, defaults, capabilityIds, simulated);
         Map<String, PendingTask> pendingTasks = new ConcurrentHashMap<>();
         Map<String, Tool> installedTools = new LinkedHashMap<>();
         String promptSection = "finance-capability-pack:" + pack.packId();
@@ -52,6 +66,17 @@ public final class OpenJiuwenCapabilityInstaller {
 
         try {
             for (FinanceCapabilityPackV1.Capability capability : pack.capabilities()) {
+                ProviderBinding providerBinding = providerBindings.get(capability.capabilityId());
+                if (providerBinding == null) {
+                    throw new IllegalArgumentException(
+                            "Provider binding is missing for capability: " + capability.capabilityId());
+                }
+                OpenJiuwenFinanceBridge bridge = new OpenJiuwenFinanceBridge(
+                        providerBinding.provider(),
+                        providerBinding.providerId(),
+                        defaults,
+                        Set.of(capability.capabilityId()),
+                        simulated);
                 ensureAvailable(agent, capability.toolName());
                 Tool tool = tool(agentId, capability, bridge, pendingTasks);
                 agent.getAbilityManager().add(tool.getCard());
@@ -70,15 +95,21 @@ public final class OpenJiuwenCapabilityInstaller {
 
         List<CapabilityBinding> bindings = pack.capabilities().stream()
                 .map(capability -> new CapabilityBinding(
-                        capability.capabilityId(), capability.toolName(), capability.operation().name()))
+                        capability.capabilityId(),
+                        capability.toolName(),
+                        capability.operation().name(),
+                        providerBindings.get(capability.capabilityId()).providerId(),
+                        providerBindings.get(capability.capabilityId()).providerVersion()))
                 .toList();
+        Set<String> providerIds = new LinkedHashSet<>();
+        bindings.forEach(binding -> providerIds.add(binding.providerId()));
         InstallationReceipt receipt = new InstallationReceipt(
                 "fh-install-" + UUID.randomUUID(),
                 pack.packId(),
                 pack.version(),
                 INTEGRATION_ID,
                 INTEGRATION_VERSION,
-                providerId,
+                providerIds.size() == 1 ? providerIds.iterator().next() : "multiple",
                 agentId,
                 bindings,
                 Instant.now());
@@ -255,7 +286,29 @@ public final class OpenJiuwenCapabilityInstaller {
         }
     }
 
-    public record CapabilityBinding(String capabilityId, String toolName, String operation) {
+    public record ProviderBinding(
+            String providerId,
+            String providerVersion,
+            FinanceProvider provider) {
+        public ProviderBinding {
+            if (providerId == null || providerId.isBlank()) {
+                throw new IllegalArgumentException("providerId is required");
+            }
+            if (providerVersion == null || providerVersion.isBlank()) {
+                throw new IllegalArgumentException("providerVersion is required");
+            }
+            providerId = providerId.trim();
+            providerVersion = providerVersion.trim();
+            Objects.requireNonNull(provider, "provider");
+        }
+    }
+
+    public record CapabilityBinding(
+            String capabilityId,
+            String toolName,
+            String operation,
+            String providerId,
+            String providerVersion) {
     }
 
     public record InstallationReceipt(

@@ -62,6 +62,17 @@
         "$ref": "#/$defs/assetRef"
       }
     },
+    "capabilityBindings": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{2,63}$"
+      },
+      "description": "Maps each installed capability to a declared Provider. Required when a Solution declares multiple Providers."
+    },
     "modelRef": {
       "type": "string",
       "minLength": 1,

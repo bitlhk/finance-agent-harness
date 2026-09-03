@@ -201,6 +201,106 @@ class OpenJiuwenSolutionAssemblerTest {
     }
 
     @Test
+    void riskReviewSolutionBindsEachCapabilityToItsDeclaredProvider() throws Exception {
+        Path root = root();
+        AtomicReference<CapabilityRequestV1> accountRequest = new AtomicReference<>();
+        AtomicReference<CapabilityRequestV1> fraudRequest = new AtomicReference<>();
+        FinanceProvider accountProvider = describedProvider(
+                "non-ai-banking-reference",
+                "account.balance.query",
+                CapabilityRequestV1.Operation.QUERY,
+                accountRequest,
+                Map.of("accounts", List.of(Map.of("accountId", "acct-001"))));
+        FinanceProvider fraudProvider = describedProvider(
+                "fraud-mining-reference",
+                "fraud.transfer-risk.assess",
+                CapabilityRequestV1.Operation.QUERY,
+                fraudRequest,
+                Map.of("decision", "BLOCK", "reasonCode", "KNOWN_FRAUD_INCIDENT_MATCH"));
+        ReActAgent cleanAgent = cleanAgent("risk-review-solution-assembly-agent");
+
+        OpenJiuwenSolutionAssembler.AssembledSolution solution =
+                new OpenJiuwenSolutionAssembler().assemble(
+                        root,
+                        root.resolve("examples/solutions/openjiuwen-risk-review/solution.yaml"),
+                        cleanAgent,
+                        Map.of(
+                                "non-ai-banking-reference", accountProvider,
+                                "fraud-mining-reference", fraudProvider),
+                        riskReviewDefaults(),
+                        true);
+        try {
+            assertNotNull(cleanAgent.getAbilityManager().get("account_balance_query"));
+            assertNotNull(cleanAgent.getAbilityManager().get("fraud_transfer_risk_assess"));
+            assertTrue(cleanAgent.getSystemPromptBuilder().hasSection(
+                    "finance-domain-pack:risk-review-internal-control:transfer-risk-review"));
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> accountOutput = (Map<String, Object>) ((Tool) Runner.resourceMgr()
+                    .getTool("account_balance_query"))
+                    .invoke(Map.of("accountId", "acct-001"));
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fraudOutput = (Map<String, Object>) ((Tool) Runner.resourceMgr()
+                    .getTool("fraud_transfer_risk_assess"))
+                    .invoke(Map.of("accountRef", "acct-001"));
+
+            assertEquals("COMPLETED", accountOutput.get("status"));
+            assertEquals("COMPLETED", fraudOutput.get("status"));
+            assertEquals("account.balance.query", accountRequest.get().capabilityId());
+            assertEquals("fraud.transfer-risk.assess", fraudRequest.get().capabilityId());
+            assertEquals("multiple", solution.lock().installations().getFirst().providerId());
+            Map<String, String> lockedBindings = solution.lock().installations().getFirst()
+                    .capabilities().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            OpenJiuwenCapabilityInstaller.CapabilityBinding::capabilityId,
+                            OpenJiuwenCapabilityInstaller.CapabilityBinding::providerId));
+            assertEquals("non-ai-banking-reference", lockedBindings.get("account.balance.query"));
+            assertEquals("fraud-mining-reference", lockedBindings.get("fraud.transfer-risk.assess"));
+        } finally {
+            solution.close();
+        }
+
+        assertNull(cleanAgent.getAbilityManager().get("account_balance_query"));
+        assertNull(cleanAgent.getAbilityManager().get("fraud_transfer_risk_assess"));
+    }
+
+    @Test
+    void multipleProvidersRequireACompleteExplicitCapabilityBinding() throws Exception {
+        Path root = root();
+        String source = Files.readString(
+                root.resolve("examples/solutions/openjiuwen-risk-review/solution.yaml"));
+        Path solutionFile = temporaryDirectory.resolve("missing-capability-binding.yaml");
+        Files.writeString(solutionFile, source.replace(
+                "  fraud.transfer-risk.assess: fraud-mining-reference\n", ""));
+        FinanceProvider accountProvider = describedProvider(
+                "non-ai-banking-reference",
+                "account.balance.query",
+                CapabilityRequestV1.Operation.QUERY,
+                new AtomicReference<>(),
+                Map.of());
+        FinanceProvider fraudProvider = describedProvider(
+                "fraud-mining-reference",
+                "fraud.transfer-risk.assess",
+                CapabilityRequestV1.Operation.QUERY,
+                new AtomicReference<>(),
+                Map.of());
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new OpenJiuwenSolutionAssembler().assemble(
+                        root,
+                        solutionFile,
+                        cleanAgent("risk-review-incomplete-binding"),
+                        Map.of(
+                                "non-ai-banking-reference", accountProvider,
+                                "fraud-mining-reference", fraudProvider),
+                        riskReviewDefaults(),
+                        true));
+
+        assertTrue(error.getMessage().contains("explicit binding"));
+        assertTrue(error.getMessage().contains("fraud.transfer-risk.assess"));
+    }
+
+    @Test
     void rejectsProviderWithoutDescriptorBeforeInstallingTools() {
         Path root = root();
         ReActAgent cleanAgent = cleanAgent("undescribed-provider");
@@ -330,6 +430,31 @@ class OpenJiuwenSolutionAssemblerTest {
                 null);
     }
 
+    private static FinanceProvider describedProvider(
+            String providerId,
+            String capabilityId,
+            CapabilityRequestV1.Operation operation,
+            AtomicReference<CapabilityRequestV1> captured,
+            Map<String, Object> data) {
+        return new DescribedFinanceProvider() {
+            @Override
+            public ProviderDescriptorV1 descriptor() {
+                return OpenJiuwenSolutionAssemblerTest.descriptor(providerId, capabilityId, operation);
+            }
+
+            @Override
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                captured.set(request);
+                return completed(request, data);
+            }
+
+            @Override
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("test Provider is read-only");
+            }
+        };
+    }
+
     private static OpenJiuwenFinanceBridge.InvocationDefaults defaults() {
         return new OpenJiuwenFinanceBridge.InvocationDefaults(
                 "customer-001",
@@ -359,6 +484,17 @@ class OpenJiuwenSolutionAssemblerTest {
                 FinanceContextV1.PrincipalType.EMPLOYEE,
                 "openjiuwen-insurance-example",
                 "INSURANCE_ADVISORY",
+                FinanceContextV1.AuthenticationLevel.STRONG,
+                Set.of());
+    }
+
+    private static OpenJiuwenFinanceBridge.InvocationDefaults riskReviewDefaults() {
+        return new OpenJiuwenFinanceBridge.InvocationDefaults(
+                "risk-reviewer-001",
+                "customer-001",
+                FinanceContextV1.PrincipalType.EMPLOYEE,
+                "openjiuwen-risk-review-example",
+                "TRANSFER_RISK_REVIEW",
                 FinanceContextV1.AuthenticationLevel.STRONG,
                 Set.of());
     }
