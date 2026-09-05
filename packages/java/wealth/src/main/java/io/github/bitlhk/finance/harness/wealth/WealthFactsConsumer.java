@@ -15,7 +15,16 @@ public final class WealthFactsConsumer {
         String risk = facts.risk().availability().name() + "; level=" + value(facts.risk().level())
                 + "; scheme=" + value(facts.risk().scheme()) + "; version=" + value(facts.risk().assessmentVersion())
                 + "; expires=" + value(facts.risk().expiresOn());
-        return new Description(facts.gaps().isEmpty() ? "COMPLETE_FOR_DESCRIPTION" : "PARTIAL_FOR_DESCRIPTION",
+        boolean complete = facts.gaps().isEmpty()
+                && facts.assets().availability() == WealthFactsV1.Availability.AVAILABLE
+                && !facts.assets().amounts().isEmpty()
+                && facts.assets().amounts().stream().allMatch(item -> item.valuationAt() != null
+                        && !"SOURCE_REPORTED_UNSPECIFIED".equals(item.scope()))
+                && facts.risk().availability() == WealthFactsV1.Availability.AVAILABLE
+                && facts.risk().scheme() != null && facts.risk().assessmentVersion() != null
+                && facts.risk().expiresOn() != null
+                && (facts.risk().expiresOn().length() != 10 || facts.risk().dateZone() != null);
+        return new Description(complete ? "COMPLETE_FOR_DESCRIPTION" : "PARTIAL_FOR_DESCRIPTION",
                 assets, risk, facts.gaps(), "NOT_EVALUATED",
                 "Source-reported assets only; not household wealth, authorization, suitability, or an investment recommendation.");
     }

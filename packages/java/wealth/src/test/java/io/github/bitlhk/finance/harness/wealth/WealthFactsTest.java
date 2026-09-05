@@ -109,6 +109,13 @@ class WealthFactsTest {
         var extreme = json(MOBILE); ((ObjectNode) extreme.at("/wealthAggregate/overview")).put("totalAssets", "1e100000000");
         assertThrows(IllegalArgumentException.class, () -> map(WealthFactsMapper.Format.MOBILE, extreme, BASIS));
     }
+    @Test void emptyGapListCannotClaimCompletenessWhenRequiredFactsAreMissing() throws Exception {
+        var original = map(WealthFactsMapper.Format.MOBILE, json(MOBILE), BASIS);
+        var incomplete = new WealthFactsV1(VERSION, original.subject(), original.assets(),
+                new Risk(Availability.MISSING, null, null, null, null, null, null), List.of(), original.source());
+        assertEquals("PARTIAL_FOR_DESCRIPTION", WealthFactsConsumer.describe(incomplete).taskReadiness());
+        assertEquals("NOT_EVALUATED", WealthFactsConsumer.describe(incomplete).suitability());
+    }
     static ObjectNode json(String input) throws Exception { return (ObjectNode)WealthJson.mapper().readTree(input); }
     static WealthFactsV1 map(WealthFactsMapper.Format format, ObjectNode data, WealthSourceSemantics semantics) {
         return WealthFactsMapper.map(format, result(data), "customer-001", semantics, SourceKind.CONTROLLED_FIXTURE, CLOCK);
