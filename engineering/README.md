@@ -2,6 +2,15 @@
 
 Engineering Plane 是长期构建期能力，不进入生产请求热路径。
 
-简化版 V1 不实现 Builder、SolutionManifest、SolutionLock 或自动优化平台，只要求代码、Fixture 和演示可以由非原作者复跑。
+当前已有仓内 `solution.yaml`、`OpenJiuwenSolutionAssembler` 与 `solution-lock.json` 薄装配器：检查引用摘要和能力绑定，安装原生工具并记录本次内容。它不是大型 Builder、自动优化平台或远端服务证明。
 
-手机银行和 Wealth Domain Pack 证明公共合同稳定后，再由 Builder 团队基于这些真实合同开展 V1.2 Solution Composition。Builder 可以继续使用 Python，生成或装配 Java 产物并不要求 Builder 与 Runtime 使用相同语言。
+外部 Builder 历史联调记录仍保留在 docs/builder-handoff-*；本轮复用现有装配路径，不开发第二套 Builder。后续通用 Composition 仍由真实第二接入需求决定。Builder 使用 Python 不要求 Runtime 与其同语言。
+
+## 本轮离线门禁
+
+1. `python engineering/verify_contracts.py`：实际 JSON Schema 2020-12、日期格式、共享正反例和所有声明资产。缺依赖或空测试不会当成成功。
+2. `mvn -B -ntp verify`：全部 Java 模块，包括确认/恢复/授权边界、共同财富语义、原生 AgentLoop。真实 Smoke 需显式启用，普通 PR 不访问真实业务。
+3. `bash examples/solutions/wealth-facts-kit/run-controlled.sh`：可交接的 CLI 路径，实际 HTTP Adapter + 脚本模型，默认无生产 Key。
+4. `python engineering/verify_wealth_kit.py`：核验五份运行报告的证据摘要、业务结果和拒绝计数。
+
+安装 Python 依赖见 `requirements-conformance.txt`。CI 同时执行以上入口并保存 XML 与受控报告。依赖下载需要网络，测试业务调用只使用 loopback。详见 [快速接入](../examples/solutions/wealth-facts-kit/README.md)。

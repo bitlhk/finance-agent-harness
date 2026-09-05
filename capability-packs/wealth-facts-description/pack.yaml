@@ -1,0 +1,19 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-facts-description
+version: 0.1.0
+systemPrompt: >-
+  Call wealth_facts_describe for the host-selected authorized subject. Report only
+  returned facts, scope, source time, risk status and gaps. Do not infer missing
+  currency, household assets, authorization, suitability or investment advice.
+capabilities:
+  - capabilityId: wealth.facts.describe
+    toolName: wealth_facts_describe
+    name: Describe authorized wealth facts
+    description: Read-only facts for the host-selected customer; no model-supplied identity or policy.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties: {}
+    requiredScopes:
+      - wealth:facts:read

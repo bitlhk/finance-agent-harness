@@ -2,6 +2,7 @@
 
 import copy
 import json
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
 
 import yaml
@@ -9,9 +10,16 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parents[1]
+FORMATS = FormatChecker()
+
+
+@FORMATS.checks("iana-time-zone", raises=(ZoneInfoNotFoundError, ValueError, TypeError))
+def valid_zone(value):
+    return isinstance(value, str) and bool(ZoneInfo(value))
 
 
 def main():
+    assert not FORMATS.conforms("not-a-date", "date-time"), "Install required date-time validator; do not silently skip formats"
     schemas = {}
     registry = Registry()
     for path in sorted((ROOT / "contracts/json-schema").rglob("*.schema.json")):
@@ -19,10 +27,12 @@ def main():
         Draft202012Validator.check_schema(schema)
         schemas[path.name.removesuffix(".schema.json")] = schema
         registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
-    assert len(schemas) == 8, "Schema inventory changed; review the gate"
+    required = {"finance-context.v1", "capability-request.v1", "capability-result.v1", "evidence-receipt.v1",
+                "provider-descriptor.v1", "capability-pack.v1", "domain-pack.v1", "solution-build-input.v1"}
+    assert required <= schemas.keys(), f"Missing required schemas: {required - schemas.keys()}"
 
     def validator(name):
-        return Draft202012Validator(schemas[name], registry=registry, format_checker=FormatChecker())
+        return Draft202012Validator(schemas[name], registry=registry, format_checker=FORMATS)
 
     count = 0
     for path in sorted((ROOT / "conformance/fixtures/v1").rglob("*.json")):
@@ -36,6 +46,12 @@ def main():
         for path in sorted((ROOT / directory).rglob("pack.yaml")):
             validator(schema_name).validate(yaml.safe_load(path.read_text()))
             count += 1
+    wealth_fixtures = sorted((ROOT / "conformance/fixtures/wealth/v0.1").rglob("*.json"))
+    assert wealth_fixtures, "Wealth contract fixtures must not be empty"
+    for path in wealth_fixtures:
+        errors = list(validator("wealth-facts.v0.1").iter_errors(json.loads(path.read_text())))
+        assert bool(errors) == (path.parent.name == "invalid"), f"Unexpected wealth fixture: {path} {errors}"
+        count += 1
     for path in sorted((ROOT / "examples/solutions").rglob("*")):
         if path.name in {"solution.yaml", "solution-without-domain.yaml", "solution-build-input.v1.json"}:
             validator("solution-build-input.v1").validate(yaml.safe_load(path.read_text()))

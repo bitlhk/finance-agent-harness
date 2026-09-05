@@ -7,6 +7,8 @@ import io.github.bitlhk.finance.harness.core.EvidenceReceipts;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.InvocationAccess;
+import io.github.bitlhk.finance.harness.core.spi.InputCollectionProvider;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -37,6 +39,7 @@ public final class OpenJiuwenFinanceBridge {
     public static final String CK_PARAMETERS = "financeHarness.parameters";
     public static final String CK_BINDING = "financeHarness.confirmationBinding";
     public static final String CK_OWNER = "financeHarness.owner";
+    public static final String CK_INPUTS = "financeHarness.collectableInputs";
 
     private static final Set<String> CONTROL_ARGUMENTS = Set.of(
             "query",
@@ -59,6 +62,7 @@ public final class OpenJiuwenFinanceBridge {
     private final InvocationDefaults defaults;
     private final Set<String> supportedCapabilities;
     private final boolean simulated;
+    private String hostSessionRef;
 
     public OpenJiuwenFinanceBridge(
             FinanceProvider provider,
@@ -74,6 +78,14 @@ public final class OpenJiuwenFinanceBridge {
         this.simulated = simulated;
     }
 
+    OpenJiuwenFinanceBridge hostSession(String sessionRef) { this.hostSessionRef = sessionRef; return this; }
+
+    void checkAccess(OpenJiuwenInvocationV1 invocation, CapabilityRequestV1.Operation operation) {
+        if (!supports(invocation.capabilityId())) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
+        CapabilityRequestV1 request = request(invocation, operation);
+        if (provider instanceof InvocationAccess access) access.checkAccess(request);
+    }
+
     public boolean supports(String capabilityId) {
         return capabilityId != null && supportedCapabilities.contains(capabilityId);
     }
@@ -81,6 +93,7 @@ public final class OpenJiuwenFinanceBridge {
     public OpenJiuwenExecutionV1 query(OpenJiuwenInvocationV1 invocation) {
         Instant startedAt = Instant.now();
         try {
+            checkAccess(invocation, CapabilityRequestV1.Operation.QUERY);
             CapabilityRequestV1 request = request(invocation, CapabilityRequestV1.Operation.QUERY);
             CapabilityResultV1 result = provider.query(request);
             EvidenceReceiptV1 receipt = EvidenceReceipts.from(
@@ -98,8 +111,12 @@ public final class OpenJiuwenFinanceBridge {
             return execution(
                     needsUser ? OpenJiuwenExecutionV1.Status.NEED_USER : OpenJiuwenExecutionV1.Status.REJECTED,
                     invocation, result, data, evidence, code, needsUser ? result.content() : "", Map.of());
+        } catch (SecurityException denied) {
+            return accessDenied(invocation, startedAt);
         } catch (RuntimeException exception) {
-            return rejected(invocation, "暂时无法完成查询，请稍后重试。");
+            return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
+                    "暂时无法完成查询，请稍后重试。", Map.of(), List.of(localEvidence(invocation, startedAt, "UNOBSERVED")),
+                    "FINANCE_HARNESS_ERROR", "", Map.of());
         }
     }
 
@@ -111,6 +128,7 @@ public final class OpenJiuwenFinanceBridge {
     public OpenJiuwenExecutionV1 executeTask(OpenJiuwenInvocationV1 invocation, HostTaskConfirmation approval) {
         Instant startedAt = Instant.now();
         try {
+            checkAccess(invocation, CapabilityRequestV1.Operation.TASK);
             if (!supports(invocation.capabilityId())) return rejected(invocation, "未安装此办理能力。");
             Map<String, Object> prior = invocation.checkpoint();
             if (!prior.isEmpty() && (!invocation.capabilityId().equals(prior.get(CK_CAPABILITY))
@@ -119,7 +137,8 @@ public final class OpenJiuwenFinanceBridge {
             }
             Map<String, Object> supplied = businessParameters(invocation.arguments());
             if (prior.containsKey(CK_PARAMETERS) && !supplied.isEmpty()
-                    && !fingerprint(supplied).equals(fingerprint(prior.get(CK_PARAMETERS)))) {
+                    && !fingerprint(supplied).equals(fingerprint(prior.get(CK_PARAMETERS)))
+                    && !canSupplement(prior, supplied)) {
                 return rejected(invocation, "原任务参数不可变更，请先处理原任务。");
             }
             if (approval != null && !approval.validFor(text(prior.get(CK_BINDING)), startedAt)) {
@@ -155,11 +174,13 @@ public final class OpenJiuwenFinanceBridge {
                     : result.error().sourceCode();
             return execution(OpenJiuwenExecutionV1.Status.REJECTED, invocation, result,
                     data, evidence, code, "", Map.of());
+        } catch (SecurityException denied) {
+            return accessDenied(invocation, startedAt);
         } catch (RuntimeException exception) {
             if (!invocation.checkpoint().isEmpty()) {
                 return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.NEED_USER,
                         invocation.taskId(), "当前无法确认原任务结果，请勿重新提交。",
-                        Map.of("resultStatus", "UNKNOWN"), List.of(), "OBSERVATION_FAILED",
+                        Map.of("resultStatus", "UNKNOWN"), List.of(localEvidence(invocation, startedAt, "UNOBSERVED")), "OBSERVATION_FAILED",
                         "请稍后查证原任务。", recoveryCheckpoint(invocation));
             }
             return rejected(invocation, "暂时无法完成办理，请稍后重试。");
@@ -170,9 +191,9 @@ public final class OpenJiuwenFinanceBridge {
             OpenJiuwenInvocationV1 invocation,
             CapabilityRequestV1.Operation operation) {
         String invocationId = UUID.randomUUID().toString();
-        Set<String> scopes = invocation.requiredScopes().isEmpty()
-                ? defaults.scopes()
-                : invocation.requiredScopes();
+        Set<String> granted = Set.copyOf(defaults.currentScopes().get());
+        if (!granted.containsAll(invocation.requiredScopes())) throw new SecurityException("INSUFFICIENT_SCOPES");
+        Set<String> scopes = invocation.requiredScopes().isEmpty() ? Set.of() : invocation.requiredScopes();
         FinanceContextV1 context = new FinanceContextV1(
                 FinanceContextV1.SCHEMA_VERSION,
                 "fh-request-" + invocationId,
@@ -182,7 +203,7 @@ public final class OpenJiuwenFinanceBridge {
                 defaults.channel(),
                 defaults.purpose(),
                 defaults.subjectRef(),
-                invocation.taskId(),
+                hostSessionRef == null ? invocation.taskId() : hostSessionRef,
                 defaults.authenticationLevel(),
                 scopes);
         return new CapabilityRequestV1(
@@ -214,7 +235,8 @@ public final class OpenJiuwenFinanceBridge {
                 base.capabilityId(),
                 base.operation(),
                 base.context(),
-                prior.containsKey(CK_PARAMETERS) ? parameters(prior) : base.parameters(),
+                prior.containsKey(CK_PARAMETERS) && !canSupplement(prior, base.parameters())
+                        ? parameters(prior) : base.parameters(),
                 idempotencyKey,
                 taskRef.isBlank() ? null : taskRef,
                 continuation(prior),
@@ -250,7 +272,19 @@ public final class OpenJiuwenFinanceBridge {
             CapabilityRequestV1 request,
             OpenJiuwenInvocationV1 invocation) {
         CapabilityResultV1.TaskState task = result.task();
-        if (task == null) return recoveryCheckpoint(invocation);
+        if (task == null) {
+            Map<String, Object> prior = new LinkedHashMap<>(recoveryCheckpoint(invocation));
+            if (result.status() == CapabilityResultV1.Status.NEED_USER
+                    && !prior.containsKey(CK_TASK_REF) && !Boolean.TRUE.equals(continuation(prior).get("submitOutcomeUnknown"))
+                    && provider instanceof InputCollectionProvider collector) {
+                Set<String> fields = collector.collectableInputs(request, result);
+                if (!fields.isEmpty()) {
+                    prior.put(CK_INPUTS, fields.stream().sorted().toList());
+                    prior.put(CK_PARAMETERS, request.parameters());
+                }
+            }
+            return Map.copyOf(prior);
+        }
         Map<String, Object> checkpoint = new LinkedHashMap<>();
         checkpoint.put(CK_TASK_REF, task.taskRef());
         checkpoint.put(CK_STATUS, task.status());
@@ -280,7 +314,33 @@ public final class OpenJiuwenFinanceBridge {
     static Map<String, Object> recoveryCheckpoint(OpenJiuwenInvocationV1 invocation) {
         Map<String, Object> prior = new LinkedHashMap<>(invocation.checkpoint());
         prior.remove(CK_BINDING);
+        prior.remove(CK_INPUTS);
         return Map.copyOf(prior);
+    }
+
+    static boolean canSupplement(Map<String, Object> checkpoint, Map<String, Object> merged) {
+        if (!(checkpoint.get(CK_INPUTS) instanceof List<?> fields) || fields.isEmpty()
+                || checkpoint.containsKey(CK_TASK_REF)) return false;
+        Map<String, Object> original = parameters(checkpoint);
+        if (original == null || !merged.keySet().containsAll(original.keySet())) return false;
+        for (var field : merged.entrySet()) {
+            if (original.containsKey(field.getKey())) {
+                if (!fingerprint(original.get(field.getKey())).equals(fingerprint(field.getValue()))) return false;
+            } else if (!fields.contains(field.getKey())) return false;
+        }
+        return true;
+    }
+
+    private Map<String, Object> localEvidence(OpenJiuwenInvocationV1 invocation, Instant start, String status) {
+        return Map.of("requestId", "fh-local-" + UUID.randomUUID(), "taskId", invocation.taskId(),
+                "providerId", providerId, "startedAt", start.toString(), "finishedAt", Instant.now().toString(),
+                "sourceStatus", status, "evidenceKind", "LOCAL_BOUNDARY", "simulated", simulated);
+    }
+
+    OpenJiuwenExecutionV1 accessDenied(OpenJiuwenInvocationV1 invocation, Instant start) {
+        return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
+                "当前身份或权限不允许此操作。", Map.of(), List.of(localEvidence(invocation, start, "ACCESS_DENIED")),
+                "AUTHORIZATION_DENIED", "", Map.of());
     }
 
     static Map<String, Object> freeze(Map<String, Object> values) {
@@ -469,7 +529,14 @@ public final class OpenJiuwenFinanceBridge {
             String channel,
             String purpose,
             FinanceContextV1.AuthenticationLevel authenticationLevel,
-            Set<String> scopes) {
+            Set<String> scopes,
+            java.util.function.Supplier<Set<String>> currentScopes) {
+
+        public InvocationDefaults(String principalId, String subjectRef, FinanceContextV1.PrincipalType principalType,
+                String channel, String purpose, FinanceContextV1.AuthenticationLevel authenticationLevel, Set<String> scopes) {
+            this(principalId, subjectRef, principalType, channel, purpose, authenticationLevel, scopes,
+                    () -> scopes == null ? Set.of() : Set.copyOf(scopes));
+        }
         public InvocationDefaults {
             principalId = required(principalId, "principalId");
             subjectRef = required(subjectRef, "subjectRef");
@@ -480,6 +547,7 @@ public final class OpenJiuwenFinanceBridge {
                     ? FinanceContextV1.AuthenticationLevel.UNKNOWN
                     : authenticationLevel;
             scopes = scopes == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(scopes));
+            currentScopes = Objects.requireNonNull(currentScopes, "currentScopes");
         }
 
         public InvocationDefaults withPurpose(String newPurpose) {
@@ -487,7 +555,7 @@ public final class OpenJiuwenFinanceBridge {
                     ? this
                     : new InvocationDefaults(
                             principalId, subjectRef, principalType, channel, newPurpose,
-                            authenticationLevel, scopes);
+                            authenticationLevel, scopes, currentScopes);
         }
     }
 }

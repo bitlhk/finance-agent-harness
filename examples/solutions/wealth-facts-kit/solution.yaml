@@ -1,0 +1,29 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: wealth-facts-kit-v01
+displayName: Wealth Facts Integration Kit
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.13
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: shared-read-only
+  version: 0.1.0
+  source: repo://profiles/shared-read-only.md
+domainPackRefs:
+  - id: wealth-shared-facts
+    version: 0.1.0
+    source: repo://domain-packs/wealth/shared-facts
+capabilityPackRefs:
+  - id: wealth-facts-description
+    version: 0.1.0
+    source: repo://capability-packs/wealth-facts-description
+providerRefs:
+  - id: wealth-facts-adapter
+    version: 0.1.0
+    source: repo://packages/java/wealth
+modelRef: fixture://local-scripted-tool-selection
+evaluationPackRef:
+  id: wealth-facts-controlled
+  version: 0.1.0
+  source: repo://conformance/fixtures/wealth/v0.1

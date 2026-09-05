@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 
 /** Coordinates host checkpoints and approvals; the bank still owns all business task states. */
 final class InstalledTaskController {
@@ -32,6 +33,7 @@ final class InstalledTaskController {
     String confirmationBinding(String handle) {
         return store.locked(access -> {
             TaskCheckpointStore.SavedTask saved = owned(access, handle);
+            authorize(saved);
             Object binding = saved.checkpoint().get(OpenJiuwenFinanceBridge.CK_BINDING);
             if (saved.terminalResult() != null || !(binding instanceof String text) || text.isBlank()) {
                 throw new IllegalStateException("Task is not awaiting a host confirmation");
@@ -49,6 +51,7 @@ final class InstalledTaskController {
     Map<String, Object> decline(String handle) {
         return store.locked(access -> {
             TaskCheckpointStore.SavedTask saved = owned(access, handle);
+            authorize(saved);
             if (saved.terminalResult() != null) return result(saved.terminalResult(), "");
             if (!saved.checkpoint().containsKey(OpenJiuwenFinanceBridge.CK_BINDING)) {
                 return error("TASK_NOT_AWAITING_CONFIRMATION", "原任务结果仍需查证，不能作为未提交任务取消。");
@@ -74,13 +77,27 @@ final class InstalledTaskController {
                 if (!capabilityId.equals(prior.capabilityId())) {
                     return error("TASK_CAPABILITY_MISMATCH", "此句柄不属于当前业务能力。");
                 }
+                try { authorize(prior); }
+                catch (SecurityException denied) { return denied(prior); }
                 if (prior.terminalResult() != null) return result(prior.terminalResult(), "");
                 Map<String, Object> supplied = OpenJiuwenFinanceBridge.businessParameters(current);
+                Map<String, Object> merged = new LinkedHashMap<>(prior.arguments());
+                merged.putAll(supplied);
+                boolean supplement = OpenJiuwenFinanceBridge.canSupplement(prior.checkpoint(), merged);
                 for (var field : supplied.entrySet()) {
-                    if (!prior.arguments().containsKey(field.getKey()) || !OpenJiuwenFinanceBridge.fingerprint(field.getValue())
-                            .equals(OpenJiuwenFinanceBridge.fingerprint(prior.arguments().get(field.getKey())))) {
+                    if (!supplement && (!prior.arguments().containsKey(field.getKey()) || !OpenJiuwenFinanceBridge.fingerprint(field.getValue())
+                            .equals(OpenJiuwenFinanceBridge.fingerprint(prior.arguments().get(field.getKey()))))) {
                         return error("TASK_PARAMETERS_CHANGED", "原任务金额、收款人等参数不可在续办时变更。");
                     }
+                }
+                if (supplement) {
+                    prior = new TaskCheckpointStore.SavedTask(prior.scope(), prior.capabilityId(), prior.taskId(),
+                            merged, prior.checkpoint(), null);
+                } else if (!prior.checkpoint().containsKey(OpenJiuwenFinanceBridge.CK_TASK_REF)
+                        && Boolean.TRUE.equals(prior.checkpoint().get("financeHarness.attempted"))) {
+                    return Map.of("status", "NEED_USER", "requiresUserAction", true,
+                            "errorCode", "ORIGINAL_TASK_REQUIRES_VERIFICATION", "financeTaskHandle", handle,
+                            "content", "原调用结果未确认且缺少可自动查证的银行引用，请由宿主查证，勿重复创建任务。");
                 }
             }
             var capability = capabilities.get(capabilityId);
@@ -102,6 +119,11 @@ final class InstalledTaskController {
             }
             var invocation = new OpenJiuwenInvocationV1(prior.taskId(), capabilityId, agentId,
                     capability.requiredScopes(), prior.arguments(), prior.checkpoint());
+            try { bridge.checkAccess(invocation, CapabilityRequestV1.Operation.TASK); }
+            catch (SecurityException denied) { return denied(prior); }
+            Map<String, Object> attempted = new LinkedHashMap<>(OpenJiuwenFinanceBridge.recoveryCheckpoint(invocation));
+            attempted.put("financeHarness.attempted", true);
+            access.put(handle, saved(prior, attempted, null));
             if (approval != null) {
                 // Persist uncertainty BEFORE a write. A crash must resume by observation, never replay approval.
                 Map<String, Object> recovery = new LinkedHashMap<>(OpenJiuwenFinanceBridge.recoveryCheckpoint(invocation));
@@ -113,8 +135,11 @@ final class InstalledTaskController {
                 access.put(handle, saved(prior, recovery, null));
             }
             OpenJiuwenExecutionV1 execution = bridge.executeTask(invocation, approval);
+            if ("AUTHORIZATION_DENIED".equals(execution.errorCode())) return result(execution, "");
             if (!execution.checkpoint().isEmpty()) {
-                Map<String, Object> checkpoint = execution.checkpoint();
+                Map<String, Object> checkpoint = new LinkedHashMap<>(execution.checkpoint());
+                checkpoint.put("financeHarness.attempted", true);
+                checkpoint.put(OpenJiuwenFinanceBridge.CK_PARAMETERS, prior.arguments());
                 if (approval != null) {
                     Map<String, Object> uncertain = new LinkedHashMap<>(checkpoint);
                     uncertain.remove(OpenJiuwenFinanceBridge.CK_BINDING);
@@ -133,6 +158,21 @@ final class InstalledTaskController {
             access.put(handle, saved(prior, Map.of(), execution));
             return result(execution, "");
         });
+    }
+
+    private void authorize(TaskCheckpointStore.SavedTask saved) {
+        var capability = capabilities.get(saved.capabilityId());
+        var bridge = bridges.get(saved.capabilityId());
+        if (bridge == null || capability == null) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
+        bridge.checkAccess(new OpenJiuwenInvocationV1(saved.taskId(), saved.capabilityId(), agentId,
+                capability.requiredScopes(), saved.arguments(), saved.checkpoint()), CapabilityRequestV1.Operation.TASK);
+    }
+
+    private Map<String, Object> denied(TaskCheckpointStore.SavedTask saved) {
+        var capability = capabilities.get(saved.capabilityId());
+        return result(bridges.get(saved.capabilityId()).accessDenied(new OpenJiuwenInvocationV1(
+                saved.taskId(), saved.capabilityId(), agentId, capability.requiredScopes(), Map.of(), Map.of()),
+                Instant.now()), "");
     }
 
     private TaskCheckpointStore.SavedTask owned(TaskCheckpointStore.Access access, String handle) {

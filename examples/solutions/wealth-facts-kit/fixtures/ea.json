@@ -1,0 +1,17 @@
+{
+  "previsitContext": {
+    "schema": "ea.wealth-previsit-context.v1",
+    "status": "ready",
+    "customer": {
+      "customerId": "customer-001",
+      "name": "PRIVATE_NAME",
+      "maskedPhone": "PRIVATE_PHONE",
+      "recentContactSummary": "PRIVATE_EMPLOYEE_NOTES",
+      "riskLevel": "C3",
+      "assessmentExpiresAt": "2027-03-01",
+      "portfolio": {"summary": {"totalAssets": 1000000.12345678}}
+    },
+    "evidence": {"customerId": "customer-001", "portfolioDataAsOf": "2026-09-01T00:00:00Z"},
+    "knowledgeBasis": {"internal": "PRIVATE_KNOWLEDGE"}
+  }
+}

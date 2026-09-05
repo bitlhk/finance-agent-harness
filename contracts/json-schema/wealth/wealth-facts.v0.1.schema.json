@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitlhk.github.io/finance-agent-harness/schema/wealth-facts.v0.1.schema.json",
+  "title": "Candidate read-only wealth facts V0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "subject",
+    "assets",
+    "risk",
+    "gaps",
+    "source"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "wealth-facts.v0.1"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "assets": {
+      "$ref": "#/$defs/assets"
+    },
+    "risk": {
+      "$ref": "#/$defs/risk"
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/gap"
+      }
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    }
+  },
+  "$defs": {
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "id"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "currency"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,17})(?:\\.[0-9]{1,8})?$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "assetAmount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "money",
+        "scope"
+      ],
+      "properties": {
+        "money": {
+          "$ref": "#/$defs/money"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "valuationAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "amounts",
+        "missingSources"
+      ],
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "MISSING",
+            "UNAVAILABLE",
+            "NOT_COVERED",
+            "EXPIRED",
+            "CONFLICT"
+          ]
+        },
+        "amounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assetAmount"
+          }
+        },
+        "missingSources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "enum": [
+                  "AVAILABLE",
+                  "EXPIRED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "amounts": {
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "amounts": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability"
+      ],
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "MISSING",
+            "UNAVAILABLE",
+            "NOT_COVERED",
+            "EXPIRED",
+            "CONFLICT"
+          ]
+        },
+        "level": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "scheme": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "assessmentVersion": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "assessedOn": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "expiresOn": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "dateZone": {
+          "type": "string",
+          "format": "iana-time-zone",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "enum": [
+                  "AVAILABLE",
+                  "EXPIRED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "level"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "level"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "reason",
+        "code"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "reason": {
+          "enum": [
+            "MISSING",
+            "UNAVAILABLE",
+            "NOT_COVERED",
+            "EXPIRED",
+            "CONFLICT"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "contract",
+        "semanticsBasis",
+        "kind",
+        "observedAt",
+        "payloadSha256"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "semanticsBasis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "enum": [
+            "CONTROLLED_FIXTURE",
+            "UPSTREAM_RESPONSE"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payloadSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

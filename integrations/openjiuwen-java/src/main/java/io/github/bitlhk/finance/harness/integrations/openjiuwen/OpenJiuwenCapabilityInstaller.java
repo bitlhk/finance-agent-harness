@@ -93,7 +93,7 @@ public final class OpenJiuwenCapabilityInstaller {
                         providerBinding.providerId(),
                         defaults,
                         Set.of(capability.capabilityId()),
-                        simulated);
+                        simulated).hostSession(hostSessionRef);
                 ensureAvailable(agent, capability.toolName());
                 tasks.register(capability, bridge);
                 Tool tool = tool(agentId, capability, bridge, tasks);

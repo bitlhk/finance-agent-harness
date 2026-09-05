@@ -135,7 +135,11 @@ class ContractFixtureTest {
             schemas = files.filter(path -> path.getFileName().toString().endsWith(".schema.json"))
                     .toList();
         }
-        assertEquals(8, schemas.size());
+        var names = schemas.stream().map(path -> path.getFileName().toString()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(names.containsAll(java.util.Set.of("finance-context.v1.schema.json", "capability-request.v1.schema.json",
+                "capability-result.v1.schema.json", "evidence-receipt.v1.schema.json", "provider-descriptor.v1.schema.json",
+                "capability-pack.v1.schema.json", "domain-pack.v1.schema.json", "solution-build-input.v1.schema.json")),
+                "Required contracts must remain present while new schemas are validated too");
         for (Path schema : schemas) {
             JsonNode root = JSON.readTree(schema.toFile());
             assertEquals("https://json-schema.org/draft/2020-12/schema", root.path("$schema").asText());

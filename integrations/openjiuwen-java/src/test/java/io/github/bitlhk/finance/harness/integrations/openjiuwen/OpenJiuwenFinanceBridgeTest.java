@@ -30,7 +30,7 @@ class OpenJiuwenFinanceBridgeTest {
                     "mobile-banking",
                     "WEALTH_DIAGNOSIS",
                     FinanceContextV1.AuthenticationLevel.BASIC,
-                    Set.of("fallback:read"));
+                    Set.of("fallback:read", "wealth:read", "channel:write"));
 
     @Test
     void queryMapsContextAndReturnsMinimalEvidence() {

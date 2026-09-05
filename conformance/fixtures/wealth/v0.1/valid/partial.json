@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "wealth-facts.v0.1",
+  "subject": {
+    "namespace": "fixture-bank",
+    "id": "customer-001"
+  },
+  "assets": {
+    "availability": "UNAVAILABLE",
+    "amounts": [],
+    "missingSources": []
+  },
+  "risk": {
+    "availability": "MISSING"
+  },
+  "gaps": [
+    {
+      "field": "assets",
+      "reason": "UNAVAILABLE",
+      "code": "SOURCE_UNAVAILABLE"
+    },
+    {
+      "field": "risk",
+      "reason": "MISSING",
+      "code": "RISK_NOT_RETURNED"
+    }
+  ],
+  "source": {
+    "reference": "fixture-bank",
+    "contract": "fixture:wealth-source-v1",
+    "semanticsBasis": "fixture:dictionary-v1",
+    "kind": "CONTROLLED_FIXTURE",
+    "observedAt": "2026-09-05T00:00:00Z",
+    "payloadSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
