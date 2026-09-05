@@ -97,6 +97,20 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
     }
 
     private CapabilityResultV1 accountBalance(CapabilityRequestV1 request) {
+        if (request.parameters().containsKey("accountId")) {
+            Object selector = request.parameters().get("accountId");
+            if (!(selector instanceof String accountId) || !accountId.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")) {
+                return localFailure(request, "INVALID_INPUT", "ACCOUNT_ID_INVALID", false,
+                        "accountId must identify one account", List.of("CHECK_ACCOUNT_ID"));
+            }
+            Response response = client.get("/api/v1/accounts/" + accountId, Map.of(), request.context());
+            if (!accountId.equals(response.data().get("accountId"))) {
+                return localFailure(request, "TEMPORARY_FAILURE", "ACCOUNT_ID_MISMATCH", false,
+                        "bank response does not match selected account", List.of("CHECK_PROVIDER"));
+            }
+            return completed(request, "指定账户余额查询已完成。", Map.of("accounts", List.of(response.data())),
+                    response.sourceSystem(), response.asOf());
+        }
         Map<String, String> query = new LinkedHashMap<>();
         copyQueryParameter(request.parameters(), query, "page");
         copyQueryParameter(request.parameters(), query, "pageSize");
@@ -223,11 +237,27 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                     ? startChannelPreferenceUpdate(request)
                     : resumeChannelPreferenceUpdate(request);
         } catch (ProviderFailure failure) {
-            return upstreamFailure(request, failure);
+            return request.taskRef() == null ? upstreamFailure(request, failure) : observationFailure(request, failure);
         } catch (RuntimeException failure) {
+            if (request.taskRef() != null) {
+                return observationFailure(request, new ProviderFailure(
+                        "TEMPORARY_FAILURE", "PROVIDER_CONTRACT_FAILURE", false,
+                        "unable to observe original bank task", List.of(), List.of("CHECK_TASK_STATUS"),
+                        request.context().requestId(), request.context().traceId(), "non-ai-banking", Instant.now()));
+            }
             return localFailure(request, "TEMPORARY_FAILURE", "PROVIDER_CONTRACT_FAILURE", false,
                     "provider could not map the bank task response", List.of("CHECK_PROVIDER"));
         }
+    }
+
+    private static CapabilityResultV1 observationFailure(CapabilityRequestV1 request, ProviderFailure failure) {
+        return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
+                request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.UNKNOWN,
+                "本次未能查证原任务，请保留原任务继续查询，勿重复提交。", Map.of(), List.of(),
+                List.of("CHECK_TASK_STATUS", "CONTACT_HUMAN"), failure.sourceSystem(), failure.asOf(),
+                new CapabilityResultV1.TaskState(request.taskRef(), "UNKNOWN", false, request.continuation()),
+                new CapabilityResultV1.Failure("OBSERVATION_FAILED", failure.sourceCode(), failure.retryable(),
+                        "observation failed; bank task outcome remains unverified", List.of()));
     }
 
     private CapabilityResultV1 startTransfer(CapabilityRequestV1 request) {
@@ -297,111 +327,96 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
     }
 
     private CapabilityResultV1 resumeTransfer(CapabilityRequestV1 request) {
+        return resumeBankTask(request, true);
+    }
+
+    private CapabilityResultV1 resumeBankTask(CapabilityRequestV1 request, boolean transfer) {
         if (!TASK_REF.matcher(request.taskRef()).matches()) {
             return localFailure(request, "INVALID_INPUT", "TASK_REF_INVALID", false,
                     "taskRef does not match the provider task identity contract", List.of("CHECK_TASK_REF"));
         }
         Response observed = client.get("/api/v1/tasks/" + request.taskRef(), Map.of(), request.context());
-        String capabilityId = text(observed.data().get("capabilityId"), "");
-        if (!capabilityId.isBlank() && !TRANSFER_INTERNAL_CREATE.equals(capabilityId)) {
+        if (!request.capabilityId().equals(text(observed.data().get("capabilityId"), ""))) {
             return localFailure(request, "INVALID_INPUT", "TASK_CAPABILITY_MISMATCH", false,
-                    "taskRef belongs to a different capability", List.of("CHECK_TASK_REF"));
+                    "taskRef belongs to a different or unknown capability", List.of("CHECK_TASK_REF"));
         }
-        String status = text(observed.data().get("status"), "UNKNOWN").toUpperCase();
-        if ("COMPLETED".equals(status)) return completedTransferTask(request, observed);
-        if ("FAILED_FINAL".equals(status) || "FAILED".equals(status) || "CANCELLED".equals(status)) {
-            return failedTransferTask(request, observed, status);
-        }
-        if ("UNKNOWN".equals(status)
-                || Boolean.TRUE.equals(request.continuation().get("submitOutcomeUnknown"))) {
-            CapabilityResultV1 authentication = ensureTransferAuthentication(request);
-            if (authentication != null) return authentication;
-            Response reconciled = client.post(
-                    "/api/v1/tasks/" + request.taskRef() + "/reconcile", Map.of(), request.context());
-            String reconciledStatus = text(reconciled.data().get("status"), "UNKNOWN").toUpperCase();
-            if ("COMPLETED".equals(reconciledStatus)) return completedTransferTask(request, reconciled);
-            if ("FAILED_FINAL".equals(reconciledStatus) || "FAILED".equals(reconciledStatus)
-                    || "CANCELLED".equals(reconciledStatus)) {
-                return failedTransferTask(request, reconciled, reconciledStatus);
+        String status = text(observed.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+        CapabilityResultV1 terminal = terminalTask(request, observed, status, transfer);
+        if (terminal != null) return terminal;
+        if ("UNKNOWN".equals(status) || Boolean.TRUE.equals(request.continuation().get("submitOutcomeUnknown"))) {
+            if (transfer) {
+                CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+                if (authentication != null) return authentication;
             }
-            return taskResult(
-                    request,
-                    CapabilityResultV1.Status.UNKNOWN,
-                    "转账提交结果仍待查证，请勿重复提交。",
-                    Map.of("task", reconciled.data()),
-                    reconciled,
-                    request.taskRef(),
-                    reconciledStatus,
-                    false,
-                    unknownContinuation(request.continuation()),
-                    List.of("RECONCILE_TASK", "CONTACT_HUMAN"));
+            Response reconciled = client.post("/api/v1/tasks/" + request.taskRef() + "/reconcile",
+                    Map.of(), request.context());
+            String reconciledStatus = text(reconciled.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+            terminal = terminalTask(request, reconciled, reconciledStatus, transfer);
+            if (terminal != null) return terminal;
+            return pendingTask(request, reconciled, CapabilityResultV1.Status.UNKNOWN, reconciledStatus);
         }
-        if ("CREATED".equals(status)) {
+        if ("CREATED".equals(status) || "CONFIRMED".equals(status)) {
             CapabilityRequestV1.Confirmation confirmation = request.confirmation();
             if (confirmation == null || !confirmation.confirmed()) {
-                return taskResult(
-                        request,
-                        CapabilityResultV1.Status.NEED_CONFIRMATION,
-                        "请核对转账摘要并回复「确认提交」。",
-                        Map.of("task", observed.data()),
-                        observed,
-                        request.taskRef(),
-                        status,
-                        true,
-                        request.continuation(),
-                        List.of("CONFIRM_TASK"));
+                return taskResult(request, CapabilityResultV1.Status.NEED_CONFIRMATION,
+                        "请通过宿主确认界面核对并授权原任务。", Map.of("task", observed.data()), observed,
+                        request.taskRef(), status, true, request.continuation(), List.of("CONFIRM_TASK"));
             }
-            observed = client.post(
-                    "/api/v1/tasks/" + request.taskRef() + "/confirm",
-                    Map.of("confirmationText", confirmation.confirmationText()),
-                    request.context());
-            status = text(observed.data().get("status"), "CONFIRMED").toUpperCase();
-        }
-        if ("CONFIRMED".equals(status)) {
-            CapabilityResultV1 authentication = ensureTransferAuthentication(request);
-            if (authentication != null) return authentication;
-            Response submitted;
+            // Both confirm and submit are mutation boundaries. Unreadable responses require observation.
             try {
-                submitted = client.post(
-                        "/api/v1/tasks/" + request.taskRef() + "/submit", Map.of(), request.context());
+                if ("CREATED".equals(status)) {
+                    observed = client.post("/api/v1/tasks/" + request.taskRef() + "/confirm",
+                            Map.of("confirmationText", confirmation.confirmationText()), request.context());
+                    status = text(observed.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+                    terminal = terminalTask(request, observed, status, transfer);
+                    if (terminal != null) return terminal;
+                }
+                if ("CONFIRMED".equals(status)) {
+                    if (transfer) {
+                        CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+                        if (authentication != null) return authentication;
+                    }
+                    observed = client.post("/api/v1/tasks/" + request.taskRef() + "/submit",
+                            Map.of(), request.context());
+                    status = text(observed.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+                    terminal = terminalTask(request, observed, status, transfer);
+                    if (terminal != null) return terminal;
+                }
             } catch (ProviderFailure failure) {
-                if (!failure.retryable()) throw failure;
                 return unknownTransferAfterSubmit(request, failure);
             }
-            String submittedStatus = text(submitted.data().get("status"), "UNKNOWN").toUpperCase();
-            if ("COMPLETED".equals(submittedStatus)) return completedTransferTask(request, submitted);
-            CapabilityResultV1.Status resultStatus = "UNKNOWN".equals(submittedStatus)
-                    ? CapabilityResultV1.Status.UNKNOWN
-                    : CapabilityResultV1.Status.PROCESSING;
-            return taskResult(
-                    request,
-                    resultStatus,
-                    resultStatus == CapabilityResultV1.Status.UNKNOWN
-                            ? "转账提交结果未知，请先查证，勿重复提交。"
-                            : "转账已提交，正在处理。",
-                    Map.of("task", submitted.data()),
-                    submitted,
-                    request.taskRef(),
-                    submittedStatus,
-                    false,
-                    resultStatus == CapabilityResultV1.Status.UNKNOWN
-                            ? unknownContinuation(request.continuation())
-                            : request.continuation(),
-                    resultStatus == CapabilityResultV1.Status.UNKNOWN
-                            ? List.of("RECONCILE_TASK")
-                            : List.of("CHECK_TASK_STATUS"));
         }
-        return taskResult(
-                request,
-                CapabilityResultV1.Status.PROCESSING,
-                "转账正在处理。",
-                Map.of("task", observed.data()),
-                observed,
-                request.taskRef(),
-                status,
-                false,
-                request.continuation(),
-                List.of("CHECK_TASK_STATUS"));
+        CapabilityResultV1.Status resultStatus = Set.of("PROCESSING", "SUBMITTED", "PENDING", "RUNNING")
+                .contains(status) ? CapabilityResultV1.Status.PROCESSING : CapabilityResultV1.Status.UNKNOWN;
+        return pendingTask(request, observed, resultStatus, status);
+    }
+
+    private static CapabilityResultV1 terminalTask(
+            CapabilityRequestV1 request, Response response, String status, boolean transfer) {
+        String returnedRef = text(response.data().get("taskId"), "");
+        String returnedCapability = text(response.data().get("capabilityId"), "");
+        if (!request.taskRef().equals(returnedRef) || !request.capabilityId().equals(returnedCapability)) {
+            throw new ProviderFailure("TEMPORARY_FAILURE", "TASK_IDENTITY_MISMATCH", false,
+                    "bank response does not identify the original task", List.of(), List.of("CHECK_TASK_STATUS"),
+                    request.context().requestId(), request.context().traceId(), response.sourceSystem(), response.asOf());
+        }
+        if ("COMPLETED".equals(status)) {
+            return transfer ? completedTransferTask(request, response) : completedTask(request, response);
+        }
+        if (Set.of("FAILED_FINAL", "FAILED", "CANCELLED").contains(status)) {
+            return failedTransferTask(request, response, status);
+        }
+        return null;
+    }
+
+    private static CapabilityResultV1 pendingTask(
+            CapabilityRequestV1 request, Response response, CapabilityResultV1.Status status, String bankStatus) {
+        boolean unknown = status == CapabilityResultV1.Status.UNKNOWN;
+        return taskResult(request, status,
+                unknown ? "办理结果仍待查证，请勿重复提交。" : "原任务正在处理，请稍后查询。",
+                Map.of("task", response.data()), response, request.taskRef(), bankStatus, false,
+                unknown ? unknownContinuation(request.continuation()) : request.continuation(),
+                unknown ? List.of("RECONCILE_TASK", "CONTACT_HUMAN") : List.of("CHECK_TASK_STATUS"));
     }
 
     private CapabilityResultV1 ensureTransferAuthentication(CapabilityRequestV1 request) {
@@ -450,7 +465,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                 request.context().requestId(),
                 request.context().traceId(),
                 CapabilityResultV1.Status.UNKNOWN,
-                "转账提交结果未知，请先查证，勿重复提交。",
+                "办理提交结果未知，请先查证，勿重复提交。",
                 Map.of("taskRef", request.taskRef()),
                 List.of(),
                 List.of("RECONCILE_TASK", "CONTACT_HUMAN"),
@@ -461,7 +476,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                         unknownContinuation(request.continuation())),
                 new CapabilityResultV1.Failure(
                         "RESULT_UNKNOWN", failure.sourceCode(), false,
-                        "transfer submission outcome is unknown", failure.fieldErrors()));
+                        "task mutation outcome is unknown", failure.fieldErrors()));
     }
 
     private static Map<String, Object> unknownContinuation(Map<String, Object> continuation) {
@@ -479,7 +494,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                 request.context().requestId(),
                 request.context().traceId(),
                 CapabilityResultV1.Status.FAILED,
-                "行内转账未完成。",
+                "银行任务未完成。",
                 Map.of("task", response.data()),
                 List.of(),
                 List.of("CONTACT_HUMAN"),
@@ -561,78 +576,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
     }
 
     private CapabilityResultV1 resumeChannelPreferenceUpdate(CapabilityRequestV1 request) {
-        if (!TASK_REF.matcher(request.taskRef()).matches()) {
-            return localFailure(request, "INVALID_INPUT", "TASK_REF_INVALID", false,
-                    "taskRef does not match the provider task identity contract",
-                    List.of("CHECK_TASK_REF"));
-        }
-        Response observed = client.get("/api/v1/tasks/" + request.taskRef(), Map.of(), request.context());
-        String capabilityId = text(observed.data().get("capabilityId"), "");
-        if (!capabilityId.isBlank() && !CHANNEL_PREFERENCES_UPDATE.equals(capabilityId)) {
-            return localFailure(request, "INVALID_INPUT", "TASK_CAPABILITY_MISMATCH", false,
-                    "taskRef belongs to a different capability", List.of("CHECK_TASK_REF"));
-        }
-        String status = text(observed.data().get("status"), "UNKNOWN").toUpperCase();
-        if ("COMPLETED".equals(status)) {
-            return completedTask(request, observed);
-        }
-        if ("CANCELLED".equals(status) || "FAILED".equals(status)) {
-            return localFailure(request, "PERMANENT_FAILURE", "TASK_" + status, false,
-                    "bank task is " + status.toLowerCase(), List.of("START_NEW_TASK"));
-        }
-        if ("CREATED".equals(status)) {
-            CapabilityRequestV1.Confirmation confirmation = request.confirmation();
-            if (confirmation == null || !confirmation.confirmed()) {
-                return taskResult(
-                        request,
-                        CapabilityResultV1.Status.NEED_CONFIRMATION,
-                        "请确认后更新渠道展示偏好。",
-                        Map.of("task", observed.data()),
-                        observed,
-                        request.taskRef(),
-                        status,
-                        true,
-                        request.continuation(),
-                        List.of("CONFIRM_TASK"));
-            }
-            observed = client.post(
-                    "/api/v1/tasks/" + request.taskRef() + "/confirm",
-                    Map.of("confirmationText", confirmation.confirmationText()),
-                    request.context());
-            status = text(observed.data().get("status"), "CONFIRMED").toUpperCase();
-        }
-        if ("CONFIRMED".equals(status)) {
-            Response submitted = client.post(
-                    "/api/v1/tasks/" + request.taskRef() + "/submit",
-                    Map.of(),
-                    request.context());
-            String submittedStatus = text(submitted.data().get("status"), "UNKNOWN").toUpperCase();
-            if ("COMPLETED".equals(submittedStatus)) {
-                return completedTask(request, submitted);
-            }
-            return taskResult(
-                    request,
-                    CapabilityResultV1.Status.PROCESSING,
-                    "渠道偏好更新已提交，正在处理。",
-                    Map.of("task", submitted.data()),
-                    submitted,
-                    request.taskRef(),
-                    submittedStatus,
-                    false,
-                    request.continuation(),
-                    List.of("CHECK_TASK_STATUS"));
-        }
-        return taskResult(
-                request,
-                CapabilityResultV1.Status.PROCESSING,
-                "渠道偏好更新正在处理。",
-                Map.of("task", observed.data()),
-                observed,
-                request.taskRef(),
-                status,
-                false,
-                request.continuation(),
-                List.of("CHECK_TASK_STATUS"));
+        return resumeBankTask(request, false);
     }
 
     private static CapabilityResultV1 completedTask(CapabilityRequestV1 request, Response response) {

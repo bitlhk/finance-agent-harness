@@ -17,6 +17,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProviderConformanceKitTest {
     @Test
+    void emptyNullAndWrongCapabilitySuitesCannotCertifyAProvider() {
+        for (List<ProviderConformanceKit.Case> cases : java.util.Arrays.<List<ProviderConformanceKit.Case>>asList(
+                null, List.of(), List.of(new ProviderConformanceKit.Case("wrong",
+                        request("other.balance.query"), Set.of(CapabilityResultV1.Status.COMPLETED))))) {
+            var report = ProviderConformanceKit.verify(provider(false), cases);
+            assertEquals(ProviderConformanceKit.Status.FAIL, report.status());
+            assertEquals(List.of("account.balance.query:QUERY"), report.missingCapabilities());
+            assertEquals(List.of("account.balance.query:QUERY"), report.declaredCapabilities());
+        }
+    }
+
+    @Test
+    void partialCoverageCannotCertifyAllDeclaredCapabilities() {
+        var report = ProviderConformanceKit.verify(provider(false, true), List.of(new ProviderConformanceKit.Case(
+                "balance", request("account.balance.query"), Set.of(CapabilityResultV1.Status.COMPLETED))));
+        assertEquals(ProviderConformanceKit.Status.FAIL, report.status());
+        assertEquals(List.of("account.balance.query:QUERY"), report.testedCapabilities());
+        assertEquals(List.of("account.history.query:QUERY"), report.missingCapabilities());
+    }
+
+    @Test
     void acceptsAProviderThatDeclaresAndPreservesItsCanonicalContract() {
         ProviderConformanceKit.Report report = ProviderConformanceKit.verify(
                 provider(false),
@@ -54,6 +75,10 @@ class ProviderConformanceKitTest {
     }
 
     private static DescribedFinanceProvider provider(boolean throwsFailure) {
+        return provider(throwsFailure, false);
+    }
+
+    private static DescribedFinanceProvider provider(boolean throwsFailure, boolean extraCapability) {
         return new DescribedFinanceProvider() {
             @Override
             public ProviderDescriptorV1 descriptor() {
@@ -61,7 +86,10 @@ class ProviderConformanceKitTest {
                         ProviderDescriptorV1.SCHEMA_VERSION,
                         "reference-bank",
                         "1.0.0",
-                        List.of(new ProviderDescriptorV1.CapabilitySupport(
+                        extraCapability ? List.of(
+                                new ProviderDescriptorV1.CapabilitySupport("account.balance.query", CapabilityRequestV1.Operation.QUERY),
+                                new ProviderDescriptorV1.CapabilitySupport("account.history.query", CapabilityRequestV1.Operation.QUERY))
+                                : List.of(new ProviderDescriptorV1.CapabilitySupport(
                                 "account.balance.query", CapabilityRequestV1.Operation.QUERY)));
             }
 

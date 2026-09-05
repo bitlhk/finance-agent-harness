@@ -25,7 +25,14 @@ public final class ProviderConformanceKit {
         for (Case testCase : cases == null ? List.<Case>of() : cases) {
             results.add(runCase(provider, descriptor, Objects.requireNonNull(testCase, "case")));
         }
-        Status status = results.stream().allMatch(result -> result.status() == Status.PASS)
+        Set<String> declared = new java.util.TreeSet<>();
+        descriptor.capabilities().forEach(c -> declared.add(c.capabilityId() + ":" + c.operation()));
+        Set<String> tested = new java.util.TreeSet<>();
+        if (cases != null) cases.forEach(c -> tested.add(c.request().capabilityId() + ":" + c.request().operation()));
+        Set<String> missing = new java.util.TreeSet<>(declared);
+        missing.removeAll(tested);
+        Status status = !results.isEmpty() && missing.isEmpty()
+                && results.stream().allMatch(result -> result.status() == Status.PASS)
                 ? Status.PASS
                 : Status.FAIL;
         return new Report(
@@ -33,7 +40,7 @@ public final class ProviderConformanceKit {
                 descriptor.providerId(),
                 descriptor.version(),
                 status,
-                results);
+                results, List.copyOf(declared), List.copyOf(tested), List.copyOf(missing));
     }
 
     private static CaseResult runCase(
@@ -149,7 +156,10 @@ public final class ProviderConformanceKit {
             String providerId,
             String providerVersion,
             Status status,
-            List<CaseResult> cases) {
+            List<CaseResult> cases,
+            List<String> declaredCapabilities,
+            List<String> testedCapabilities,
+            List<String> missingCapabilities) {
         public Report {
             cases = List.copyOf(cases);
         }

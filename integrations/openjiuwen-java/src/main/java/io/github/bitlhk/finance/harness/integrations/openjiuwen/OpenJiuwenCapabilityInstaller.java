@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Installs a Finance Capability Pack as native tools visible to an OpenJiuwen agent. */
 public final class OpenJiuwenCapabilityInstaller {
@@ -52,11 +51,29 @@ public final class OpenJiuwenCapabilityInstaller {
             OpenJiuwenFinanceBridge.InvocationDefaults defaults,
             FinanceCapabilityPackV1 pack,
             boolean simulated) {
+        return install(agent, providerBindings, defaults, pack, simulated,
+                new TaskCheckpointStore.Memory(), "session-" + UUID.randomUUID());
+    }
+
+    /** Supply an authenticated, stable host session id and durable store for restart recovery. */
+    public Installation install(
+            BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+            FinanceCapabilityPackV1 pack,
+            boolean simulated,
+            TaskCheckpointStore store,
+            String hostSessionRef) {
         Objects.requireNonNull(agent, "agent");
         Objects.requireNonNull(pack, "pack");
         Objects.requireNonNull(providerBindings, "providerBindings");
         String agentId = agent.getCard().getId();
-        Map<String, PendingTask> pendingTasks = new ConcurrentHashMap<>();
+        if (hostSessionRef == null || hostSessionRef.isBlank()) throw new IllegalArgumentException("hostSessionRef is required");
+        String scope = OpenJiuwenFinanceBridge.fingerprint(List.of(agentId, defaults.principalId(),
+                defaults.subjectRef(), defaults.purpose(), defaults.channel(), hostSessionRef, pack.packId(), pack.version(),
+                providerBindings.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry ->
+                        List.of(entry.getKey(), entry.getValue().providerId(), entry.getValue().providerVersion())).toList()));
+        InstalledTaskController tasks = new InstalledTaskController(agentId, scope, Objects.requireNonNull(store));
         Map<String, Tool> installedTools = new LinkedHashMap<>();
         String promptSection = "finance-capability-pack:" + pack.packId();
 
@@ -78,7 +95,8 @@ public final class OpenJiuwenCapabilityInstaller {
                         Set.of(capability.capabilityId()),
                         simulated);
                 ensureAvailable(agent, capability.toolName());
-                Tool tool = tool(agentId, capability, bridge, pendingTasks);
+                tasks.register(capability, bridge);
+                Tool tool = tool(agentId, capability, bridge, tasks);
                 agent.getAbilityManager().add(tool.getCard());
                 installedTools.put(capability.toolName(), tool);
                 var registered = Runner.resourceMgr().addTool(tool, List.of(agentId), true);
@@ -113,14 +131,14 @@ public final class OpenJiuwenCapabilityInstaller {
                 agentId,
                 bindings,
                 Instant.now());
-        return new Installation(agent, installedTools, pendingTasks, receipt, promptSection);
+        return new Installation(agent, installedTools, tasks, receipt, promptSection);
     }
 
     private static Tool tool(
             String agentId,
             FinanceCapabilityPackV1.Capability capability,
             OpenJiuwenFinanceBridge bridge,
-            Map<String, PendingTask> pendingTasks) {
+            InstalledTaskController tasks) {
         Map<String, Object> inputSchema = capability.operation() == FinanceCapabilityPackV1.Operation.TASK
                 ? withTaskControls(capability.inputSchema())
                 : capability.inputSchema();
@@ -135,7 +153,7 @@ public final class OpenJiuwenCapabilityInstaller {
                 .build();
         return new LocalFunction(card, arguments -> capability.operation() == FinanceCapabilityPackV1.Operation.QUERY
                 ? query(agentId, capability, bridge, arguments)
-                : task(agentId, capability, bridge, pendingTasks, arguments));
+                : tasks.invoke(capability.capabilityId(), arguments));
     }
 
     private static Map<String, Object> query(
@@ -150,81 +168,7 @@ public final class OpenJiuwenCapabilityInstaller {
                 capability.requiredScopes(),
                 arguments,
                 Map.of());
-        return toolResult(bridge.query(invocation), "");
-    }
-
-    private static Map<String, Object> task(
-            String agentId,
-            FinanceCapabilityPackV1.Capability capability,
-            OpenJiuwenFinanceBridge bridge,
-            Map<String, PendingTask> pendingTasks,
-            Map<String, Object> arguments) {
-        String requestedHandle = text(arguments.get(TASK_HANDLE_ARGUMENT));
-        PendingTask pending = requestedHandle.isBlank() ? null : pendingTasks.get(requestedHandle);
-        if (!requestedHandle.isBlank() && pending == null) {
-            return Map.of(
-                    "status", OpenJiuwenExecutionV1.Status.REJECTED.name(),
-                    "capabilityId", capability.capabilityId(),
-                    "errorCode", "FINANCE_TASK_HANDLE_NOT_FOUND",
-                    "content", "当前确认任务已失效，请重新发起。",
-                    "requiresUserAction", false);
-        }
-
-        String handle = pending == null ? "fh-task-handle-" + UUID.randomUUID() : requestedHandle;
-        String taskId = pending == null ? "fh-task-" + UUID.randomUUID() : pending.taskId();
-        Map<String, Object> mergedArguments = pending == null
-                ? businessArguments(arguments)
-                : resumeArguments(pending.businessArguments(), arguments, capability.capabilityId());
-        Map<String, Object> checkpoint = pending == null ? Map.of() : pending.checkpoint();
-        OpenJiuwenExecutionV1 execution = bridge.executeTask(new OpenJiuwenInvocationV1(
-                taskId,
-                capability.capabilityId(),
-                agentId,
-                capability.requiredScopes(),
-                mergedArguments,
-                checkpoint));
-
-        if (execution.status() == OpenJiuwenExecutionV1.Status.NEED_USER
-                && !execution.checkpoint().isEmpty()) {
-            Map<String, Object> originalArguments = pending == null
-                    ? businessArguments(arguments)
-                    : pending.businessArguments();
-            pendingTasks.put(handle, new PendingTask(taskId, originalArguments, execution.checkpoint()));
-            return toolResult(execution, handle);
-        }
-        pendingTasks.remove(handle);
-        return toolResult(execution, "");
-    }
-
-    private static Map<String, Object> businessArguments(Map<String, Object> arguments) {
-        Map<String, Object> business = new LinkedHashMap<>(arguments == null ? Map.of() : arguments);
-        business.remove(TASK_HANDLE_ARGUMENT);
-        business.remove(CONFIRMATION_ARGUMENT);
-        return Map.copyOf(business);
-    }
-
-    private static Map<String, Object> resumeArguments(
-            Map<String, Object> original,
-            Map<String, Object> current,
-            String capabilityId) {
-        Map<String, Object> merged = new LinkedHashMap<>(original);
-        if (current != null) merged.putAll(current);
-        merged.put("confirmedCapabilityId", capabilityId);
-        merged.remove(TASK_HANDLE_ARGUMENT);
-        return Map.copyOf(merged);
-    }
-
-    private static Map<String, Object> toolResult(OpenJiuwenExecutionV1 execution, String handle) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", execution.status().name());
-        result.put("content", execution.content());
-        result.put("data", execution.data());
-        result.put("evidence", execution.evidence());
-        result.put("requiresUserAction", execution.status() == OpenJiuwenExecutionV1.Status.NEED_USER);
-        if (!execution.errorCode().isBlank()) result.put("errorCode", execution.errorCode());
-        if (!execution.question().isBlank()) result.put("question", execution.question());
-        if (!handle.isBlank()) result.put(TASK_HANDLE_ARGUMENT, handle);
-        return Map.copyOf(result);
+        return InstalledTaskController.result(bridge.query(invocation), "");
     }
 
     private static Map<String, Object> withTaskControls(Map<String, Object> source) {
@@ -239,13 +183,13 @@ public final class OpenJiuwenCapabilityInstaller {
                 "description", "工具要求确认后返回的续办句柄；首次调用不要提供。"));
         properties.put(CONFIRMATION_ARGUMENT, Map.of(
                 "type", "string",
-                "description", "用户明确确认时的原始确认文本；不得代替用户填写。"));
+                "description", "兼容旧调用的文本字段，不构成授权；办理确认须通过宿主确认界面。"));
         schema.put("properties", Map.copyOf(properties));
         Object configuredRequired = schema.remove("required");
         if (configuredRequired instanceof List<?> required && !required.isEmpty()) {
             schema.put("anyOf", List.of(
                     Map.of("required", List.copyOf(required)),
-                    Map.of("required", List.of(TASK_HANDLE_ARGUMENT, CONFIRMATION_ARGUMENT))));
+                    Map.of("required", List.of(TASK_HANDLE_ARGUMENT))));
         }
         return Map.copyOf(schema);
     }
@@ -274,16 +218,6 @@ public final class OpenJiuwenCapabilityInstaller {
 
     private static String text(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
-    }
-
-    private record PendingTask(
-            String taskId,
-            Map<String, Object> businessArguments,
-            Map<String, Object> checkpoint) {
-        private PendingTask {
-            businessArguments = Map.copyOf(businessArguments);
-            checkpoint = Map.copyOf(checkpoint);
-        }
     }
 
     public record ProviderBinding(
@@ -329,7 +263,7 @@ public final class OpenJiuwenCapabilityInstaller {
     public static final class Installation implements AutoCloseable {
         private final BaseAgent agent;
         private final Map<String, Tool> tools;
-        private final Map<String, PendingTask> pendingTasks;
+        private final InstalledTaskController tasks;
         private final InstallationReceipt receipt;
         private final String promptSection;
         private boolean closed;
@@ -337,12 +271,12 @@ public final class OpenJiuwenCapabilityInstaller {
         private Installation(
                 BaseAgent agent,
                 Map<String, Tool> tools,
-                Map<String, PendingTask> pendingTasks,
+                InstalledTaskController tasks,
                 InstallationReceipt receipt,
                 String promptSection) {
             this.agent = agent;
             this.tools = Map.copyOf(tools);
-            this.pendingTasks = pendingTasks;
+            this.tasks = tasks;
             this.receipt = receipt;
             this.promptSection = promptSection;
         }
@@ -361,12 +295,30 @@ public final class OpenJiuwenCapabilityInstaller {
             return tools.keySet();
         }
 
+        public synchronized String confirmationBinding(String handle) {
+            ensureOpen();
+            return tasks.confirmationBinding(handle);
+        }
+
+        public synchronized Map<String, Object> confirm(String handle, HostTaskConfirmation approval) {
+            ensureOpen();
+            return tasks.confirm(handle, approval);
+        }
+
+        public synchronized Map<String, Object> decline(String handle) {
+            ensureOpen();
+            return tasks.decline(handle);
+        }
+
+        private void ensureOpen() {
+            if (closed) throw new IllegalStateException("Installation is closed");
+        }
+
         @Override
         public synchronized void close() {
             if (closed) return;
             uninstall(agent, tools.keySet(), receipt.agentId());
             removePromptSection(agent, promptSection);
-            pendingTasks.clear();
             closed = true;
         }
     }

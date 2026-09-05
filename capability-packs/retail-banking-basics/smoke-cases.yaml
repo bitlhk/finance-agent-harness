@@ -15,4 +15,9 @@ cases:
     expectedFirstStatus: NEED_USER
     resumeWith:
       confirmationText: 确认提交
-    expectedFinalStatus: COMPLETED
+    expectedResumeStatus: NEED_USER
+    hostConfirmation:
+      entrypoint: Installation.confirm
+      binding: Installation.confirmationBinding
+      eventSource: authenticated-host-user-action
+    expectedAfterHostConfirmationStatus: COMPLETED

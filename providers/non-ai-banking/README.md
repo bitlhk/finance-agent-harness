@@ -5,7 +5,7 @@
 当前能力：
 
 - 自动创建并复用 Simulator 会话；
-- 将 `account.balance.query` 映射到 `GET /api/v1/accounts`；
+- 将 `account.balance.query` 映射到 `GET /api/v1/accounts`；传入 `accountId` 时查询专属详情接口并核对返回账户，禁止静默返回其他账户；
 - 将 `channel.preferences.update` 映射到 Simulator 的
   `preflight -> task create -> confirm -> submit` 原生任务协议；
 - 将 `transfer.internal.create` 映射到相同公共任务合同，并保留银行侧反诈预检；

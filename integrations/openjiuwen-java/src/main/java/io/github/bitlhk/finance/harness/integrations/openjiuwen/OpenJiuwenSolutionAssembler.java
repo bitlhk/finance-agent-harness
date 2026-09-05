@@ -45,6 +45,19 @@ public final class OpenJiuwenSolutionAssembler {
             Map<String, FinanceProvider> providers,
             OpenJiuwenFinanceBridge.InvocationDefaults defaults,
             boolean simulated) throws IOException {
+        return assemble(repositoryRoot, solutionFile, agent, providers, defaults, simulated,
+                new TaskCheckpointStore.Memory(), "session-" + java.util.UUID.randomUUID());
+    }
+
+    public AssembledSolution assemble(
+            Path repositoryRoot,
+            Path solutionFile,
+            BaseAgent agent,
+            Map<String, FinanceProvider> providers,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+            boolean simulated,
+            TaskCheckpointStore checkpoints,
+            String hostSessionRef) throws IOException {
         Objects.requireNonNull(repositoryRoot, "repositoryRoot");
         Objects.requireNonNull(solutionFile, "solutionFile");
         Objects.requireNonNull(agent, "agent");
@@ -55,8 +68,12 @@ public final class OpenJiuwenSolutionAssembler {
         List<FinanceDomainPackLoader.LoadedDomainPack> loadedDomainPacks = new ArrayList<>();
         List<FinanceCapabilityPackV1> loadedCapabilityPacks = new ArrayList<>();
         List<LockedAsset> lockedAssets = new ArrayList<>();
+        checkOptionalReference(repositoryRoot, spec.profileRef(), "PROFILE", lockedAssets);
+        checkOptionalReference(repositoryRoot, spec.evaluationPackRef(), "EVALUATION", lockedAssets);
         for (AssetRef ref : spec.domainPackRefs()) {
             Path packFile = resolvePackFile(repositoryRoot, ref.source(), "Domain Pack");
+            String digest = sha256Tree(packFile.getParent());
+            verifyDigest(ref.digest(), digest, ref.id());
             FinanceDomainPackLoader.LoadedDomainPack loaded = domainPackLoader.load(packFile);
             if (!ref.id().equals(loaded.pack().packId()) || !ref.version().equals(loaded.pack().version())) {
                 throw new IllegalArgumentException(
@@ -64,10 +81,12 @@ public final class OpenJiuwenSolutionAssembler {
             }
             loadedDomainPacks.add(loaded);
             lockedAssets.add(new LockedAsset(
-                    "DOMAIN_PACK", ref.id(), ref.version(), ref.source(), sha256Tree(packFile.getParent())));
+                    "DOMAIN_PACK", ref.id(), ref.version(), ref.source(), digest));
         }
         for (AssetRef ref : spec.capabilityPackRefs()) {
             Path packFile = resolvePackFile(repositoryRoot, ref.source(), "Capability Pack");
+            String digest = sha256(packFile);
+            verifyDigest(ref.digest(), digest, ref.id());
             FinanceCapabilityPackV1 pack = packLoader.load(packFile);
             if (!ref.id().equals(pack.packId()) || !ref.version().equals(pack.version())) {
                 throw new IllegalArgumentException(
@@ -75,7 +94,22 @@ public final class OpenJiuwenSolutionAssembler {
             }
             loadedCapabilityPacks.add(pack);
             lockedAssets.add(new LockedAsset(
-                    "CAPABILITY_PACK", ref.id(), ref.version(), ref.source(), sha256(packFile)));
+                    "CAPABILITY_PACK", ref.id(), ref.version(), ref.source(), digest));
+        }
+        for (ProviderRef ref : spec.providerRefs()) {
+            checkOptionalReference(repositoryRoot, new AssetRef(ref.id(), ref.version(), ref.source(), ref.digest()),
+                    "PROVIDER_SOURCE", lockedAssets);
+            FinanceProvider provider = providers.get(ref.id());
+            if (provider != null) {
+                try {
+                    Path artifact = Path.of(provider.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+                    lockedAssets.add(new LockedAsset("PROVIDER_RUNTIME", ref.id(), ref.version(),
+                            "codesource://" + artifact.getFileName(),
+                            Files.isDirectory(artifact) ? sha256Tree(artifact) : sha256(artifact)));
+                } catch (java.net.URISyntaxException exception) {
+                    throw new IllegalArgumentException("Provider runtime artifact cannot be resolved: " + ref.id(), exception);
+                }
+            }
         }
         validateCapabilityCoverage(loadedDomainPacks, loadedCapabilityPacks);
         Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> providerBindings =
@@ -89,7 +123,7 @@ public final class OpenJiuwenSolutionAssembler {
             }
             for (FinanceCapabilityPackV1 pack : loadedCapabilityPacks) {
                 installations.add(installer.install(
-                        agent, providerBindings, defaults, pack, simulated));
+                        agent, providerBindings, defaults, pack, simulated, checkpoints, hostSessionRef));
             }
         } catch (RuntimeException exception) {
             closeCapabilityReverse(installations);
@@ -249,20 +283,52 @@ public final class OpenJiuwenSolutionAssembler {
         }
     }
 
-    private static Path resolvePackFile(Path repositoryRoot, String source, String kind) {
-        if (source == null || !source.startsWith("repo://")) {
-            throw new IllegalArgumentException("V1 assembler only resolves repo:// " + kind + "s");
-        }
-        Path normalizedRoot = repositoryRoot.toAbsolutePath().normalize();
-        Path resolved = normalizedRoot.resolve(source.substring("repo://".length())).normalize();
-        if (!resolved.startsWith(normalizedRoot)) {
-            throw new IllegalArgumentException("Capability Pack source escapes repository root");
-        }
+    private static Path resolvePackFile(Path repositoryRoot, String source, String kind) throws IOException {
+        Path resolved = resolveLocalSource(repositoryRoot, source);
         if (Files.isDirectory(resolved)) resolved = resolved.resolve("pack.yaml");
         if (!Files.isRegularFile(resolved)) {
             throw new IllegalArgumentException(kind + " was not found: " + source);
         }
+        rejectSymlinks(resolved.getParent());
         return resolved;
+    }
+
+    private static Path resolveLocalSource(Path repositoryRoot, String source) throws IOException {
+        if (source == null || !source.startsWith("repo://")) {
+            throw new IllegalArgumentException("V1 assembler only resolves repo:// assets");
+        }
+        Path normalizedRoot = repositoryRoot.toRealPath();
+        Path resolved = normalizedRoot.resolve(source.substring("repo://".length())).normalize();
+        if (!resolved.startsWith(normalizedRoot) || !resolved.toRealPath().startsWith(normalizedRoot)
+                || Files.isSymbolicLink(resolved)) {
+            throw new IllegalArgumentException("Asset source escapes repository root or is a symlink");
+        }
+        return resolved;
+    }
+
+    private static void checkOptionalReference(Path root, AssetRef ref, String kind, List<LockedAsset> assets)
+            throws IOException {
+        if (ref == null) return;
+        if (ref.source() == null || !ref.source().startsWith("repo://")) {
+            if (ref.digest() != null) throw new IllegalArgumentException("Cannot verify unresolved external digest: " + ref.id());
+            return;
+        }
+        Path source = resolveLocalSource(root, ref.source());
+        String digest = Files.isDirectory(source) ? sha256Tree(source) : sha256(source);
+        verifyDigest(ref.digest(), digest, ref.id());
+        assets.add(new LockedAsset(kind, ref.id(), ref.version(), ref.source(), digest));
+    }
+
+    private static void verifyDigest(String declared, String actual, String id) {
+        if (declared != null && (!declared.matches("sha256:[a-f0-9]{64}") || !declared.equals(actual))) {
+            throw new IllegalArgumentException("Declared digest does not match asset: " + id);
+        }
+    }
+
+    private static void rejectSymlinks(Path directory) throws IOException {
+        try (Stream<Path> paths = Files.walk(directory)) {
+            if (paths.anyMatch(Files::isSymbolicLink)) throw new IllegalArgumentException("Asset symlinks are not supported");
+        }
     }
 
     private static String sha256(Path file) throws IOException {
@@ -275,10 +341,17 @@ public final class OpenJiuwenSolutionAssembler {
     }
 
     private static String sha256Tree(Path directory) throws IOException {
+        rejectSymlinks(directory);
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             try (Stream<Path> paths = Files.walk(directory)) {
                 for (Path path : paths.filter(Files::isRegularFile)
+                        .filter(path -> {
+                            for (Path part : directory.relativize(path)) {
+                                if (Set.of("target", "build", "logs", ".git").contains(part.toString())) return false;
+                            }
+                            return true;
+                        })
                         .sorted(Comparator.comparing(path -> directory.relativize(path).toString()))
                         .toList()) {
                     digest.update(directory.relativize(path).toString().replace('\\', '/')
@@ -416,6 +489,13 @@ public final class OpenJiuwenSolutionAssembler {
 
         public SolutionLock lock() {
             return lock;
+        }
+
+        public synchronized OpenJiuwenCapabilityInstaller.Installation installationForCapability(String capabilityId) {
+            if (closed) throw new IllegalStateException("Solution is closed");
+            return installations.stream().filter(installation -> installation.receipt().capabilities().stream()
+                    .anyMatch(capability -> capability.capabilityId().equals(capabilityId))).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Capability is not installed: " + capabilityId));
         }
 
         public void writeLock(Path output) throws IOException {
