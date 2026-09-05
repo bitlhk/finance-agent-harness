@@ -171,6 +171,26 @@ class NonAiBankingProviderTest {
     }
 
     @Test
+    void sessionSubjectMismatchDoesNotReadAnyCustomerAccounts() {
+        var original = request(Map.of());
+        var c = original.context();
+        var other = new FinanceContextV1(c.schemaVersion(), c.requestId(), c.traceId(), c.principalId(),
+                c.principalType(), c.channel(), c.purpose(), "other-customer", c.sessionRef(), c.authenticationLevel(), c.scopes());
+        var result = provider.query(new CapabilityRequestV1(original.schemaVersion(), original.capabilityId(),
+                original.operation(), other, Map.of(), null, null, Map.of(), null));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertTrue(result.data().isEmpty());
+        assertEquals(1, sessionHits.get());
+        assertEquals("BANK_SESSION_SUBJECT_MISMATCH", result.error().sourceCode());
+        assertEquals(0, accountHits.get());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, provider.query(original).status());
+        assertEquals(1, accountHits.get());
+        provider.query(new CapabilityRequestV1(original.schemaVersion(), original.capabilityId(),
+                original.operation(), other, Map.of(), null, null, Map.of(), null));
+        assertEquals(1, accountHits.get());
+    }
+
+    @Test
     void selectedAccountUsesDedicatedEndpointAndNeverFallsBackToAnotherAccount() {
         CapabilityResultV1 selected = provider.query(request(Map.of("accountId", "acct-002")));
         assertEquals(CapabilityResultV1.Status.COMPLETED, selected.status());

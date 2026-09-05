@@ -8,6 +8,7 @@ import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.InputCollectionProvider;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 /** Reference Provider Adapter for the non-ai-banking simulator. */
-public final class NonAiBankingProvider implements DescribedFinanceProvider {
+public final class NonAiBankingProvider implements DescribedFinanceProvider, InputCollectionProvider {
     public static final String PROVIDER_ID = "non-ai-banking-reference";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
@@ -54,6 +55,12 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
     private static final Pattern TASK_REF = Pattern.compile("[A-Za-z0-9._:-]{1,160}");
 
     private final Client client;
+
+    public Set<String> collectableInputs(CapabilityRequestV1 request, CapabilityResultV1 result) {
+        return result.status() == CapabilityResultV1.Status.NEED_USER && result.task() == null
+                && "LOCAL_INPUT_COLLECTION".equals(result.data().get("inputPhase"))
+                ? Set.copyOf(result.missingInputs()) : Set.of();
+    }
 
     public NonAiBankingProvider(Config config) {
         this.client = new Client(Objects.requireNonNull(config, "config"));
@@ -227,6 +234,15 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                     "unsupported task capability: " + request.capabilityId(),
                     List.of("CHECK_CAPABILITY_ID"));
         }
+        if (request.taskRef() == null && TRANSFER_INTERNAL_CREATE.equals(request.capabilityId())) {
+            List<String> missing = Set.of("fromAccountId", "beneficiaryId", "amount").stream()
+                    .filter(field -> !request.parameters().containsKey(field)
+                            || text(request.parameters().get(field), "").isBlank()).sorted().toList();
+            if (!missing.isEmpty()) return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
+                    request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.NEED_USER,
+                    "请补齐转账输入，尚未向银行发起任务。", Map.of("inputPhase", "LOCAL_INPUT_COLLECTION"),
+                    missing, List.of("PROVIDE_MISSING_INPUTS"), PROVIDER_ID, Instant.now(), null, null);
+        }
         try {
             if (TRANSFER_INTERNAL_CREATE.equals(request.capabilityId())) {
                 return request.taskRef() == null
@@ -236,6 +252,14 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
             return request.taskRef() == null
                     ? startChannelPreferenceUpdate(request)
                     : resumeChannelPreferenceUpdate(request);
+        } catch (UncertainCreation failure) {
+            return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
+                    request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.NEED_USER,
+                    "银行创建结果未确认且未取得任务引用，请由宿主按原幂等键人工查证，勿重新创建。",
+                    Map.of("creationOutcome", "UNOBSERVED"), List.of(), List.of("HOST_VERIFICATION_REQUIRED"),
+                    PROVIDER_ID, Instant.now(), null,
+                    new CapabilityResultV1.Failure("OBSERVATION_FAILED", "TASK_CREATION_UNOBSERVED", false,
+                            "No automatic idempotency lookup contract is available", List.of()));
         } catch (ProviderFailure failure) {
             return request.taskRef() == null ? upstreamFailure(request, failure) : observationFailure(request, failure);
         } catch (RuntimeException failure) {
@@ -300,7 +324,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
         createBody.put("preflightId", preflightId);
         createBody.put("idempotencyKey", request.idempotencyKey());
         createBody.put("parameters", parameters);
-        Response created = client.post("/api/v1/tasks", createBody, request.context());
+        Response created = createBankTask(createBody, request.context());
         String taskRef = requiredDataText(created.data(), "taskId");
 
         Map<String, Object> continuation = new LinkedHashMap<>();
@@ -485,6 +509,20 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
         return Map.copyOf(values);
     }
 
+    private Response createBankTask(Map<String, Object> body, FinanceContextV1 context) {
+        try {
+            Response result = client.post("/api/v1/tasks", body, context);
+            requiredDataText(result.data(), "taskId");
+            return result;
+        } catch (ProviderFailure failure) {
+            if (Set.of("INVALID_INPUT", "NOT_AUTHENTICATED", "NOT_AUTHORIZED", "NOT_ELIGIBLE")
+                    .contains(failure.failureClass())) throw failure;
+            throw new UncertainCreation();
+        }
+    }
+
+    private static final class UncertainCreation extends RuntimeException { }
+
     private static CapabilityResultV1 failedTransferTask(
             CapabilityRequestV1 request,
             Response response,
@@ -550,7 +588,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
         createBody.put("preflightId", preflightId);
         createBody.put("idempotencyKey", request.idempotencyKey());
         createBody.put("parameters", parameters);
-        Response created = client.post("/api/v1/tasks", createBody, request.context());
+        Response created = createBankTask(createBody, request.context());
         String taskRef = requiredDataText(created.data(), "taskId");
 
         Map<String, Object> continuation = new LinkedHashMap<>();
@@ -795,12 +833,14 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
     }
 
     private static final class Client {
-        private static final ObjectMapper JSON = HarnessJson.mapper();
+        private static final ObjectMapper JSON = HarnessJson.mapper()
+                .enable(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         private static final String SESSION_HEADER = "X-Session-Id";
 
         private final Config config;
         private final HttpClient http;
         private final AtomicReference<String> sessionId = new AtomicReference<>();
+        private volatile String sessionCustomerRef;
         private volatile boolean strongAuthentication;
 
         private Client(Config config) {
@@ -819,6 +859,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                     response = sendGet(path, query, context, sessionId.get());
                 }
                 return parse(response, context);
+            } catch (SecurityException denied) {
+                throw identityFailure(context);
             } catch (ProviderFailure failure) {
                 throw failure;
             } catch (InterruptedException interrupted) {
@@ -841,6 +883,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                     response = sendPost(path, body, context, sessionId.get());
                 }
                 return parse(response, context);
+            } catch (SecurityException denied) {
+                throw identityFailure(context);
             } catch (ProviderFailure failure) {
                 throw failure;
             } catch (InterruptedException interrupted) {
@@ -854,6 +898,12 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
 
         private boolean hasStepUpCode() {
             return config.stepUpCode != null;
+        }
+
+        private ProviderFailure identityFailure(FinanceContextV1 context) {
+            return new ProviderFailure("NOT_AUTHORIZED", "BANK_SESSION_SUBJECT_MISMATCH", false,
+                    "Bank session does not match the bound subject", List.of(), List.of("VERIFY_HOST_BINDING"),
+                    context.requestId(), context.traceId(), "non-ai-banking", Instant.now());
         }
 
         private boolean strongAuthenticationAvailable() {
@@ -870,7 +920,11 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
         }
 
         private synchronized void ensureSession(FinanceContextV1 context) throws Exception {
+            if (context.principalType() != FinanceContextV1.PrincipalType.CUSTOMER) {
+                throw new SecurityException("BANK_CUSTOMER_PRINCIPAL_REQUIRED");
+            }
             if (sessionId.get() != null && !sessionId.get().isBlank()) {
+                verifySessionCustomer(context);
                 return;
             }
             Map<String, Object> body = Map.of(
@@ -892,7 +946,17 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider {
                         "login response missing sessionId", List.of(), List.of("RELOGIN"),
                         response.requestId(), response.traceId(), response.sourceSystem(), response.asOf());
             }
+            sessionCustomerRef = NonAiBankingProvider.text(response.data().get("customerRef"), "");
+            verifySessionCustomer(context);
             sessionId.set(String.valueOf(value));
+            strongAuthentication = false;
+        }
+
+        private void verifySessionCustomer(FinanceContextV1 context) {
+            if (sessionCustomerRef == null || sessionCustomerRef.isBlank()
+                    || !sessionCustomerRef.equals(context.subjectRef())) {
+                throw new SecurityException("BANK_SESSION_SUBJECT_MISMATCH");
+            }
         }
 
         private HttpResponse<String> sendGet(

@@ -54,7 +54,9 @@ class EmployeeAgentWealthProviderTest {
                     tokenRequests.incrementAndGet();
                     return TOKEN;
                 },
-                Duration.ofSeconds(5)));
+                Duration.ofSeconds(5), () -> new EmployeeAgentIdentityBinding("employee-001",
+                        new EmployeeAgentRuntimeIdentity("finance-harness-test", "jiuwen_lgj-wealth", "lgj-wealth"),
+                        "fixture:adoption-owner", java.time.Instant.now().plusSeconds(60))));
     }
 
     @AfterEach
@@ -128,7 +130,21 @@ class EmployeeAgentWealthProviderTest {
 
         assertEquals(CapabilityResultV1.Status.FAILED, result.status());
         assertEquals("EA_MCP_ERROR", result.error().sourceCode());
-        assertEquals("EA tool unavailable", result.error().message());
+        assertEquals("Employee Agent MCP call failed", result.error().message());
+    }
+
+    @Test
+    void rejectsWrongSubjectBeforeTokenAndWrongReturnedCustomerBeforeExposure() {
+        var original = request("C-005");
+        var changed = new CapabilityRequestV1(original.schemaVersion(), original.capabilityId(), original.operation(),
+                original.context(), Map.of("customerRef", "other"), null, original.idempotencyKey(), Map.of(), null);
+        assertEquals("EA_IDENTITY_BINDING_REJECTED", provider.query(changed).error().sourceCode());
+        assertEquals(0, hits.get());
+        assertEquals(0, tokenRequests.get());
+        var wrongReturned = provider.query(request("WRONG_RETURN"));
+        assertEquals("EA_RESULT_SUBJECT_MISMATCH", wrongReturned.error().sourceCode());
+        assertTrue(wrongReturned.data().isEmpty());
+        assertFalse(wrongReturned.toString().contains("陈明"));
     }
 
     @Test
@@ -249,11 +265,14 @@ class EmployeeAgentWealthProviderTest {
     }
 
     private static CapabilityRequestV1 request(String customerRef) {
+        FinanceContextV1 original = context(FinanceContextV1.PrincipalType.EMPLOYEE);
         return new CapabilityRequestV1(
                 CapabilityRequestV1.SCHEMA_VERSION,
                 EmployeeAgentWealthProvider.WEALTH_PREVISIT_CONTEXT_QUERY,
                 CapabilityRequestV1.Operation.QUERY,
-                context(FinanceContextV1.PrincipalType.EMPLOYEE),
+                new FinanceContextV1(original.schemaVersion(), original.requestId(), original.traceId(),
+                        original.principalId(), original.principalType(), original.channel(), original.purpose(),
+                        customerRef, original.sessionRef(), original.authenticationLevel(), original.scopes()),
                 Map.of("customerRef", customerRef),
                 null,
                 "WM-GT-01",

@@ -511,7 +511,7 @@ class OpenJiuwenSolutionAssemblerTest {
                 "openjiuwen-clean-example",
                 "RETAIL_BANKING",
                 FinanceContextV1.AuthenticationLevel.STRONG,
-                Set.of());
+                Set.of("account:read", "transfer:create"));
     }
 
     private static OpenJiuwenFinanceBridge.InvocationDefaults employeeDefaults() {
@@ -522,7 +522,7 @@ class OpenJiuwenSolutionAssemblerTest {
                 "openjiuwen-wealth-example",
                 "WEALTH_PREVISIT",
                 FinanceContextV1.AuthenticationLevel.STRONG,
-                Set.of());
+                Set.of("wealth:previsit:read"));
     }
 
     private static OpenJiuwenFinanceBridge.InvocationDefaults insuranceDefaults() {
@@ -533,7 +533,7 @@ class OpenJiuwenSolutionAssemblerTest {
                 "openjiuwen-insurance-example",
                 "INSURANCE_ADVISORY",
                 FinanceContextV1.AuthenticationLevel.STRONG,
-                Set.of());
+                Set.of("insurance:customer:read"));
     }
 
     private static OpenJiuwenFinanceBridge.InvocationDefaults riskReviewDefaults() {
@@ -544,7 +544,7 @@ class OpenJiuwenSolutionAssemblerTest {
                 "openjiuwen-risk-review-example",
                 "TRANSFER_RISK_REVIEW",
                 FinanceContextV1.AuthenticationLevel.STRONG,
-                Set.of());
+                Set.of("account:read", "fraud-risk:read"));
     }
 
     private static Path root() {

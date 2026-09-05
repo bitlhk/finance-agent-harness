@@ -204,7 +204,7 @@ class OpenJiuwenCapabilityInstallerTest {
                 "openjiuwen-clean-example",
                 "RETAIL_BANKING",
                 FinanceContextV1.AuthenticationLevel.STRONG,
-                Set.of());
+                Set.of("account:read", "transfer:create"));
     }
 
     private static Path root() {

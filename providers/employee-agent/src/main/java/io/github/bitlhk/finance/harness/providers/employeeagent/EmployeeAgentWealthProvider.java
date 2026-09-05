@@ -8,6 +8,7 @@ import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.InvocationAccess;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -24,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Reference adapter from the canonical wealth capability to Employee Agent Platform MCP. */
-public final class EmployeeAgentWealthProvider implements DescribedFinanceProvider {
+public final class EmployeeAgentWealthProvider implements DescribedFinanceProvider, InvocationAccess {
     public static final String PROVIDER_ID = "employee-agent-reference";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String WEALTH_PREVISIT_CONTEXT_QUERY = "wealth.previsit-context.query";
@@ -32,7 +33,8 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
 
     private static final String ENDPOINT = "/api/internal/platform-tools/mcp";
     static final String CONTENT_PREFIX = "EA_WEALTH_PREVISIT_CONTEXT:";
-    private static final ObjectMapper JSON = HarnessJson.mapper();
+    private static final ObjectMapper JSON = HarnessJson.mapper()
+            .enable(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
     private final Config config;
     private final HttpClient http;
@@ -64,14 +66,30 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
         }
 
         try {
+            checkAccess(request);
             return callPrevisitTool(request, requiredParameter(request.parameters(), "customerRef"));
+        } catch (SecurityException denied) {
+            return failure(request, "NOT_AUTHORIZED", "EA_IDENTITY_BINDING_REJECTED", false,
+                    "Host identity does not match verified EA binding", List.of("VERIFY_HOST_BINDING"));
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return failure(request, "TEMPORARY_FAILURE", "REQUEST_INTERRUPTED", true,
                     "Employee Agent request was interrupted", List.of("RETRY"));
         } catch (Exception exception) {
             return failure(request, "TEMPORARY_FAILURE", "EA_TRANSPORT_FAILURE", true,
-                    "Employee Agent request failed: " + safeMessage(exception), List.of("RETRY"));
+                    "Employee Agent request could not be validated", List.of("RETRY"));
+        }
+    }
+
+    @Override
+    public void checkAccess(CapabilityRequestV1 request) {
+        EmployeeAgentIdentityBinding binding = config.identityBinding().get();
+        if (binding == null || !binding.expiresAt().isAfter(Instant.now())
+                || !binding.runtime().equals(config.runtimeIdentity())
+                || !binding.principalId().equals(request.context().principalId())
+                || request.context().principalType() != FinanceContextV1.PrincipalType.EMPLOYEE
+                || !Objects.equals(request.context().subjectRef(), request.parameters().get("customerRef"))) {
+            throw new SecurityException("EA_IDENTITY_BINDING_REJECTED");
         }
     }
 
@@ -157,9 +175,8 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
         }
         JsonNode rpcError = root.get("error");
         if (rpcError != null && !rpcError.isNull()) {
-            String message = rpcError.path("message").asText("Employee Agent MCP call failed");
             return failure(request, "UPSTREAM_FAILURE", "EA_MCP_ERROR", false,
-                    message, List.of("CHECK_EA_TOOL_RESULT"));
+                    "Employee Agent MCP call failed", List.of("CHECK_EA_TOOL_RESULT"));
         }
 
         JsonNode result = root.path("result");
@@ -182,8 +199,16 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
         }
         if (result.path("isError").asBoolean(false)) {
             return failure(request, "UPSTREAM_FAILURE", "EA_WEALTH_CONTEXT_BLOCKED", false,
-                    previsit.path("message").asText("Employee Agent could not provide wealth context"),
+                    "Employee Agent could not provide authorized wealth context",
                     List.of("FOLLOW_EA_REMEDIATION"));
+        }
+
+        for (String returned : List.of(previsit.path("customer").path("customerId").asText(""),
+                previsit.path("evidence").path("customerId").asText(""))) {
+            if (!returned.isBlank() && !returned.equals(request.context().subjectRef())) {
+                return failure(request, "NOT_AUTHORIZED", "EA_RESULT_SUBJECT_MISMATCH", false,
+                        "Returned customer does not match the authorized subject", List.of("VERIFY_HOST_BINDING"));
+            }
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -338,11 +363,17 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
             URI baseUri,
             EmployeeAgentRuntimeIdentity runtimeIdentity,
             EmployeeAgentRuntimeTokenSupplier runtimeTokenSupplier,
-            Duration timeout) {
+            Duration timeout,
+            java.util.function.Supplier<EmployeeAgentIdentityBinding> identityBinding) {
+        public Config(URI baseUri, EmployeeAgentRuntimeIdentity runtimeIdentity,
+                      EmployeeAgentRuntimeTokenSupplier runtimeTokenSupplier, Duration timeout) {
+            this(baseUri, runtimeIdentity, runtimeTokenSupplier, timeout, () -> null);
+        }
         public Config {
             baseUri = normalizeBaseUri(Objects.requireNonNull(baseUri, "baseUri"));
             Objects.requireNonNull(runtimeIdentity, "runtimeIdentity");
             Objects.requireNonNull(runtimeTokenSupplier, "runtimeTokenSupplier");
+            Objects.requireNonNull(identityBinding, "identityBinding");
             if (timeout == null || timeout.isZero() || timeout.isNegative()) {
                 throw new IllegalArgumentException("timeout must be positive");
             }
