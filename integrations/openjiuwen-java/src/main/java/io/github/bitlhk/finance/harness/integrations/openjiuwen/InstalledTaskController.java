@@ -118,8 +118,13 @@ final class InstalledTaskController {
                 if (approval != null) {
                     Map<String, Object> uncertain = new LinkedHashMap<>(checkpoint);
                     uncertain.remove(OpenJiuwenFinanceBridge.CK_BINDING);
-                    uncertain.put(OpenJiuwenFinanceBridge.CK_CONTINUATION,
-                            access.get(handle).checkpoint().get(OpenJiuwenFinanceBridge.CK_CONTINUATION));
+                    Map<String, Object> continuation = new LinkedHashMap<>();
+                    Object returned = checkpoint.get(OpenJiuwenFinanceBridge.CK_CONTINUATION);
+                    if (returned instanceof Map<?, ?> map) {
+                        map.forEach((key, value) -> continuation.put(String.valueOf(key), value));
+                    }
+                    continuation.put("submitOutcomeUnknown", true);
+                    uncertain.put(OpenJiuwenFinanceBridge.CK_CONTINUATION, Map.copyOf(continuation));
                     checkpoint = Map.copyOf(uncertain);
                 }
                 access.put(handle, saved(prior, checkpoint, null));

@@ -123,6 +123,21 @@ class TaskRecoveryTest {
     }
 
     @Test
+    void processingReplyKeepsProviderContinuationAlongsideRecoveryMarker() throws Exception {
+        Bank bank = new Bank();
+        var first = controller(new FileTaskCheckpointStore(temp), bank, "user-session");
+        String handle = start(first);
+        bank.replyProcessing = true;
+        assertEquals(handle, first.confirm(handle, approval(first, handle)).get(HANDLE));
+        var restarted = controller(new FileTaskCheckpointStore(temp), bank, "user-session");
+        assertEquals("COMPLETED", restarted.invoke(CAP, Map.of(HANDLE, handle)).get("status"));
+        assertEquals("new-bank-cursor", bank.requests.getLast().continuation().get("resumeToken"));
+        assertTrue(bank.requests.getLast().continuation().containsKey("submitOutcomeUnknown"));
+        assertNull(bank.requests.getLast().confirmation());
+        assertEquals(1, bank.writes.get());
+    }
+
+    @Test
     void crashBetweenBankCommitAndCheckpointWriteUsesPersistedUncertainty() throws Exception {
         Bank bank = new Bank();
         var first = controller(new FileTaskCheckpointStore(temp), bank, "user-session");
@@ -193,6 +208,7 @@ class TaskRecoveryTest {
         final AtomicInteger writes = new AtomicInteger();
         boolean observationUnavailable;
         boolean reauthenticationRequired;
+        boolean replyProcessing;
         boolean loseSubmitResponse;
         boolean crashAfterSubmit;
         public CapabilityResultV1 query(CapabilityRequestV1 request) { throw new UnsupportedOperationException(); }
@@ -209,6 +225,13 @@ class TaskRecoveryTest {
                 writes.incrementAndGet();
                 if (crashAfterSubmit) throw new AssertionError("simulated process termination after bank commit");
                 if (loseSubmitResponse) throw new IllegalStateException("acknowledgement lost after commit");
+                if (replyProcessing) {
+                    return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
+                            request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.PROCESSING,
+                            "Bank processing", Map.of(), List.of(), List.of(), "bank", Instant.now(),
+                            new CapabilityResultV1.TaskState("bank-task-1", "PROCESSING", false,
+                                    Map.of("resumeToken", "new-bank-cursor")), null);
+                }
             }
             boolean completed = writes.get() > 0;
             return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
