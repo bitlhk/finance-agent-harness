@@ -24,6 +24,7 @@
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
         <module>examples/solutions/openjiuwen-risk-review</module>
+        <module>examples/solutions/wealth-facts-kit</module>
     </modules>
 
     <properties>

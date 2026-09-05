@@ -8,7 +8,9 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 ## 当前状态
 
-`Runtime Plane V1 Verified · Multi-provider and Multi-domain Assembly Available`
+`Reusable Financial Agent Kit V0.1 Candidate · Controlled Runtime Validation · Live Authorization Pending`
+
+新增 [财富只读接入套件](examples/solutions/wealth-facts-kit/README.md)：从模板、可信身份绑定、原生工具调用到结果与证据核验的一条可重跑入口。共同财富事实单独版本化，原客户/员工能力不变。本轮使用真实 Java Runtime、受控 HTTP 数据和脚本模型；不宣称真实客户 READY、跨银行替换或模型质量已验收。
 
 V1 按两个连续阶段推进：
 
@@ -69,7 +71,7 @@ Provider 另用 `finance-provider.v1` 声明实际支持的能力。装配器在
 2. 手机银行通过 Harness 完成一条需要确认的模拟办理；
 3. 面客与员工辅助 Wealth Domain Pack 使用同一 Core 合同和 Evidence 语义，消费各自宿主的 Provider。
 
-当前已验证：
+已有阶段验证记录（具体环境和限制以对应报告为准；不是本轮全部重跑）：
 
 - `retail-banking-basics` 可声明式安装到未预置金融工具的 OpenJiuwen Java Agent；
 - 安装回执与 `solution-lock.json` 可追溯 Pack、Integration、Provider、能力和内容摘要；
@@ -103,6 +105,11 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 
 ## 文档入口
 
+- [V0.1 快速接入与兼容说明](examples/solutions/wealth-facts-kit/README.md)
+- [财富字段定义与依据](docs/wealth-field-basis-v01.md)
+- [本轮执行记录与外部验收清单](docs/financial-agent-kit-v01-worklog.md)
+- [V0.1 分项验证报告](docs/verification/2026-09-06-financial-agent-kit-v01.md)
+- [共同财富事实候选 ADR](docs/adr/0008-common-wealth-facts-candidate.md)
 - [简化版总体架构](docs/finance-agent-harness-architecture-v1.md)
 - [V1 范围与快速路线](docs/v1-scope-and-roadmap.md)
 - [V1 演示故事](docs/v1-demo-story.md)

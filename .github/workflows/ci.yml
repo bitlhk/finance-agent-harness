@@ -35,9 +35,15 @@ jobs:
         run: python engineering/verify_contracts.py
       - name: Unit tests and local HTTP fault injection
         run: mvn -B -ntp verify
+      - name: Controlled developer entrypoint (no external model or bank)
+        run: bash examples/solutions/wealth-facts-kit/run-controlled.sh
+      - name: Verify CLI evidence and business results
+        run: python engineering/verify_wealth_kit.py
       - name: Retain test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: harness-test-results
-          path: '**/target/surefire-reports/*.xml'
+          path: |
+            **/target/surefire-reports/*.xml
+            examples/solutions/wealth-facts-kit/target/runs/**

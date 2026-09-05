@@ -17,6 +17,12 @@
   ],
   "profiles": [
     {
+      "id": "shared-read-only",
+      "version": "0.1.0",
+      "displayName": "共同财富只读（候选）",
+      "source": "repo://profiles/shared-read-only.md"
+    },
+    {
       "id": "customer-self-service",
       "version": "0.1.0",
       "displayName": "客户自服务",
@@ -36,6 +42,13 @@
     }
   ],
   "domainPacks": [
+    {
+      "id": "wealth-shared-facts",
+      "version": "0.1.0",
+      "displayName": "财富事实描述（候选）",
+      "profile": "shared-read-only",
+      "source": "repo://domain-packs/wealth/shared-facts"
+    },
     {
       "id": "wealth-customer-self-service",
       "version": "0.1.0",
@@ -74,6 +87,12 @@
   ],
   "capabilityPacks": [
     {
+      "id": "wealth-facts-description",
+      "version": "0.1.0",
+      "displayName": "财富共同事实只读能力（候选）",
+      "source": "repo://capability-packs/wealth-facts-description"
+    },
+    {
       "id": "retail-banking-basics",
       "version": "0.1.0",
       "displayName": "零售银行基础能力",
@@ -99,6 +118,13 @@
     }
   ],
   "providers": [
+    {
+      "id": "wealth-facts-adapter",
+      "version": "0.1.0",
+      "displayName": "有授权源的财富投影 Adapter（候选）",
+      "source": "repo://packages/java/wealth",
+      "capabilities": ["wealth.facts.describe"]
+    },
     {
       "id": "non-ai-banking-reference",
       "version": "0.1.0-SNAPSHOT",
@@ -138,6 +164,12 @@
     }
   ],
   "evalPacks": [
+    {
+      "id": "wealth-facts-controlled",
+      "version": "0.1.0",
+      "displayName": "共同财富合同受控案例（非模型质量评测）",
+      "source": "repo://conformance/fixtures/wealth/v0.1"
+    },
     {
       "id": "wealth-management",
       "version": "0.2.3",
