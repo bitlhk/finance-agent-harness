@@ -17,7 +17,7 @@ class ExecutionBoundaryTest {
     final BoundFinanceProvider bound = new BoundFinanceProvider(bank, () -> authorized.get()
             ? new BoundFinanceProvider.Grant("host-user", FinanceContextV1.PrincipalType.CUSTOMER,
                 Set.of("bank-customer"), Set.of("TEST"), grants.get(), "session", "fixture:host-binding",
-                Instant.now().plusSeconds(60)) : null);
+                Instant.now().plusSeconds(60)) : null, Map.of(CAP, SCOPES));
 
     OpenJiuwenFinanceBridge bridge() {
         return new OpenJiuwenFinanceBridge(bound, "fixture-bank", new OpenJiuwenFinanceBridge.InvocationDefaults(
@@ -72,6 +72,24 @@ class ExecutionBoundaryTest {
         assertEquals("AUTHORIZATION_DENIED", bridge.query(new OpenJiuwenInvocationV1("task", "other", "agent",
                 Set.of(), Map.of(), Map.of())).errorCode());
         assertEquals(0, bank.calls);
+    }
+    @Test void directBoundCallsCannotUnderDeclareScopesOrChangeIdentityPurposeOrSession() {
+        for (var c : List.of(
+                context("host-user", "bank-customer", "TEST", "session", Set.of()),
+                context("other-user", "bank-customer", "TEST", "session", SCOPES),
+                context("host-user", "other-customer", "TEST", "session", SCOPES),
+                context("host-user", "bank-customer", "OTHER_PURPOSE", "session", SCOPES),
+                context("host-user", "bank-customer", "TEST", "other-session", SCOPES))) {
+            assertThrows(SecurityException.class, () -> bound.executeTask(new CapabilityRequestV1(
+                    CapabilityRequestV1.SCHEMA_VERSION, CAP, CapabilityRequestV1.Operation.TASK, c,
+                    Map.of("amount", 10), "original-key", null, Map.of(), null)));
+        }
+        assertEquals(0, bank.calls); assertEquals(0, bank.writes);
+    }
+    static FinanceContextV1 context(String principal, String subject, String purpose, String session, Set<String> scopes) {
+        return new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, "req", "trace", principal,
+                FinanceContextV1.PrincipalType.CUSTOMER, "test", purpose, subject, session,
+                FinanceContextV1.AuthenticationLevel.STRONG, scopes);
     }
     static class Bank implements DescribedFinanceProvider, InputCollectionProvider {
         int calls, creates, writes;

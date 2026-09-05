@@ -114,7 +114,9 @@ public final class OpenJiuwenFinanceBridge {
         } catch (SecurityException denied) {
             return accessDenied(invocation, startedAt);
         } catch (RuntimeException exception) {
-            return rejected(invocation, "暂时无法完成查询，请稍后重试。");
+            return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
+                    "暂时无法完成查询，请稍后重试。", Map.of(), List.of(localEvidence(invocation, startedAt, "UNOBSERVED")),
+                    "FINANCE_HARNESS_ERROR", "", Map.of());
         }
     }
 

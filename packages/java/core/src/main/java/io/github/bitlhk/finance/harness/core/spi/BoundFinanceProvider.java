@@ -11,18 +11,30 @@ import java.util.function.Supplier;
 public final class BoundFinanceProvider implements DescribedFinanceProvider, InvocationAccess, InputCollectionProvider {
     private final DescribedFinanceProvider delegate;
     private final Supplier<Grant> grants;
+    private final Map<String, Set<String>> requirements;
 
-    public BoundFinanceProvider(DescribedFinanceProvider delegate, Supplier<Grant> grants) {
+    public BoundFinanceProvider(DescribedFinanceProvider delegate, Supplier<Grant> grants,
+                                Map<String, Set<String>> requirements) {
         this.delegate = Objects.requireNonNull(delegate);
         this.grants = Objects.requireNonNull(grants);
+        Map<String, Set<String>> copy = new java.util.LinkedHashMap<>();
+        requirements.forEach((key, value) -> copy.put(key, Set.copyOf(value)));
+        this.requirements = Map.copyOf(copy);
     }
 
     public ProviderDescriptorV1 descriptor() { return delegate.descriptor(); }
+    public java.util.List<Class<?>> artifactTypes() {
+        java.util.List<Class<?>> types = new java.util.ArrayList<>(delegate.artifactTypes());
+        types.add(getClass()); return types.stream().distinct().toList();
+    }
 
     public void checkAccess(CapabilityRequestV1 request) {
         Grant grant = grants.get();
         FinanceContextV1 context = request.context();
+        Set<String> required = requirements.get(request.capabilityId());
         if (grant == null || !grant.expiresAt().isAfter(Instant.now())
+                || required == null || !delegate.descriptor().supports(request.capabilityId(), request.operation())
+                || !grant.scopes().containsAll(required) || !context.scopes().containsAll(required)
                 || !grant.principalId().equals(context.principalId()) || grant.principalType() != context.principalType()
                 || !grant.subjects().contains(context.subjectRef()) || !grant.purposes().contains(context.purpose())
                 || !grant.scopes().containsAll(context.scopes()) || !grant.sessionRef().equals(context.sessionRef())) {

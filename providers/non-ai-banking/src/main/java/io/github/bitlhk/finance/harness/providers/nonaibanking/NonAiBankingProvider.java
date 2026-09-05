@@ -518,6 +518,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             if (Set.of("INVALID_INPUT", "NOT_AUTHENTICATED", "NOT_AUTHORIZED", "NOT_ELIGIBLE")
                     .contains(failure.failureClass())) throw failure;
             throw new UncertainCreation();
+        } catch (RuntimeException invalidAcknowledgement) {
+            throw new UncertainCreation();
         }
     }
 

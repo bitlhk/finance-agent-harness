@@ -101,10 +101,13 @@ public final class OpenJiuwenSolutionAssembler {
                     "PROVIDER_SOURCE", lockedAssets);
             FinanceProvider provider = providers.get(ref.id());
             if (provider != null) {
-                try {
-                    Path artifact = Path.of(provider.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+                List<Class<?>> types = provider instanceof DescribedFinanceProvider described
+                        ? described.artifactTypes() : List.of(provider.getClass());
+                if (types.isEmpty()) throw new IllegalArgumentException("Provider artifact inventory cannot be empty");
+                for (Class<?> type : types) try {
+                    Path artifact = Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI());
                     lockedAssets.add(new LockedAsset("PROVIDER_RUNTIME", ref.id(), ref.version(),
-                            "codesource://" + artifact.getFileName(),
+                            "codesource://" + type.getName() + "/" + artifact.getFileName(),
                             Files.isDirectory(artifact) ? sha256Tree(artifact) : sha256(artifact)));
                 } catch (java.net.URISyntaxException exception) {
                     throw new IllegalArgumentException("Provider runtime artifact cannot be resolved: " + ref.id(), exception);

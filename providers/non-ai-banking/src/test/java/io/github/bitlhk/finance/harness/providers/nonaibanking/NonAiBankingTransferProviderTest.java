@@ -41,6 +41,7 @@ class NonAiBankingTransferProviderTest {
     private final AtomicBoolean unknownOnSubmit = new AtomicBoolean();
     private final AtomicBoolean disconnectOnSubmit = new AtomicBoolean();
     private final AtomicReference<String> submitResponse = new AtomicReference<>();
+    private final AtomicReference<String> creationResponse = new AtomicReference<>();
     private final AtomicReference<String> submittedState = new AtomicReference<>("COMPLETED");
     private final AtomicBoolean observationUnavailable = new AtomicBoolean();
     private String capabilityId = NonAiBankingProvider.TRANSFER_INTERNAL_CREATE;
@@ -202,6 +203,7 @@ class NonAiBankingTransferProviderTest {
         String path = exchange.getRequestURI().getPath();
         if ("/api/v1/tasks".equals(path)) {
             createHits.incrementAndGet();
+            if (creationResponse.get() != null) { writeJson(exchange, 200, creationResponse.get()); return; }
             taskStatus.set("CREATED");
             writeTask(exchange, 202, "CREATED", false);
             return;
@@ -240,6 +242,28 @@ class NonAiBankingTransferProviderTest {
             return;
         }
         writeTask(exchange, 200, taskStatus.get(), "COMPLETED".equals(taskStatus.get()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not json", "{\"status\":\"SUCCESS\",\"data\":[]}", "{\"status\":\"SUCCESS\",\"data\":{}}"})
+    void creationAcknowledgementLossDoesNotInventTaskOrInputCollectionProof(String broken) {
+        creationResponse.set(broken);
+        var request = request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", "0.01"),
+                "original-create-key", null, Map.of(), null);
+        var result = provider.executeTask(request);
+        assertEquals(CapabilityResultV1.Status.NEED_USER, result.status());
+        assertEquals("TASK_CREATION_UNOBSERVED", result.error().sourceCode());
+        org.junit.jupiter.api.Assertions.assertNull(result.task());
+        assertTrue(provider.collectableInputs(request, result).isEmpty());
+        assertEquals(1, createHits.get()); assertEquals(0, confirmHits.get()); assertEquals(0, submitHits.get());
+    }
+
+    @Test void missingFieldsAreCollectedBeforeAnyBankTaskOrAuthentication() {
+        var request = request(Map.of("fromAccountId", "acct-001"), "key", null, Map.of(), null);
+        var result = provider.executeTask(request);
+        assertEquals(CapabilityResultV1.Status.NEED_USER, result.status());
+        assertEquals(Set.of("beneficiaryId", "amount"), provider.collectableInputs(request, result));
+        assertEquals(0, createHits.get()); assertEquals(0, stepUpHits.get());
     }
 
     @ParameterizedTest
