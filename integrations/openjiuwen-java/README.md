@@ -61,7 +61,31 @@ Bridge 统一处理：
 - `OpenJiuwenCapabilityInstaller`：注册/卸载 OpenJiuwen 原生 `ToolCard`、`LocalFunction` 和 Pack 使用提示；
 - `OpenJiuwenSolutionAssembler`：从最小 `solution.yaml` 解析 Pack 引用并生成 `solution-lock.json`。
 
-Task 工具采用两阶段调用：首次调用由 Provider 做预检并返回 `NEED_USER`，Integration 返回 `financeTaskHandle`；用户明确确认后，Runtime 使用该句柄和 `confirmationText` 继续同一 Provider 任务与幂等键。
+Task 工具首次调用返回 `financeTaskHandle`。模型携带句柄继续调用只负责查询进度；包括“确认提交”在内的 `confirmationText` 均不构成授权。
+
+宿主在展示原任务摘要时，读取并保存 `Installation.confirmationBinding(handle)`，绑定到当前认证用户的确认表单。收到该用户明确的批准事件后，调用 `Installation.confirm(handle, HostTaskConfirmation)`。事件有效期最多五分钟；金额、收款人、摘要或原任务改变后，旧绑定不可使用。用户拒绝时调用 `Installation.decline(handle)`，该操作关闭本地授权，不声称撤销已提交的银行任务。
+
+```java
+// In the authenticated host handler, using the binding captured when the form was shown.
+Instant now = Instant.now();
+var approval = new HostTaskConfirmation(userEventId, displayedBinding, now, now.plusSeconds(60));
+var result = installation.confirm(handle, approval);
+```
+
+宿主必须校验用户、会话及原表单，再构造此对象。不要从模型 JSON 或未经验证的 HTTP 参数直接反序列化确认对象，也不要将此接口注册为模型工具。直接调用 Bridge 的宿主改用 `executeTask(invocation, approval)`；原有单参数方法只负责准备和观察任务。
+
+需要重启恢复时，使用 Installer / Assembler 的新增重载，传入稳定的宿主会话 ID 和 `TaskCheckpointStore`。仓内 `FileTaskCheckpointStore` 是 Linux 单机参考实现，采用文件锁、原子写和受限权限；生产宿主可以用原有数据库实现同一存储接口。默认 `Memory` 仅适合开发，不提供进程重启恢复。关闭 Installation 不删除宿主保存的任务。
+
+```java
+var store = new FileTaskCheckpointStore(privateStateDirectory);
+var solution = assembler.assemble(root, solutionFile, agent, providers, defaults,
+        simulated, store, authenticatedSessionId);
+var installation = solution.installationForCapability("transfer.internal.create");
+```
+
+确认调用会先持久化待查证状态，再进入银行 Provider。响应丢失或崩溃后沿原句柄、taskRef 和幂等键查证；并发或重复确认复用已记录的终态结果。未知句柄不再提示用户直接重建任务。源数据、存储权限、保存期限和多机部署锁由宿主负责。
+
+装配时校验已声明的 `sha256:` 摘要。Domain Pack 使用目录树摘要，Capability Pack 使用 `pack.yaml` 摘要；本地 Profile、Evaluation 和 Provider 源码引用也会记录摘要，目录树排除 `target/build/logs/.git`。Provider 实际加载的类目录或 JAR 单独记录为 `PROVIDER_RUNTIME`。外部引用的摘要如果无法解析会拒绝装配；没有摘要的外部评测引用仍属于待验证输入，不能声称已经锁定。完整依赖、模型配置和业务输出合同将在下一阶段固化。
 
 完整的干净 Runtime 样例位于：
 

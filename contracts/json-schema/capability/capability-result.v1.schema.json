@@ -47,6 +47,14 @@
   },
   "allOf": [
     {
+      "if": { "properties": { "status": { "enum": ["NEED_CONFIRMATION", "PROCESSING", "UNKNOWN"] } }, "required": ["status"] },
+      "then": { "required": ["task"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "NEED_CONFIRMATION" } }, "required": ["status"] },
+      "then": { "properties": { "task": { "properties": { "confirmationRequired": { "const": true } } } } }
+    },
+    {
       "if": {
         "properties": { "status": { "const": "FAILED" } },
         "required": ["status"]

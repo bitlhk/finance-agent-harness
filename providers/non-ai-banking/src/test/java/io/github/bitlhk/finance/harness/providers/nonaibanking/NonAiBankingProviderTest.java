@@ -59,6 +59,12 @@ class NonAiBankingProviderTest {
         });
         server.createContext("/api/v1/accounts", exchange -> {
             accountHits.incrementAndGet();
+            if (exchange.getRequestURI().getPath().startsWith("/api/v1/accounts/")) {
+                writeJson(exchange, 200, """
+                        {"status":"SUCCESS","data":{"accountId":"acct-002","availableBalance":0,"currency":"CNY"}}
+                        """);
+                return;
+            }
             observedSession.set(exchange.getRequestHeaders().getFirst("X-Session-Id"));
             observedRequestId.set(exchange.getRequestHeaders().getFirst("X-Request-Id"));
             observedTraceId.set(exchange.getRequestHeaders().getFirst("X-Trace-Id"));
@@ -162,6 +168,21 @@ class NonAiBankingProviderTest {
         if (server != null) {
             server.stop(0);
         }
+    }
+
+    @Test
+    void selectedAccountUsesDedicatedEndpointAndNeverFallsBackToAnotherAccount() {
+        CapabilityResultV1 selected = provider.query(request(Map.of("accountId", "acct-002")));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, selected.status());
+        var accounts = (List<?>) selected.data().get("accounts");
+        assertEquals(1, accounts.size());
+        assertEquals("acct-002", ((Map<?, ?>) accounts.getFirst()).get("accountId"));
+        assertEquals(0, ((Map<?, ?>) accounts.getFirst()).get("availableBalance"));
+        CapabilityResultV1 wrong = provider.query(request(Map.of("accountId", "acct-003")));
+        assertEquals("ACCOUNT_ID_MISMATCH", wrong.error().sourceCode());
+        int hits = accountHits.get();
+        assertEquals("ACCOUNT_ID_INVALID", provider.query(request(Map.of("accountId", "../other"))).error().sourceCode());
+        assertEquals(hits, accountHits.get());
     }
 
     @Test

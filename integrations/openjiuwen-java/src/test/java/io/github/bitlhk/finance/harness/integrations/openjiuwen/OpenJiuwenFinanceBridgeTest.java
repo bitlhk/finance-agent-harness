@@ -94,7 +94,7 @@ class OpenJiuwenFinanceBridgeTest {
                 }
                 assertEquals("task-pref-001", request.taskRef());
                 assertEquals(firstKey.get(), request.idempotencyKey());
-                assertTrue(request.parameters().isEmpty());
+                assertEquals(Map.of("largeTextEnabled", true), request.parameters());
                 assertTrue(request.confirmation().confirmed());
                 assertEquals("pf-pref-001", request.continuation().get("preflightId"));
                 return result(request, CapabilityResultV1.Status.COMPLETED,
@@ -117,7 +117,9 @@ class OpenJiuwenFinanceBridgeTest {
                 Map.of(
                         "confirmedCapabilityId", TASK,
                         "confirmationText", "确认保存渠道偏好"),
-                first.checkpoint()));
+                first.checkpoint()), new HostTaskConfirmation("host-event-001",
+                String.valueOf(first.checkpoint().get(OpenJiuwenFinanceBridge.CK_BINDING)),
+                Instant.now(), Instant.now().plusSeconds(60)));
 
         assertEquals(OpenJiuwenExecutionV1.Status.NEED_USER, first.status());
         assertEquals("task-pref-001", first.checkpoint().get(OpenJiuwenFinanceBridge.CK_TASK_REF));

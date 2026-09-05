@@ -23,6 +23,22 @@ class ContractFixtureTest {
     private static final Path ROOT = findRepositoryRoot();
 
     @Test
+    void waitingAndUnknownResultsCannotLoseTaskReferenceOrConfirmationFlag() throws IOException {
+        var base = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(
+                validFixture("capability-result.completed.json").toFile());
+        for (String status : List.of("NEED_CONFIRMATION", "PROCESSING", "UNKNOWN")) {
+            var probe = base.deepCopy();
+            probe.put("status", status);
+            probe.remove("task");
+            assertThrows(JsonProcessingException.class, () -> JSON.treeToValue(probe, CapabilityResultV1.class), status);
+        }
+        var probe = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(
+                validFixture("capability-result.need-confirmation.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) probe.get("task")).put("confirmationRequired", false);
+        assertThrows(JsonProcessingException.class, () -> JSON.treeToValue(probe, CapabilityResultV1.class));
+    }
+
+    @Test
     void validFixturesDeserializeAndRoundTrip() throws IOException {
         assertRoundTrip("finance-context.customer.json", FinanceContextV1.class);
         assertRoundTrip("capability-request.query.json", CapabilityRequestV1.class);

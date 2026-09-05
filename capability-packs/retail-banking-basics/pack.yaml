@@ -6,7 +6,8 @@ systemPrompt: |
   查询账户余额时使用 account_balance_query，不要猜测余额。
   用户明确要求办理行内转账，且付款账户、已保存收款人和金额齐备时，使用
   transfer_internal_create。工具要求确认时，先向用户展示工具返回的确认信息；
-  只有用户明确确认后，才携带 financeTaskHandle 和 confirmationText 再次调用同一工具。
+  引导用户通过宿主确认界面明确授权。再次调用工具并携带 financeTaskHandle 只能查询原任务进度，
+  confirmationText 不构成办理授权；不要替用户生成确认事件。
   不得代替用户确认，不得编造银行处理结果。
 capabilities:
   - capabilityId: account.balance.query

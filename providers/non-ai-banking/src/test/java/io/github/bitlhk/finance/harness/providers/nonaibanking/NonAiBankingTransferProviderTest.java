@@ -8,6 +8,8 @@ import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -17,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +40,10 @@ class NonAiBankingTransferProviderTest {
     private final AtomicReference<String> taskStatus = new AtomicReference<>("CREATED");
     private final AtomicBoolean unknownOnSubmit = new AtomicBoolean();
     private final AtomicBoolean disconnectOnSubmit = new AtomicBoolean();
+    private final AtomicReference<String> submitResponse = new AtomicReference<>();
+    private final AtomicReference<String> submittedState = new AtomicReference<>("COMPLETED");
+    private final AtomicBoolean observationUnavailable = new AtomicBoolean();
+    private String capabilityId = NonAiBankingProvider.TRANSFER_INTERNAL_CREATE;
 
     @BeforeEach
     void startServer() throws IOException {
@@ -207,12 +214,17 @@ class NonAiBankingTransferProviderTest {
         }
         if (path.endsWith("/submit")) {
             submitHits.incrementAndGet();
+            if (submitResponse.get() != null) {
+                taskStatus.set("CONFIRMED");
+                writeJson(exchange, 200, submitResponse.get());
+                return;
+            }
             if (disconnectOnSubmit.get()) {
                 taskStatus.set("CONFIRMED");
                 exchange.close();
                 return;
             }
-            String status = unknownOnSubmit.get() ? "UNKNOWN" : "COMPLETED";
+            String status = unknownOnSubmit.get() ? "UNKNOWN" : submittedState.get();
             taskStatus.set(status);
             writeTask(exchange, 200, status, "COMPLETED".equals(status));
             return;
@@ -223,7 +235,74 @@ class NonAiBankingTransferProviderTest {
             writeTask(exchange, 200, "COMPLETED", true);
             return;
         }
+        if (observationUnavailable.get()) {
+            writeJson(exchange, 503, "{\"status\":\"FAILED\",\"data\":null}");
+            return;
+        }
         writeTask(exchange, 200, taskStatus.get(), "COMPLETED".equals(taskStatus.get()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"transfer.internal.create", "channel.preferences.update"})
+    void malformedSubmitResponsesStayUnknownAndRetainReconciliation(String capability) {
+        capabilityId = capability;
+        for (String bad : List.of("not json", "{\"status\":\"SUCCESS\",\"data\":[]}",
+                "{\"status\":\"SUCCESS\",\"data\":null}",
+                "{\"status\":\"SUCCESS\",\"data\":{\"status\":\"COMPLETED\",\"taskId\":\"wrong\"}}")) {
+            taskStatus.set("CONFIRMED");
+            submitResponse.set(bad);
+            CapabilityResultV1 unknown = provider.executeTask(resumeRequest(true, Map.of()));
+            assertEquals(CapabilityResultV1.Status.UNKNOWN, unknown.status());
+            assertEquals("task-transfer-001", unknown.task().taskRef());
+            assertEquals(true, unknown.task().continuation().get("submitOutcomeUnknown"));
+            int submissions = submitHits.get();
+            observationUnavailable.set(true);
+            CapabilityResultV1 failedObservation = provider.executeTask(resumeRequest(false, unknown.task().continuation()));
+            assertEquals(CapabilityResultV1.Status.UNKNOWN, failedObservation.status());
+            assertEquals(unknown.task().continuation(), failedObservation.task().continuation());
+            observationUnavailable.set(false);
+            submitResponse.set(null);
+            CapabilityResultV1 recovered = provider.executeTask(resumeRequest(false, failedObservation.task().continuation()));
+            assertEquals(CapabilityResultV1.Status.COMPLETED, recovered.status());
+            assertEquals(submissions, submitHits.get());
+            assertEquals(0, createHits.get());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"transfer.internal.create", "channel.preferences.update"})
+    void allBankTerminalAndPendingStatesAreMappedExplicitly(String capability) {
+        capabilityId = capability;
+        for (String state : List.of("FAILED_FINAL", "FAILED", "CANCELLED", "PROCESSING", "UNKNOWN", "UNRECOGNIZED")) {
+            taskStatus.set("CONFIRMED");
+            submittedState.set(state);
+            CapabilityResultV1 result = provider.executeTask(resumeRequest(true, Map.of()));
+            CapabilityResultV1.Status expected = Set.of("FAILED_FINAL", "FAILED", "CANCELLED").contains(state)
+                    ? CapabilityResultV1.Status.FAILED : "PROCESSING".equals(state)
+                    ? CapabilityResultV1.Status.PROCESSING : CapabilityResultV1.Status.UNKNOWN;
+            assertEquals(expected, result.status(), state);
+            assertEquals("task-transfer-001", result.task().taskRef());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"transfer.internal.create", "channel.preferences.update"})
+    void progressChecksNeverConfirmOrSubmitEvenWhenBankAlreadyConfirmed(String capability) {
+        capabilityId = capability;
+        for (String state : List.of("CREATED", "CONFIRMED")) {
+            taskStatus.set(state);
+            assertEquals(CapabilityResultV1.Status.NEED_CONFIRMATION,
+                    provider.executeTask(resumeRequest(false, Map.of())).status());
+        }
+        assertEquals(0, submitHits.get());
+        assertEquals(0, confirmHits.get());
+    }
+
+    private CapabilityRequestV1 resumeRequest(boolean confirmed, Map<String, Object> continuation) {
+        CapabilityRequestV1 base = request(Map.of(), "idem-original-task", "task-transfer-001", continuation,
+                confirmed ? new CapabilityRequestV1.Confirmation(true, "Host approval", Instant.now()) : null);
+        return new CapabilityRequestV1(base.schemaVersion(), capabilityId, base.operation(), base.context(),
+                base.parameters(), base.idempotencyKey(), base.taskRef(), base.continuation(), base.confirmation());
     }
 
     private static CapabilityRequestV1 request(
@@ -256,7 +335,7 @@ class NonAiBankingTransferProviderTest {
                 confirmation);
     }
 
-    private static void writeTask(
+    private void writeTask(
             HttpExchange exchange,
             int statusCode,
             String status,
@@ -266,10 +345,10 @@ class NonAiBankingTransferProviderTest {
                 : "";
         writeJson(exchange, statusCode, """
                 {"requestId":"req-task","traceId":"trace-task","status":"SUCCESS",
-                 "data":{"taskId":"task-transfer-001","capabilityId":"transfer.internal.create",
+                 "data":{"taskId":"task-transfer-001","capabilityId":"%s",
                  "status":"%s","operation":"SUBMIT"%s},
                  "asOf":"2026-09-03T01:00:03Z","sourceSystem":"task-store-simulator","error":null}
-                """.formatted(status, result));
+                """.formatted(capabilityId, status, result));
     }
 
     private static void writeJson(HttpExchange exchange, int status, String body) throws IOException {

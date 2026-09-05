@@ -35,6 +35,54 @@ class OpenJiuwenSolutionAssemblerTest {
     Path temporaryDirectory;
 
     @Test
+    void explicitWrongDigestsFailBeforeRegisteringAnyTools() throws Exception {
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        Path original = root().resolve("examples/solutions/openjiuwen-retail-banking/solution.yaml");
+        for (String ref : List.of("profileRef", "evaluationPackRef", "capabilityPackRefs", "providerRefs", "domainPackRefs")) {
+            var input = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(original.toFile());
+            com.fasterxml.jackson.databind.node.ObjectNode asset;
+            if (ref.equals("domainPackRefs")) {
+                asset = input.putArray(ref).addObject();
+                asset.put("id", "wealth-employee-assisted");
+                asset.put("version", "0.1.0");
+                asset.put("source", "repo://domain-packs/wealth/employee-assisted");
+            } else {
+                asset = (com.fasterxml.jackson.databind.node.ObjectNode)
+                        (input.get(ref).isArray() ? input.get(ref).get(0) : input.get(ref));
+            }
+            asset.put("digest", "sha256:" + "0".repeat(64));
+            Path candidate = temporaryDirectory.resolve(ref + ".yaml");
+            yaml.writeValue(candidate.toFile(), input);
+            ReActAgent agent = new ReActAgent(AgentCard.builder().id("bad-digest-" + ref).name("Digest test").build());
+            var error = assertThrows(IllegalArgumentException.class, () -> new OpenJiuwenSolutionAssembler().assemble(
+                    root(), candidate, agent, Map.of("non-ai-banking-reference", provider()), defaults(), true));
+            assertTrue(error.getMessage().contains("digest"), ref + ": " + error.getMessage());
+            assertNull(agent.getAbilityManager().get("account_balance_query"));
+        }
+    }
+
+    @Test
+    void matchingDeclaredDigestIsAcceptedAndRuntimeBytesAreLocked() throws Exception {
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        var source = root().resolve("examples/solutions/openjiuwen-retail-banking/solution.yaml");
+        var agent = new ReActAgent(AgentCard.builder().id("matching-digest").name("Digest test").build());
+        String digest;
+        try (var first = new OpenJiuwenSolutionAssembler().assemble(root(), source, agent,
+                Map.of("non-ai-banking-reference", provider()), defaults(), true)) {
+            digest = first.lock().assets().stream().filter(a -> a.kind().equals("CAPABILITY_PACK")).findFirst().orElseThrow().digest();
+            assertTrue(first.lock().assets().stream().anyMatch(a -> a.kind().equals("PROVIDER_RUNTIME")));
+        }
+        var input = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(source.toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) input.get("capabilityPackRefs").get(0)).put("digest", digest);
+        Path candidate = temporaryDirectory.resolve("matching.yaml");
+        yaml.writeValue(candidate.toFile(), input);
+        try (var second = new OpenJiuwenSolutionAssembler().assemble(root(), candidate, agent,
+                Map.of("non-ai-banking-reference", provider()), defaults(), true)) {
+            assertTrue(second.lock().assets().stream().anyMatch(a -> a.digest().equals(digest)));
+        }
+    }
+
+    @Test
     void solutionYamlInstallsPackAndWritesReproducibleAssetLock() throws Exception {
         Path root = root();
         ReActAgent cleanAgent = new ReActAgent(AgentCard.builder()
@@ -55,7 +103,7 @@ class OpenJiuwenSolutionAssemblerTest {
             assertNotNull(cleanAgent.getAbilityManager().get("account_balance_query"));
             assertNotNull(cleanAgent.getAbilityManager().get("transfer_internal_create"));
             assertEquals("openjiuwen", solution.lock().runtime().family());
-            assertEquals(1, solution.lock().assets().size());
+            assertEquals(5, solution.lock().assets().size());
             assertTrue(solution.lock().assets().getFirst().digest().matches("sha256:[a-f0-9]{64}"));
             assertEquals("retail-banking-basics",
                     solution.lock().installations().getFirst().packId());
@@ -120,7 +168,7 @@ class OpenJiuwenSolutionAssemblerTest {
             assertNotNull(cleanAgent.getAbilityManager().get("wealth_previsit_context_query"));
             assertTrue(cleanAgent.getSystemPromptBuilder().hasSection(
                     "finance-domain-pack:wealth-employee-assisted:wealth-previsit-diagnosis"));
-            assertEquals(2, solution.lock().assets().size());
+            assertEquals(5, solution.lock().assets().size());
             assertEquals("wealth-employee-assisted",
                     solution.lock().domainInstallations().getFirst().packId());
             assertEquals("wealth-manager-previsit",

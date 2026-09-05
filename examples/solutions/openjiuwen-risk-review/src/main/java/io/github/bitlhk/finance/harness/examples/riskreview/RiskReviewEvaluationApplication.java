@@ -93,8 +93,10 @@ public final class RiskReviewEvaluationApplication {
                     loadedSkills,
                     solution.solutionId(),
                     solution.lock(),
-                    true,
-                    true);
+                    false,
+                    false,
+                    Map.of("runtimeIdentity", "NOT_CHECKED", "streamCompletion", "NOT_CHECKED",
+                            "synchronousInvocation", "RETURNED", "providerMode", "CONTROLLED_FIXTURE"));
             Files.createDirectories(outputFile.getParent());
             HarnessJson.mapper().writerWithDefaultPrettyPrinter().writeValue(outputFile.toFile(), output);
             System.out.println(outputFile);
@@ -377,6 +379,7 @@ public final class RiskReviewEvaluationApplication {
             String solutionId,
             OpenJiuwenSolutionAssembler.SolutionLock solutionLock,
             boolean runtimeIdentityVerified,
-            boolean streamCompleted) {
+            boolean streamCompleted,
+            Map<String, String> verification) {
     }
 }

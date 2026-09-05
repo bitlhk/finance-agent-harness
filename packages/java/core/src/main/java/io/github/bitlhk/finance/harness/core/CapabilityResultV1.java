@@ -39,6 +39,13 @@ public record CapabilityResultV1(
         if (status == Status.FAILED && error == null) {
             throw new IllegalArgumentException("FAILED result requires error");
         }
+        if ((status == Status.NEED_CONFIRMATION || status == Status.PROCESSING || status == Status.UNKNOWN)
+                && task == null) {
+            throw new IllegalArgumentException(status + " requires a provider-owned task reference");
+        }
+        if (status == Status.NEED_CONFIRMATION && !task.confirmationRequired()) {
+            throw new IllegalArgumentException("NEED_CONFIRMATION requires confirmationRequired=true");
+        }
     }
 
     public enum Status {

@@ -5,6 +5,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.EvidenceReceiptV1;
 import io.github.bitlhk.finance.harness.core.EvidenceReceipts;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
+import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 
 import java.nio.charset.StandardCharsets;
@@ -33,6 +34,9 @@ public final class OpenJiuwenFinanceBridge {
     public static final String CK_CAPABILITY = "financeHarness.capabilityId";
     public static final String CK_IDEMPOTENCY = "financeHarness.idempotencyKey";
     public static final String CK_CONTINUATION = "financeHarness.continuation";
+    public static final String CK_PARAMETERS = "financeHarness.parameters";
+    public static final String CK_BINDING = "financeHarness.confirmationBinding";
+    public static final String CK_OWNER = "financeHarness.owner";
 
     private static final Set<String> CONTROL_ARGUMENTS = Set.of(
             "query",
@@ -100,9 +104,28 @@ public final class OpenJiuwenFinanceBridge {
     }
 
     public OpenJiuwenExecutionV1 executeTask(OpenJiuwenInvocationV1 invocation) {
+        return executeTask(invocation, null);
+    }
+
+    /** The approval parameter belongs to the trusted host API, not tool arguments. */
+    public OpenJiuwenExecutionV1 executeTask(OpenJiuwenInvocationV1 invocation, HostTaskConfirmation approval) {
         Instant startedAt = Instant.now();
         try {
-            CapabilityRequestV1 request = taskRequest(invocation);
+            if (!supports(invocation.capabilityId())) return rejected(invocation, "未安装此办理能力。");
+            Map<String, Object> prior = invocation.checkpoint();
+            if (!prior.isEmpty() && (!invocation.capabilityId().equals(prior.get(CK_CAPABILITY))
+                    || !owner(invocation).equals(prior.get(CK_OWNER)))) {
+                return rejected(invocation, "续办身份与原任务不一致。");
+            }
+            Map<String, Object> supplied = businessParameters(invocation.arguments());
+            if (prior.containsKey(CK_PARAMETERS) && !supplied.isEmpty()
+                    && !fingerprint(supplied).equals(fingerprint(prior.get(CK_PARAMETERS)))) {
+                return rejected(invocation, "原任务参数不可变更，请先处理原任务。");
+            }
+            if (approval != null && !approval.validFor(text(prior.get(CK_BINDING)), startedAt)) {
+                return rejected(invocation, "确认事件已过期或与待确认任务不一致。");
+            }
+            CapabilityRequestV1 request = taskRequest(invocation, approval);
             CapabilityResultV1 result = provider.executeTask(request);
             EvidenceReceiptV1 receipt = EvidenceReceipts.from(
                     request, result, providerId, startedAt, Instant.now());
@@ -117,7 +140,15 @@ public final class OpenJiuwenFinanceBridge {
                     || result.status() == CapabilityResultV1.Status.PROCESSING
                     || result.status() == CapabilityResultV1.Status.UNKNOWN) {
                 return execution(OpenJiuwenExecutionV1.Status.NEED_USER, invocation, result,
-                        data, evidence, "", result.content(), checkpoint(result, request));
+                        data, evidence, "", result.content(), checkpoint(result, request, invocation));
+            }
+            if (!prior.isEmpty() && result.task() == null && (prior.containsKey(CK_TASK_REF)
+                    || (result.error() != null && (result.error().retryable()
+                    || "TEMPORARY_FAILURE".equals(result.error().failureClass()))))) {
+                return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.NEED_USER,
+                        invocation.taskId(), "本次查询未能确认原任务结果，请沿原任务继续查证。",
+                        data, evidence, result.error() == null ? "OBSERVATION_FAILED" : result.error().sourceCode(),
+                        "请稍后查证原任务。", recoveryCheckpoint(invocation));
             }
             String code = result.error() == null
                     ? "FINANCE_HARNESS_TASK_FAILED"
@@ -125,6 +156,12 @@ public final class OpenJiuwenFinanceBridge {
             return execution(OpenJiuwenExecutionV1.Status.REJECTED, invocation, result,
                     data, evidence, code, "", Map.of());
         } catch (RuntimeException exception) {
+            if (!invocation.checkpoint().isEmpty()) {
+                return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.NEED_USER,
+                        invocation.taskId(), "当前无法确认原任务结果，请勿重新提交。",
+                        Map.of("resultStatus", "UNKNOWN"), List.of(), "OBSERVATION_FAILED",
+                        "请稍后查证原任务。", recoveryCheckpoint(invocation));
+            }
             return rejected(invocation, "暂时无法完成办理，请稍后重试。");
         }
     }
@@ -162,7 +199,7 @@ public final class OpenJiuwenFinanceBridge {
                 null);
     }
 
-    private CapabilityRequestV1 taskRequest(OpenJiuwenInvocationV1 invocation) {
+    private CapabilityRequestV1 taskRequest(OpenJiuwenInvocationV1 invocation, HostTaskConfirmation approval) {
         Map<String, Object> args = invocation.arguments();
         Map<String, Object> prior = invocation.checkpoint();
         String taskRef = text(prior.get(CK_TASK_REF));
@@ -177,34 +214,20 @@ public final class OpenJiuwenFinanceBridge {
                 base.capabilityId(),
                 base.operation(),
                 base.context(),
-                base.parameters(),
+                prior.containsKey(CK_PARAMETERS) ? parameters(prior) : base.parameters(),
                 idempotencyKey,
                 taskRef.isBlank() ? null : taskRef,
                 continuation(prior),
-                confirmation(invocation.capabilityId(), taskRef, args));
+                approval == null ? null : new CapabilityRequestV1.Confirmation(
+                        true, "Host approval event: " + approval.eventId(), approval.confirmedAt()));
     }
 
-    private static CapabilityRequestV1.Confirmation confirmation(
-            String capabilityId,
-            String taskRef,
-            Map<String, Object> args) {
-        if (taskRef.isBlank()) return null;
-        String confirmationText = firstText(
-                args.get("confirmationText"),
-                args.get("_confirmation"),
-                args.get("query"),
-                args.get("message"));
-        boolean confirmed = capabilityId.equals(text(args.get("confirmedCapabilityId")))
-                || looksLikeConfirmation(confirmationText);
-        return confirmed
-                ? new CapabilityRequestV1.Confirmation(
-                        true,
-                        confirmationText.isBlank() ? "确认提交" : confirmationText,
-                        Instant.now())
-                : null;
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parameters(Map<String, Object> checkpoint) {
+        return (Map<String, Object>) checkpoint.get(CK_PARAMETERS);
     }
 
-    private static Map<String, Object> businessParameters(Map<String, Object> args) {
+    static Map<String, Object> businessParameters(Map<String, Object> args) {
         Map<String, Object> parameters = new LinkedHashMap<>();
         args.forEach((key, value) -> {
             if (key != null && value != null && !CONTROL_ARGUMENTS.contains(key)) {
@@ -222,18 +245,66 @@ public final class OpenJiuwenFinanceBridge {
                 : Map.of();
     }
 
-    private static Map<String, Object> checkpoint(
+    private Map<String, Object> checkpoint(
             CapabilityResultV1 result,
-            CapabilityRequestV1 request) {
+            CapabilityRequestV1 request,
+            OpenJiuwenInvocationV1 invocation) {
         CapabilityResultV1.TaskState task = result.task();
-        if (task == null) return Map.of();
+        if (task == null) return recoveryCheckpoint(invocation);
         Map<String, Object> checkpoint = new LinkedHashMap<>();
         checkpoint.put(CK_TASK_REF, task.taskRef());
         checkpoint.put(CK_STATUS, task.status());
         checkpoint.put(CK_CAPABILITY, request.capabilityId());
         checkpoint.put(CK_IDEMPOTENCY, request.idempotencyKey());
         checkpoint.put(CK_CONTINUATION, task.continuation());
+        checkpoint.put(CK_PARAMETERS, request.parameters());
+        checkpoint.put(CK_OWNER, owner(invocation));
+        if (task.confirmationRequired()) {
+            checkpoint.put(CK_BINDING, fingerprint(Map.of(
+                    "checkpoint", checkpoint, "summary", result.content(), "data", result.data())));
+        }
         return Map.copyOf(checkpoint);
+    }
+
+    Map<String, Object> initialCheckpoint(OpenJiuwenInvocationV1 invocation) {
+        return Map.of(CK_CAPABILITY, invocation.capabilityId(), CK_OWNER, owner(invocation),
+                CK_PARAMETERS, businessParameters(invocation.arguments()),
+                CK_IDEMPOTENCY, deterministicIdempotencyKey(invocation.capabilityId(), invocation.taskId()));
+    }
+
+    private String owner(OpenJiuwenInvocationV1 invocation) {
+        return fingerprint(List.of(defaults.principalId(), defaults.subjectRef(), defaults.channel(),
+                defaults.purpose(), providerId, invocation.ownerAgentId(), invocation.taskId()));
+    }
+
+    static Map<String, Object> recoveryCheckpoint(OpenJiuwenInvocationV1 invocation) {
+        Map<String, Object> prior = new LinkedHashMap<>(invocation.checkpoint());
+        prior.remove(CK_BINDING);
+        return Map.copyOf(prior);
+    }
+
+    static Map<String, Object> freeze(Map<String, Object> values) {
+        return sanitizeMap(values);
+    }
+
+    static String fingerprint(Object value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(
+                    HarnessJson.mapper().writeValueAsBytes(canonical(value))));
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("Cannot fingerprint task binding", exception);
+        }
+    }
+
+    private static Object canonical(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new java.util.TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), canonical(item)));
+            return sorted;
+        }
+        if (value instanceof List<?> list) return list.stream().map(OpenJiuwenFinanceBridge::canonical).toList();
+        if (value instanceof Number number) return new java.math.BigDecimal(number.toString()).stripTrailingZeros();
+        return value;
     }
 
     private static Map<String, Object> resultData(
@@ -370,14 +441,6 @@ public final class OpenJiuwenFinanceBridge {
         } catch (Exception exception) {
             return deterministicIdempotencyKey("fallback", key);
         }
-    }
-
-    private static boolean looksLikeConfirmation(String value) {
-        String normalized = value == null ? "" : value.replaceAll("\\s+", "");
-        return normalized.equals("确认")
-                || normalized.equals("确认提交")
-                || normalized.startsWith("确认保存")
-                || normalized.equalsIgnoreCase("confirm");
     }
 
     private static String firstText(Object... values) {

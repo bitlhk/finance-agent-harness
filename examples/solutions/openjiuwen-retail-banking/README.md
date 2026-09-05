@@ -27,7 +27,7 @@ export NON_AI_BANKING_BASE_URL='http://116.204.36.83:8086'
 ./examples/solutions/openjiuwen-retail-banking/run-live-demo.sh
 ```
 
-转账演示会在配置的模拟银行中创建一笔 `CNY 0.01` 的模拟交易，并验证预检、等待确认和恢复提交：
+转账脚本可以验证预检和等待确认；脚本中第二轮“确认提交”文本现在只能查询原任务，不能授权提交。完成办理需宿主按 Integration 文档接入显式确认处理器。仅运行以下对话脚本不再构成完整办理验收：
 
 ```bash
 ./examples/solutions/openjiuwen-retail-banking/run-live-demo.sh demo/transfer-confirmation.txt

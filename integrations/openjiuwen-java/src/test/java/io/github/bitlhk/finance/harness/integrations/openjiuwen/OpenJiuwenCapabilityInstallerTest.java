@@ -80,10 +80,9 @@ class OpenJiuwenCapabilityInstallerTest {
             String handle = String.valueOf(first.get(OpenJiuwenCapabilityInstaller.TASK_HANDLE_ARGUMENT));
             assertTrue(handle.startsWith("fh-task-handle-"));
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> second = (Map<String, Object>) installation.tool(TRANSFER_TOOL).invoke(Map.of(
-                    OpenJiuwenCapabilityInstaller.TASK_HANDLE_ARGUMENT, handle,
-                    OpenJiuwenCapabilityInstaller.CONFIRMATION_ARGUMENT, "确认提交"));
+            Instant confirmedAt = Instant.now();
+            Map<String, Object> second = installation.confirm(handle, new HostTaskConfirmation(
+                    "user-event-001", installation.confirmationBinding(handle), confirmedAt, confirmedAt.plusSeconds(60)));
             assertEquals("COMPLETED", second.get("status"));
             assertFalse(second.containsKey(OpenJiuwenCapabilityInstaller.TASK_HANDLE_ARGUMENT));
             assertEquals(2, taskRequests.size());

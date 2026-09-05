@@ -21,8 +21,8 @@ public record OpenJiuwenInvocationV1(
         requiredScopes = requiredScopes == null
                 ? Set.of()
                 : Set.copyOf(new LinkedHashSet<>(requiredScopes));
-        arguments = immutableMap(arguments);
-        checkpoint = immutableMap(checkpoint);
+        arguments = OpenJiuwenFinanceBridge.freeze(arguments);
+        checkpoint = OpenJiuwenFinanceBridge.freeze(checkpoint);
     }
 
     private static String required(String value, String name) {
