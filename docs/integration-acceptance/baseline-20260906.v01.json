@@ -1,0 +1,53 @@
+{
+  "status": "CONTROLLED_HOST_ADAPTER_VERIFIED_APPLICATION_WIRING_PENDING",
+  "verifiedHarnessCommit": "9d403ee3663abb51bfc225509c3a14961016644c",
+  "verifiedMobileCommit": "8d830b44756a05c125c4a813188a3dfff41437ab",
+  "mobileUpstreamMain": "f89c9fb2215dc4ebca169f676f96fac2d18b0e8c",
+  "bankSimulator": {
+    "repository": "bitlhk/non-ai-banking",
+    "upstreamMain": "f48fe89ecc56c79dbcd48fbb69124fc54b429f7a",
+    "preservedAntifraudCommit": "a69b33f68c959e96101d219b47334aa03b1950ca",
+    "participation": "NOT_RUN"
+  },
+  "employeeAgent": {
+    "repository": "bitlhk/employee-agent-internal",
+    "inspectedCommit": "5706428bfd9b3d1708fa3e9e710a212a48aa229b",
+    "participation": "SOURCE_INSPECTION_ONLY"
+  },
+  "builder": {
+    "repository": "Euphoria_Yan/agent-store-builder-dev-wo-fork",
+    "reference": "merge-requests/118/head",
+    "inspectedCommit": "66d2767557cf4fd4890d55fe8729aaeafd30de97",
+    "manualReproduction": "PENDING_REVIEW",
+    "productIntegration": "NOT_RUN"
+  },
+  "execution": {
+    "path": "MOBILE_ADAPTER_HARNESS_CONTROLLED_HTTP",
+    "model": "NOT_USED",
+    "fullMobileConversation": "NOT_RUN",
+    "java": "21.0.12",
+    "maven": "3.8.7",
+    "python": "3.12.3",
+    "openJiuwenSdkDeclaredDependency": "0.1.13",
+    "businessAsOf": "2026-09-05T00:00:00Z"
+  },
+  "results": {
+    "harnessJava": {"tests": 169, "passed": 162, "skipped": 7, "failed": 0},
+    "mobileTargetedJava": {"tests": 113, "passed": 111, "skipped": 2, "failed": 0},
+    "mobileReadonlyCases": {"tests": 18, "passed": 18},
+    "python": {"tests": 19, "passed": 19},
+    "schemas": 9,
+    "fixtureAssetProbes": 54,
+    "liveAuthorization": "NOT_RUN",
+    "realProviderSubstitution": "NOT_RUN",
+    "independentHumanOnboarding": "PENDING_REVIEW"
+  },
+  "evidence": {
+    "localReport": "target/mobile-readonly/fd9275b82cfa4521ba57d95f3ddf4ec8/report.json",
+    "automatedCommandSeconds": 40.843,
+    "humanElapsedSeconds": null,
+    "helpRequests": null,
+    "loadedArtifactDigestsVerifiedAgainstBuild": true,
+    "artifactHashesAreObservationsNotReproducibleBuildGuarantees": true
+  }
+}

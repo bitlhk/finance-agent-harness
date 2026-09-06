@@ -59,6 +59,9 @@ def main():
         raise ValueError("Use the readonly integration branch, not the old demo branch")
     if git(mobile, "merge-base", UPSTREAM, "HEAD") != UPSTREAM:
         raise ValueError("Selected upstream main is not included")
+    harness_commit = git(ROOT, "rev-parse", "HEAD")
+    mobile_commit = git(mobile, "rev-parse", "HEAD")
+    mobile_tree = git(mobile, "rev-parse", "HEAD^{tree}")
     output = ROOT / "target" / "mobile-readonly" / uuid4().hex
     output.mkdir(parents=True, mode=0o700)
     commands = [
@@ -73,8 +76,8 @@ def main():
     path = output / "report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
     report.update(evidenceKind="CROSS_REPO_CONTROLLED_HOST_ADAPTER",
-                  mobileCommit=git(mobile, "rev-parse", "HEAD"), mobileUpstreamCommit=UPSTREAM,
-                  mobileTree=git(mobile, "rev-parse", "HEAD^{tree}"),
+                  mobileCommit=mobile_commit, mobileUpstreamCommit=UPSTREAM,
+                  mobileTree=mobile_tree,
                   fullMobileConversation="NOT_RUN", bankSimulator="NOT_RUN",
                   builderManualReproduction="PENDING_REVIEW", builderProductIntegration="NOT_RUN", eaConsumer="NOT_RUN")
     try:
@@ -96,7 +99,9 @@ def main():
             built = {Path(name).name: digest for name, digest in report["testedArtifacts"].items()}
             if any(record["loadedArtifacts"] != built for record in records.values()):
                 raise ValueError("Loaded Harness JARs differ from this checkout's build")
-            if git(ROOT, "status", "--porcelain") or git(mobile, "status", "--porcelain"):
+            if (git(ROOT, "status", "--porcelain") or git(mobile, "status", "--porcelain")
+                    or git(ROOT, "rev-parse", "HEAD") != harness_commit
+                    or git(mobile, "rev-parse", "HEAD") != mobile_commit):
                 raise ValueError("Source changed during reproduction")
     except (OSError, ValueError, KeyError) as failure:
         report.update(automatedStatus="FAIL", artifactCollection="FAIL", failureType=type(failure).__name__)
