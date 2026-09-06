@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
+import java.util.function.Consumer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -771,6 +773,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     }
 
     public static final class Config {
+        private Supplier<HostSession> hostSession;
+        private Consumer<HttpObservation> observer = observation -> { };
         private final URI baseUri;
         private final String loginName;
         private final String loginSecret;
@@ -779,6 +783,20 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         private final String appVersion;
         private final Duration timeout;
         private final String stepUpCode;
+
+        /** The supplier must revalidate the bank session and current host authorization on every call. */
+        public static Config hostSession(URI baseUri, Duration timeout, Supplier<HostSession> currentSession) {
+            Config config = new Config(baseUri, "host-session", "unused", "host", "M", "0.1.0", timeout);
+            config.hostSession = Objects.requireNonNull(currentSession);
+            return config;
+        }
+
+        public static Config hostSession(URI baseUri, Duration timeout, Supplier<HostSession> currentSession,
+                                         Consumer<HttpObservation> observer) {
+            Config config = hostSession(baseUri, timeout, currentSession);
+            config.observer = Objects.requireNonNull(observer);
+            return config;
+        }
 
         public Config(
                 URI baseUri,
@@ -834,6 +852,18 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         }
     }
 
+    public record HostSession(String bankSessionId, String customerRef, String principalId,
+                              String hostSessionRef, Instant expiresAt) {
+        public HostSession {
+            for (String value : List.of(bankSessionId, customerRef, principalId, hostSessionRef))
+                if (value.isBlank()) throw new IllegalArgumentException("Incomplete host bank session");
+            Objects.requireNonNull(expiresAt);
+        }
+    }
+
+    /** Transport observations contain neither customer identifiers nor headers/bodies. */
+    public record HttpObservation(String method, String route, int status, Instant observedAt) { }
+
     private static final class Client {
         private static final ObjectMapper JSON = HarnessJson.mapper()
                 .enable(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
@@ -854,7 +884,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 ensureSession(context);
                 HttpResponse<String> response = sendGet(path, query, context, sessionId.get());
-                if (response.statusCode() == 401) {
+                config.observer.accept(new HttpObservation("GET", observationRoute(path), response.statusCode(), Instant.now()));
+                if (response.statusCode() == 401 && config.hostSession == null) {
                     sessionId.set(null);
                     strongAuthentication = false;
                     ensureSession(context);
@@ -878,7 +909,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 ensureSession(context);
                 HttpResponse<String> response = sendPost(path, body, context, sessionId.get());
-                if (response.statusCode() == 401) {
+                if (response.statusCode() == 401 && config.hostSession == null) {
                     sessionId.set(null);
                     strongAuthentication = false;
                     ensureSession(context);
@@ -925,6 +956,17 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             if (context.principalType() != FinanceContextV1.PrincipalType.CUSTOMER) {
                 throw new SecurityException("BANK_CUSTOMER_PRINCIPAL_REQUIRED");
             }
+            if (config.hostSession != null) {
+                HostSession current = config.hostSession.get();
+                if (current == null || !current.expiresAt().isAfter(Instant.now())
+                        || !current.customerRef().equals(context.subjectRef())
+                        || !current.principalId().equals(context.principalId())
+                        || !current.hostSessionRef().equals(context.sessionRef()))
+                    throw new SecurityException("HOST_BANK_SESSION_REJECTED");
+                sessionCustomerRef = current.customerRef();
+                sessionId.set(current.bankSessionId());
+                return;
+            }
             if (sessionId.get() != null && !sessionId.get().isBlank()) {
                 verifySessionCustomer(context);
                 return;
@@ -952,6 +994,10 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             verifySessionCustomer(context);
             sessionId.set(String.valueOf(value));
             strongAuthentication = false;
+        }
+
+        private static String observationRoute(String path) {
+            return path.startsWith("/api/v1/accounts/") ? "/api/v1/accounts/{accountId}" : path;
         }
 
         private void verifySessionCustomer(FinanceContextV1 context) {
