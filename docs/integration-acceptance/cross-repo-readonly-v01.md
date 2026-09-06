@@ -36,6 +36,7 @@ Harness 使用 `feat/cross-repo-readonly-v01`，依赖尚未合并的 PR #6；�
 - [ ] 启动完整模拟器，核对源 Session/事实和出站调用。
 - [ ] 非原作者独立复跑，记录人工时间/求助。
 - [ ] Builder 自动生成同一个应用并装配运行。
+- [x] Builder CLI 新增干净 Runtime 的独立受控只读参考模板（不等于上项完整应用或真实宿主接线）；见 [本批边界](clean-runtime-builder-v01.md)。
 - [ ] 真实授权只读、同条件真实 Provider 替换，分别验收。
 - [ ] 将模拟反诈转账接上可信宿主确认及恢复路径。
 

@@ -1,5 +1,8 @@
 # Finance Agent Harness
 
+干净 Runtime 的下一步交付见 [Builder 只读参考模板与验收边界](docs/integration-acceptance/clean-runtime-builder-v01.md)：
+Builder 独立生成，金融规则继续消费 Harness 制品；受控运行与真实授权/完整手机银行分别验收。
+
 Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 它不替代 Agent Runtime，也不重做银行业务系统。V1 只解决一个具体问题：让 Agent 通过统一合同调用金融查询和办理能力，并留下可验证的结果。
