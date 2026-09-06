@@ -33,6 +33,29 @@ class OpenJiuwenFinanceBridgeTest {
                     Set.of("fallback:read", "wealth:read", "channel:write"));
 
     @Test
+    void externalHostSessionIsNotTakenFromModelArgumentsOrTaskId() {
+        AtomicReference<CapabilityRequestV1> captured = new AtomicReference<>();
+        FinanceProvider provider = new FinanceProvider() {
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                captured.set(request);
+                return result(request, CapabilityResultV1.Status.COMPLETED, "read", Map.of(), null, null);
+            }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("Read-only test");
+            }
+        };
+        var bridge = new OpenJiuwenFinanceBridge(provider, "test-provider", DEFAULTS,
+                Set.of(QUERY), true, "authenticated-session");
+        var output = bridge.query(invocation(QUERY, Set.of("wealth:read"),
+                Map.of("sessionRef", "model-session"), Map.of()));
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, output.status());
+        assertEquals("authenticated-session", captured.get().context().sessionRef());
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> new OpenJiuwenFinanceBridge(provider, "test-provider", DEFAULTS,
+                        Set.of(QUERY), true, " "));
+    }
+
+    @Test
     void queryMapsContextAndReturnsMinimalEvidence() {
         AtomicReference<CapabilityRequestV1> captured = new AtomicReference<>();
         OpenJiuwenFinanceBridge bridge = bridge(new FinanceProvider() {

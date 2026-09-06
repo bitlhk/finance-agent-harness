@@ -80,6 +80,14 @@ public final class OpenJiuwenFinanceBridge {
 
     OpenJiuwenFinanceBridge hostSession(String sessionRef) { this.hostSessionRef = sessionRef; return this; }
 
+    /** Session comes from the authenticated host, never invocation arguments. */
+    public OpenJiuwenFinanceBridge(
+            FinanceProvider provider, String providerId, InvocationDefaults defaults,
+            Set<String> supportedCapabilities, boolean simulated, String hostSessionRef) {
+        this(provider, providerId, defaults, supportedCapabilities, simulated);
+        this.hostSessionRef = required(hostSessionRef, "hostSessionRef");
+    }
+
     void checkAccess(OpenJiuwenInvocationV1 invocation, CapabilityRequestV1.Operation operation) {
         if (!supports(invocation.capabilityId())) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
         CapabilityRequestV1 request = request(invocation, operation);
