@@ -30,6 +30,50 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NonAiBankingProviderTest {
+    @Test
+    void hostSessionIsRecheckedWithoutAutomaticLogin() {
+        var grant = new AtomicReference<>(new NonAiBankingProvider.HostSession("host-bank-session", "customer-demo-001",
+                "customer-demo-001", "session-contract-001", Instant.now().plusSeconds(60)));
+        var observed = new java.util.ArrayList<NonAiBankingProvider.HttpObservation>();
+        var bound = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), java.time.Duration.ofSeconds(5), grant::get, observed::add));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, bound.query(request(Map.of())).status());
+        assertEquals("host-bank-session", observedSession.get());
+        assertEquals(0, sessionHits.get());
+        assertEquals(1, observed.size());
+        grant.set(null);
+        assertEquals(CapabilityResultV1.Status.FAILED, bound.query(request(Map.of())).status());
+        assertEquals(1, accountHits.get());
+        assertEquals(0, sessionHits.get());
+    }
+
+    @Test
+    void hostSessionRejectsIdentityExpiryAndSessionChangesBeforeBusinessRead() {
+        for (var session : List.of(
+                new NonAiBankingProvider.HostSession("bank", "other-customer", "customer-demo-001", "session-contract-001", Instant.now().plusSeconds(60)),
+                new NonAiBankingProvider.HostSession("bank", "customer-demo-001", "other-principal", "session-contract-001", Instant.now().plusSeconds(60)),
+                new NonAiBankingProvider.HostSession("bank", "customer-demo-001", "customer-demo-001", "other-session", Instant.now().plusSeconds(60)),
+                new NonAiBankingProvider.HostSession("bank", "customer-demo-001", "customer-demo-001", "session-contract-001", Instant.now().minusSeconds(1)))) {
+            var bound = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                    URI.create("http://127.0.0.1:" + server.getAddress().getPort()), java.time.Duration.ofSeconds(5), () -> session));
+            assertEquals("BANK_SESSION_SUBJECT_MISMATCH", bound.query(request(Map.of())).error().sourceCode());
+        }
+        assertEquals(0, accountHits.get()); assertEquals(0, sessionHits.get());
+    }
+
+    @Test
+    void revokedSourceSessionNeverTriggersLoginRetry() throws Exception {
+        server.removeContext("/api/v1/accounts");
+        server.createContext("/api/v1/accounts", exchange -> {
+            accountHits.incrementAndGet();
+            writeJson(exchange, 401, "{\"status\":\"FAILED\",\"error\":{\"failureClass\":\"NOT_AUTHENTICATED\",\"sourceCode\":\"SESSION_EXPIRED\"}}");
+        });
+        var bound = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), java.time.Duration.ofSeconds(5),
+                () -> new NonAiBankingProvider.HostSession("revoked-bank", "customer-demo-001", "customer-demo-001", "session-contract-001", Instant.now().plusSeconds(60))));
+        assertEquals(CapabilityResultV1.Status.FAILED, bound.query(request(Map.of())).status());
+        assertEquals(1, accountHits.get()); assertEquals(0, sessionHits.get());
+    }
     private HttpServer server;
     private NonAiBankingProvider provider;
     private final AtomicInteger sessionHits = new AtomicInteger();
