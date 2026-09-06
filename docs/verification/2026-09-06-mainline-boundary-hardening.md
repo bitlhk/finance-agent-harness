@@ -80,3 +80,31 @@ Python 可用 `python3 -m venv /tmp/finance-harness-verify` 后安装 `requireme
 
 下一步仍是灯塔组确认财富字段与真实宿主授权，场景工具组独立复跑只读接入。
 需要的材料和验收角色保持 [原实施记录](../financial-agent-kit-v01-worklog.md) 不变；不扩原语清单。
+
+## PR #5 复审后的兼容性补充
+
+基于 `731505b0c5ad1723efc112e822a772fcd41b9ef0` 继续整改，同一 PR/分支，不合并或部署。
+原六项修复保留；本节是随后一轮实际验证，不覆盖上面的历史测试数量。
+
+1. **Builder 输入迁移**：保险输入在新增回归中复现 `RUNTIME_REFERENCE_MISMATCH`。
+   保留原 Git Host Bridge/EA Integration 来源，三个源码引用样例补显式 `runtime.resolvedArtifacts`。
+   SDK 与 Assembler 的完整 Maven 坐标仍与实际 CodeSource 对照，原 Maven 声明也不能由解析字段覆盖。
+   保险/员工财富两份原路径文件已装配并安装/卸载原生工具，Provider 业务调用数为零；
+   假版本、冲突原声明、缺解析及未知字段仍拒绝。原 Maven-only 输入/Lock 形状不变。
+   Catalog 同步保留 source 并补 artifactRef。Schema、Java 读取方式及 Builder 交接文档同步迁移。
+   外部 Builder 的严格读取器需识别新增可选字段；本轮没有部署该外部服务。
+2. **Python 3.10**：在本机安装独立 CPython **3.10.20** 环境，未替换默认 Python。
+   对实际报告时间 `2026-09-06T01:12:43.806364116Z` 的原 `fromisoformat` 调用复现 ValueError。
+   新比较器显式解析时区，按整秒与纳秒排序；不依赖 3.11 新行为或丢弃纳秒来凑通过。
+   Maven 生成 10 条真实 Java 时间样本（0/3/6/9 位小数秒）；另覆盖 1–9 位、时区等价、
+   相差 1ns、秒边界及非法日期。缺少 Java 样本文件使 Python 门禁失败，不跳过。
+
+本轮验证：13 模块 `mvn -B -ntp verify` 通过；29 类、168 项，**161 通过、7 跳过、0 失败/错误**。
+Schema 9 个、54 项校验通过。Python **3.10.20 / 3.12.3** 均通过 6 项 Python 测试及五份 CLI 报告校验。
+五份 CLI 重新执行为 3 COMPLETED / 2 REJECTED，拒绝读取为零。CI 扩为 3.10/3.12 完整矩阵，按版本保存证据。
+日志：`/tmp/finance-pr5-compat-red.log`、`/tmp/finance-pr5-compat-verify.log`、`/tmp/finance-pr5-compat-cli.log`。
+复跑先执行 Maven，再 `python -m unittest discover -s engineering -p 'test_*.py' -v`，其余四项命令不变。
+
+本轮的装配通过不证明 Git Host Bridge 源码已获取/编译，也不证明额外 EA Host Integration 已完成真实签名接线。
+面客历史输入缺 Capability Pack 的问题仍单独待处理；仅同步它的 Runtime 引用表达，不声称该路径已验收。
+真实授权、同条件 Provider 替换、独立人工接入及多进程恢复继续待验收。

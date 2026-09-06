@@ -1,6 +1,7 @@
 """Validate the five controlled CLI reports against artifacts and shared business contracts."""
 import hashlib
 import json
+import re
 from datetime import datetime
 
 from jsonschema import Draft202012Validator
@@ -9,6 +10,20 @@ from verify_contracts import FORMATS, ROOT
 
 def read(path):
     return json.loads(path.read_text())
+
+
+def instant_key(value):
+    """Compare Java instants losslessly on Python 3.10+, including nanoseconds."""
+    if not isinstance(value, str):
+        raise ValueError("Expected an ISO timestamp string")
+    match = re.fullmatch(
+        r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)", value
+    )
+    if not match:
+        raise ValueError("Expected ISO timestamp with timezone and at most nine fractional digits")
+    seconds, fraction, offset = match.groups()
+    whole = datetime.fromisoformat(seconds + ("+00:00" if offset == "Z" else offset))
+    return whole, int((fraction or "").ljust(9, "0"))
 
 
 def verify(directory):
@@ -46,12 +61,13 @@ def verify(directory):
         Draft202012Validator(schema, format_checker=FORMATS).validate(tool["data"]["facts"])
         assert tool["data"]["description"]["suitability"] == "NOT_EVALUATED"
         assert tool["data"]["description"]["taskReadiness"] == "COMPLETE_FOR_DESCRIPTION"
-        assert datetime.fromisoformat(tool["data"]["facts"]["source"]["observedAt"]) >= datetime.fromisoformat(report["startedAt"])
+        assert instant_key(tool["data"]["facts"]["source"]["observedAt"]) >= instant_key(report["startedAt"])
         assert tool["data"]["facts"]["assets"]["amounts"][0]["money"]["value"] == "1000000.12345678"
     lock = read(directory / "solution-lock.json")
+    runtime = lock["runtime"].get("resolvedArtifacts", lock["runtime"])
     for kind, field in [("RUNTIME_TEMPLATE", "templateRef"), ("RUNTIME_INTEGRATION", "integrationRef")]:
         observed = [a for a in lock["assets"] if a["kind"] == kind]
-        assert len(observed) == 1 and observed[0]["id"] == lock["runtime"][field]
+        assert len(observed) == 1 and observed[0]["id"] == runtime[field]
         assert observed[0]["digest"].startswith("sha256:") and len(observed[0]["digest"]) == 71
     assert "WealthFactsProvider" in json.dumps(lock) and "BoundFinanceProvider" in json.dumps(lock)
     print(f"{directory.name}: {tool['status']}, sourceReads={report['sourceReadCount']}, "

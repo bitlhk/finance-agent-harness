@@ -34,6 +34,63 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @org.junit.jupiter.api.TestFactory
+    List<org.junit.jupiter.api.DynamicTest> existingEmployeeBuilderInputsInstallWithoutBusinessCalls() {
+        return List.of("insurance-advisor-previsit", "wealth-manager-previsit").stream().map(scenario ->
+                org.junit.jupiter.api.DynamicTest.dynamicTest(scenario, () -> {
+            Path inputFile = root().resolve("examples/solutions/" + scenario + "/solution-build-input.v1.json");
+            JsonNode input = new ObjectMapper().readTree(inputFile.toFile());
+            String providerId = input.path("providerRefs").get(0).path("id").asText();
+            boolean insurance = scenario.startsWith("insurance");
+            String capability = insurance ? "insurance.customer-context.query" : "wealth.previsit-context.query";
+            String tool = insurance ? "insurance_customer_context_query" : "wealth_previsit_context_query";
+            var captured = new AtomicReference<CapabilityRequestV1>();
+            var agent = cleanAgent("builder-input-" + scenario);
+            try (var assembled = new OpenJiuwenSolutionAssembler().assemble(root(), inputFile, agent,
+                    Map.of(providerId, describedProvider(providerId, capability, CapabilityRequestV1.Operation.QUERY, captured, Map.of())),
+                    insurance ? insuranceDefaults() : employeeDefaults(), true)) {
+                assertNotNull(agent.getAbilityManager().get(tool));
+                assertEquals(input.path("runtime").path("templateRef").asText(), assembled.lock().runtime().templateRef());
+                assertEquals(input.path("runtime").path("integrationRef").asText(), assembled.lock().runtime().integrationRef());
+                var lockFile = temporaryDirectory.resolve(scenario + "-lock.json");
+                assembled.writeLock(lockFile);
+                var lock = new ObjectMapper().readTree(lockFile.toFile());
+                assertEquals(input.path("runtime").path("resolvedArtifacts"), lock.path("runtime").path("resolvedArtifacts"));
+                assertTrue(assembled.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_TEMPLATE")
+                        && a.id().equals(lock.at("/runtime/resolvedArtifacts/templateRef").asText())));
+                assertTrue(assembled.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_INTEGRATION")
+                        && a.id().equals(lock.at("/runtime/resolvedArtifacts/integrationRef").asText())));
+                assertEquals(insurance ? "repo://integrations/openjiuwen-java" : "repo://integrations/employee-agent-java",
+                        lock.path("runtime").path("integrationRef").asText());
+                if (!insurance) assertTrue(lock.path("runtime").path("templateRef").asText().contains("#agents/domain-runtime"));
+                assertNull(captured.get(), "Assembly must not query the source");
+            }
+            assertNull(agent.getAbilityManager().get(tool));
+        })).toList();
+    }
+
+    @Test
+    void explicitResolutionCannotConcealWrongVersionsOrBeInferredFromASource() throws Exception {
+        var json = new ObjectMapper();
+        var original = root().resolve("examples/solutions/insurance-advisor-previsit/solution-build-input.v1.json");
+        for (String change : List.of("missingResolution", "templateRef", "integrationRef", "declaredMaven", "unknownField")) {
+            var input = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(original.toFile());
+            var runtime = (com.fasterxml.jackson.databind.node.ObjectNode) input.get("runtime");
+            if (change.equals("missingResolution")) runtime.remove("resolvedArtifacts");
+            else if (change.equals("declaredMaven")) runtime.put("templateRef", "maven://com.openjiuwen:agent-core-java:999.999-does-not-exist");
+            else if (change.equals("unknownField")) ((com.fasterxml.jackson.databind.node.ObjectNode)runtime.get("resolvedArtifacts")).put("trusted", true);
+            else ((com.fasterxml.jackson.databind.node.ObjectNode)runtime.get("resolvedArtifacts"))
+                        .put(change, "maven://wrong:artifact:999.999-does-not-exist");
+            var file = temporaryDirectory.resolve(change + ".json"); json.writeValue(file.toFile(), input);
+            var agent = cleanAgent("bad-resolution-" + change);
+            var error = assertThrows(Exception.class, () -> new OpenJiuwenSolutionAssembler().assemble(root(), file, agent,
+                    Map.of(), insuranceDefaults(), true));
+            assertTrue(error.getMessage().contains(change.equals("missingResolution") ? "RUNTIME_ARTIFACT_RESOLUTION_REQUIRED"
+                    : change.equals("unknownField") ? "trusted" : "RUNTIME_REFERENCE_MISMATCH"), error.toString());
+            assertNull(agent.getAbilityManager().get("insurance_customer_context_query"));
+        }
+    }
+
     @Test
     void nonexistentRuntimeReferencesAreRejectedBeforeInstallingTools() throws Exception {
         var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
@@ -138,6 +195,8 @@ class OpenJiuwenSolutionAssemblerTest {
             solution.writeLock(lockFile);
             JsonNode lock = new ObjectMapper().readTree(lockFile.toFile());
             assertEquals("finance-solution-lock.v1", lock.path("schemaVersion").asText());
+            assertFalse(lock.path("runtime").has("resolvedArtifacts"), "Maven-only lock shape remains unchanged");
+            assertEquals(4, lock.path("runtime").size());
             assertEquals("retail-banking-basics",
                     lock.path("installations").path(0).path("packId").asText());
             assertEquals("account.balance.query",

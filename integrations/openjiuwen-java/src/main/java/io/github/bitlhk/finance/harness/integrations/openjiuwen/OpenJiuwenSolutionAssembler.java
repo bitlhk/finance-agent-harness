@@ -68,7 +68,7 @@ public final class OpenJiuwenSolutionAssembler {
         List<FinanceDomainPackLoader.LoadedDomainPack> loadedDomainPacks = new ArrayList<>();
         List<FinanceCapabilityPackV1> loadedCapabilityPacks = new ArrayList<>();
         List<LockedAsset> lockedAssets = new ArrayList<>();
-        lockRuntime(spec.runtime(), lockedAssets);
+        RuntimeArtifacts observedRuntime = lockRuntime(spec.runtime(), lockedAssets);
         checkOptionalReference(repositoryRoot, spec.profileRef(), "PROFILE", lockedAssets);
         checkOptionalReference(repositoryRoot, spec.evaluationPackRef(), "EVALUATION", lockedAssets);
         for (AssetRef ref : spec.domainPackRefs()) {
@@ -162,24 +162,40 @@ public final class OpenJiuwenSolutionAssembler {
                         spec.runtime().family(),
                         spec.runtime().language(),
                         spec.runtime().templateRef(),
-                        spec.runtime().integrationRef()),
+                        spec.runtime().integrationRef(),
+                        spec.runtime().resolvedArtifacts() == null ? null : observedRuntime),
                 List.copyOf(lockedAssets),
                 installedDomainPacks,
                 installedPacks);
         return new AssembledSolution(spec.solutionId(), domainInstallations, installations, lock, json);
     }
 
-    private static void lockRuntime(RuntimeRef declared, List<LockedAsset> assets) throws IOException {
+    private static RuntimeArtifacts lockRuntime(RuntimeRef declared, List<LockedAsset> assets) throws IOException {
         var template = LoadedRuntimeArtifact.read(BaseAgent.class,
                 "META-INF/maven/com.openjiuwen/agent-core-java/pom.properties", "com.openjiuwen", "agent-core-java");
         var integration = LoadedRuntimeArtifact.read(OpenJiuwenSolutionAssembler.class,
                 "META-INF/finance-harness/integration.properties", "io.github.bitlhk.finance", "finance-harness-openjiuwen-java");
-        template.requireReference(declared.templateRef());
-        integration.requireReference(declared.integrationRef());
+        requireRuntimeReference(template, declared.templateRef(), declared.resolvedArtifacts());
+        requireRuntimeReference(integration, declared.integrationRef(), declared.resolvedArtifacts());
+        if (declared.resolvedArtifacts() != null) {
+            template.requireReference(declared.resolvedArtifacts().templateRef());
+            integration.requireReference(declared.resolvedArtifacts().integrationRef());
+        }
         if (!integration.version().equals(OpenJiuwenCapabilityInstaller.INTEGRATION_VERSION))
             throw new IllegalArgumentException("RUNTIME_REFERENCE_MISMATCH: integration receipt version");
         lockRuntimeAsset("RUNTIME_TEMPLATE", template, assets);
         lockRuntimeAsset("RUNTIME_INTEGRATION", integration, assets);
+        return new RuntimeArtifacts(template.reference(), integration.reference());
+    }
+
+    private static void requireRuntimeReference(LoadedRuntimeArtifact actual, String reference, RuntimeArtifacts resolved) {
+        if (reference != null && (reference.startsWith("repo://") || reference.startsWith("git+https://"))) {
+            if (resolved == null) throw new IllegalArgumentException(
+                    "RUNTIME_ARTIFACT_RESOLUTION_REQUIRED: preserve source references and supply runtime.resolvedArtifacts");
+            // A source reference records Builder provenance, not proof that this source was loaded.
+        } else {
+            actual.requireReference(reference);
+        }
     }
 
     private static void lockRuntimeAsset(String kind, LoadedRuntimeArtifact artifact, List<LockedAsset> assets) throws IOException {
@@ -422,8 +438,11 @@ public final class OpenJiuwenSolutionAssembler {
         }
     }
 
-    private record RuntimeRef(String family, String language, String templateRef, String integrationRef) {
+    private record RuntimeRef(String family, String language, String templateRef, String integrationRef,
+                              RuntimeArtifacts resolvedArtifacts) {
     }
+
+    public record RuntimeArtifacts(String templateRef, String integrationRef) { }
 
     private record AssetRef(String id, String version, String source, String digest) {
     }
@@ -435,7 +454,12 @@ public final class OpenJiuwenSolutionAssembler {
             String family,
             String language,
             String templateRef,
-            String integrationRef) {
+            String integrationRef,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            RuntimeArtifacts resolvedArtifacts) {
+        public LockedRuntime(String family, String language, String templateRef, String integrationRef) {
+            this(family, language, templateRef, integrationRef, null);
+        }
     }
 
     public record LockedAsset(

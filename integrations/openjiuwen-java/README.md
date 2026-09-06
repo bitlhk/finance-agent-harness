@@ -25,11 +25,17 @@ mvn install
 模块当前按 OpenJiuwen Java `0.1.13` 编译，与手机银行首个消费者保持一致。OpenJiuwen 依赖被标记为 Maven optional，应用仍需显式选择自己的 Runtime 版本；升级 Runtime 时必须运行本模块 Conformance。
 
 Assembler 在安装前读取 `BaseAgent` 实际 CodeSource 的 Maven 元数据和 Integration
-制品内的构建元数据，核对 `templateRef/integrationRef` 完整坐标。
+制品内的构建元数据。Maven-only 输入核对 `templateRef/integrationRef` 完整坐标；
+Builder 源码引用需显式补 `runtime.resolvedArtifacts`，原来源字段仍保留，不能将
+Host Bridge 或 EA Host Integration 来源误当 SDK/Assembler 制品。缺解析会明确报迁移错误；
+伪造的原 Maven 引用或解析坐标仍拒绝，未降低版本门禁。
 不匹配报 `RUNTIME_REFERENCE_MISMATCH`；元数据无法观察则拒绝，不用声明补证据。
-Lock 原 Runtime 字段兼容，`assets` 新增 `RUNTIME_TEMPLATE/RUNTIME_INTEGRATION`，
+Lock 原 Runtime 字段保留输入语义，带解析的输入新增 `runtime.resolvedArtifacts`（实测坐标）；
+Maven-only 旧 Lock 不增加该字段。`assets` 包含 `RUNTIME_TEMPLATE/RUNTIME_INTEGRATION`，
 保存实测版本与类目录/JAR 摘要。旧 Lock 不具备这一保证，须重新装配。
 SNAPSHOT 同版本不保证同内容，复现必须比较制品摘要；不代表远端服务被锁定。
+源码引用的内容不由此 Assembler 获取/核验，不能把保留出处误称源码已安装。
+详细迁移和额外 Host 依赖见 [Builder 交接](../../docs/builder-handoff-wealth-v1.md)。
 
 ## Bridge 接入
 

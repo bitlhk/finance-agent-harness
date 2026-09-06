@@ -96,6 +96,11 @@ EA 还须给五参数 `EmployeeAgentWealthProvider.Config` 注入 `Supplier<Empl
 
 ## 验收界限
 
+Python 最低版本仍为 3.10。报告校验显式解析 UTC `Z` 和 0–9 位小数秒，按秒与纳秒
+共同排序；不把纳秒截成微秒。CI 同时验证 3.10/3.12，且用 Maven 实际生成的 Java 时间样本。
+完整回归命令：先 `mvn -B -ntp verify`，再 `python -m unittest discover -s engineering -p 'test_*.py' -v`。
+旧 Builder 源码输入还须补显式运行制品解析，见 [迁移说明](../../../docs/builder-handoff-wealth-v1.md)。
+
 ### 受控端点与业务时钟
 
 - 正常与负向样例固定业务日期 `2026-09-05T00:00:00Z`，不因日历推移失效。

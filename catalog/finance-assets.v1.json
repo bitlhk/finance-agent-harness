@@ -6,13 +6,15 @@
       "id": "openjiuwen-java",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "OpenJiuwen Java Integration",
-      "source": "repo://integrations/openjiuwen-java"
+      "source": "repo://integrations/openjiuwen-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
     },
     {
       "id": "employee-agent-java",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "Employee Agent Java Host Integration",
-      "source": "repo://integrations/employee-agent-java"
+      "source": "repo://integrations/employee-agent-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-employee-agent-java:0.1.0-SNAPSHOT"
     }
   ],
   "profiles": [

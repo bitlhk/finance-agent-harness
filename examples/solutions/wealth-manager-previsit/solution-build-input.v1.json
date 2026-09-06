@@ -6,7 +6,11 @@
     "family": "openjiuwen",
     "language": "java",
     "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@f89c9fb2215dc4ebca169f676f96fac2d18b0e8c#agents/domain-runtime",
-    "integrationRef": "repo://integrations/employee-agent-java"
+    "integrationRef": "repo://integrations/employee-agent-java",
+    "resolvedArtifacts": {
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    }
   },
   "profileRef": {
     "id": "employee-assisted",

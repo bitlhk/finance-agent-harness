@@ -106,6 +106,16 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 512
+        },
+        "resolvedArtifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["templateRef", "integrationRef"],
+          "description": "Explicit Builder resolution to loaded SDK and Harness Assembler artifacts. Original source references remain declared provenance, not verified source installations.",
+          "properties": {
+            "templateRef": {"type": "string", "pattern": "^maven://[^:/]+:[^:/]+:[^:/]+$", "maxLength": 512},
+            "integrationRef": {"type": "string", "pattern": "^maven://[^:/]+:[^:/]+:[^:/]+$", "maxLength": 512}
+          }
         }
       }
     },
