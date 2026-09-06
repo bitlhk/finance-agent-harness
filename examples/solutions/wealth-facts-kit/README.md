@@ -4,7 +4,10 @@
 
 ## 快速运行
 
-环境：JDK 21、Maven 3.8+、Python 3.10+、Bash。本机需允许随机 loopback 端口；首次构建需联网下载 Maven/Python 依赖，无需 API Key，不访问银行/EA 生产环境。CI 使用 JDK 21/Python 3.12。
+环境：JDK 21、Maven 3.8+、Python 3.10+、Bash。本机需允许随机 loopback 端口；首次构建需联网下载 Maven/Python 依赖，无需 API Key，不访问银行/EA 生产环境。CI 使用 JDK 21 与 Python 3.10/3.12。
+
+非原作者交接使用[独立接入手册](../../../docs/onboarding-wealth-v01.md)及 `engineering/run_onboarding.py`，
+自动记录门禁与耗时；真人参与及真实授权仍按[双线验收](../../../docs/wealth-readonly-acceptance-v01.md)分开确认。
 
 在 Git 工作副本根目录执行：
 
