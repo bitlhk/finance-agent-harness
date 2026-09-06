@@ -19,8 +19,8 @@
 - [x] Builder job API and red/white/gray UI with real process state.
 - [x] Full simulator read smoke with an explicitly controlled test model.
 - [ ] Configured real model dialogue: model connection is not configured yet.
-- [ ] Desktop/mobile UI and lifecycle failure validation.
-- [ ] Version/fixture/artifact inventory, reproduction instructions and scoped evidence.
+- [x] Desktop/mobile UI and lifecycle failure validation (actual-model UI dialogue still pending).
+- [x] Version/fixture/artifact inventory, reproduction instructions and scoped evidence.
 - [ ] Independent human onboarding: external organizational acceptance, not AI self-testing.
 
 ## Decisions
