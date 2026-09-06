@@ -1,5 +1,8 @@
 # Finance Agent Harness
 
+干净 Runtime 的下一步交付见 [Builder 只读参考模板与验收边界](docs/integration-acceptance/clean-runtime-builder-v01.md)：
+Builder 独立生成，金融规则继续消费 Harness 制品；受控运行与真实授权/完整手机银行分别验收。
+
 Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 它不替代 Agent Runtime，也不重做银行业务系统。V1 只解决一个具体问题：让 Agent 通过统一合同调用金融查询和办理能力，并留下可验证的结果。
@@ -19,6 +22,10 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 下一阶段使用[财富只读双线验收](docs/wealth-readonly-acceptance-v01.md)：真实授权只读与
 [非原作者独立接入](docs/onboarding-wealth-v01.md)分别验收。`engineering/run_onboarding.py`
 复跑现有受控门禁并记录步骤/耗时，不自动认证真实授权、人工接入或 Provider 替换。
+
+[跨仓只读接入首批记录](docs/integration-acceptance/cross-repo-readonly-v01.md)固定手机银行上游 main，
+保留两个 Fork 的已有增强，通过 `engineering/run_mobile_readonly.py` 验证手机银行宿主 Adapter 与
+同一份 Harness 制品。Builder 同事手工复跑、Builder 产品自动装配和 EA 接入分别验收。
 
 V1 按两个连续阶段推进：
 

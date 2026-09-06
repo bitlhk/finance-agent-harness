@@ -1,0 +1,12 @@
+[
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"NORMAL"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"SNAPSHOT","scenario":"NORMAL"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"DENIED"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"EXPIRED_GRANT"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"WRONG_SUBJECT"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"MODEL_SELECTOR"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"MISSING_RISK"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"MISSING_METADATA"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"ZERO"},
+  {"mode":"CONTROLLED","profile":"CUSTOMER","binding":"BANK_HTTP","scenario":"BAD_RESPONSE"}
+]
