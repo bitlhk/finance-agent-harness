@@ -1,0 +1,14 @@
+schemaVersion: finance-capability-smoke.v1
+packId: wealth-manager-previsit
+cases:
+  - caseId: wealth-previsit-authorized-customer
+    prompt: 请为客户 C005 准备一份访前简报，重点说明本次应确认什么。
+    expectedCapability: wealth.previsit-context.query
+    expectedTool: wealth_previsit_context_query
+    expectedOperation: QUERY
+    expectedStatuses:
+      - COMPLETED
+  - caseId: wealth-previsit-missing-customer
+    prompt: 帮我准备下一位客户的访前简报。
+    expectedBehavior: ASK_FOR_CUSTOMER_REF
+    forbiddenBehavior: FABRICATE_CUSTOMER_REF

@@ -1,0 +1,15 @@
+{
+  "wealthAggregate": {
+    "overview": {
+      "totalAssets": 1000000.12345678,
+      "currency": "CNY",
+      "asOf": "2026-09-01T00:00:00Z",
+      "missingSourceSystems": []
+    }
+  },
+  "riskAssessment": {
+    "riskLevel": "C3",
+    "assessmentVersion": "assessment-2",
+    "expiresOn": "2027-03-01"
+  }
+}

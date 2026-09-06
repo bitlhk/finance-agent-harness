@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "capability-result.v1",
+  "requestId": "req-demo-002",
+  "traceId": "trace-demo-002",
+  "status": "NEED_CONFIRMATION",
+  "content": "将开启长辈模式，请确认提交。",
+  "data": { "enabled": true },
+  "missingInputs": [],
+  "nextActions": ["CONFIRM_TASK"],
+  "sourceSystem": "policy-simulator",
+  "asOf": "2026-09-01T01:00:02Z",
+  "task": {
+    "taskRef": "task-demo-002",
+    "status": "CREATED",
+    "confirmationRequired": true,
+    "continuation": {
+      "preflightId": "preflight-demo-002",
+      "payloadHash": "sha256:demo"
+    }
+  }
+}

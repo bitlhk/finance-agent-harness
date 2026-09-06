@@ -1,0 +1,14 @@
+schemaVersion: finance-domain-pack.v1
+packId: transfer-anti-fraud
+version: 0.1.0
+profile: customer-self-service
+capabilities:
+  - fraud.transfer-risk.assess
+scope:
+  - 转账前查询已知涉诈风险
+  - 输出风险结论、原因和最小证据
+  - 上游异常时明确返回不可用
+outOfScope:
+  - 执行转账
+  - 在 Harness Core 中固化银行阈值
+  - 使用大模型直接决定是否拦截

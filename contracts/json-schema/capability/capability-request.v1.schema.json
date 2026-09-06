@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.dev/contracts/capability/capability-request.v1.schema.json",
+  "title": "CapabilityRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "capabilityId",
+    "operation",
+    "context",
+    "parameters",
+    "continuation"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "capability-request.v1" },
+    "capabilityId": { "type": "string", "minLength": 1 },
+    "operation": { "enum": ["QUERY", "TASK"] },
+    "context": {
+      "$ref": "../context/finance-context.v1.schema.json"
+    },
+    "parameters": { "type": "object" },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "taskRef": { "type": "string", "minLength": 1 },
+    "continuation": { "type": "object" },
+    "confirmation": { "$ref": "#/$defs/confirmation" }
+  },
+  "$defs": {
+    "confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmed"],
+      "properties": {
+        "confirmed": { "type": "boolean" },
+        "confirmationText": { "type": "string", "minLength": 1 },
+        "confirmedAt": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "confirmed": { "const": true } },
+            "required": ["confirmed"]
+          },
+          "then": {
+            "required": ["confirmationText", "confirmedAt"],
+            "properties": {
+              "confirmationText": { "type": "string", "minLength": 1 },
+              "confirmedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

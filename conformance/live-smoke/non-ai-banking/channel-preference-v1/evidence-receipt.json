@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "evidence-receipt.v1",
+  "receiptId": "receipt-2a788c3d-1ccd-4da2-a67c-e06fb567c1cc",
+  "requestId": "request-live-channel-9685647c-73d3-468f-b092-c805b72f81fd",
+  "traceId": "trace-live-channel-9685647c-73d3-468f-b092-c805b72f81fd",
+  "capabilityId": "channel.preferences.update",
+  "operation": "TASK",
+  "providerId": "non-ai-banking-reference",
+  "sourceSystem": "crm-simulator",
+  "resultStatus": "COMPLETED",
+  "taskRef": "task-5d5dcb3d-ee4e-45c4-a1ce-7934e7eeacd0",
+  "startedAt": "2026-09-01T23:54:51.868049953Z",
+  "finishedAt": "2026-09-01T23:54:53.147980756Z"
+}

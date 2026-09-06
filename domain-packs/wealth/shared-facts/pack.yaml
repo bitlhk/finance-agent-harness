@@ -1,0 +1,17 @@
+schemaVersion: finance-domain-pack.v1
+packId: wealth-shared-facts
+version: 0.1.0
+profile: shared-read-only
+capabilities:
+  - wealth.facts.describe
+skills:
+  - directory: wealth-facts-description
+    entry: skills/wealth-facts-description/SKILL.md
+scope:
+  - Describe source-reported assets and risk assessment status
+  - Explain missing facts without guessing
+outOfScope:
+  - Product recommendation and suitability decisions
+  - Transfers and all write operations
+sourceReferences:
+  - docs/wealth-field-basis-v01.md

@@ -1,0 +1,21 @@
+schemaVersion: finance-domain-pack.v1
+packId: risk-review-internal-control
+version: 0.1.0
+profile: internal-control
+capabilities:
+  - account.balance.query
+  - fraud.transfer-risk.assess
+skills:
+  - directory: transfer-risk-review
+    entry: skills/transfer-risk-review/SKILL.md
+scope:
+  - 转账账户与已知涉诈风险的审核准备
+  - 风险证据解释与待核实事项
+  - 面向审核人员的处置建议
+outOfScope:
+  - 替代银行系统作出最终交易决定
+  - 执行、放行或撤销转账
+  - 在 Domain Pack 中固化银行风险阈值
+sourceReferences:
+  - finance-agent-harness/fraud-mining-reference@0.1.0-SNAPSHOT
+  - finance-agent-harness/non-ai-banking-reference@0.1.0-SNAPSHOT

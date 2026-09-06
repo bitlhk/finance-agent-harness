@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.dev/contracts/evidence/evidence-receipt.v1.schema.json",
+  "title": "EvidenceReceiptV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "receiptId",
+    "requestId",
+    "traceId",
+    "capabilityId",
+    "operation",
+    "providerId",
+    "sourceSystem",
+    "resultStatus",
+    "startedAt",
+    "finishedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "evidence-receipt.v1" },
+    "receiptId": { "type": "string", "minLength": 1 },
+    "requestId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "capabilityId": { "type": "string", "minLength": 1 },
+    "operation": { "enum": ["QUERY", "TASK"] },
+    "providerId": { "type": "string", "minLength": 1 },
+    "sourceSystem": { "type": "string", "minLength": 1 },
+    "resultStatus": {
+      "enum": [
+        "COMPLETED",
+        "NEED_USER",
+        "NEED_CONFIRMATION",
+        "PROCESSING",
+        "FAILED",
+        "UNKNOWN"
+      ]
+    },
+    "taskRef": { "type": "string", "minLength": 1 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "finishedAt": { "type": "string", "format": "date-time" }
+  }
+}

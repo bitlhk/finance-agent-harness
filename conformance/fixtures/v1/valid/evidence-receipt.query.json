@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "evidence-receipt.v1",
+  "receiptId": "receipt-demo-001",
+  "requestId": "req-demo-001",
+  "traceId": "trace-demo-001",
+  "capabilityId": "account.balance.query",
+  "operation": "QUERY",
+  "providerId": "non-ai-banking-reference",
+  "sourceSystem": "account-core-simulator",
+  "resultStatus": "COMPLETED",
+  "startedAt": "2026-09-01T00:59:59Z",
+  "finishedAt": "2026-09-01T01:00:00Z"
+}

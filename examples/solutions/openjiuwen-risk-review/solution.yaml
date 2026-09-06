@@ -1,0 +1,35 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: openjiuwen-risk-review-demo
+displayName: OpenJiuwen 转账风险审核助手
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.13
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: internal-control
+  version: 0.1.0
+  source: repo://profiles
+domainPackRefs:
+  - id: risk-review-internal-control
+    version: 0.1.0
+    source: repo://domain-packs/risk/internal-control
+capabilityPackRefs:
+  - id: risk-review-basics
+    version: 0.1.0
+    source: repo://capability-packs/risk-review-basics
+providerRefs:
+  - id: non-ai-banking-reference
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/non-ai-banking
+  - id: fraud-mining-reference
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/fraud-mining
+capabilityBindings:
+  account.balance.query: non-ai-banking-reference
+  fraud.transfer-risk.assess: fraud-mining-reference
+modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: risk-review
+  version: 1.0.0
+  source: git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/risk-review

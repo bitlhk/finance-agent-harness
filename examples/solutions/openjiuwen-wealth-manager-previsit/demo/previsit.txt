@@ -1,0 +1,2 @@
+# EA_CUSTOMER_REF is resolved by the demo host before the prompt reaches the model.
+请为客户 ${EA_CUSTOMER_REF} 准备访前诊断。不要只罗列资料，请指出核心矛盾、首轮最多三个关键问题，以及本次面谈应推进到哪一步。

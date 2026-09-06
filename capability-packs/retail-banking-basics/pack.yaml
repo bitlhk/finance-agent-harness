@@ -1,0 +1,54 @@
+schemaVersion: finance-capability-pack.v1
+packId: retail-banking-basics
+version: 0.1.0
+systemPrompt: |
+  你可以使用已安装的金融能力处理账户查询和行内转账。
+  查询账户余额时使用 account_balance_query，不要猜测余额。
+  用户明确要求办理行内转账，且付款账户、已保存收款人和金额齐备时，使用
+  transfer_internal_create。工具要求确认时，先向用户展示工具返回的确认信息；
+  引导用户通过宿主确认界面明确授权。再次调用工具并携带 financeTaskHandle 只能查询原任务进度，
+  confirmationText 不构成办理授权；不要替用户生成确认事件。
+  不得代替用户确认，不得编造银行处理结果。
+capabilities:
+  - capabilityId: account.balance.query
+    toolName: account_balance_query
+    name: 账户余额查询
+    description: 查询当前客户有权查看的银行账户及可用余额；账户事实必须来自银行 Provider。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        accountId:
+          type: string
+          description: 可选的账户标识；不提供时返回当前可见账户。
+    requiredScopes:
+      - account:read
+  - capabilityId: transfer.internal.create
+    toolName: transfer_internal_create
+    name: 行内转账
+    description: 向已保存收款人发起行内转账；先由银行系统预检，明确确认后才提交。
+    operation: TASK
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required:
+        - fromAccountId
+        - beneficiaryId
+        - amount
+      properties:
+        fromAccountId:
+          type: string
+          description: 付款账户标识。
+        beneficiaryId:
+          type: string
+          description: 已保存收款人标识。
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          description: 转账金额。
+        purpose:
+          type: string
+          description: 可选转账用途。
+    requiredScopes:
+      - transfer:create

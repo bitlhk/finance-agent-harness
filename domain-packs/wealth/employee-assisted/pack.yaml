@@ -1,0 +1,21 @@
+schemaVersion: finance-domain-pack.v1
+packId: wealth-employee-assisted
+version: 0.1.0
+profile: employee-assisted
+capabilities:
+  - wealth.previsit-context.query
+skills:
+  - directory: wealth-previsit-diagnosis
+    entry: skills/wealth-previsit-diagnosis/SKILL.md
+scope:
+  - 客户访前事实快照
+  - 拜访触发事件与核心矛盾识别
+  - 首轮关键问题与面谈目标
+  - 会后推进建议
+outOfScope:
+  - 具体产品推荐
+  - 客户交易执行
+  - CRM 写入
+sourceReferences:
+  - employee-agent/wealth-manager-assistant@2.1.5
+  - finance-skill-eval/wealth-management/previsit-diagnosis

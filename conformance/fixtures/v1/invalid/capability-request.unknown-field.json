@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "capability-request.v1",
+  "capabilityId": "account.balance.query",
+  "operation": "QUERY",
+  "context": {
+    "schemaVersion": "finance-context.v1",
+    "requestId": "req-invalid-001",
+    "traceId": "trace-invalid-001",
+    "principalId": "customer-demo-001",
+    "principalType": "CUSTOMER",
+    "channel": "mobile-banking",
+    "purpose": "ACCOUNT_SERVICE",
+    "authenticationLevel": "BASIC",
+    "scopes": []
+  },
+  "parameters": {},
+  "continuation": {},
+  "runtimeAgentId": "must-not-enter-core-contract"
+}

@@ -1,0 +1,18 @@
+schemaVersion: finance-domain-pack.v1
+packId: wealth-customer-self-service
+version: 0.1.0
+profile: customer-self-service
+capabilities:
+  - wealth.customer-context.query
+skills:
+  - directory: wealth-customer-diagnosis
+    entry: skills/wealth-customer-diagnosis/SKILL.md
+scope:
+  - 资产结构诊断
+  - 集中度与流动性提示
+  - 近期财富事件识别
+  - 关键问题生成
+outOfScope:
+  - 具体产品推荐
+  - 交易执行
+  - 收益承诺

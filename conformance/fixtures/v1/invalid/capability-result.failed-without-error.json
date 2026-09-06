@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "capability-result.v1",
+  "requestId": "req-invalid-002",
+  "traceId": "trace-invalid-002",
+  "status": "FAILED",
+  "content": "查询失败。",
+  "data": {},
+  "missingInputs": [],
+  "nextActions": ["RETRY_LATER"],
+  "sourceSystem": "account-core-simulator",
+  "asOf": "2026-09-01T01:00:00Z"
+}

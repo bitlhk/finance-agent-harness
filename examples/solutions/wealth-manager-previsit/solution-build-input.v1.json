@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "finance-agent-solution-build.v1",
+  "solutionId": "wealth-manager-previsit-demo",
+  "displayName": "财富经理访前助手",
+  "runtime": {
+    "family": "openjiuwen",
+    "language": "java",
+    "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@f89c9fb2215dc4ebca169f676f96fac2d18b0e8c#agents/domain-runtime",
+    "integrationRef": "repo://integrations/employee-agent-java"
+  },
+  "profileRef": {
+    "id": "employee-assisted",
+    "version": "0.1.0",
+    "source": "repo://domain-packs/wealth/employee-assisted"
+  },
+  "domainPackRefs": [
+    {
+      "id": "wealth-employee-assisted",
+      "version": "0.1.0",
+      "source": "repo://domain-packs/wealth/employee-assisted"
+    }
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "wealth-manager-previsit",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/wealth-manager-previsit"
+    }
+  ],
+  "providerRefs": [
+    {
+      "id": "employee-agent-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "source": "repo://providers/employee-agent"
+    }
+  ],
+  "modelRef": "env://FINANCE_AGENT_MODEL",
+  "evaluationPackRef": {
+    "id": "wealth-management",
+    "version": "0.2.3",
+    "source": "git+https://github.com/bitlhk/finance-skill-eval.git@e960d2e#packs/finance/wealth-management"
+  }
+}

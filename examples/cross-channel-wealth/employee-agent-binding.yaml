@@ -1,0 +1,13 @@
+schemaVersion: finance-host-binding.example.v1
+bindingId: employee-agent-wealth-previsit-v1
+host: employee-agent
+profile: employee-assisted
+domainPackRef: wealth-employee-assisted@0.1.0
+capabilityBindings:
+  - capabilityId: wealth.previsit-context.query
+    hostTool: prepare_wealth_previsit_context
+    inputMapping:
+      customerRef: customer_id
+evidenceBinding:
+  sourceReceipt: ea.context-receipt.v1
+  note: Host-specific receipt remains owned by EA; it is not copied into Harness Core.
