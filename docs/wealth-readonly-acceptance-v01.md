@@ -11,7 +11,7 @@
 | 工作项 | 当前状态 | 完成依据/下一步 |
 | --- | --- | --- |
 | 修复基线与双版本 CI | 已完成 | PR #5/main `647b41c` |
-| 受控复跑入口与记录格式 | 已实现，验证结果另记 | `engineering/run_onboarding.py` |
+| 受控复跑入口与记录格式 | 已实现，AI 干净克隆复跑通过 | [本轮工程记录](verification/2026-09-06-readonly-acceptance-preparation.md)，不代替人工验收 |
 | 真实员工、客户范围、环境与负责人 | 待确认 | 灯塔场景负责人提供获准验收范围 |
 | 宿主当前实授及 adoption-owner 来源 | 待接线 | 技术架构组与 EA Owner 核实权威读取入口 |
 | 真实客户 READY、字段口径与来源 | 待材料 | 受控样例、旧 DEGRADED Smoke 不作替代 |
