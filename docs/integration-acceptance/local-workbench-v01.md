@@ -18,8 +18,10 @@
 - [x] Portable persistent native Agent host; conversation, authorization and revocation isolation.
 - [x] Builder job API and red/white/gray UI with real process state.
 - [x] Full simulator read smoke with an explicitly controlled test model.
-- [ ] Configured real model dialogue: model connection is not configured yet.
-- [x] Desktop/mobile UI and lifecycle failure validation (actual-model UI dialogue still pending).
+- [x] Configured real model workflow executed; one failed tool-use attempt retained, complete repeat passed.
+- [x] PR #8 per-model revocation, instance generation and two verifier corrections; new artifacts checked.
+- [ ] Stable model task/professional quality: optional-parameter and unsupported explanation errors remain.
+- [x] Desktop/mobile UI, lifecycle failure validation and actual-model UI workflow exercised.
 - [x] Version/fixture/artifact inventory, reproduction instructions and scoped evidence.
 - [ ] Independent human onboarding: external organizational acceptance, not AI self-testing.
 
@@ -29,7 +31,8 @@ The workbench is a local single-operator development tool, not bank IAM or a mul
 Configured capabilities never grant access. Simulator session introspection establishes the source
 customer; a server-owned test access policy grants a bounded set of read scopes to that identity.
 Revocation invalidates the local conversation, clears runtime memory and blocks model use before
-another turn. Bank-session and host-grant validity are checked again at the tool boundary.
+each model request, including within a turn. Bank-session and host-grant validity are checked again
+at the tool boundary and before returning a response.
 
 Runtime tool names are globally registered by SDK 0.1.13. The local host serializes native invocations
 and mounts/unmounts each session's tools, keeping sessions separate without modifying the SDK.
@@ -57,5 +60,6 @@ The Builder owns `templates/local-readonly-service`, `service.py`, `workbench.py
 `engineering/start_local_stack.py` under `community/finance/builder/finance-solution-builder`.
 Its `docs/local-workbench-v01.md` documents three compositions, server configuration, portable
 artifacts, local policy, startup/shutdown and explicit controlled checks. No EA/old-mobile deployment
-or second Builder repository is involved. Model configuration and human onboarding remain external
-acceptance items; the exact component SHAs and measured results are recorded in the delivery report.
+or second Builder repository is involved. Model configuration is present; professional reliability and
+human onboarding remain separate acceptance items. Exact component SHAs, red/green regressions and
+current limits are in the [PR #8 correction report](local-workbench-pr8-hardening-20260906.md).

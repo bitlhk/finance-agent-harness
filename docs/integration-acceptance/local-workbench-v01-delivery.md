@@ -1,5 +1,10 @@
 # Local Visual Financial Agent Workbench V0.1: Delivery Record
 
+Historical record, retained unchanged below. PR #8 review found four cross-repository gaps; current
+corrections, regenerated artifacts and model limitations are recorded in
+[the correction report](local-workbench-pr8-hardening-20260906.md). Do not use this original status
+or its counter/message-count checks as evidence that those gaps were closed.
+
 Date: 2026-09-06. Status: **Implemented / Controlled Native Service Verified / Actual Model and Human Acceptance Pending**.
 This is a local read-only reference Agent, not a complete mobile bank or production authorization acceptance.
 
