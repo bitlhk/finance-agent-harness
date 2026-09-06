@@ -83,14 +83,7 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
 
     @Override
     public void checkAccess(CapabilityRequestV1 request) {
-        EmployeeAgentIdentityBinding binding = config.identityBinding().get();
-        if (binding == null || !binding.expiresAt().isAfter(Instant.now())
-                || !binding.runtime().equals(config.runtimeIdentity())
-                || !binding.principalId().equals(request.context().principalId())
-                || request.context().principalType() != FinanceContextV1.PrincipalType.EMPLOYEE
-                || !Objects.equals(request.context().subjectRef(), request.parameters().get("customerRef"))) {
-            throw new SecurityException("EA_IDENTITY_BINDING_REJECTED");
-        }
+        EmployeeAgentIdentityBinding.verify(config.identityBinding().get(), config.runtimeIdentity(), request);
     }
 
     @Override

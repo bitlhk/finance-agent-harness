@@ -35,7 +35,7 @@ class EmployeeAgentInsuranceLiveSmokeTest {
                         URI.create(environment("EA_BASE_URL", "http://127.0.0.1:5180")),
                         identity,
                         EaRuntimeTokenSupplier.customerContextFromEnvironment(identity),
-                        Duration.ofSeconds(30)));
+                        Duration.ofSeconds(30), () -> LiveIdentityBinding.read("EA_INSURANCE_IDENTITY_BINDING_FILE")));
         CapabilityRequestV1 request = new CapabilityRequestV1(
                 CapabilityRequestV1.SCHEMA_VERSION,
                 EmployeeAgentInsuranceProvider.INSURANCE_CUSTOMER_CONTEXT_QUERY,
@@ -44,7 +44,7 @@ class EmployeeAgentInsuranceLiveSmokeTest {
                         FinanceContextV1.SCHEMA_VERSION,
                         "fh-ea-insurance-live-request",
                         "fh-ea-insurance-live-trace",
-                        "employee:" + adoptId,
+                        required("EA_INSURANCE_PRINCIPAL_ID"),
                         FinanceContextV1.PrincipalType.EMPLOYEE,
                         "finance-harness-insurance-live-smoke",
                         "INSURANCE_ADVISORY",
