@@ -20,6 +20,10 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 [非原作者独立接入](docs/onboarding-wealth-v01.md)分别验收。`engineering/run_onboarding.py`
 复跑现有受控门禁并记录步骤/耗时，不自动认证真实授权、人工接入或 Provider 替换。
 
+[跨仓只读接入首批记录](docs/integration-acceptance/cross-repo-readonly-v01.md)固定手机银行上游 main，
+保留两个 Fork 的已有增强，通过 `engineering/run_mobile_readonly.py` 验证手机银行宿主 Adapter 与
+同一份 Harness 制品。Builder 同事手工复跑、Builder 产品自动装配和 EA 接入分别验收。
+
 V1 按两个连续阶段推进：
 
 1. 手机银行作为首个 Java 消费者，接入 `non-ai-banking` 参考业务环境；
