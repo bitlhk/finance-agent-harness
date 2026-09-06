@@ -43,6 +43,22 @@ class WealthKitTest {
         assertFalse(report.toString().contains("PRIVATE_"));
         assertEquals("COMPLETE_FOR_DESCRIPTION", tool(report).at("/data/description/taskReadiness").asText());
     }
+    @Test void businessExpiryClockIsSeparateFromExecutionEvidenceTime() throws Exception {
+        var before = java.time.Instant.now();
+        var normal = runCase(Binding.EA_HTTP, Scenario.NORMAL);
+        var expired = runCase(Binding.EA_HTTP, Scenario.EXPIRED_RISK);
+        var after = java.time.Instant.now();
+        assertEquals(BUSINESS_AS_OF, normal.get("businessAsOf"));
+        assertEquals("AVAILABLE", tool(normal).at("/data/facts/risk/availability").asText());
+        assertEquals("EXPIRED", tool(expired).at("/data/facts/risk/availability").asText());
+        assertEquals("PARTIAL_FOR_DESCRIPTION", tool(expired).at("/data/description/taskReadiness").asText());
+        for (var report : List.of(normal, expired)) {
+            var observed = java.time.Instant.parse(tool(report).at("/data/facts/source/observedAt").asText());
+            assertFalse(observed.isBefore(before)); assertFalse(observed.isAfter(after));
+            var attempts = WealthJson.mapper().valueToTree(report.get("sourceCallAttempts"));
+            assertEquals(1, attempts.size()); assertEquals("MCP_READ", attempts.get(0).path("reason").asText());
+        }
+    }
     @TestFactory List<DynamicTest> denialAndMalformedInputsAreBlockedOnTheNativePath() {
         List<DynamicTest> tests = new ArrayList<>();
         for (Binding binding : List.of(Binding.BANK_HTTP, Binding.EA_HTTP))

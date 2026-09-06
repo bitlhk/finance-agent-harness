@@ -35,6 +35,28 @@ class OpenJiuwenSolutionAssemblerTest {
     Path temporaryDirectory;
 
     @Test
+    void nonexistentRuntimeReferencesAreRejectedBeforeInstallingTools() throws Exception {
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        var original = root().resolve("examples/solutions/openjiuwen-retail-banking/solution.yaml");
+        for (String field : List.of("templateRef", "integrationRef")) {
+            var input = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(original.toFile());
+            var runtime = (com.fasterxml.jackson.databind.node.ObjectNode) input.get("runtime");
+            String ref = runtime.get(field).asText();
+            runtime.put(field, ref.substring(0, ref.lastIndexOf(':') + 1) + "999.999-does-not-exist");
+            Path candidate = temporaryDirectory.resolve(field + ".yaml");
+            yaml.writeValue(candidate.toFile(), input);
+            var agent = cleanAgent("wrong-runtime-" + field);
+            try (var ignored = new OpenJiuwenSolutionAssembler().assemble(root(), candidate, agent,
+                    Map.of("non-ai-banking-reference", provider()), defaults(), true)) {
+                org.junit.jupiter.api.Assertions.fail("Invalid runtime was installed: " + field);
+            } catch (IllegalArgumentException expected) {
+                assertTrue(expected.getMessage().contains("RUNTIME_REFERENCE_MISMATCH"), expected.getMessage());
+            }
+            assertNull(agent.getAbilityManager().get("account_balance_query"));
+        }
+    }
+
+    @Test
     void explicitWrongDigestsFailBeforeRegisteringAnyTools() throws Exception {
         var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
         Path original = root().resolve("examples/solutions/openjiuwen-retail-banking/solution.yaml");
@@ -103,7 +125,11 @@ class OpenJiuwenSolutionAssemblerTest {
             assertNotNull(cleanAgent.getAbilityManager().get("account_balance_query"));
             assertNotNull(cleanAgent.getAbilityManager().get("transfer_internal_create"));
             assertEquals("openjiuwen", solution.lock().runtime().family());
-            assertEquals(5, solution.lock().assets().size());
+            assertEquals(7, solution.lock().assets().size());
+            assertTrue(solution.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_TEMPLATE")
+                    && a.id().equals(solution.lock().runtime().templateRef()) && a.version().equals("0.1.13")));
+            assertTrue(solution.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_INTEGRATION")
+                    && a.id().equals(solution.lock().runtime().integrationRef()) && a.version().equals("0.1.0-SNAPSHOT")));
             assertTrue(solution.lock().assets().getFirst().digest().matches("sha256:[a-f0-9]{64}"));
             assertEquals("retail-banking-basics",
                     solution.lock().installations().getFirst().packId());
@@ -168,7 +194,7 @@ class OpenJiuwenSolutionAssemblerTest {
             assertNotNull(cleanAgent.getAbilityManager().get("wealth_previsit_context_query"));
             assertTrue(cleanAgent.getSystemPromptBuilder().hasSection(
                     "finance-domain-pack:wealth-employee-assisted:wealth-previsit-diagnosis"));
-            assertEquals(5, solution.lock().assets().size());
+            assertEquals(7, solution.lock().assets().size());
             assertEquals("wealth-employee-assisted",
                     solution.lock().domainInstallations().getFirst().packId());
             assertEquals("wealth-manager-previsit",

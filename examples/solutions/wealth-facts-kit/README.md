@@ -96,4 +96,19 @@ EA 还须给五参数 `EmployeeAgentWealthProvider.Config` 注入 `Supplier<Empl
 
 ## 验收界限
 
+### 受控端点与业务时钟
+
+- 正常与负向样例固定业务日期 `2026-09-05T00:00:00Z`，不因日历推移失效。
+  `EXPIRED_RISK` 单独把业务时间推进至 `2027-03-02T00:00:00Z`。报告记录 `businessAsOf`；
+  Grant/绑定有效期、运行时间与 Source.observedAt 仍使用真实时钟，不能把重放日期当执行证据时间。
+- 受控银行查询只接受 GET、固定 Session、无额外查询参数；MCP 只接受 POST、
+  JSON-RPC 2.0 `tools/call`、`prepare_wealth_previsit_context`、唯一固定客户参数及预期测试身份。
+  它们是模拟器精确断言，不是生产认证协议。
+- `sourceCallAttempts` 记录源调用（含登录、拒绝、Snapshot 读取）的原因与时间，不记录 Token 或原始数据。
+  `sourceWriteCount` 表示**可能修改的调用尝试数，包含已拒绝请求**，不是实际写入成功数；
+  未知工具保守计入。通过只读门禁还须检查方法/工具/客户白名单与拒绝记录，不能只看零写入。
+- 共享消费者直接把 `assets.missingSources` 转为可见覆盖缺口及 PARTIAL，
+  不依赖某一 Mapper 同时填充顶层 gaps。
+- Runtime Lock 校验实际制品版本并记录摘要，未声明 Pack 摘要的模板仍不是发布固定基线。
+
 共同语义、原生调用边界及受控同 Profile 换源可以自动验证；EA 和银行跨角色演示不是同条件 Provider 替换证明。真实授权只读、EA READY、真实第二 Provider、真实模型输出质量、非原作者独立接入均待单独验收。本轮不提供提效百分比，CLI 耗时不等于人工接入耗时。

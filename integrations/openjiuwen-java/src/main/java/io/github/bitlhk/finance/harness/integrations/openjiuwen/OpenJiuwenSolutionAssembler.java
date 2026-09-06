@@ -68,6 +68,7 @@ public final class OpenJiuwenSolutionAssembler {
         List<FinanceDomainPackLoader.LoadedDomainPack> loadedDomainPacks = new ArrayList<>();
         List<FinanceCapabilityPackV1> loadedCapabilityPacks = new ArrayList<>();
         List<LockedAsset> lockedAssets = new ArrayList<>();
+        lockRuntime(spec.runtime(), lockedAssets);
         checkOptionalReference(repositoryRoot, spec.profileRef(), "PROFILE", lockedAssets);
         checkOptionalReference(repositoryRoot, spec.evaluationPackRef(), "EVALUATION", lockedAssets);
         for (AssetRef ref : spec.domainPackRefs()) {
@@ -166,6 +167,25 @@ public final class OpenJiuwenSolutionAssembler {
                 installedDomainPacks,
                 installedPacks);
         return new AssembledSolution(spec.solutionId(), domainInstallations, installations, lock, json);
+    }
+
+    private static void lockRuntime(RuntimeRef declared, List<LockedAsset> assets) throws IOException {
+        var template = LoadedRuntimeArtifact.read(BaseAgent.class,
+                "META-INF/maven/com.openjiuwen/agent-core-java/pom.properties", "com.openjiuwen", "agent-core-java");
+        var integration = LoadedRuntimeArtifact.read(OpenJiuwenSolutionAssembler.class,
+                "META-INF/finance-harness/integration.properties", "io.github.bitlhk.finance", "finance-harness-openjiuwen-java");
+        template.requireReference(declared.templateRef());
+        integration.requireReference(declared.integrationRef());
+        if (!integration.version().equals(OpenJiuwenCapabilityInstaller.INTEGRATION_VERSION))
+            throw new IllegalArgumentException("RUNTIME_REFERENCE_MISMATCH: integration receipt version");
+        lockRuntimeAsset("RUNTIME_TEMPLATE", template, assets);
+        lockRuntimeAsset("RUNTIME_INTEGRATION", integration, assets);
+    }
+
+    private static void lockRuntimeAsset(String kind, LoadedRuntimeArtifact artifact, List<LockedAsset> assets) throws IOException {
+        assets.add(new LockedAsset(kind, artifact.reference(), artifact.version(),
+                "codesource://" + artifact.source().getFileName(),
+                Files.isDirectory(artifact.source()) ? sha256Tree(artifact.source()) : sha256(artifact.source())));
     }
 
     private static void validateCapabilityCoverage(

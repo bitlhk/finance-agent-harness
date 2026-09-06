@@ -17,14 +17,21 @@ public final class WealthFactsProvider implements DescribedFinanceProvider, Invo
     private final WealthSourceSemantics semantics;
     private final WealthFactsV1.SourceKind sourceKind;
     private final Clock clock;
+    private final Clock businessClock;
 
     public WealthFactsProvider(BoundFinanceProvider source, String sourceCapability, Set<String> sourceScopes,
                               WealthFactsMapper.Format format, WealthSourceSemantics semantics,
                               WealthFactsV1.SourceKind sourceKind, Clock clock) {
+        this(source, sourceCapability, sourceScopes, format, semantics, sourceKind, clock, clock);
+    }
+    public WealthFactsProvider(BoundFinanceProvider source, String sourceCapability, Set<String> sourceScopes,
+                              WealthFactsMapper.Format format, WealthSourceSemantics semantics,
+                              WealthFactsV1.SourceKind sourceKind, Clock businessClock, Clock observationClock) {
         this.source = Objects.requireNonNull(source); this.sourceCapability = Objects.requireNonNull(sourceCapability);
         this.sourceScopes = Set.copyOf(sourceScopes); this.format = Objects.requireNonNull(format);
         this.semantics = Objects.requireNonNull(semantics); this.sourceKind = Objects.requireNonNull(sourceKind);
-        this.clock = Objects.requireNonNull(clock);
+        this.clock = Objects.requireNonNull(observationClock);
+        this.businessClock = Objects.requireNonNull(businessClock);
         if (source.descriptor().capabilities().stream().noneMatch(c -> c.capabilityId().equals(sourceCapability)
                 && c.operation() == CapabilityRequestV1.Operation.QUERY)) throw new IllegalArgumentException("Source query not declared");
     }
@@ -50,7 +57,7 @@ public final class WealthFactsProvider implements DescribedFinanceProvider, Invo
             if (upstream.status() != CapabilityResultV1.Status.COMPLETED) {
                 return failure(request, "SOURCE_QUERY_FAILED", upstream.error() == null ? "UPSTREAM_FAILURE" : upstream.error().failureClass());
             }
-            WealthFactsV1 facts = WealthFactsMapper.map(format, upstream, request.context().subjectRef(), semantics, sourceKind, clock);
+            WealthFactsV1 facts = WealthFactsMapper.map(format, upstream, request.context().subjectRef(), semantics, sourceKind, businessClock, clock);
             WealthFactsConsumer.Description description = WealthFactsConsumer.describe(facts);
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("facts", HarnessJson.mapper().convertValue(facts, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}));

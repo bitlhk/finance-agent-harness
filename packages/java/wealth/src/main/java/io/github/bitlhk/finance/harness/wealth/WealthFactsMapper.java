@@ -15,6 +15,12 @@ public final class WealthFactsMapper {
 
     public static WealthFactsV1 map(Format format, CapabilityResultV1 result, String authorizedSubject,
                                    WealthSourceSemantics semantics, SourceKind kind, Clock clock) {
+        return map(format, result, authorizedSubject, semantics, kind, clock, clock);
+    }
+
+    /** Business time may be fixed for replay; observation time must describe the actual invocation. */
+    public static WealthFactsV1 map(Format format, CapabilityResultV1 result, String authorizedSubject,
+                                   WealthSourceSemantics semantics, SourceKind kind, Clock businessClock, Clock observationClock) {
         if (result.status() != CapabilityResultV1.Status.COMPLETED)
             throw new IllegalArgumentException("Only completed authorized queries may be mapped");
         JsonNode root = HarnessJson.mapper().valueToTree(result.data());
@@ -52,9 +58,9 @@ public final class WealthFactsMapper {
         }
         if (!assets.isMissingNode() && !assets.isNull()) requireObject(assets);
         Assets mappedAssets = assets(assets, valuation, semantics, gaps, format == Format.EA && unavailable);
-        Risk mappedRisk = risk(risk, format, semantics, gaps, unavailable, clock);
+        Risk mappedRisk = risk(risk, format, semantics, gaps, unavailable, businessClock);
         return new WealthFactsV1(VERSION, new Subject(semantics.namespace(), authorizedSubject), mappedAssets, mappedRisk, gaps,
-                new Source(result.sourceSystem(), semantics.contract(), semantics.basisReference(), kind, clock.instant(), digest(root)));
+                new Source(result.sourceSystem(), semantics.contract(), semantics.basisReference(), kind, observationClock.instant(), digest(root)));
     }
 
     private static Assets assets(JsonNode source, String valuation, WealthSourceSemantics semantics, List<Gap> gaps, boolean unavailable) {

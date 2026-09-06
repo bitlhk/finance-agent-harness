@@ -14,3 +14,9 @@ Engineering Plane 是长期构建期能力，不进入生产请求热路径。
 4. `python engineering/verify_wealth_kit.py`：核验五份运行报告的证据摘要、业务结果和拒绝计数。
 
 安装 Python 依赖见 `requirements-conformance.txt`。CI 同时执行以上入口并保存 XML 与受控报告。依赖下载需要网络，测试业务调用只使用 loopback。详见 [快速接入](../examples/solutions/wealth-facts-kit/README.md)。
+
+2026-09-06 边界回归纳入原门禁，无新增线上任务：保险可信身份、Checkpoint 精度与空值补参、
+共享合同覆盖缺口、Runtime 实测版本、受控端点请求白名单及固定业务时钟。
+Schema 和 Java 同时消费 `valid/coverage-gap.json`：格式合法不代表事实齐全，消费者必须返回 PARTIAL。
+CLI 报告检查实际 Runtime 制品摘要、源请求尝试记录、业务时钟与真实证据时间的区分。
+结果与兼容影响见 [主线边界修复验证](../docs/verification/2026-09-06-mainline-boundary-hardening.md)。

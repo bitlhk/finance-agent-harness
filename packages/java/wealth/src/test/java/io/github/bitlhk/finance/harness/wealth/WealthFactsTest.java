@@ -116,6 +116,20 @@ class WealthFactsTest {
         assertEquals("PARTIAL_FOR_DESCRIPTION", WealthFactsConsumer.describe(incomplete).taskReadiness());
         assertEquals("NOT_EVALUATED", WealthFactsConsumer.describe(incomplete).suitability());
     }
+    @Test void publicContractMissingSourcesAreReportedWithoutMapperAssumptions() throws Exception {
+        var facts = WealthJson.read(Files.readString(root().resolve("conformance/fixtures/wealth/v0.1/valid/coverage-gap.json")));
+        assertTrue(facts.gaps().isEmpty());
+        var description = WealthFactsConsumer.describe(facts);
+        assertEquals("PARTIAL_FOR_DESCRIPTION", description.taskReadiness());
+        assertTrue(description.gaps().toString().contains("deposits"));
+    }
+    @Test void replayBusinessClockDoesNotBackdateObservedEvidence() throws Exception {
+        var observed = Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC);
+        var facts = WealthFactsMapper.map(WealthFactsMapper.Format.MOBILE, result(json(MOBILE)), "customer-001",
+                BASIS, SourceKind.CONTROLLED_FIXTURE, CLOCK, observed);
+        assertEquals(Availability.AVAILABLE, facts.risk().availability());
+        assertEquals(observed.instant(), facts.source().observedAt());
+    }
     static ObjectNode json(String input) throws Exception { return (ObjectNode)WealthJson.mapper().readTree(input); }
     static WealthFactsV1 map(WealthFactsMapper.Format format, ObjectNode data, WealthSourceSemantics semantics) {
         return WealthFactsMapper.map(format, result(data), "customer-001", semantics, SourceKind.CONTROLLED_FIXTURE, CLOCK);
