@@ -50,7 +50,7 @@ examples/solutions/openjiuwen-retail-banking/solution.yaml
 ## Builder 首版职责
 
 1. 校验输入 Schema；
-2. 解析 `templateRef` 和 `integrationRef`；
+2. 保留 `templateRef` 和 `integrationRef` 的来源含义；若为源码引用，显式生成 `runtime.resolvedArtifacts` 的 SDK/Assembler Maven 坐标；
 3. 安装 Harness Core 与 `integrations/openjiuwen-java` Maven 依赖；
 4. 将 Domain Pack 安装到模板约定的 Skill 目录；
 5. 将 Capability Pack 交给 Runtime Integration 注册为原生工具；
@@ -60,7 +60,32 @@ examples/solutions/openjiuwen-retail-banking/solution.yaml
 
 Builder 可以继续使用 Python。`backend=java` 表示产物为 Java Agent，不要求 Builder 自身改写为 Java。
 
-员工辅助样例的 `templateRef` 提供通用 OpenJiuwen Host Bridge，`integrationRef` 另外安装 `finance-integration-employee-agent-java`，将其中的 `EaRuntimeTokenSupplier` 注入 `EmployeeAgentWealthProvider`。Builder 只生成环境变量占位和 Host Wiring，不签发 Token、不写入 `INTERNAL_API_KEY`，也不把任何凭据写进 Lock 或 Report。真实签名密钥由部署环境的 Secret Manager 注入，Integration 按调用生成一次性 Token。
+员工辅助样例的 `templateRef` 提供通用 OpenJiuwen Host Bridge，`integrationRef` 仍表示额外的 `finance-integration-employee-agent-java` 来源，将其中的 `EaRuntimeTokenSupplier` 注入 `EmployeeAgentWealthProvider`。它不是 Harness Assembler 制品的别名。Builder 只生成环境变量占位和 Host Wiring，不签发 Token、不写入 `INTERNAL_API_KEY`，也不把任何凭据写进 Lock 或 Report。真实签名密钥由部署环境的 Secret Manager 注入，Integration 按调用生成一次性 Token。
+
+### 2026-09-06 输入迁移
+
+`repo://` 和 `git+https://` 是来源，不是已加载制品的版本证明。保留原始字符串，补：
+
+```json
+"runtime": {
+  "family": "openjiuwen",
+  "language": "java",
+  "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@f89c9fb2215dc4ebca169f676f96fac2d18b0e8c#agents/domain-runtime",
+  "integrationRef": "repo://integrations/employee-agent-java",
+  "resolvedArtifacts": {
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+    "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+  }
+}
+```
+
+- `resolvedArtifacts` 来自 Builder 的明确构建计划，Assembler 与实际 CodeSource 的元数据核对；不能用运行时观察值偷偷填默认。
+- 原字段为 Maven 坐标时仍须与实际制品一致，不能用另一组正确的 resolvedArtifacts 掩盖虚假声明。
+- 来源引用缺少显式解析时报 `RUNTIME_ARTIFACT_RESOLUTION_REQUIRED`。旧文件不能只靠重新装配恢复，须按三个仓内源码引用样例补字段。
+- 保险/员工财富输入已加入真实安装/卸载回归，无模型或业务查询。面客旧输入另有 Capability Pack 缺失，仍未完成直接 Assembler 验收，不把本轮迁移算作修复该历史缺口。
+- Catalog 的 `source` 保持来源语义，新增 `artifactRef` 提供该 Integration 的制品坐标。EA Host Integration 仍是独立附加依赖，不占用 SDK/Assembler 坐标。
+- Lock 原四字段保留来源，带显式解析的输入另记录实测 `runtime.resolvedArtifacts`，对应 `RUNTIME_TEMPLATE/RUNTIME_INTEGRATION` 摘要。来源字段仅为声明的出处，**不证明远端 Host Bridge 已拉取、编译或安装**；这部分证据仍由 Builder 生成的 Candidate 提供。
+- 无显式解析的 Maven-only 样例及其 Lock JSON 形状不变。严格读取新输入/新 Lock 的外部 Builder 须更新此可选字段，不应删除来源或吞掉未知字段。外部 Builder 服务未在本轮部署或独立验收。
 
 ## 最小输出
 

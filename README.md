@@ -12,6 +12,10 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 新增 [财富只读接入套件](examples/solutions/wealth-facts-kit/README.md)：从模板、可信身份绑定、原生工具调用到结果与证据核验的一条可重跑入口。共同财富事实单独版本化，原客户/员工能力不变。本轮使用真实 Java Runtime、受控 HTTP 数据和脚本模型；不宣称真实客户 READY、跨银行替换或模型质量已验收。
 
+[2026-09-06 主线边界修复](docs/verification/2026-09-06-mainline-boundary-hardening.md)
+覆盖保险身份绑定、恢复精度、空值补参、财富来源缺口、Runtime 版本核验和受控请求白名单。
+受控验证与真实授权验收继续分别报告。
+
 V1 按两个连续阶段推进：
 
 1. 手机银行作为首个 Java 消费者，接入 `non-ai-banking` 参考业务环境；

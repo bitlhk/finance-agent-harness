@@ -6,7 +6,11 @@
     "family": "openjiuwen",
     "language": "java",
     "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
-    "integrationRef": "repo://integrations/openjiuwen-java"
+    "integrationRef": "repo://integrations/openjiuwen-java",
+    "resolvedArtifacts": {
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    }
   },
   "profileRef": {
     "id": "employee-assisted",

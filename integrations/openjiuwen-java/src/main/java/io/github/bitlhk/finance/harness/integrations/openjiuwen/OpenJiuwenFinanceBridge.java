@@ -320,12 +320,16 @@ public final class OpenJiuwenFinanceBridge {
 
     static boolean canSupplement(Map<String, Object> checkpoint, Map<String, Object> merged) {
         if (!(checkpoint.get(CK_INPUTS) instanceof List<?> fields) || fields.isEmpty()
-                || checkpoint.containsKey(CK_TASK_REF)) return false;
+                || checkpoint.containsKey(CK_TASK_REF)
+                || Boolean.TRUE.equals(continuation(checkpoint).get("submitOutcomeUnknown"))) return false;
         Map<String, Object> original = parameters(checkpoint);
         if (original == null || !merged.keySet().containsAll(original.keySet())) return false;
         for (var field : merged.entrySet()) {
             if (original.containsKey(field.getKey())) {
-                if (!fingerprint(original.get(field.getKey())).equals(fingerprint(field.getValue()))) return false;
+                Object previous = original.get(field.getKey());
+                boolean missingValue = previous == null || previous instanceof String s && s.isBlank();
+                if (!fingerprint(previous).equals(fingerprint(field.getValue()))
+                        && !(fields.contains(field.getKey()) && missingValue)) return false;
             } else if (!fields.contains(field.getKey())) return false;
         }
         return true;

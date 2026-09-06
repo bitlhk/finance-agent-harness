@@ -13,4 +13,16 @@ Engineering Plane 是长期构建期能力，不进入生产请求热路径。
 3. `bash examples/solutions/wealth-facts-kit/run-controlled.sh`：可交接的 CLI 路径，实际 HTTP Adapter + 脚本模型，默认无生产 Key。
 4. `python engineering/verify_wealth_kit.py`：核验五份运行报告的证据摘要、业务结果和拒绝计数。
 
+Maven 完成后运行 `python -m unittest discover -s engineering -p 'test_*.py' -v`，
+验证源码/制品分离的 Builder 输入，以及 Java 实际生成的 UTC 时间。
+Java 会生成 `integrations/openjiuwen-java/target/java-instant-cases.json`；缺少文件使 Python 测试失败，不能静默跳过。
+CI 使用 Python **3.10 与 3.12** 两套真实解释器，分别运行上述全部门禁。时间解析接受
+0 至 9 位小数秒和显式时区，保留纳秒排序，不依赖 Python 3.11 才加入的 Z 解析行为。
+
 安装 Python 依赖见 `requirements-conformance.txt`。CI 同时执行以上入口并保存 XML 与受控报告。依赖下载需要网络，测试业务调用只使用 loopback。详见 [快速接入](../examples/solutions/wealth-facts-kit/README.md)。
+
+2026-09-06 边界回归纳入原门禁，无新增线上任务：保险可信身份、Checkpoint 精度与空值补参、
+共享合同覆盖缺口、Runtime 实测版本、受控端点请求白名单及固定业务时钟。
+Schema 和 Java 同时消费 `valid/coverage-gap.json`：格式合法不代表事实齐全，消费者必须返回 PARTIAL。
+CLI 报告检查实际 Runtime 制品摘要、源请求尝试记录、业务时钟与真实证据时间的区分。
+结果与兼容影响见 [主线边界修复验证](../docs/verification/2026-09-06-mainline-boundary-hardening.md)。

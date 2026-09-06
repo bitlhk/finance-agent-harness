@@ -8,6 +8,7 @@ import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.InvocationAccess;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -24,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** Reference adapter from insurance context query to the Employee Agent customer-context MCP. */
-public final class EmployeeAgentInsuranceProvider implements DescribedFinanceProvider {
+public final class EmployeeAgentInsuranceProvider implements DescribedFinanceProvider, InvocationAccess {
     public static final String PROVIDER_ID = "employee-agent-insurance-reference";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String INSURANCE_CUSTOMER_CONTEXT_QUERY =
@@ -65,15 +66,24 @@ public final class EmployeeAgentInsuranceProvider implements DescribedFinancePro
             return localFailure;
         }
         try {
+            checkAccess(request);
             return callCustomerContext(request, requiredParameter(request.parameters(), "customerRef"));
+        } catch (SecurityException denied) {
+            return failure(request, "NOT_AUTHORIZED", "EA_IDENTITY_BINDING_REJECTED", false,
+                    "Host identity does not match verified EA binding", List.of("VERIFY_HOST_BINDING"));
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return failure(request, "TEMPORARY_FAILURE", "REQUEST_INTERRUPTED", true,
                     "Employee Agent request was interrupted", List.of("RETRY"));
         } catch (Exception exception) {
             return failure(request, "TEMPORARY_FAILURE", "EA_TRANSPORT_FAILURE", true,
-                    "Employee Agent request failed: " + safeMessage(exception), List.of("RETRY"));
+                    "Employee Agent request could not be validated", List.of("RETRY"));
         }
+    }
+
+    @Override
+    public void checkAccess(CapabilityRequestV1 request) {
+        EmployeeAgentIdentityBinding.verify(config.identityBinding().get(), config.runtimeIdentity(), request);
     }
 
     @Override
@@ -166,7 +176,7 @@ public final class EmployeeAgentInsuranceProvider implements DescribedFinancePro
         JsonNode rpcError = root.get("error");
         if (rpcError != null && !rpcError.isNull()) {
             return failure(request, "UPSTREAM_FAILURE", "EA_MCP_ERROR", false,
-                    rpcError.path("message").asText("Employee Agent MCP call failed"),
+                    "Employee Agent MCP call failed",
                     List.of("CHECK_EA_TOOL_RESULT"));
         }
 
@@ -187,7 +197,13 @@ public final class EmployeeAgentInsuranceProvider implements DescribedFinancePro
         if (result.path("isError").asBoolean(false)) {
             return failure(request, "UPSTREAM_FAILURE", "EA_INSURANCE_CONTEXT_BLOCKED", false,
                     "Employee Agent could not provide insurance customer context",
-                    remediation(customerContext));
+                    List.of("VERIFY_SOURCE_AND_AUTHORIZATION"));
+        }
+
+        String returnedSubject = customerContext.path("subjectId").asText("");
+        if (!returnedSubject.equals(request.context().subjectRef())) {
+            return failure(request, "NOT_AUTHORIZED", "EA_RESULT_SUBJECT_MISMATCH", false,
+                    "Returned customer does not match the authorized subject", List.of("VERIFY_HOST_BINDING"));
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -337,20 +353,22 @@ public final class EmployeeAgentInsuranceProvider implements DescribedFinancePro
         return value.trim();
     }
 
-    private static String safeMessage(Exception exception) {
-        String value = exception.getMessage();
-        return value == null || value.isBlank() ? exception.getClass().getSimpleName() : value;
-    }
-
     public record Config(
             URI baseUri,
             EmployeeAgentRuntimeIdentity runtimeIdentity,
             EmployeeAgentRuntimeTokenSupplier runtimeTokenSupplier,
-            Duration timeout) {
+            Duration timeout,
+            java.util.function.Supplier<EmployeeAgentIdentityBinding> identityBinding) {
+        /** Legacy construction remains source compatible, but cannot authorize a source read. */
+        public Config(URI baseUri, EmployeeAgentRuntimeIdentity runtimeIdentity,
+                      EmployeeAgentRuntimeTokenSupplier runtimeTokenSupplier, Duration timeout) {
+            this(baseUri, runtimeIdentity, runtimeTokenSupplier, timeout, () -> null);
+        }
         public Config {
             baseUri = normalizeBaseUri(Objects.requireNonNull(baseUri, "baseUri"));
             Objects.requireNonNull(runtimeIdentity, "runtimeIdentity");
             Objects.requireNonNull(runtimeTokenSupplier, "runtimeTokenSupplier");
+            Objects.requireNonNull(identityBinding, "identityBinding");
             if (timeout == null || timeout.isZero() || timeout.isNegative()) {
                 throw new IllegalArgumentException("timeout must be positive");
             }

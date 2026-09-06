@@ -65,6 +65,29 @@ class ExecutionBoundaryTest {
         assertEquals("ORIGINAL_TASK_REQUIRES_VERIFICATION", tasks.invoke(CAP, Map.of("financeTaskHandle", handle)).get("errorCode"));
         assertEquals(1, bank.creates);
     }
+    @Test void explicitLocalCollectionAllowsBlankButNotNonblankReplacement() {
+        var tasks = controller();
+        String handle = (String) tasks.invoke(CAP, Map.of("amount", " ")).get("financeTaskHandle");
+        assertEquals(0, bank.creates);
+        assertEquals(handle, tasks.invoke(CAP, Map.of("financeTaskHandle", handle, "amount", 10)).get("financeTaskHandle"));
+        assertEquals(1, bank.creates);
+        assertEquals(10, bank.last.parameters().get("amount"));
+        assertEquals("TASK_PARAMETERS_CHANGED", tasks.invoke(CAP, Map.of("financeTaskHandle", handle, "amount", 20)).get("errorCode"));
+        assertEquals(1, bank.creates);
+    }
+    @Test void collectionProofCannotReplaceExistingValueOrOverrideUncertainTask() {
+        var checkpoint = Map.<String, Object>of(OpenJiuwenFinanceBridge.CK_INPUTS, List.of("amount", "beneficiaryId"),
+                OpenJiuwenFinanceBridge.CK_PARAMETERS, Map.of("amount", 10, "beneficiaryId", ""));
+        assertTrue(OpenJiuwenFinanceBridge.canSupplement(checkpoint, Map.of("amount", 10, "beneficiaryId", "recipient")));
+        assertFalse(OpenJiuwenFinanceBridge.canSupplement(checkpoint, Map.of("amount", 20, "beneficiaryId", "recipient")));
+        assertFalse(OpenJiuwenFinanceBridge.canSupplement(checkpoint, Map.of("amount", 10, "beneficiaryId", "recipient", "extra", 1)));
+        var uncertain = new LinkedHashMap<>(checkpoint);
+        uncertain.put(OpenJiuwenFinanceBridge.CK_CONTINUATION, Map.of("submitOutcomeUnknown", true));
+        assertFalse(OpenJiuwenFinanceBridge.canSupplement(uncertain, Map.of("amount", 10, "beneficiaryId", "recipient")));
+        var frozen = new LinkedHashMap<>(checkpoint);
+        frozen.put(OpenJiuwenFinanceBridge.CK_TASK_REF, "bank-task");
+        assertFalse(OpenJiuwenFinanceBridge.canSupplement(frozen, Map.of("amount", 10, "beneficiaryId", "recipient")));
+    }
     @Test void wrongSubjectAndUninstalledCapabilityNeverReachProvider() {
         var bridge = bridge();
         var wrong = new OpenJiuwenInvocationV1("task", CAP, "agent", SCOPES, Map.of("customerRef", "other"), Map.of());
@@ -100,7 +123,8 @@ class ExecutionBoundaryTest {
         public CapabilityResultV1 query(CapabilityRequestV1 request) { calls++; throw new UnsupportedOperationException(); }
         public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
             calls++; last = request;
-            if (!request.parameters().containsKey("amount")) return result(request, CapabilityResultV1.Status.NEED_USER, null, List.of("amount"));
+            if (!request.parameters().containsKey("amount") || request.parameters().get("amount") instanceof String s && s.isBlank())
+                return result(request, CapabilityResultV1.Status.NEED_USER, null, List.of("amount"));
             if (request.taskRef() == null) { creates++; if (loseCreation) throw new IllegalStateException("create ack lost"); }
             if (request.confirmation() != null) writes++;
             return result(request, writes > 0 ? CapabilityResultV1.Status.COMPLETED : CapabilityResultV1.Status.NEED_CONFIRMATION,

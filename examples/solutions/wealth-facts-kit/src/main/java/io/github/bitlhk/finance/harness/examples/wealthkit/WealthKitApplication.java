@@ -18,8 +18,9 @@ import java.util.function.Supplier;
 
 /** Reproducible native Agent -> Tool -> grant -> source -> mapping -> evidence path. */
 public final class WealthKitApplication {
+    static final Instant BUSINESS_AS_OF = Instant.parse("2026-09-05T00:00:00Z");
     public enum Binding { BANK_HTTP, EA_HTTP, SNAPSHOT }
-    public enum Scenario { NORMAL, DENIED, EXPIRED_GRANT, WRONG_SUBJECT, MODEL_SELECTOR, MISSING_METADATA, MISSING_RISK, ZERO, BAD_RESPONSE }
+    public enum Scenario { NORMAL, DENIED, EXPIRED_GRANT, WRONG_SUBJECT, MODEL_SELECTOR, MISSING_METADATA, MISSING_RISK, ZERO, BAD_RESPONSE, EXPIRED_RISK }
     public record Configuration(String mode, FinanceContextV1.PrincipalType profile, Binding binding, Scenario scenario) {
         public Configuration {
             if (!"CONTROLLED".equals(mode)) throw new IllegalArgumentException("CLI supports CONTROLLED only; live sources require a trusted host binding adapter");
@@ -60,7 +61,9 @@ public final class WealthKitApplication {
                     known ? "assessment-2" : null, known ? ZoneId.of("Asia/Shanghai") : null, known);
             var mapped = new WealthFactsProvider(boundSource, sourceCapability, Set.of(sourceScope),
                     settings.binding() == Binding.EA_HTTP ? WealthFactsMapper.Format.EA : WealthFactsMapper.Format.MOBILE,
-                    semantics, WealthFactsV1.SourceKind.CONTROLLED_FIXTURE, Clock.systemUTC());
+                    semantics, WealthFactsV1.SourceKind.CONTROLLED_FIXTURE,
+                    Clock.fixed(settings.scenario() == Scenario.EXPIRED_RISK ? Instant.parse("2027-03-02T00:00:00Z") : BUSINESS_AS_OF,
+                            ZoneOffset.UTC), Clock.systemUTC());
             var provider = new BoundFinanceProvider(mapped, grantSource, Map.of(WealthFactsProvider.CAPABILITY, Set.of(WealthFactsProvider.SCOPE)));
             String agentId = "wealth-facts-kit-" + UUID.randomUUID();
             var agent = new ReActAgent(AgentCard.builder().id(agentId).name("Wealth facts kit").build());
@@ -113,6 +116,9 @@ public final class WealthKitApplication {
                 report.put("lockSha256", digest(Files.readAllBytes(output.resolve("solution-lock.json"))));
                 report.put("modelRequestCount", endpoints.modelRequests.get()); report.put("modelCompletionCount", endpoints.modelCompletions.get());
                 report.put("sourceReadCount", endpoints.sourceReads.get()); report.put("sourceWriteCount", endpoints.sourceWrites.get());
+                report.put("sourceCallAttempts", List.copyOf(endpoints.sourceAttempts));
+                report.put("sourceWriteCountSemantics", "POSSIBLE_MUTATION_ATTEMPTS_INCLUDING_REJECTED");
+                report.put("businessAsOf", settings.scenario() == Scenario.EXPIRED_RISK ? Instant.parse("2027-03-02T00:00:00Z") : BUSINESS_AS_OF);
                 report.put("privateDataObservedByModel", leaked); report.put("toolResults", List.copyOf(nativeResults));
                 report.put("nativeEvents", nativeEvents);
                 report.put("streamCheck", "NOT_APPLICABLE_NON_STREAMING"); report.put("modelQuality", "NOT_EVALUATED_SCRIPTED_MODEL");
@@ -142,6 +148,8 @@ public final class WealthKitApplication {
                     "controlled-snapshot", "0.1.0", List.of(new ProviderDescriptorV1.CapabilitySupport(
                     NonAiBankingProvider.WEALTH_CUSTOMER_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY))); }
             public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                endpoints.sourceAttempts.add(new ControlledEndpoints.SourceAttempt("SNAPSHOT", "fixture:mobile",
+                        "ACCEPTED", "SNAPSHOT_READ", false, Instant.now()));
                 endpoints.sourceReads.incrementAndGet();
                 return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(), request.context().traceId(),
                         CapabilityResultV1.Status.COMPLETED, "Controlled snapshot", WealthJson.mapper().convertValue(endpoints.mobile,

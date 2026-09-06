@@ -1,4 +1,4 @@
-# Employee Agent 财富 Provider
+# Employee Agent 财富与保险 Provider
 
 这是一个宿主兼容 Provider，用于把 Harness 语义能力：
 
@@ -33,9 +33,10 @@ EA 的生产 MCP 请求使用短时、一次性签名 Runtime Token。Provider �
 ```java
 new EmployeeAgentWealthProvider.Config(
     eaBaseUri,
-    new RuntimeIdentity(runtimeId, agentId, adoptId),
+    new EmployeeAgentRuntimeIdentity(runtimeId, agentId, adoptId),
     context -> runtimeTokenBroker.issue(context),
-    Duration.ofSeconds(20)
+    Duration.ofSeconds(20),
+    verifiedAdoptionOwnerSupplier
 );
 ```
 
@@ -48,6 +49,17 @@ integrations/employee-agent-java
 其中 `EaRuntimeTokenSupplier` 已按 EA 现有签名合同实现每请求动态签发。不得把 `INTERNAL_API_KEY`、签名密钥或固定 Token 写入 Solution、Domain Pack、构建输入或代码仓。
 
 ## 边界
+
+财富和保险均要求 `Supplier<EmployeeAgentIdentityBinding>`。供应器来自可信宿主解析的
+adoption-owner 记录，包含 `principalId`、完整 `runtime/agent/adoption`、`authorityRef` 和
+`expiresAt`；每次调用重读，不能从模型参数、员工标签或 Token 存在推导。
+缺失、撤销、过期或身份不匹配在取 Token 和读取 EA 之前拒绝。
+旧四参数 Config 保留源码兼容，但不再允许源数据读取；必须补第五个可信供应器。
+
+`EmployeeAgentInsuranceProvider` 通过 `get_customer_profile` 读取保险客户投影，验证
+请求 `customerRef == Context.subjectRef`，并要求返回 `subjectId` 一致才暴露结果。
+EA 拒绝或异常的原始文字不直接回流，改为稳定的错误码和修复动作。
+这不代替 EA 的客户关系、岗位用途或字段权限检查；外层 `BoundFinanceProvider` 实授校验仍需配置。
 
 - 只接受 `EMPLOYEE` Principal；
 - 只实现只读访前上下文查询；

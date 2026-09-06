@@ -35,7 +35,7 @@ class EmployeeAgentWealthLiveSmokeTest {
                         URI.create(environment("EA_BASE_URL", "http://127.0.0.1:5180")),
                         identity,
                         EaRuntimeTokenSupplier.platformToolsFromEnvironment(identity),
-                        Duration.ofSeconds(30)));
+                        Duration.ofSeconds(30), () -> LiveIdentityBinding.read("EA_IDENTITY_BINDING_FILE")));
         CapabilityRequestV1 request = new CapabilityRequestV1(
                 CapabilityRequestV1.SCHEMA_VERSION,
                 EmployeeAgentWealthProvider.WEALTH_PREVISIT_CONTEXT_QUERY,
@@ -44,7 +44,7 @@ class EmployeeAgentWealthLiveSmokeTest {
                         FinanceContextV1.SCHEMA_VERSION,
                         "fh-ea-live-request",
                         "fh-ea-live-trace",
-                        "employee:" + adoptId,
+                        required("EA_PRINCIPAL_ID"),
                         FinanceContextV1.PrincipalType.EMPLOYEE,
                         "finance-harness-live-smoke",
                         "WEALTH_PREVISIT",

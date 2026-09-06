@@ -24,6 +24,23 @@ class TaskRecoveryTest {
     @TempDir Path temp;
 
     @Test
+    void exactAmountSurvivesRecoveryApprovalAndTerminalCache() throws Exception {
+        Bank bank = new Bank();
+        var amount = new java.math.BigDecimal("90071992547409.91");
+        var first = controller(new FileTaskCheckpointStore(temp), bank, "session");
+        String handle = (String)first.invoke(CAP, Map.of("amount", amount, "beneficiaryId", "beneficiary-1")).get(HANDLE);
+        String binding = first.confirmationBinding(handle);
+        var restarted = controller(new FileTaskCheckpointStore(temp), bank, "session");
+        assertEquals(binding, restarted.confirmationBinding(handle));
+        assertEquals(handle, restarted.invoke(CAP, Map.of(HANDLE, handle, "amount", amount)).get(HANDLE));
+        assertEquals("COMPLETED", restarted.confirm(handle, approval(restarted, handle)).get("status"));
+        assertEquals("COMPLETED", controller(new FileTaskCheckpointStore(temp), bank, "session")
+                .invoke(CAP, Map.of(HANDLE, handle, "amount", amount)).get("status"));
+        assertEquals(1, bank.writes.get());
+        assertTrue(bank.requests.stream().allMatch(r -> amount.compareTo(new java.math.BigDecimal(r.parameters().get("amount").toString())) == 0));
+    }
+
+    @Test
     void modelStringsIncludingAffirmativeTextCannotAuthorizeWrites() {
         Bank bank = new Bank();
         var controller = controller(new TaskCheckpointStore.Memory(), bank, "user-session");

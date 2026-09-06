@@ -24,6 +24,19 @@ mvn install
 
 模块当前按 OpenJiuwen Java `0.1.13` 编译，与手机银行首个消费者保持一致。OpenJiuwen 依赖被标记为 Maven optional，应用仍需显式选择自己的 Runtime 版本；升级 Runtime 时必须运行本模块 Conformance。
 
+Assembler 在安装前读取 `BaseAgent` 实际 CodeSource 的 Maven 元数据和 Integration
+制品内的构建元数据。Maven-only 输入核对 `templateRef/integrationRef` 完整坐标；
+Builder 源码引用需显式补 `runtime.resolvedArtifacts`，原来源字段仍保留，不能将
+Host Bridge 或 EA Host Integration 来源误当 SDK/Assembler 制品。缺解析会明确报迁移错误；
+伪造的原 Maven 引用或解析坐标仍拒绝，未降低版本门禁。
+不匹配报 `RUNTIME_REFERENCE_MISMATCH`；元数据无法观察则拒绝，不用声明补证据。
+Lock 原 Runtime 字段保留输入语义，带解析的输入新增 `runtime.resolvedArtifacts`（实测坐标）；
+Maven-only 旧 Lock 不增加该字段。`assets` 包含 `RUNTIME_TEMPLATE/RUNTIME_INTEGRATION`，
+保存实测版本与类目录/JAR 摘要。旧 Lock 不具备这一保证，须重新装配。
+SNAPSHOT 同版本不保证同内容，复现必须比较制品摘要；不代表远端服务被锁定。
+源码引用的内容不由此 Assembler 获取/核验，不能把保留出处误称源码已安装。
+详细迁移和额外 Host 依赖见 [Builder 交接](../../docs/builder-handoff-wealth-v1.md)。
+
 ## Bridge 接入
 
 ```java
@@ -86,6 +99,18 @@ var installation = solution.installationForCapability("transfer.internal.create"
 确认调用会先持久化待查证状态，再进入银行 Provider。响应丢失或崩溃后沿原句柄、taskRef 和幂等键查证；并发或重复确认复用已记录的终态结果。未知句柄不再提示用户直接重建任务。源数据、存储权限、保存期限和多机部署锁由宿主负责。
 
 装配时校验已声明的 `sha256:` 摘要。Domain Pack 使用目录树摘要，Capability Pack 使用 `pack.yaml` 摘要；本地 Profile、Evaluation 和 Provider 源码引用也会记录摘要，目录树排除 `target/build/logs/.git`。Provider 实际加载的类目录或 JAR 单独记录为 `PROVIDER_RUNTIME`。外部引用的摘要如果无法解析会拒绝装配；没有摘要的外部评测引用仍属于待验证输入，不能声称已经锁定。完整依赖、模型配置和业务输出合同将在下一阶段固化。
+
+### Checkpoint 数值与补参兼容
+
+文件 Store 单独启用十进制精确读取，浮点 JSON 数字读为 `BigDecimal`；不改变全局
+`HarnessJson`。Map/嵌套列表的参数指纹继续按键排序、数字去尾零，不改旧指纹算法；
+`10`、`10.00` 与 `10.0` 按同一数值比较。历史 Double 已舍入并写回的值不能自动恢复，
+不得据此重提未知银行任务，仍按原 taskRef 查证。
+恢复、确认及终态缓存覆盖高精度回归；范围为同 JVM 重建控制器/Store，非多进程验收。
+
+Adapter 的 `InputCollectionProvider` 明确声明未尝试银行写入时，只允许补列出的
+缺失键、null 或空白字符串；非空值不能改。冻结、待确认及 UNKNOWN/PROCESSING
+沿用原限制，无 taskRef 本身不是可补参证明。
 
 完整的干净 Runtime 样例位于：
 
