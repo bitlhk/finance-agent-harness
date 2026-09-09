@@ -15,6 +15,7 @@
     <modules>
         <module>packages/java/core</module>
         <module>packages/java/wealth</module>
+        <module>packages/java/cashflow</module>
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>providers/non-ai-banking</module>

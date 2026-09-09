@@ -41,6 +41,12 @@
       "version": "0.1.0",
       "displayName": "内部审核",
       "source": "repo://profiles"
+    },
+    {
+      "id": "cashflow-read-only",
+      "version": "0.1.0",
+      "displayName": "收支只读（候选）",
+      "source": "repo://profiles/cashflow-read-only.md"
     }
   ],
   "domainPacks": [
@@ -85,6 +91,13 @@
       "displayName": "面客转账反诈",
       "profile": "customer-self-service",
       "source": "repo://domain-packs/anti-fraud"
+    },
+    {
+      "id": "cashflow-customer-self-service",
+      "version": "0.1.0",
+      "displayName": "收支说明专业方法（候选）",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/cashflow/customer-self-service"
     }
   ],
   "capabilityPacks": [
@@ -117,6 +130,12 @@
       "version": "0.1.0",
       "displayName": "转账风险审核基础能力",
       "source": "repo://capability-packs/risk-review-basics"
+    },
+    {
+      "id": "cashflow-readonly",
+      "version": "0.1.0",
+      "displayName": "摘要与分类趋势只读能力（候选）",
+      "source": "repo://capability-packs/cashflow-readonly"
     }
   ],
   "providers": [
@@ -125,7 +144,9 @@
       "version": "0.1.0",
       "displayName": "有授权源的财富投影 Adapter（候选）",
       "source": "repo://packages/java/wealth",
-      "capabilities": ["wealth.facts.describe"]
+      "capabilities": [
+        "wealth.facts.describe"
+      ]
     },
     {
       "id": "non-ai-banking-reference",
@@ -134,7 +155,11 @@
       "source": "repo://providers/non-ai-banking",
       "capabilities": [
         "account.balance.query",
-        "transfer.internal.create"
+        "transfer.internal.create",
+        "wealth.customer-context.query",
+        "channel.preferences.update",
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
       ]
     },
     {
@@ -189,6 +214,12 @@
       "version": "1.0.0",
       "displayName": "转账风险审核评测包",
       "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/risk-review"
+    },
+    {
+      "id": "cashflow-controlled",
+      "version": "0.1.0",
+      "displayName": "收支合同受控案例（非模型质量评测）",
+      "source": "repo://conformance/fixtures/cashflow/v0.1"
     }
   ]
 }

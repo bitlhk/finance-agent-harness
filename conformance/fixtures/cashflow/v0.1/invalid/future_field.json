@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "finance-cashflow-facts.v0.1",
+  "section": "SUMMARY",
+  "period": "2026-08",
+  "currency": "CNY",
+  "coverage": "OWN_BANK_ACCOUNT_BOOKED",
+  "totals": {
+    "income": "10000.00",
+    "expense": "1250.50",
+    "netCashflow": "8749.50"
+  },
+  "categories": [],
+  "trend": [],
+  "source": {
+    "namespace": "non-ai-banking",
+    "subjectRef": "synthetic-customer-a",
+    "system": "controlled-bank",
+    "recordVersion": "financial-summary-v2",
+    "asOf": "2026-09-01T01:00:00Z",
+    "observedAt": "2026-09-02T00:00:00Z",
+    "policyRef": "D05-003-SUMMARY-GOVERNANCE",
+    "policyAsOf": "2026-09-01T01:00:00Z"
+  },
+  "gaps": [
+    "ACCOUNT_LIST_LIMIT_100",
+    "OTHER_BANKS_AND_CURRENCIES_NOT_COVERED",
+    "CREDIT_CARD_BILLS_NOT_ADDED_TO_CASHFLOW"
+  ],
+  "approval": true
+}

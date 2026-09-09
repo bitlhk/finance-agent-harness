@@ -1,0 +1,10 @@
+schemaVersion: finance-domain-pack.v1
+packId: cashflow-customer-self-service
+version: 0.1.0
+profile: customer-self-service
+capabilities: [finance.transaction-summary.query, finance.spending-analysis.query]
+skills:
+  - directory: cashflow-review
+    entry: skills/cashflow-review/SKILL.md
+scope: [monthly cashflow explanation, classification coverage, information gaps]
+outOfScope: [payments, budgets, investment recommendations, fraud conclusions]

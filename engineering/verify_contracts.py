@@ -52,6 +52,12 @@ def main():
         errors = list(validator("wealth-facts.v0.1").iter_errors(json.loads(path.read_text())))
         assert bool(errors) == (path.parent.name == "invalid"), f"Unexpected wealth fixture: {path} {errors}"
         count += 1
+    cashflow_fixtures = sorted((ROOT / "conformance/fixtures/cashflow/v0.1").rglob("*.json"))
+    assert cashflow_fixtures, "Cashflow contract fixtures must not be empty"
+    for path in cashflow_fixtures:
+        errors = list(validator("cashflow-facts.v0.1").iter_errors(json.loads(path.read_text())))
+        assert bool(errors) == (path.parent.name == "invalid"), f"Unexpected cashflow fixture: {path} {errors}"
+        count += 1
     for path in sorted((ROOT / "examples/solutions").rglob("*")):
         if path.name in {"solution.yaml", "solution-without-domain.yaml", "solution-build-input.v1.json"}:
             validator("solution-build-input.v1").validate(yaml.safe_load(path.read_text()))

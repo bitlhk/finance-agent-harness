@@ -1,0 +1,13 @@
+{
+  "summaryVersion": "financial-summary-v2",
+  "period": "2026-08",
+  "totalIncome": "10000.00",
+  "totalExpense": "1250.50",
+  "netCashflow": "8749.50",
+  "bookedTransactionCount": 5,
+  "accountIds": [
+    "synthetic-private-account"
+  ],
+  "creditCardStatementBalance": "2000.00",
+  "asOf": "2026-09-01T01:00:00Z"
+}
