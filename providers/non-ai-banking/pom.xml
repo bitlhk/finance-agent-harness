@@ -17,6 +17,11 @@
     <dependencies>
         <dependency>
             <groupId>io.github.bitlhk.finance</groupId>
+            <artifactId>finance-harness-cashflow</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.bitlhk.finance</groupId>
             <artifactId>finance-harness-core</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -1,0 +1,17 @@
+{
+  "gate": "PASS",
+  "productionReady": false,
+  "asOf": "2026-09-01T01:00:00Z",
+  "policies": [
+    {
+      "policyId": "financial-summary-default",
+      "summaryVersion": "financial-summary-v2",
+      "currency": "CNY",
+      "accountTransactionStatus": "BOOKED",
+      "customerScopeRequired": true,
+      "ledgerWriteAllowed": false,
+      "feeReinterpretationAllowed": false,
+      "evidenceRef": "D05-003-SUMMARY-GOVERNANCE"
+    }
+  ]
+}
