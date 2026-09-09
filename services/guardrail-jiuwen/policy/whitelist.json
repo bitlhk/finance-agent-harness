@@ -1,0 +1,36 @@
+{
+  "version": "guardrail-jiuwen-v1",
+  "whitelist": {
+    "enabled": false,
+    "patterns": []
+  },
+  "guardrails": {
+    "rejection_message": "安全警告：检测到非法输入，请求已拦截。请遵守使用规范。",
+    "enable_guardrails": true
+  },
+  "content_filter": {
+    "input_enabled": false,
+    "output_enabled": false,
+    "action_mode": "block"
+  },
+  "runtime_config": {
+    "white_list": {
+      "enabled": false,
+      "patterns": []
+    },
+    "black_list": {
+      "enabled": true
+    },
+    "pii_detection": {
+      "input_enabled": false,
+      "output_enabled": false,
+      "input_entities": [],
+      "output_entities": [],
+      "input_action_mode": "detect",
+      "output_action_mode": "detect"
+    },
+    "prompt_defense": {
+      "enabled": true
+    }
+  }
+}

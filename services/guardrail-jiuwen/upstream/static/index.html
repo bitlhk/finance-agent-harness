@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体安全护栏系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=35">
+    <link rel="icon" href="/static/favicon.svg?v=2">
+    <!-- Markdown渲染库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Chart.js 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- 左侧面板 -->
+        <aside class="sidebar">
+                <!-- 侧边栏头部 -->
+                <div class="sidebar-header">
+                    <div class="sidebar-header-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <span class="sidebar-header-title">测试用例</span>
+                </div>
+
+                <!-- 测试用例模块 -->
+                <div class="sidebar-module samples-module">
+                    <div class="samples-container">
+                        <!-- 页签栏 -->
+                        <div class="sample-tabs">
+                            <div
+                                class="sample-tab white"
+                                :class="{ active: activeSampleTab === 'white' }"
+                                @click="switchSampleTab('white')"
+                            >
+                                <span class="tab-icon">✓</span>
+                                <span class="tab-label">正常样本</span>
+                                <span class="tab-badge">{{ whiteSamples.length }}</span>
+                            </div>
+                            <div
+                                class="sample-tab black"
+                                :class="{ active: activeSampleTab === 'black' }"
+                                @click="switchSampleTab('black')"
+                            >
+                                <span class="tab-icon">⚠</span>
+                                <span class="tab-label">攻击样本</span>
+                                <span class="tab-badge">{{ blackSamples.length }}</span>
+                            </div>
+                        </div>
+
+                        <!-- 正常样本列表 -->
+                        <div class="sample-group white" v-show="activeSampleTab === 'white'">
+                            <div class="sample-list expanded">
+                                <div
+                                    v-for="(sample, index) in whiteSamples"
+                                    :key="'white-' + index"
+                                    class="sample-item white"
+                                    :title="sample.text"
+                                    @click="selectSample(sample.text, 'white')"
+                                >
+                                    {{ sample.text }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 攻击样本列表 -->
+                        <div class="sample-group black" v-show="activeSampleTab === 'black'">
+                            <div class="sample-list expanded">
+                                <div
+                                    v-for="(sample, index) in blackSamples"
+                                    :key="'black-' + index"
+                                    class="sample-item black"
+                                    :title="sample.text"
+                                    @click="selectSample(sample.text, 'black')"
+                                >
+                                    {{ sample.text }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 头部 -->
+            <header class="header">
+                <div class="header-left">
+                    <div class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <defs>
+                                    <linearGradient id="shieldMetal" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#818cf8"/>
+                                        <stop offset="50%" stop-color="#6366f1"/>
+                                        <stop offset="100%" stop-color="#4f46e5"/>
+                                    </linearGradient>
+                                    <linearGradient id="rivetGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#a5b4fc"/>
+                                        <stop offset="100%" stop-color="#818cf8"/>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="url(#shieldMetal)" stroke="#c7d2fe" stroke-width="0.5"/>
+                                <path d="M12 19.5s6-3 6-7.5V6.3L12 4.5 6 6.3V12c0 4.5 6 7.5 6 7.5z" fill="#e0e7ff" stroke="#a5b4fc" stroke-width="0.5"/>
+                                <path d="M7 11.5h10M7 12.5h10" stroke="#c7d2fe" stroke-width="0.7"/>
+                                <path d="M12 6v12" stroke="#c7d2fe" stroke-width="0.7"/>
+                                <circle cx="12" cy="5.3" r="0.55" fill="url(#rivetGrad)"/>
+                                <circle cx="12" cy="18.7" r="0.55" fill="url(#rivetGrad)"/>
+                                <circle cx="12" cy="12" r="1.3" fill="#ffffff" opacity="0.95"/>
+                                <circle cx="12" cy="12" r="0.8" fill="#e0e7ff"/>
+                                <circle cx="12" cy="12" r="0.35" fill="#ffffff" opacity="0.8"/>
+                            </svg>
+                        </div>
+                        <div class="logo-text">
+                            <h1>智能体安全护栏系统</h1>
+                            <p>
+                                七层递进检测 · 全链路智能防护
+                                <span class="intro-info-btn" @click="showIntroModal = true" title="查看系统介绍">
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="10" fill="currentColor"/>
+                                        <path d="M12 7v6M12 17h.01" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="connection-status">
+                        <span class="status-dot" :class="{ disconnected: connectionStatus !== 'connected' }"></span>
+                        <span>{{ connectionStatusText }}</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="dashboard-btn" @click="openDashboardDrawer" title="监控面板">
+                        <span>📊</span>
+                    </button>
+                    <button class="config-btn" @click="openConfigDrawer" title="系统设置">
+                        <span>⚙️</span>
+                    </button>
+                    <button class="clear-btn" @click="startNewConversation" title="开启新会话">
+                        <span>💬</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 聊天区域 -->
+            <div class="chat-container">
+                <div v-if="guardrailConfig.content_filter?.output_enabled" class="streaming-warning">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>内容过滤的输出检测已开启，流式响应将切换为伪流式模式，首字节返回时间可能显著增加</span>
+                </div>
+                <div class="messages-wrapper" ref="messagesContainer">
+                    <div class="messages">
+                        <div
+                            v-for="(message, index) in messages"
+                            :key="index"
+                            class="message"
+                            :class="[message.type, { blocked: message.type === 'blocked' }]"
+                        >
+                            <div class="message-content">
+                                <div class="message-bubble" :class="{ loading: message.isLoading && !message.text }">
+                                    <!-- 加载状态：只有在正在加载且没有内容时才显示 -->
+                                    <template v-if="message.isLoading && !message.text">
+                                        <div class="typing-indicator">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                        <span class="loading-text">正在思考...</span>
+                                    </template>
+                                    <!-- 有内容时直接显示内容 -->
+                                    <template v-else>
+                                        <div v-html="renderMarkdown(message.text)"></div>
+                                    </template>
+                                </div>
+                                <div class="message-time">
+                                    {{ message.sender }} · {{ message.time }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <div class="input-box" :class="{ 'expanded': isInputExpanded }">
+                            <textarea
+                                v-model="inputMessage"
+                                @keydown="onTextareaKeydown"
+                                @input="adjustTextareaHeight"
+                                placeholder="请输入您的问题..."
+                                :disabled="isLoading"
+                                ref="inputTextarea"
+                                rows="1"
+                                v-focus
+                            ></textarea>
+                            <!-- 发送/停止按钮（垂直居中） -->
+                            <div class="send-btn-wrapper">
+                                <button
+                                    v-if="!isLoading"
+                                    class="send-btn primary"
+                                    @click="sendMessage"
+                                    :disabled="!inputMessage.trim()"
+                                    :class="{ 'show': inputMessage.trim() }"
+                                    title="发送消息"
+                                >
+                                    ➤
+                                </button>
+                                <button
+                                    v-else
+                                    class="send-btn stop"
+                                    @click="stopGeneration"
+                                    :class="{ 'show': true }"
+                                    title="停止生成"
+                                >
+                                    ■
+                                </button>
+                            </div>
+
+                            <!-- 放大按钮（右下角） -->
+                            <div class="input-buttons">
+                                <button
+                                    v-show="showExpandButton && !isInputExpanded"
+                                    class="expand-btn"
+                                    @click="toggleInputExpand"
+                                    title="放大输入框"
+                                >
+                                    ⤢
+                                </button>
+                            </div>
+
+                            <!-- 缩小按钮（显示在右上角，仅在展开时显示） -->
+                            <button
+                                v-show="isInputExpanded"
+                                class="shrink-btn"
+                                @click="toggleInputExpand"
+                                title="缩小输入框"
+                            >
+                                ⤡
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 安全状态卡片 -->
+                <div class="security-card">
+                    <div class="security-card-content">
+                        <div class="security-status">
+                            <div class="security-icon" :class="securityLevel">
+                                <span v-if="securityLevel === 'high'">✓</span>
+                                <span v-else-if="securityLevel === 'medium'">⚠</span>
+                                <span v-else>✕</span>
+                            </div>
+                            <div class="security-info">
+                                <h4>{{ securityTitle }}</h4>
+                                <p>{{ securityDescription }}</p>
+                            </div>
+                        </div>
+                        <div class="security-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ successRate }}%</div>
+                                <div class="stat-label">安全率</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ guardrailsBlocked }}</div>
+                                <div class="stat-label">黑名单过滤</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ llmBlocked }}</div>
+                                <div class="stat-label">提示词防御</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ piiBlocked }}</div>
+                                <div class="stat-label">敏感信息拦截</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ contentFilterBlocked }}</div>
+                                <div class="stat-label">内容过滤拦截</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ totalMessages }}</div>
+                                <div class="stat-label">总请求</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Toast 通知容器 -->
+        <div id="toast-container"></div>
+
+        <!-- 添加规则模态框 -->
+        <div v-if="showAddRuleModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>添加新规则</h3>
+                    <button class="modal-close" @click="closeAddRuleModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则名称 <span style="color:#dc3545;">*</span></label>
+                        <input v-model="newRule.name" type="text" placeholder="例如: custom_sql_injection" />
+                    </div>
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <input v-model="newRule.description" type="text" placeholder="例如: 检测SQL注入攻击" />
+                    </div>
+                    <div class="form-group">
+                        <label>应答话术 (可选，匹配此规则时展示给用户的回复)</label>
+                        <textarea v-model="newRule.responseMessage" rows="2"
+                                  placeholder="留空则使用默认话术：我无法回答此类问题。若您有其他问题或需要办理业务，我很乐意为您效劳。"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式(每行一个) <span style="color:#dc3545;">*</span></label>
+                        <textarea v-model="newRule.patternsText" rows="5"
+                                  placeholder="例如:&#10;(?i)(union.*select)&#10;(?i)(insert.*into)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeAddRuleModal">取消</button>
+                    <button class="btn-save" @click="saveNewRule" :disabled="!newRule.name.trim() || !newRule.patternsText.trim()">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑规则模态框 -->
+        <div v-if="showEditRuleModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑规则: {{ editingRule.name }}</h3>
+                    <button class="modal-close" @click="closeEditRuleModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <input v-model="editingRule.description" type="text" placeholder="例如: 检测SQL注入攻击" />
+                    </div>
+                    <div class="form-group">
+                        <label>应答话术 (可选，匹配此规则时展示给用户的回复)</label>
+                        <textarea v-model="editingRule.responseMessage" rows="2"
+                                  placeholder="留空则使用默认话术：我无法回答此类问题。若您有其他问题或需要办理业务，我很乐意为您效劳。"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式 * (每行一个)</label>
+                        <textarea v-model="editingRule.patternsText" rows="8"
+                                  placeholder="每行输入一个正则表达式"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeEditRuleModal">取消</button>
+                    <button class="btn-save" @click="saveEditedRule" :disabled="!editingRule.patternsText.trim()">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查看所有模式模态框 -->
+        <div v-if="showPatternsModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>{{ viewingPatternsRule?.name }} - 所有模式</h3>
+                    <button class="modal-close" @click="closePatternsModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="patterns-list">
+                        <div v-for="(pattern, index) in viewingPatternsRule?.patterns" 
+                             :key="index" class="pattern-item-full">
+                            <span class="pattern-index">{{ index + 1 }}.</span>
+                            <code>{{ pattern }}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closePatternsModal">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查看规则详情模态框（只读） -->
+        <div v-if="showViewRuleModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h3>{{ viewingRule?.name }}</h3>
+                        <span class="detail-tag" :class="viewingRule?.isDefault ? 'system' : 'custom'">{{ viewingRule?.isDefault ? '系统规则' : '自定义规则' }}</span>
+                    </div>
+                    <button class="modal-close" @click="closeViewRuleModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <div class="form-static">{{ viewingRule?.description || '暂无描述' }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>应答话术</label>
+                        <div class="form-static">{{ viewingRule?.responseMessage || '使用默认话术' }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式（共 {{ viewingRule?.patterns?.length || 0 }} 个）</label>
+                        <div class="patterns-list">
+                            <div v-for="(pattern, index) in viewingRule?.patterns" :key="index" class="pattern-item-full">
+                                <span class="pattern-index">{{ index + 1 }}.</span>
+                                <code>{{ pattern }}</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeViewRuleModal">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 确认对话框 -->
+        <div v-if="showConfirmModal" class="modal-overlay">
+            <div class="modal-content" :class="'modal-' + confirmModalConfig.type">
+                <div class="modal-header">
+                    <h3>{{ confirmModalConfig.title }}</h3>
+                    <button class="modal-close" @click="showConfirmModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="confirm-message">
+                        <span class="confirm-icon" v-if="confirmModalConfig.type === 'warning'">⚠️</span>
+                        <span class="confirm-icon" v-else-if="confirmModalConfig.type === 'error'">❌</span>
+                        <span class="confirm-icon" v-else>ℹ️</span>
+                        <p>{{ confirmModalConfig.message }}</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showConfirmModal = false">取消</button>
+                    <button class="btn-confirm" :class="'btn-' + confirmModalConfig.type" @click="confirmModalConfig.onConfirm">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加白名单规则模态框 -->
+        <div v-if="showAddWhitelistModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>添加白名单规则</h3>
+                    <button class="modal-close" @click="closeAddWhitelistModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则名称 *</label>
+                        <input v-model="newWhitelistRule.name" type="text" placeholder="例如: allow_query_balance" />
+                    </div>
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <input v-model="newWhitelistRule.description" type="text" placeholder="例如: 允许查询余额" />
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式 *</label>
+                        <input v-model="newWhitelistRule.pattern" type="text" placeholder="例如: (?i)(查余额|查流水)" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeAddWhitelistModal">取消</button>
+                    <button class="btn-save" @click="saveNewWhitelistRule" :disabled="!newWhitelistRule.name.trim() || !newWhitelistRule.pattern.trim()">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑白名单规则模态框 -->
+        <div v-if="showEditWhitelistModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑规则: {{ editingWhitelistRule.name }}</h3>
+                    <button class="modal-close" @click="closeEditWhitelistModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <input v-model="editingWhitelistRule.description" type="text" placeholder="例如: 允许查询余额" />
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式 *</label>
+                        <input v-model="editingWhitelistRule.pattern" type="text" placeholder="例如: (?i)(查余额|查流水)" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeEditWhitelistModal">取消</button>
+                    <button class="btn-save" @click="saveEditedWhitelistRule" :disabled="!editingWhitelistRule.pattern.trim()">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查看白名单规则详情模态框（只读） -->
+        <div v-if="showViewWhitelistModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h3>{{ viewingWhitelistRule?.name }}</h3>
+                        <span class="detail-tag whitelist">白名单</span>
+                    </div>
+                    <button class="modal-close" @click="closeViewWhitelistModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>规则描述</label>
+                        <div class="form-static">{{ viewingWhitelistRule?.description || '暂无描述' }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>正则表达式模式</label>
+                        <div class="form-static"><code>{{ viewingWhitelistRule?.pattern }}</code></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeViewWhitelistModal">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提示词预览模态框 -->
+        <div v-if="showPromptPreviewModal" class="modal-overlay">
+            <div class="modal-content preview-modal">
+                <div class="modal-header">
+                    <h3>🔍 提示词预览</h3>
+                    <button class="modal-close" @click="closePromptPreview">&times;</button>
+                </div>
+                <div class="modal-body preview-body">
+                    <div class="preview-content" v-html="renderMarkdown(securityCheckPrompt)"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closePromptPreview">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容过滤 - 添加类别模态框 -->
+        <div v-if="showAddContentFilterModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>添加新类别</h3>
+                    <button class="modal-close" @click="closeAddContentFilterModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">名称 <span style="color:#dc3545;">*</span></label>
+                        <input type="text" class="form-input" v-model="newContentFilterCategory.name" placeholder="例如：政治敏感">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">阈值 (0-1)</label>
+                        <input type="number" class="form-input" v-model="newContentFilterCategory.threshold" min="0" max="1" step="0.01" placeholder="0.75">
+                        <p class="form-hint">输入文本与锚点的余弦相似度 ≥ 此阈值时触发拦截。值越小越敏感，建议 0.60 ~ 0.85。</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">描述</label>
+                        <input type="text" class="form-input" v-model="newContentFilterCategory.description" placeholder="类别描述">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">锚点文本（每行一个） <span style="color:#dc3545;">*</span></label>
+                        <textarea class="form-textarea" v-model="newContentFilterCategory.anchorsText" rows="6" placeholder="输入锚点文本，每行一个...
+例如：
+暴力行为描述
+仇恨言论
+歧视性语言"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeAddContentFilterModal">取消</button>
+                    <button class="btn-save" :disabled="!newContentFilterCategory.name.trim() || !newContentFilterCategory.anchorsText.trim()" @click="createContentFilterCategory">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容过滤 - 编辑类别模态框 -->
+        <div v-if="showEditContentFilterModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑类别: {{ editingContentFilterCategory.name }}</h3>
+                    <button class="modal-close" @click="closeEditContentFilterModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">名称</label>
+                        <input type="text" class="form-input" :value="editingContentFilterCategory.name" disabled style="background: var(--bg-elevated); color: var(--text-muted); cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">阈值 (0-1)</label>
+                        <input type="number" class="form-input" v-model="editingContentFilterCategory.threshold" min="0" max="1" step="0.01" placeholder="0.75">
+                        <p class="form-hint">输入文本与锚点的余弦相似度 ≥ 此阈值时触发拦截。值越小越敏感，建议 0.60 ~ 0.85。</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">描述</label>
+                        <input type="text" class="form-input" v-model="editingContentFilterCategory.description" placeholder="类别描述">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">锚点文本（每行一个）</label>
+                        <textarea class="form-textarea" v-model="editingContentFilterCategory.anchorsText" rows="6" placeholder="输入锚点文本，每行一个..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeEditContentFilterModal">取消</button>
+                    <button class="btn-save" @click="saveEditedContentFilterCategory">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容过滤 - 查看锚点模态框 -->
+        <div v-if="showViewAnchorsModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>{{ viewingAnchorsCategory?.name }} - 所有锚点</h3>
+                    <button class="modal-close" @click="closeViewAnchorsModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="patterns-list" v-if="viewingAnchorsCategory?.anchors?.length">
+                        <div v-for="(anchor, index) in viewingAnchorsCategory.anchors" :key="anchor.id" class="pattern-item-full">
+                            <span class="pattern-index">{{ index + 1 }}.</span>
+                            <code>{{ anchor.text }}</code>
+                            <span v-if="!anchor.has_embedding" style="font-size:10px;color:#dc3545;background:#fff0f0;padding:1px 6px;border-radius:4px;flex-shrink:0;">待向量化</span>
+                        </div>
+                    </div>
+                    <div v-else style="text-align:center;padding:40px;color:var(--text-muted);">
+                        暂无锚点
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeViewAnchorsModal">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容过滤 - 查看类别详情模态框 -->
+        <div v-if="showViewContentFilterModal" class="modal-overlay">
+            <div class="modal-content" style="max-width:560px;">
+                <div class="modal-header">
+                    <h3>{{ viewingContentFilterCategory?.name }}</h3>
+                    <button class="modal-close" @click="closeViewContentFilterModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="display:flex;gap:16px;margin-bottom:12px;font-size:13px;color:#666;">
+                        <span>阈值: {{ viewingContentFilterCategory?.threshold }}</span>
+                        <span>类型: {{ viewingContentFilterCategory?.category_type === 'system' ? '系统' : '自定义' }}</span>
+                        <span>锚点: {{ viewingContentFilterCategory?.anchors?.length || 0 }}</span>
+                    </div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">{{ viewingContentFilterCategory?.description || '无描述' }}</div>
+                    <div class="rule-list" style="max-height:300px;overflow-y:auto;">
+                        <div v-for="anchor in viewingContentFilterCategory?.anchors" :key="anchor.id" class="rule-item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:12px;color:#666;">{{ anchor.text }}</span>
+                                <span v-if="!anchor.has_embedding" style="font-size:10px;color:#dc3545;background:#fff0f0;padding:1px 6px;border-radius:4px;">待向量化</span>
+                            </div>
+                            <button v-if="viewingContentFilterCategory?.category_type === 'custom'" class="card-action delete" @click="deleteAnchor(viewingContentFilterCategory.name, anchor.id)" title="删除锚点">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeViewContentFilterModal">关闭</button>
+                    <button v-if="viewingContentFilterCategory?.category_type === 'custom'" class="btn-primary" @click="openAddAnchorModal(viewingContentFilterCategory); closeViewContentFilterModal();">添加锚点</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容过滤 - 添加锚点模态框 -->
+        <div v-if="showAddAnchorModal" class="modal-overlay">
+            <div class="modal-content" style="max-width:420px;">
+                <div class="modal-header">
+                    <h3>添加锚点</h3>
+                    <button class="modal-close" @click="closeAddAnchorModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">类别</label>
+                        <input type="text" class="form-input" :value="currentCategoryForAnchor?.name" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">锚点文本</label>
+                        <input type="text" class="form-input" v-model="newAnchorText" placeholder="输入锚点文本...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="closeAddAnchorModal">取消</button>
+                    <button class="btn-primary" @click="addAnchor">确认添加</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统介绍弹窗 -->
+        <div v-if="showIntroModal" class="modal-overlay" @click.self="showIntroModal = false">
+            <div class="modal-content intro-modal">
+                <div class="modal-header">
+                    <h3>智能体安全护栏系统介绍</h3>
+                    <button class="modal-close" @click="showIntroModal = false">×</button>
+                </div>
+                <div class="modal-body intro-body">
+                    <!-- 系统用途 -->
+                    <div class="intro-section">
+                        <div class="intro-section-title">
+                            <span class="intro-section-icon">💼</span>
+                            <span>系统用途</span>
+                        </div>
+                        <p class="intro-text">
+                            智能体安全护栏服务，通过多层递进式检测机制，提供合规检测、金融欺诈、数据隐私泄露、恶意指令、社会工程等提示词注入、大模型输出的安全检测和防御能力，
+                            确保 AI 智能体的安全性和可靠性。
+                        </p>
+                    </div>
+
+                    <!-- 工作流程图 -->
+                    <div class="intro-section">
+                        <div class="intro-section-title">
+                            <span class="intro-section-icon">⚙️</span>
+                            <span>安全防护架构工作流</span>
+                        </div>
+                        <div class="flow-diagram">
+                            <!-- 节点0 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge input">输入侧</span>
+                                    <span class="flow-node-num">节点 0</span>
+                                </div>
+                                <div class="flow-node-name">white_list_check</div>
+                                <div class="flow-node-desc">白名单放行（可选）</div>
+                                <div class="flow-node-detail">匹配白名单规则 → 跳过所有检测，直接调用 LLM</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">未匹配</span>
+                            </div>
+
+                            <!-- 节点1 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge input">输入侧</span>
+                                    <span class="flow-node-num">节点 1</span>
+                                </div>
+                                <div class="flow-node-name">pii_input_check</div>
+                                <div class="flow-node-desc">敏感信息 检测 / 脱敏 / 拦截</div>
+                                <div class="flow-node-detail">支持识别“身份证号”、“手机号”、“银行卡号”、“手机号码”等敏感信息实体</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">通过</span>
+                            </div>
+
+                            <!-- 节点2 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge input">输入侧</span>
+                                    <span class="flow-node-num">节点 2</span>
+                                </div>
+                                <div class="flow-node-name">guardrails_check</div>
+                                <div class="flow-node-desc">黑名单过滤</div>
+                                <div class="flow-node-detail">系统规则 + 自定义规则，正则匹配恶意指令和攻击模式</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">通过</span>
+                            </div>
+
+                            <!-- 节点3 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge input">输入侧</span>
+                                    <span class="flow-node-num">节点 3</span>
+                                </div>
+                                <div class="flow-node-name">content_filter_check</div>
+                                <div class="flow-node-desc">内容过滤</div>
+                                <div class="flow-node-detail">基于语义相似度的零样本分类，检测仇恨、辱骂、色情、暴力、违法等内容</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">通过</span>
+                            </div>
+
+                            <!-- 节点4 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge input">输入侧</span>
+                                    <span class="flow-node-num">节点 4</span>
+                                </div>
+                                <div class="flow-node-name">llm_defense_check</div>
+                                <div class="flow-node-desc">提示词防御</div>
+                                <div class="flow-node-detail">使用大模型深度分析输入，检测敏感信息、金融风险等复杂攻击</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">通过</span>
+                            </div>
+
+                            <!-- 节点5 -->
+                            <div class="flow-node llm-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge core">核心</span>
+                                    <span class="flow-node-num">节点 5</span>
+                                </div>
+                                <div class="flow-node-name">call_llm</div>
+                                <div class="flow-node-desc">调用大模型生成响应</div>
+                                <div class="flow-node-detail">基于 SYSTEM_PROMPT + 用户输入，生成响应内容</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">生成完成</span>
+                            </div>
+
+                            <!-- 节点6 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge output">输出侧</span>
+                                    <span class="flow-node-num">节点 6</span>
+                                </div>
+                                <div class="flow-node-name">content_filter_output_check</div>
+                                <div class="flow-node-desc">内容过滤</div>
+                                <div class="flow-node-detail">检测输出内容中是否包含有害信息</div>
+                            </div>
+                            <div class="flow-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                                </svg>
+                                <span class="flow-arrow-label">通过</span>
+                            </div>
+
+                            <!-- 节点7 -->
+                            <div class="flow-node">
+                                <div class="flow-node-header">
+                                    <span class="flow-node-badge output">输出侧</span>
+                                    <span class="flow-node-num">节点 7</span>
+                                </div>
+                                <div class="flow-node-name">pii_output_check</div>
+                                <div class="flow-node-desc">敏感信息 检测 / 脱敏 / 拦截</div>
+                                <div class="flow-node-detail">输出阶段再次检测敏感信息，支持检测/脱敏/拦截三种动作模式</div>
+                            </div>
+                            <div class="flow-arrow end">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="flow-arrow-label">END</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" @click="showIntroModal = false">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 安全护栏配置抽屉 -->
+        <div class="drawer-overlay" :class="{ show: showConfigDrawer }"></div>
+        <div class="drawer-panel" :class="{ show: showConfigDrawer, maximized: isDrawerMaximized }">
+            <div class="drawer-header">
+                <h3>⚙️ 系统设置</h3>
+                <div class="drawer-header-actions">
+                    <button class="drawer-maximize" @click="toggleDrawerMaximize" :title="isDrawerMaximized ? '还原' : '最大化'">
+                        <svg v-if="!isDrawerMaximized" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                        </svg>
+                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
+                        </svg>
+                    </button>
+                    <button class="drawer-close" @click="closeConfigDrawer">&times;</button>
+                </div>
+            </div>
+            <div class="drawer-body">
+                <div class="drawer-menu">
+                    <div
+                        v-for="menu in configMenus"
+                        :key="menu.key"
+                        class="drawer-menu-item"
+                        :class="{ active: activeConfigMenu === menu.key }"
+                        @click="activeConfigMenu = menu.key"
+                    >
+                        <span class="menu-icon">{{ menu.icon }}</span>
+                        <span class="menu-label">{{ menu.label }}</span>
+                    </div>
+                </div>
+                <div class="drawer-content">
+                    <!-- 白名单放行 -->
+                    <div v-if="activeConfigMenu === 'white_list'" class="config-section">
+                        <div class="config-section-header whitelist-header">
+                            <div class="cf-header-top">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="guardrailConfig.white_list.enabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="config-title">白名单放行</span>
+                                <div class="cf-header-right">
+                                    <div class="cf-desc-flow">
+                                        <span class="cf-flow-step"><i>1</i>规则匹配</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>2</i>跳过检测</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>3</i>直接放行</span>
+                                    </div>
+                                    <div class="cf-header-sub">命中白名单规则的请求，将跳过所有安全检测环节直接放行</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section-body" :class="{ disabled: !guardrailConfig.white_list.enabled }">
+                            <!-- 工具栏 -->
+                            <div class="blacklist-toolbar">
+                                <div class="toolbar-actions" style="margin-left: auto;">
+                                    <button class="toolbar-btn" @click="refreshWhitelistRules" :disabled="loadingWhitelistRules" title="刷新规则列表">
+                                        <svg class="spin" v-if="loadingWhitelistRules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="23 4 23 10 17 10"/>
+                                            <polyline points="1 20 1 14 7 14"/>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                        </svg>
+                                        刷新
+                                    </button>
+                                    <button class="toolbar-btn primary" @click="openAddWhitelistModal" title="添加白名单规则">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <line x1="12" y1="5" x2="12" y2="19"/>
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                        </svg>
+                                        新增
+                                    </button>
+                                    <button class="toolbar-btn danger" @click="resetWhitelistRules" :disabled="resettingWhitelistRules" title="清空所有规则">
+                                        <svg class="spin" v-if="resettingWhitelistRules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        清空
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 白名单规则列表 -->
+                            <div class="blacklist-rules">
+                                <div class="rule-cards" v-if="paginatedWhitelistRules?.length">
+                                    <div v-for="rule in paginatedWhitelistRules" :key="'wl-' + rule.name" class="rule-card whitelist" style="cursor: pointer;" @click="openViewWhitelistModal(rule)">
+                                        <div class="card-accent"></div>
+                                        <div class="card-body">
+                                            <div class="card-top">
+                                                <div class="card-name">{{ rule.name }}</div>
+                                                <code class="card-pattern-text">{{ rule.pattern }}</code>
+                                            </div>
+                                        </div>
+                                        <div class="card-actions">
+                                            <button class="card-action edit" @click.stop="openEditWhitelistModal(rule)" title="编辑规则">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                </svg>
+                                            </button>
+                                            <button class="card-action delete" @click.stop="deleteWhitelistRule(rule.name)" title="删除规则">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                    <polyline points="3 6 5 6 21 6"/>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 空状态 -->
+                                <div v-if="!whitelistRules?.length" class="blacklist-empty">
+                                    <div class="empty-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="empty-title">暂无白名单规则</div>
+                                    <div class="empty-desc">点击「新增」按钮创建放行规则</div>
+                                </div>
+                                <!-- 分页 -->
+                                <div v-if="whitelistRules?.length > whitelistPageSize" class="table-pagination">
+                                    <button @click="prevWhitelistPage" :disabled="whitelistPage <= 1">上一页</button>
+                                    <span>第</span>
+                                    <input type="number" min="1" :max="whitelistTotalPages" :value="whitelistPage" @change="e => { const p = parseInt(e.target.value) || 1; const valid = Math.max(1, Math.min(p, whitelistTotalPages)); whitelistPage = valid; e.target.value = valid; }" style="width:44px;text-align:center;padding:4px 6px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-surface);color:var(--text-primary);">
+                                    <span>页 / 共 {{ whitelistTotalPages }} 页</span>
+                                    <button @click="nextWhitelistPage" :disabled="whitelistPage >= whitelistTotalPages">下一页</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 黑名单过滤 -->
+                    <div v-if="activeConfigMenu === 'black_list'" class="config-section">
+                        <div class="config-section-header blacklist-header">
+                            <div class="cf-header-top">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="guardrailConfig.black_list.enabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="config-title">黑名单过滤</span>
+                                <div class="cf-header-right">
+                                    <div class="cf-desc-flow">
+                                        <span class="cf-flow-step"><i>1</i>正则规则库</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>2</i>模式匹配</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>3</i>命中拦截</span>
+                                    </div>
+                                    <div class="cf-header-sub">基于预设黑名单正则规则库对输入内容进行模式匹配，命中规则即触发拦截</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section-body" :class="{ disabled: !guardrailConfig.black_list.enabled }">
+                            <!-- 工具栏 -->
+                            <div class="blacklist-toolbar">
+                                <div class="rule-tabs">
+                                    <div
+                                        class="rule-tab default"
+                                        :class="{ active: activeRuleTab === 'default' }"
+                                        @click="switchRuleTab('default')"
+                                    >
+                                        <span class="tab-icon">🛡</span>
+                                        <span class="tab-label">默认规则</span>
+                                        <span class="tab-badge">{{ guardrailsRules?.default_rules?.length || 0 }}</span>
+                                    </div>
+                                    <div
+                                        class="rule-tab custom"
+                                        :class="{ active: activeRuleTab === 'custom' }"
+                                        @click="switchRuleTab('custom')"
+                                    >
+                                        <span class="tab-icon">✎</span>
+                                        <span class="tab-label">自定义</span>
+                                        <span class="tab-badge">{{ guardrailsRules?.custom_rules?.length || 0 }}</span>
+                                    </div>
+                                </div>
+                                <div class="toolbar-actions">
+                                    <button class="toolbar-btn" @click="refreshGuardrailsRules" :disabled="loadingRules" title="刷新规则列表">
+                                        <svg class="spin" v-if="loadingRules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="23 4 23 10 17 10"/>
+                                            <polyline points="1 20 1 14 7 14"/>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                        </svg>
+                                        刷新
+                                    </button>
+                                    <button class="toolbar-btn primary" @click="openAddRuleModal" title="添加自定义规则">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <line x1="12" y1="5" x2="12" y2="19"/>
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                        </svg>
+                                        添加
+                                    </button>
+                                    <button class="toolbar-btn danger" v-show="activeRuleTab === 'default'" @click="resetGuardrailsRules" :disabled="resettingRules" title="重置为默认规则">
+                                        <svg class="spin" v-if="resettingRules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="1 4 1 10 7 10"/>
+                                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                        </svg>
+                                        重置
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 规则列表 -->
+                            <div class="blacklist-rules">
+                                <!-- 默认规则组 -->
+                                <div class="rule-section default" v-show="activeRuleTab === 'default'" v-if="guardrailsRules?.default_rules?.length">
+                                    <div class="rule-cards">
+                                        <div v-for="rule in paginatedDefaultRules" :key="'default-' + rule.name" class="rule-card default" @click="openViewRuleModal(rule, true)" style="cursor: pointer;">
+                                            <div class="card-accent"></div>
+                                            <div class="card-body">
+                                                <div class="card-top">
+                                                    <div class="card-name">{{ rule.name }}</div>
+                                                    <button class="card-pattern-btn" @click.stop="openPatternsModal(rule)">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                            <polyline points="14 2 14 8 20 8"/>
+                                                        </svg>
+                                                        {{ rule.patterns?.length || 0 }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="card-action edit" @click.stop="openEditRuleModal(rule)" title="编辑规则">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="card-tag system">系统</div>
+                                        </div>
+                                    </div>
+                                    <!-- 分页 -->
+                                    <div v-if="guardrailsRules?.default_rules?.length > rulesPageSize" class="table-pagination">
+                                        <button @click="prevDefaultRulesPage" :disabled="defaultRulesPage <= 1">上一页</button>
+                                        <span>第</span>
+                                        <input type="number" min="1" :max="defaultRulesTotalPages" :value="defaultRulesPage" @change="e => { const p = parseInt(e.target.value) || 1; const valid = Math.max(1, Math.min(p, defaultRulesTotalPages)); defaultRulesPage = valid; e.target.value = valid; }" style="width:44px;text-align:center;padding:4px 6px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-surface);color:var(--text-primary);">
+                                        <span>页 / 共 {{ defaultRulesTotalPages }} 页</span>
+                                        <button @click="nextDefaultRulesPage" :disabled="defaultRulesPage >= defaultRulesTotalPages">下一页</button>
+                                    </div>
+                                </div>
+
+                                <!-- 自定义规则组 -->
+                                <div class="rule-section custom" v-show="activeRuleTab === 'custom'" v-if="guardrailsRules?.custom_rules?.length">
+                                    <div class="rule-cards">
+                                        <div v-for="rule in paginatedCustomRules" :key="'custom-' + rule.name" class="rule-card custom" @click="openViewRuleModal(rule, false)" style="cursor: pointer;">
+                                            <div class="card-accent"></div>
+                                            <div class="card-body">
+                                                <div class="card-top">
+                                                    <div class="card-name">{{ rule.name }}</div>
+                                                    <button class="card-pattern-btn" @click.stop="openPatternsModal(rule)">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                            <polyline points="14 2 14 8 20 8"/>
+                                                        </svg>
+                                                        {{ rule.patterns?.length || 0 }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="card-action edit" @click.stop="openEditRuleModal(rule)" title="编辑规则">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                    </svg>
+                                                </button>
+                                                <button class="card-action delete" @click.stop="deleteGuardrailRule(rule.name)" title="删除规则">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <polyline points="3 6 5 6 21 6"/>
+                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 分页 -->
+                                    <div v-if="guardrailsRules?.custom_rules?.length > rulesPageSize" class="table-pagination">
+                                        <button @click="prevCustomRulesPage" :disabled="customRulesPage <= 1">上一页</button>
+                                        <span>第</span>
+                                        <input type="number" min="1" :max="customRulesTotalPages" :value="customRulesPage" @change="e => { const p = parseInt(e.target.value) || 1; const valid = Math.max(1, Math.min(p, customRulesTotalPages)); customRulesPage = valid; e.target.value = valid; }" style="width:44px;text-align:center;padding:4px 6px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-surface);color:var(--text-primary);">
+                                        <span>页 / 共 {{ customRulesTotalPages }} 页</span>
+                                        <button @click="nextCustomRulesPage" :disabled="customRulesPage >= customRulesTotalPages">下一页</button>
+                                    </div>
+                                </div>
+
+                                <!-- 空状态 - 默认规则 -->
+                                <div v-if="activeRuleTab === 'default' && !guardrailsRules?.default_rules?.length" class="blacklist-empty">
+                                    <div class="empty-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                            <line x1="9" y1="9" x2="15" y2="15"/>
+                                            <line x1="15" y1="9" x2="9" y2="15"/>
+                                        </svg>
+                                    </div>
+                                    <div class="empty-title">暂无默认规则</div>
+                                    <div class="empty-desc">点击「刷新」按钮加载规则列表</div>
+                                </div>
+
+                                <!-- 空状态 - 自定义规则 -->
+                                <div v-if="activeRuleTab === 'custom' && !guardrailsRules?.custom_rules?.length" class="blacklist-empty">
+                                    <div class="empty-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="empty-title">暂无自定义规则</div>
+                                    <div class="empty-desc">点击「添加」按钮创建新规则</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 内容过滤 -->
+                    <div v-if="activeConfigMenu === 'content_filter'" class="config-section">
+                        <div class="config-section-header content-filter-header">
+                            <div class="cf-header-top">
+                                <span class="config-title">内容过滤</span>
+                                <div class="cf-header-right">
+                                    <div class="cf-desc-flow">
+                                        <span class="cf-flow-step"><i>1</i>文本向量化</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>2</i>相似度计算</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>3</i>阈值判定拦截</span>
+                                    </div>
+                                    <div class="cf-header-sub">基于 Embedding 语义向量与锚点的余弦相似度匹配，相似度 ≥ 阈值即触发拦截，记录匹配的所有类别</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section-body">
+                            <!-- 输入/输出检测页签和控制栏合并 -->
+                            <div class="pii-tabs-row">
+                                <div class="rule-tabs">
+                                    <div
+                                        class="rule-tab pii-tab input"
+                                        :class="{ active: activeContentFilterControlTab === 'input' }"
+                                        @click="switchContentFilterControlTab('input')"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                        输入检测
+                                        <span v-if="guardrailConfig.content_filter.input_enabled" class="pii-status-dot on"></span>
+                                    </div>
+                                    <div
+                                        class="rule-tab pii-tab output"
+                                        :class="{ active: activeContentFilterControlTab === 'output' }"
+                                        @click="switchContentFilterControlTab('output')"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                        输出检测
+                                        <span v-if="guardrailConfig.content_filter.output_enabled" class="pii-status-dot on"></span>
+                                    </div>
+                                </div>
+                                <div class="pii-control-inline">
+                                    <div v-show="activeContentFilterControlTab === 'input'" class="pii-control-bar">
+                                        <div class="pii-control-left">
+                                            <label class="toggle-switch toggle-compact">
+                                                <input type="checkbox" v-model="guardrailConfig.content_filter.input_enabled">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <div class="pii-control-text">
+                                                <span class="pii-control-title">输入检测</span>
+                                                <span class="pii-control-sub">用户输入阶段检测有害内容</span>
+                                            </div>
+                                        </div>
+                                        <div class="pii-segmented" :class="{ disabled: !guardrailConfig.content_filter.input_enabled }">
+                                            <span class="pii-segment active" style="cursor: default;">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                拦截
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div v-show="activeContentFilterControlTab === 'output'" class="pii-control-bar">
+                                        <div class="pii-control-left">
+                                            <label class="toggle-switch toggle-compact">
+                                                <input type="checkbox" v-model="guardrailConfig.content_filter.output_enabled">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <div class="pii-control-text">
+                                                <span class="pii-control-title">输出检测</span>
+                                                <span class="pii-control-sub">模型输出阶段检测有害内容</span>
+                                            </div>
+                                        </div>
+                                        <div class="pii-segmented" :class="{ disabled: !guardrailConfig.content_filter.output_enabled }">
+                                            <span class="pii-segment active" style="cursor: default;">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                拦截
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 工具栏 -->
+                            <div class="blacklist-toolbar">
+                                <div class="rule-tabs">
+                                    <div
+                                        class="rule-tab default"
+                                        :class="{ active: activeContentFilterTab === 'system' }"
+                                        @click="switchContentFilterTab('system')"
+                                    >
+                                        <span class="tab-icon">🛡</span>
+                                        <span class="tab-label">系统类别</span>
+                                        <span class="tab-badge">{{ systemCategories.length || 0 }}</span>
+                                    </div>
+                                </div>
+                                <div class="toolbar-actions">
+                                    <button class="toolbar-btn" @click="loadContentFilterCategories(true)" :disabled="loadingContentFilter" title="刷新分类列表">
+                                        <svg class="spin" v-if="loadingContentFilter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="23 4 23 10 17 10"/>
+                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                                        </svg>
+                                        刷新
+                                    </button>
+                                    <button class="toolbar-btn danger" @click="resetContentFilterCategories" :disabled="resettingContentFilter" title="重置系统默认类别为原始配置">
+                                        <svg class="spin" v-if="resettingContentFilter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                        </svg>
+                                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="1 4 1 10 7 10"/>
+                                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                        </svg>
+                                        重置
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="blacklist-rules">
+                                <!-- 系统类别列表 -->
+                                <div class="rule-section default" v-show="activeContentFilterTab === 'system'" v-if="systemCategories.length">
+                                    <div class="rule-cards">
+                                        <div v-for="cat in paginatedSystemCategories" :key="'sys-' + cat.id" class="rule-card default" @click="openViewContentFilterModal(cat)" style="cursor: pointer;" :title="cat.description || ''">
+                                            <div class="card-accent"></div>
+                                            <div class="card-body">
+                                                <div class="card-top">
+                                                    <div style="display:flex;align-items:center;gap:8px;">
+                                                        <div class="card-name">{{ cat.name }}</div>
+                                                        <span v-if="!cat.anchors?.every(a => a.has_embedding)" class="cf-pending-dot" title="存在待向量化的锚点"></span>
+                                                    </div>
+                                                    <div style="display:flex;align-items:center;gap:8px;">
+                                                        <span class="card-pattern-text">阈值 {{ cat.threshold }}</span>
+                                                        <button class="card-pattern-btn" @click.stop="openViewAnchorsModal(cat)" title="查看锚点">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                                <polyline points="14 2 14 8 20 8"/>
+                                                            </svg>
+                                                            {{ cat.anchors?.length || 0 }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="card-action edit" @click.stop="openEditContentFilterModal(cat)" title="编辑类别">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="card-tag system">系统</div>
+                                        </div>
+                                    </div>
+                                    <!-- 分页 -->
+                                    <div v-if="systemCategories.length > contentFilterPageSize" class="table-pagination">
+                                        <button @click="prevSystemCategoriesPage" :disabled="systemCategoriesPage <= 1">上一页</button>
+                                        <span>第</span>
+                                        <input type="number" min="1" :max="systemCategoriesTotalPages" :value="systemCategoriesPage" @change="e => { const p = parseInt(e.target.value) || 1; const valid = Math.max(1, Math.min(p, systemCategoriesTotalPages)); systemCategoriesPage = valid; e.target.value = valid; }" style="width:44px;text-align:center;padding:4px 6px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-surface);color:var(--text-primary);">
+                                        <span>页 / 共 {{ systemCategoriesTotalPages }} 页</span>
+                                        <button @click="nextSystemCategoriesPage" :disabled="systemCategoriesPage >= systemCategoriesTotalPages">下一页</button>
+                                    </div>
+                                </div>
+
+                                <!-- 自定义类别列表 -->
+                                <div class="rule-section custom" v-show="activeContentFilterTab === 'custom'" v-if="customCategories.length">
+                                    <div class="rule-cards content-filter-cards">
+                                        <div v-for="cat in paginatedCustomCategories" :key="'cus-' + cat.id" class="rule-card custom" @click="openViewContentFilterModal(cat)" style="cursor: pointer;" :title="cat.description || ''">
+                                            <div class="card-accent"></div>
+                                            <div class="card-body">
+                                                <div class="card-top">
+                                                    <div style="display:flex;align-items:center;gap:8px;">
+                                                        <div class="card-name">{{ cat.name }}</div>
+                                                        <span v-if="!cat.anchors?.every(a => a.has_embedding)" class="cf-pending-dot" title="存在待向量化的锚点"></span>
+                                                    </div>
+                                                    <div style="display:flex;align-items:center;gap:8px;">
+                                                        <span class="card-pattern-text">阈值 {{ cat.threshold }}</span>
+                                                        <button class="card-pattern-btn" @click.stop="openViewAnchorsModal(cat)" title="查看锚点">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                                <polyline points="14 2 14 8 20 8"/>
+                                                            </svg>
+                                                            {{ cat.anchors?.length || 0 }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="card-action edit" @click.stop="openAddAnchorModal(cat)" title="添加锚点">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <line x1="12" y1="5" x2="12" y2="19"/>
+                                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                                    </svg>
+                                                </button>
+                                                <button class="card-action delete" @click.stop="deleteContentFilterCategory(cat.name)" title="删除类别">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                        <polyline points="3 6 5 6 21 6"/>
+                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 分页 -->
+                                    <div v-if="customCategories.length > contentFilterPageSize" class="table-pagination">
+                                        <button @click="prevCustomCategoriesPage" :disabled="customCategoriesPage <= 1">上一页</button>
+                                        <span>第</span>
+                                        <input type="number" min="1" :max="customCategoriesTotalPages" :value="customCategoriesPage" @change="e => { const p = parseInt(e.target.value) || 1; const valid = Math.max(1, Math.min(p, customCategoriesTotalPages)); customCategoriesPage = valid; e.target.value = valid; }" style="width:44px;text-align:center;padding:4px 6px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:12px;background:var(--bg-surface);color:var(--text-primary);">
+                                        <span>页 / 共 {{ customCategoriesTotalPages }} 页</span>
+                                        <button @click="nextCustomCategoriesPage" :disabled="customCategoriesPage >= customCategoriesTotalPages">下一页</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 空状态 - 系统类别 -->
+                            <div v-if="activeContentFilterTab === 'system' && !systemCategories.length && !loadingContentFilter" class="blacklist-empty">
+                                <div class="empty-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="9" y1="9" x2="15" y2="15"/>
+                                        <line x1="15" y1="9" x2="9" y2="15"/>
+                                    </svg>
+                                </div>
+                                <div class="empty-title">暂无系统类别</div>
+                                <div class="empty-desc">点击「重置」按钮加载默认类别</div>
+                            </div>
+
+                            <!-- 空状态 - 自定义类别 -->
+                            <div v-if="activeContentFilterTab === 'custom' && !customCategories.length && !loadingContentFilter" class="blacklist-empty">
+                                <div class="empty-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </div>
+                                <div class="empty-title">暂无自定义类别</div>
+                                <div class="empty-desc">点击「添加」按钮创建内容过滤类别</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 敏感信息检测 -->
+                    <div v-if="activeConfigMenu === 'pii_detection'" class="config-section">
+                        <div class="config-section-header pii-header">
+                            <div class="cf-header-top">
+                                <span class="config-title">敏感信息检测</span>
+                                <div class="cf-header-right">
+                                    <div class="cf-desc-flow">
+                                        <span class="cf-flow-step"><i>1</i>实体类型识别</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>2</i>敏感信息匹配</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>3</i>脱敏或拦截</span>
+                                    </div>
+                                    <div class="cf-header-sub">基于预设实体类型（手机号、身份证号等）自动识别输入或输出的敏感信息，支持脱敏替换或拦截阻断</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section-body">
+                            <!-- 页签和控制栏合并 -->
+                            <div class="pii-tabs-row">
+                                <div class="rule-tabs">
+                                    <div
+                                        class="rule-tab pii-tab input"
+                                        :class="{ active: activePIITab === 'input' }"
+                                        @click="switchPIITab('input')"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                        输入检测
+                                        <span v-if="guardrailConfig.pii_detection.input_enabled" class="pii-status-dot on"></span>
+                                    </div>
+                                    <div
+                                        class="rule-tab pii-tab output"
+                                        :class="{ active: activePIITab === 'output' }"
+                                        @click="switchPIITab('output')"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                        输出检测
+                                        <span v-if="guardrailConfig.pii_detection.output_enabled" class="pii-status-dot on"></span>
+                                    </div>
+                                </div>
+                                <div class="pii-control-inline">
+                                    <div v-show="activePIITab === 'input'" class="pii-control-bar">
+                                        <div class="pii-control-left">
+                                            <label class="toggle-switch toggle-compact">
+                                                <input type="checkbox" v-model="guardrailConfig.pii_detection.input_enabled">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <div class="pii-control-text">
+                                                <span class="pii-control-title">输入检测</span>
+                                                <span class="pii-control-sub">用户输入阶段检测与处理</span>
+                                            </div>
+                                        </div>
+                                        <div class="pii-segmented" :class="{ disabled: !guardrailConfig.pii_detection.input_enabled }">
+                                            <button
+                                                class="pii-segment"
+                                                :class="{ active: guardrailConfig.pii_detection.input_action_mode === 'detect' }"
+                                                @click="guardrailConfig.pii_detection.input_enabled && (guardrailConfig.pii_detection.input_action_mode = 'detect')"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                                脱敏
+                                            </button>
+                                            <button
+                                                class="pii-segment"
+                                                :class="{ active: guardrailConfig.pii_detection.input_action_mode === 'block' }"
+                                                @click="guardrailConfig.pii_detection.input_enabled && (guardrailConfig.pii_detection.input_action_mode = 'block')"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                拦截
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div v-show="activePIITab === 'output'" class="pii-control-bar">
+                                        <div class="pii-control-left">
+                                            <label class="toggle-switch toggle-compact">
+                                                <input type="checkbox" v-model="guardrailConfig.pii_detection.output_enabled">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <div class="pii-control-text">
+                                                <span class="pii-control-title">输出检测</span>
+                                                <span class="pii-control-sub">大模型输出阶段检测与处理</span>
+                                            </div>
+                                        </div>
+                                        <div class="pii-segmented" :class="{ disabled: !guardrailConfig.pii_detection.output_enabled }">
+                                            <button
+                                                class="pii-segment"
+                                                :class="{ active: guardrailConfig.pii_detection.output_action_mode === 'detect' }"
+                                                @click="guardrailConfig.pii_detection.output_enabled && (guardrailConfig.pii_detection.output_action_mode = 'detect')"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                                脱敏
+                                            </button>
+                                            <button
+                                                class="pii-segment"
+                                                :class="{ active: guardrailConfig.pii_detection.output_action_mode === 'block' }"
+                                                @click="guardrailConfig.pii_detection.output_enabled && (guardrailConfig.pii_detection.output_action_mode = 'block')"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                                拦截
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 输入敏感信息检测 -->
+                            <div v-show="activePIITab === 'input'" class="pii-tab-panel">
+                                <div class="pii-entities-compact" :class="{ disabled: !guardrailConfig.pii_detection.input_enabled }">
+                                    <div class="pii-entities-toolbar">
+                                        <div class="pii-entities-heading">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <span>检测实体</span>
+                                            <span class="pii-count-badge-sm" v-if="guardrailConfig.pii_detection.input_entities.length > 0">
+                                                {{ guardrailConfig.pii_detection.input_entities.length }}
+                                            </span>
+                                        </div>
+                                        <div class="pii-bulk-compact">
+                                            <button class="bulk-link" @click="selectAllInputPII" :disabled="!guardrailConfig.pii_detection.input_enabled">全选</button>
+                                            <span class="bulk-sep">/</span>
+                                            <button class="bulk-link" @click="deselectAllInputPII" :disabled="!guardrailConfig.pii_detection.input_enabled">清空</button>
+                                        </div>
+                                    </div>
+                                    <div class="pii-categories-compact">
+                                        <div v-for="category in piiCategories" :key="'in-' + category" class="pii-category-compact">
+                                            <div class="category-label">{{ category }}</div>
+                                            <div class="pii-tags">
+                                                <label
+                                                    v-for="opt in piiOptionsByCategory[category]"
+                                                    :key="'in-' + opt.value"
+                                                    class="pii-tag"
+                                                    :class="{ checked: guardrailConfig.pii_detection.input_entities.includes(opt.value) }"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        :value="opt.value"
+                                                        v-model="guardrailConfig.pii_detection.input_entities"
+                                                        :disabled="!guardrailConfig.pii_detection.input_enabled"
+                                                    >
+                                                    <span class="tag-dot"></span>
+                                                    <span class="tag-text">{{ opt.label }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 输出敏感信息检测 -->
+                            <div v-show="activePIITab === 'output'" class="pii-tab-panel">
+                                <div class="pii-entities-compact" :class="{ disabled: !guardrailConfig.pii_detection.output_enabled }">
+                                    <div class="pii-entities-toolbar">
+                                        <div class="pii-entities-heading">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <span>检测实体</span>
+                                            <span class="pii-count-badge-sm" v-if="guardrailConfig.pii_detection.output_entities.length > 0">
+                                                {{ guardrailConfig.pii_detection.output_entities.length }}
+                                            </span>
+                                        </div>
+                                        <div class="pii-bulk-compact">
+                                            <button class="bulk-link" @click="selectAllOutputPII" :disabled="!guardrailConfig.pii_detection.output_enabled">全选</button>
+                                            <span class="bulk-sep">/</span>
+                                            <button class="bulk-link" @click="deselectAllOutputPII" :disabled="!guardrailConfig.pii_detection.output_enabled">清空</button>
+                                        </div>
+                                    </div>
+                                    <div class="pii-categories-compact">
+                                        <div v-for="category in piiCategories" :key="'out-' + category" class="pii-category-compact">
+                                            <div class="category-label">{{ category }}</div>
+                                            <div class="pii-tags">
+                                                <label
+                                                    v-for="opt in piiOptionsByCategory[category]"
+                                                    :key="'out-' + opt.value"
+                                                    class="pii-tag"
+                                                    :class="{ checked: guardrailConfig.pii_detection.output_entities.includes(opt.value) }"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        :value="opt.value"
+                                                        v-model="guardrailConfig.pii_detection.output_entities"
+                                                        :disabled="!guardrailConfig.pii_detection.output_enabled"
+                                                    >
+                                                    <span class="tag-dot"></span>
+                                                    <span class="tag-text">{{ opt.label }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提示词防御 -->
+                    <div v-if="activeConfigMenu === 'prompt_defense'" class="config-section prompt-defense-section">
+                        <div class="config-section-header prompt-defense-header">
+                            <div class="cf-header-top">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="guardrailConfig.prompt_defense.enabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="config-title">提示词防御</span>
+                                <div class="cf-header-right">
+                                    <div class="cf-desc-flow">
+                                        <span class="cf-flow-step"><i>1</i>提示词解析</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>2</i>多维风险检测</span>
+                                        <svg class="cf-flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                                        <span class="cf-flow-step"><i>3</i>异常拦截</span>
+                                    </div>
+                                    <div class="cf-header-sub">对用户输入的提示词进行多维度深度分析，识别注入攻击、反面诱导、角色扮演等风险行为</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="config-section-body prompt-defense-body" :class="{ disabled: !guardrailConfig.prompt_defense.enabled }">
+                            <!-- 元信息栏：统计 + 检测维度 -->
+                            <div class="pd-meta-bar">
+                                <div class="pd-stats-inline">
+                                    <span class="pd-stat-mini"><b>{{ promptStats.charCount.toLocaleString() }}</b> 字符</span>
+                                    <span class="pd-stat-divider"></span>
+                                    <span class="pd-stat-mini"><b>{{ promptStats.sectionCount }}</b> 章节</span>
+                                    <span class="pd-stat-divider"></span>
+                                    <span class="pd-stat-mini"><b>{{ promptStats.attackCount }}</b> 攻击</span>
+                                    <span class="pd-stat-divider"></span>
+                                    <span class="pd-stat-mini"><b>{{ promptStats.exemptCount }}</b> 豁免</span>
+                                </div>
+                                <div class="pd-dimensions-compact">
+                                    <span class="pd-dim-label">检测维度</span>
+                                    <span class="pd-dim-tag compliance">敏感信息</span>
+                                    <span class="pd-dim-tag compliance">涉政</span>
+                                    <span class="pd-dim-tag compliance">歧视</span>
+                                    <span class="pd-dim-tag compliance">社会负面</span>
+                                    <span class="pd-dim-tag compliance">宗教</span>
+                                    <span class="pd-dim-tag compliance">低俗暴力</span>
+                                    <span class="pd-dim-tag compliance">商业违法</span>
+                                    <span class="pd-dim-tag compliance">侵权</span>
+                                    <span class="pd-dim-tag compliance">金融风险</span>
+                                    <span class="pd-dim-tag attack">提示词注入</span>
+                                    <span class="pd-dim-tag attack">反面诱导</span>
+                                    <span class="pd-dim-tag attack">角色扮演</span>
+                                    <span class="pd-dim-tag attack">逻辑陷阱</span>
+                                    <span class="pd-dim-tag attack">目标劫持</span>
+                                    <span class="pd-dim-tag exempt">业务豁免</span>
+                                </div>
+                            </div>
+
+                            <!-- 安全检测提示词 -->
+                            <div class="form-group prompt-textarea-group">
+                                <div class="prompt-textarea-header">
+                                    <label>安全检测提示词</label>
+                                    <div class="prompt-toolbar">
+                                        <button
+                                            class="prompt-toolbar-btn"
+                                            :class="{ editing: isEditingPrompt }"
+                                            @click="isEditingPrompt ? savePrompt() : editPrompt()"
+                                            :disabled="!guardrailConfig.prompt_defense.enabled"
+                                            :title="isEditingPrompt ? '保存修改' : '编辑提示词'"
+                                        >
+                                            <svg v-if="!isEditingPrompt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>
+                                            {{ isEditingPrompt ? '保存' : '编辑' }}
+                                        </button>
+                                        <button
+                                            v-if="isEditingPrompt"
+                                            class="prompt-toolbar-btn"
+                                            @click="cancelEditPrompt"
+                                            title="取消编辑"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                                <line x1="6" y1="6" x2="18" y2="18"/>
+                                            </svg>
+                                            取消
+                                        </button>
+                                        <button
+                                            class="prompt-toolbar-btn"
+                                            @click="refreshPrompt"
+                                            :disabled="refreshingPrompt"
+                                            title="刷新提示词"
+                                        >
+                                            <svg :class="{ spin: refreshingPrompt }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <polyline points="23 4 23 10 17 10"/>
+                                                <polyline points="1 20 1 14 7 14"/>
+                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                            </svg>
+                                            刷新
+                                        </button>
+                                        <button
+                                            class="prompt-toolbar-btn danger"
+                                            @click="resetPrompt"
+                                            :disabled="resettingPrompt"
+                                            title="重置为系统默认值"
+                                        >
+                                            <svg :class="{ spin: resettingPrompt }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <polyline points="1 4 1 10 7 10"/>
+                                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                            </svg>
+                                            重置
+                                        </button>
+                                        <button
+                                            class="prompt-toolbar-btn preview"
+                                            @click="previewPrompt"
+                                            title="预览提示词效果"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                            预览
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="prompt-textarea-wrapper">
+                                    <textarea
+                                        v-model="securityCheckPrompt"
+                                        :readonly="!isEditingPrompt"
+                                        :class="['readonly-textarea', { 'editable-textarea': isEditingPrompt }]"
+                                        spellcheck="false"
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="drawer-footer">
+                <button class="btn-cancel" @click="closeConfigDrawer">取消</button>
+                <button class="btn-save" @click="saveGuardrailConfig" :disabled="savingConfig">
+                    {{ savingConfig ? '保存中...' : '保存' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- 监控面板抽屉 -->
+        <div class="drawer-overlay" :class="{ show: showDashboardDrawer }"></div>
+        <div class="drawer-panel dashboard-panel" :class="{ show: showDashboardDrawer, maximized: isDashboardMaximized }">
+            <div class="drawer-header">
+                <h3>📊 监控面板</h3>
+                <div class="drawer-header-actions">
+                    <button class="drawer-maximize" @click="toggleDashboardMaximize" :title="isDashboardMaximized ? '还原' : '最大化'">
+                        <svg v-if="!isDashboardMaximized" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                        </svg>
+                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
+                        </svg>
+                    </button>
+                    <button class="drawer-close" @click="closeDashboardDrawer">&times;</button>
+                </div>
+            </div>
+            <div class="drawer-body dashboard-drawer-body">
+                <div class="dashboard-drawer-content">
+                    <!-- 工具栏 -->
+                    <div class="dashboard-toolbar">
+                        <div class="period-selector">
+                            <button :class="{ active: dashboardPeriod === '24h' }" @click="setDashboardPeriod('24h')">近24小时</button>
+                            <button :class="{ active: dashboardPeriod === '7d' }" @click="setDashboardPeriod('7d')">近7天</button>
+                            <button :class="{ active: dashboardPeriod === '30d' }" @click="setDashboardPeriod('30d')">近30天</button>
+                            <button :class="{ active: dashboardPeriod === 'all' }" @click="setDashboardPeriod('all')">全部</button>
+                        </div>
+                        <button class="refresh-btn" @click="refreshDashboard" :class="{ spinning: dashboardLoading }">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                            </svg>
+                            刷新
+                        </button>
+                    </div>
+
+                    <!-- 统计卡片 -->
+                    <div class="stats-cards-row">
+                        <div class="stat-card total">
+                            <div class="stat-card-icon">📊</div>
+                            <div class="stat-card-body">
+                                <div class="stat-card-value">{{ dashboardStats.total_requests }}</div>
+                                <div class="stat-card-label">总请求</div>
+                            </div>
+                        </div>
+                        <div class="stat-card blocked">
+                            <div class="stat-card-icon">🚫</div>
+                            <div class="stat-card-body">
+                                <div class="stat-card-value">{{ dashboardStats.blocked_requests }}</div>
+                                <div class="stat-card-label">已拦截</div>
+                            </div>
+                        </div>
+                        <div class="stat-card attack">
+                            <div class="stat-card-icon">⚠️</div>
+                            <div class="stat-card-body">
+                                <div class="stat-card-value">{{ dashboardStats.attack_requests }}</div>
+                                <div class="stat-card-label">攻击数</div>
+                            </div>
+                        </div>
+                        <div class="stat-card safe">
+                            <div class="stat-card-icon">✅</div>
+                            <div class="stat-card-body">
+                                <div class="stat-card-value">{{ dashboardStats.safety_rate }}%</div>
+                                <div class="stat-card-label">安全率</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 图表区域 -->
+                    <div class="charts-row">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h4>攻击类型分布</h4>
+                            </div>
+                            <div class="chart-body">
+                                <canvas ref="attackTypeChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h4>拦截来源分布</h4>
+                            </div>
+                            <div class="chart-body">
+                                <canvas ref="blockedByChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 趋势图 -->
+                    <div class="trend-chart-card">
+                        <div class="chart-header">
+                            <h4>安全趋势</h4>
+                        </div>
+                        <div class="chart-body">
+                            <canvas ref="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 日志表格 -->
+                    <div class="logs-table-card">
+                        <div class="table-header">
+                            <h4>最近活动记录</h4>
+                            <div class="table-filters">
+                                <select v-model="logFilter.attack_type" @change="refreshLogs">
+                                    <option value="">全部类型</option>
+                                    <option v-for="type in attackTypeOptions" :key="type" :value="type">{{ type }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-body">
+                            <table class="logs-table">
+                                <thead>
+                                    <tr>
+                                        <th>时间</th>
+                                        <th>状态</th>
+                                        <th>类型</th>
+                                        <th>检测来源</th>
+                                        <th>IP地址</th>
+                                        <th>用户输入</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="log in dashboardLogs" :key="log.id" :class="{ blocked: log.is_blocked, detected: !log.is_blocked && log.is_attack }">
+                                        <td>{{ log.access_time }}</td>
+                                        <td>
+                                            <span class="status-tag" :class="log.is_blocked ? 'status-blocked' : 'status-detected'">{{ log.is_blocked ? '拦截' : '检测' }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="tag" :class="log.attack_type || 'unknown'">{{ formatAttackType(log.attack_type) }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge" :class="log.detected_by || 'unknown'">{{ formatBlockedBy(log.detected_by) }}</span>
+                                        </td>
+                                        <td>{{ log.source_ip || '-' }}</td>
+                                        <td class="input-preview" :title="log.user_input">{{ truncate(log.user_input, 40) }}</td>
+                                    </tr>
+                                    <tr v-if="dashboardLogs.length === 0">
+                                        <td colspan="6" class="empty-row">暂无数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-pagination">
+                            <button @click="prevLogPage" :disabled="logPage <= 1">上一页</button>
+                            <span>第 {{ logPage }} 页 / 共 {{ logTotalPages }} 页</span>
+                            <button @click="nextLogPage" :disabled="logPage >= logTotalPages">下一页></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
