@@ -53,26 +53,38 @@ guardrail-jiuwen/
 ### 1. 克隆仓库
 
 ```bash
-git clone https://gitcode.com/masterchubb/guardrail-jiuwen-baseline.git guardrail-jiuwen
+git clone https://github.com/masterchubb-ctrl/guardrail-jiuwen.git guardrail-jiuwen
 cd guardrail-jiuwen
 ```
 
-### 2. 配置环境变量
+### 2. 配置大模型 API
+
+所有模型配置统一在 `.env` 文件中，代码通过环境变量读取，不在任何源码中硬编码。
 
 ```bash
-# 复制模板，填入实际 API key
+# 复制模板
 copy .env.example .env
-# 编辑 .env，设置 OPENAI_API_KEY 等配置
+# 编辑 .env，填入实际的 API key、模型地址和模型名
 ```
 
-`.env` 必须包含：
+**`.env` 配置项（完整列表）：**
 
-| 变量 | 说明 | 示例 |
-|---|---|---|
-| `OPENAI_API_KEY` | LLM API key | `sk-xxxx` |
-| `OPENAI_BASE_URL` | LLM API 地址 | `https://api.siliconflow.cn/v1` |
-| `OPENAI_MODEL` | LLM 模型名 | `Qwen/Qwen3.5-9B` |
-| `GUARDRAIL_ENABLE_PII` | PII 检测开关 | `true` |
+| 变量 | 说明 | 示例 | 必填 |
+|---|---|---|---|
+| `OPENAI_API_KEY` | LLM 安全检测模型的 API Key | `sk-xxxx` | 是 |
+| `OPENAI_BASE_URL` | LLM API 地址（OpenAI 兼容接口） | `https://api.siliconflow.cn/v1` | 是 |
+| `OPENAI_MODEL` | LLM 模型名（用于深度安全检测） | `Qwen/Qwen3.5-9B` | 是 |
+| `EMBEDDING_BASE_URL` | Embedding API 地址（内容过滤用） | `https://api.siliconflow.cn/v1` | 是 |
+| `EMBEDDING_MODEL` | Embedding 模型名 | `BAAI/bge-large-zh-v1.5` | 是 |
+| `EMBEDDING_API_KEY` | Embedding API Key（不设则复用 `OPENAI_API_KEY`） | `sk-xxxx` | 否 |
+| `GUARDRAIL_ENABLE_PII` | PII 检测总开关（engine 级别） | `true` | 否 |
+| `GUARDRAIL_API_KEY` | FastAPI 服务鉴权 Key（留空不启用） | `my-secret-key` | 否 |
+
+> **配置说明**：
+> - `OPENAI_*` 三个变量控制 LLM 深度安全检测，支持任何 OpenAI 兼容 API
+> - `EMBEDDING_*` 变量控制内容过滤的 Embedding 分类，可与 LLM 使用同一服务
+> - `GUARDRAIL_ENABLE_PII` 是 engine 级总开关，`policy/pii_config.json` 中的 `enabled` 是策略级开关，两者都为 `true` 时 PII 才生效
+> - `GUARDRAIL_API_KEY` 用于生产部署保护，留空则不启用鉴权
 
 ### 3. 安装依赖
 
