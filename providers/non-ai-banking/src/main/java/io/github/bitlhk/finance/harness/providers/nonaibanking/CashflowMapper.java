@@ -89,14 +89,19 @@ public final class CashflowMapper {
                     trend.add(new TrendPoint(expected, totals(point, "income", "expense")));
                 }
             }
-            gaps.add("UNCLASSIFIED_TRANSACTIONS_NOT_COVERED");
-        } else gaps.add("ACCOUNT_LIST_LIMIT_100");
+            if (categories.stream().anyMatch(c -> "UNCLASSIFIED".equals(c.name()))) gaps.add("CLASSIFICATION_NOT_RETURNED");
+            if (!trend.isEmpty() && totals.complete() && !totals.equals(trend.getLast().totals()))
+                gaps.add("TREND_TOTALS_CONFLICT");
+        } else {
+            gaps.add("ACCOUNT_LIST_LIMIT_100");
+            gaps.add("SOURCE_BOOKED_STATUS_NOT_VERIFIED");
+        }
         gaps.add("OTHER_BANKS_AND_CURRENCIES_NOT_COVERED");
         gaps.add("CREDIT_CARD_BILLS_NOT_ADDED_TO_CASHFLOW");
         Source source = new Source("non-ai-banking", subject, sourceSystem, version, asOf, observedAt,
                 string(policy.get("evidenceRef")), Instant.parse(string(readiness.get("asOf"))));
         return new CashflowFactsV1(VERSION, section, period, "CNY",
-                analysis ? Coverage.OWN_BANK_CLASSIFIED_BOOKED : Coverage.OWN_BANK_ACCOUNT_BOOKED,
+                analysis ? Coverage.OWN_BANK_BOOKED_WITH_CATEGORIES : Coverage.OWN_BANK_ACCOUNT_STATEMENT,
                 totals, categories, trend, source, gaps);
     }
 

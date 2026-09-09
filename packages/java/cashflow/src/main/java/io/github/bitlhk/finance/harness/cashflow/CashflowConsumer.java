@@ -10,7 +10,7 @@ public final class CashflowConsumer {
             CashflowFactsV1.Coverage coverage, CashflowFactsV1.Totals totals, List<String> gaps) { }
     public static Description describe(CashflowFactsV1 facts) {
         boolean partial = !facts.totals().complete() || facts.source().asOf() == null
-                || facts.gaps().stream().anyMatch(g -> g.endsWith("NOT_RETURNED"));
+                || facts.gaps().stream().anyMatch(g -> g.endsWith("NOT_RETURNED") || g.endsWith("NOT_VERIFIED") || g.endsWith("CONFLICT"));
         return new Description(partial ? Completeness.PARTIAL : Completeness.COMPLETE_WITHIN_DECLARED_SCOPE,
                 facts.period(), facts.currency(), facts.coverage(), facts.totals(), facts.gaps());
     }

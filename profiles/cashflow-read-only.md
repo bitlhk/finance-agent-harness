@@ -2,7 +2,7 @@
 
 CUSTOMER self-service with synthetic bank data. Install only
 `finance.transaction-summary.query` and `finance.spending-analysis.query`.
-Purpose: describe known monthly booked cashflow, category coverage and information gaps.
+Purpose: describe known monthly account statement cashflow, booked analysis and information gaps.
 
 The host must supply a currently verified bank session and separately provisioned `cashflow:read`
 grant for the subject. Required scopes and this profile never grant authority. Recheck before
