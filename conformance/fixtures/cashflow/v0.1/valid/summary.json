@@ -3,7 +3,7 @@
   "section": "SUMMARY",
   "period": "2026-08",
   "currency": "CNY",
-  "coverage": "OWN_BANK_ACCOUNT_BOOKED",
+  "coverage": "OWN_BANK_ACCOUNT_STATEMENT",
   "totals": {
     "income": "10000.00",
     "expense": "1250.50",

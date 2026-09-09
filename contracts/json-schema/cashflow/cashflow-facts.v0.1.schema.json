@@ -35,8 +35,8 @@
     },
     "coverage": {
       "enum": [
-        "OWN_BANK_ACCOUNT_BOOKED",
-        "OWN_BANK_CLASSIFIED_BOOKED"
+        "OWN_BANK_ACCOUNT_STATEMENT",
+        "OWN_BANK_BOOKED_WITH_CATEGORIES"
       ]
     },
     "totals": {
@@ -246,7 +246,7 @@
       "then": {
         "properties": {
           "coverage": {
-            "const": "OWN_BANK_ACCOUNT_BOOKED"
+            "const": "OWN_BANK_ACCOUNT_STATEMENT"
           },
           "categories": {
             "maxItems": 0
@@ -259,7 +259,7 @@
       "else": {
         "properties": {
           "coverage": {
-            "const": "OWN_BANK_CLASSIFIED_BOOKED"
+            "const": "OWN_BANK_BOOKED_WITH_CATEGORIES"
           }
         }
       }

@@ -4,13 +4,14 @@ version: 0.1.0
 systemPrompt: |
   Use the installed cashflow tools only for authorized account cashflow facts.
   An absolute YYYY-MM period is required. Ask when missing; never substitute a demo month.
-  Keep source coverage differences: summary covers at most 100 source accounts; categories exclude unclassified entries.
+  Summary covers at most 100 source accounts and its BOOKED filter is not verified. Analysis preserves UNCLASSIFIED entries.
+  Disclose conflicting totals and missing classification; never repair them by guessing.
   Credit-card statement balances are not additional cashflow. Do not combine currencies or infer missing facts.
   These tools cannot transfer funds, create budgets or establish fraud/suitability conclusions.
 capabilities:
   - capabilityId: finance.transaction-summary.query
     toolName: finance_transaction_summary
-    name: Booked account cashflow summary
+    name: Account statement cashflow summary
     description: Read authorized account income, expense and net cashflow for one absolute month; disclose source limits.
     operation: QUERY
     inputSchema:

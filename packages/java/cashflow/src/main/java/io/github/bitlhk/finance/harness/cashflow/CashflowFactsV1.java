@@ -17,7 +17,7 @@ public record CashflowFactsV1(String schemaVersion, Section section, String peri
         Source source, List<String> gaps) {
     public static final String VERSION = "finance-cashflow-facts.v0.1";
     public enum Section { SUMMARY, ANALYSIS }
-    public enum Coverage { OWN_BANK_ACCOUNT_BOOKED, OWN_BANK_CLASSIFIED_BOOKED }
+    public enum Coverage { OWN_BANK_ACCOUNT_STATEMENT, OWN_BANK_BOOKED_WITH_CATEGORIES }
 
     public CashflowFactsV1 {
         if (!VERSION.equals(schemaVersion)) throw new IllegalArgumentException("CASHFLOW_VERSION");
@@ -28,9 +28,9 @@ public record CashflowFactsV1(String schemaVersion, Section section, String peri
         if (categories.size() > 500 || gaps.stream().distinct().count() != gaps.size()
                 || gaps.stream().anyMatch(g -> !g.matches("[A-Z][A-Z0-9_]+")))
             throw new IllegalArgumentException("CASHFLOW_COLLECTION_INVALID");
-        if (section == Section.SUMMARY && (coverage != Coverage.OWN_BANK_ACCOUNT_BOOKED
+        if (section == Section.SUMMARY && (coverage != Coverage.OWN_BANK_ACCOUNT_STATEMENT
                 || !categories.isEmpty() || !trend.isEmpty())
-                || section == Section.ANALYSIS && coverage != Coverage.OWN_BANK_CLASSIFIED_BOOKED)
+                || section == Section.ANALYSIS && coverage != Coverage.OWN_BANK_BOOKED_WITH_CATEGORIES)
             throw new IllegalArgumentException("CASHFLOW_COVERAGE_MISMATCH");
         if (!totals.complete() && !gaps.contains("TOTALS_NOT_RETURNED"))
             throw new IllegalArgumentException("CASHFLOW_UNDISCLOSED_MISSING_TOTALS");
@@ -44,7 +44,11 @@ public record CashflowFactsV1(String schemaVersion, Section section, String peri
                 for (int i = 0; i < trend.size(); i++)
                     if (!month(period).minusMonths(5L - i).equals(month(trend.get(i).period())))
                         throw new IllegalArgumentException("CASHFLOW_TREND_ORDER");
+                if (totals.complete() && !totals.equals(trend.getLast().totals()) && !gaps.contains("TREND_TOTALS_CONFLICT"))
+                    throw new IllegalArgumentException("CASHFLOW_UNDISCLOSED_TREND_CONFLICT");
             }
+            if (categories.stream().anyMatch(c -> "UNCLASSIFIED".equals(c.name())) && !gaps.contains("CLASSIFICATION_NOT_RETURNED"))
+                throw new IllegalArgumentException("CASHFLOW_UNDISCLOSED_CLASSIFICATION_GAP");
             if (categories.stream().map(Category::name).distinct().count() != categories.size())
                 throw new IllegalArgumentException("CASHFLOW_DUPLICATE_CATEGORY");
             if (!gaps.contains("CATEGORIES_NOT_RETURNED") && totals.complete()) {

@@ -27,10 +27,10 @@ SQL 和迁移；手机银行 `4652b285a0bff72dd88aaf00f6acae196b8951e0` 的 fina
 | 查询账期 | 两接口 `period` | 显式 YYYY-MM，响应必须同月；缺省询问，不能落到固定演示月 | 非法/月缺失负例；Owner 待确认 |
 | 主体 | bank session 的 customerRef | 可信宿主绑定到 Context.subjectRef；带 non-ai-banking 命名空间，不猜跨系统 ID | 错主体/源会话/撤权负例 |
 | 收入、支出、净额 | `totalIncome/totalExpense/netCashflow` | 十进制字符串、两位小数、不舍入；净额=收入-支出 | 大额精度、零、缺数、矛盾负例 |
-| 币种、入账状态 | 两个 `/readiness` 的当前政策 | 必须 CNY/BOOKED；主响应无币种，不静默补默认 | 非 CNY/版本/写策略不支持时业务读取为零 |
-| 摘要范围 | BankingFacade.financialTransactionSummary | 本行账户查询前 100 项的已入账流水；不升级为全行全部账户/家庭资产 | `ACCOUNT_LIST_LIMIT_100`；范围代码审阅已核实 |
-| 分类范围 | SimulatorBankingStore spending analysis 查询 | BOOKED 流水与分类表内连接，未分类不覆盖 | 显式 gap；分类合计与自身总额核对 |
-| 趋势 | `trend` + 政策 `trendMonths=6` | 包括未分类的已入账流水；六个月顺序，末月为请求账期 | 与分类总额允许不同；缺失不造零 |
+| 币种、入账状态声明 | 两个 `/readiness` 的当前政策 | 只接受 CNY/BOOKED 声明；主响应无币种，不静默补默认；声明不等于 SQL 已过滤 | 非 CNY/版本/写策略不支持时业务读取为零 |
+| 摘要范围 | BankingFacade.financialTransactionSummary / SimulatorBankingStore.statement | 本行账户查询前 100 项的月度账单；SQL 未过滤状态，不称“已核实的已入账流水” | `ACCOUNT_LIST_LIMIT_100` + `SOURCE_BOOKED_STATUS_NOT_VERIFIED`，PARTIAL；Owner 待裁决 |
+| 分类范围 | SimulatorBankingStore.spendingAnalysis | BOOKED + CNY 流水与分类表左连接，保留 UNCLASSIFIED 及其金额 | 缺少分类标签显式报告；分类合计与自身总额核对 |
+| 趋势 | `trend` + 政策 `trendMonths=6` | 包括未分类的已入账流水；六个月顺序，末月为请求账期 | 同分析末月总额冲突标 PARTIAL；不解释为正常差异，不推断修复 |
 | 信用卡账单 | `creditCardStatementBalance` 等 | 保留原源能力；不合并进共同账户收支总额，不复制私有卡号 | 2000 元账单不加入 1250.50 元账户支出 |
 | 数据时间 | `data.asOf`、政策 asOf、观察时间 | 独立记录来源/政策/观察时间；缺时间为 PARTIAL，未来时间拒绝 | 时间缺失/未来负例 |
 | 来源版本 | summaryVersion / analysisVersion | 当前 financial-summary-v2 / spending-analysis-v1；版本变更先评审映射 | 未知版本在客户读取前拒绝 |

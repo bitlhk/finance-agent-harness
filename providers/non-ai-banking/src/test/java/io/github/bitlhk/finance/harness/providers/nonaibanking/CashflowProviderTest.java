@@ -56,8 +56,10 @@ class CashflowProviderTest {
         assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
         var facts = facts(result);
         assertEquals("8749.50", facts.totals().netCashflow());
-        assertEquals(Coverage.OWN_BANK_ACCOUNT_BOOKED, facts.coverage());
+        assertEquals(Coverage.OWN_BANK_ACCOUNT_STATEMENT, facts.coverage());
         assertTrue(facts.gaps().contains("ACCOUNT_LIST_LIMIT_100"));
+        assertTrue(facts.gaps().contains("SOURCE_BOOKED_STATUS_NOT_VERIFIED"));
+        assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(facts).completeness());
         assertFalse(json(result).contains("synthetic-private-account"));
         assertEquals(1, reads.get()); assertEquals(1, policies.get());
     }
@@ -68,7 +70,7 @@ class CashflowProviderTest {
         assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
         var analysis = facts(result);
         assertEquals("8999.50", analysis.totals().netCashflow());
-        assertEquals("8749.50", analysis.trend().getLast().totals().netCashflow());
+        assertEquals("8999.50", analysis.trend().getLast().totals().netCashflow());
         assertFalse(CashflowConsumer.comparable(summary, analysis));
         assertFalse(json(result).contains("DO_NOT_EXPOSE_RAW"));
     }
@@ -138,7 +140,7 @@ class CashflowProviderTest {
         data.put("totalIncome", "0.00"); data.put("netCashflow", "0.00");
         var zero = facts(provider.query(request(Map.of("period", "2026-08"))));
         assertEquals("0.00", zero.totals().income());
-        assertEquals(CashflowConsumer.Completeness.COMPLETE_WITHIN_DECLARED_SCOPE, CashflowConsumer.describe(zero).completeness());
+        assertFalse(zero.gaps().contains("TOTALS_NOT_RETURNED"));
     }
     @Test void mapperRejectsInexactMoneyCategoryConflictsAndBadTrend() throws Exception {
         data.put("totalIncome", 10000.0);
@@ -150,6 +152,25 @@ class CashflowProviderTest {
         assertThrows(IllegalArgumentException.class, () -> map(Section.ANALYSIS, data, policy));
         data = fixture("analysis"); data.remove("categories"); data.remove("trend");
         assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(map(Section.ANALYSIS, data, policy)).completeness());
+    }
+    @Test void unclassifiedTransactionsRetainAmountsButExposeMissingLabels() throws Exception {
+        data = fixture("analysis"); policy = fixture("analysis-policy");
+        data.put("categories", List.of(Map.of("category", "UNCLASSIFIED", "income", "10000.00", "expense", "1000.50",
+                "transactionCount", 4, "classificationVersion", "UNCLASSIFIED")));
+        var facts = map(Section.ANALYSIS, data, policy);
+        assertEquals("1000.50", facts.categories().getFirst().totals().expense());
+        assertTrue(facts.gaps().contains("CLASSIFICATION_NOT_RETURNED"));
+        assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(facts).completeness());
+    }
+    @Test void conflictingTrendIsNotMisrepresentedAsCoverageDifference() throws Exception {
+        data = fixture("analysis"); policy = fixture("analysis-policy");
+        @SuppressWarnings("unchecked") var trend = (List<Map<String,Object>>) data.get("trend");
+        trend.getLast().put("expense", "1001.50"); trend.getLast().put("netCashflow", "8998.50");
+        var facts = map(Section.ANALYSIS, data, policy);
+        assertTrue(facts.gaps().contains("TREND_TOTALS_CONFLICT"));
+        assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(facts).completeness());
+        assertEquals("8999.50", facts.totals().netCashflow());
+        assertEquals("8998.50", facts.trend().getLast().totals().netCashflow());
     }
     private static String json(Object value) {
         try { return HarnessJson.mapper().writeValueAsString(value); }
