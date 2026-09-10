@@ -15,7 +15,10 @@ public final class CashflowConsumer {
                 facts.period(), facts.currency(), facts.coverage(), facts.totals(), facts.gaps());
     }
     public static boolean comparable(CashflowFactsV1 a, CashflowFactsV1 b) {
-        return a.source().namespace().equals(b.source().namespace()) && a.source().subjectRef().equals(b.source().subjectRef())
+        return describe(a).completeness() == Completeness.COMPLETE_WITHIN_DECLARED_SCOPE
+                && describe(b).completeness() == Completeness.COMPLETE_WITHIN_DECLARED_SCOPE
+                && a.source().system().equals(b.source().system()) && a.source().recordVersion().equals(b.source().recordVersion())
+                && a.source().namespace().equals(b.source().namespace()) && a.source().subjectRef().equals(b.source().subjectRef())
                 && a.period().equals(b.period()) && a.currency().equals(b.currency()) && a.coverage() == b.coverage()
                 && a.source().asOf() != null && a.source().asOf().equals(b.source().asOf())
                 && a.totals().complete() && b.totals().complete();

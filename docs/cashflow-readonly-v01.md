@@ -12,25 +12,27 @@
 | 专业工作方法 | 一个 `cashflow-review` Skill：账期、范围、分类、趋势、缺口 | Domain Pack 正文及案例 |
 | 统一业务数据定义 | `finance-cashflow-facts.v0.1`，金额十进制字符串 | `packages/java/cashflow`，候选版本评审 |
 | 企业适配 | 源身份绑定复用、政策读取、确定性字段映射 | Provider 中的 `CashflowMapper` |
-| 场景使用边界 | `cashflow-read-only` Profile | 配置，不是实授权限 |
+| 场景使用边界 | 直接接入参考 `cashflow-read-only`；Builder 有限组合沿用 `local-read-only` | 配置，不是实授权限 |
 | 生成入口 | 配套 Builder 的有限只读配方与原生持续宿主 | Builder 原仓短分支，不复制 Base |
 
 ## 字段定义与依据表
 
-来源证据：模拟器 `162ef4e587c9e9b781bab60bf89591cf4255e579` 的 Java 合同、Facade、
-SQL 和迁移；手机银行 `4652b285a0bff72dd88aaf00f6acae196b8951e0` 的 finance-assistant
+来源证据：bitlhk 模拟器集成分支 `162ef4e587c9e9b781bab60bf89591cf4255e579` 的 Java 合同、Facade、
+SQL 和迁移（不冒充原作者主线版本）；首次盘点手机银行 `4652b285a0bff72dd88aaf00f6acae196b8951e0` 的 finance-assistant，
+本轮重新核对上游 main `db38c7f454b25f109a607308dbeb4f01de75e9d2` 的
 能力声明/Skill。`conformance/fixtures/cashflow/source` 为按合同构造的合成数据，**不是真实返回**。
 没有逐字段核实标准条款，不宣称 ISO 20022 或其他标准符合性。
 
 | 业务含义 | 源字段/接口 | 转换与适用范围 | 验证与确认状态 |
 |---|---|---|---|
 | 查询账期 | 两接口 `period` | 显式 YYYY-MM，响应必须同月；缺省询问，不能落到固定演示月 | 非法/月缺失负例；Owner 待确认 |
+| 月份与覆盖 | statement 的 UTC 月份过滤；analysis 的 FORMATDATETIME 月份 | 摘要明确 UTC；分类时区未核实；两源都未证明历史覆盖，返回零不自动代表完整 | `PERIOD_COVERAGE_NOT_VERIFIED`；分类额外 `ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED` |
 | 主体 | bank session 的 customerRef | 可信宿主绑定到 Context.subjectRef；带 non-ai-banking 命名空间，不猜跨系统 ID | 错主体/源会话/撤权负例 |
 | 收入、支出、净额 | `totalIncome/totalExpense/netCashflow` | 十进制字符串、两位小数、不舍入；净额=收入-支出 | 大额精度、零、缺数、矛盾负例 |
 | 币种、入账状态声明 | 两个 `/readiness` 的当前政策 | 只接受 CNY/BOOKED 声明；主响应无币种，不静默补默认；声明不等于 SQL 已过滤 | 非 CNY/版本/写策略不支持时业务读取为零 |
 | 摘要范围 | BankingFacade.financialTransactionSummary / SimulatorBankingStore.statement | 本行账户查询前 100 项的月度账单；SQL 未过滤状态，不称“已核实的已入账流水” | `ACCOUNT_LIST_LIMIT_100` + `SOURCE_BOOKED_STATUS_NOT_VERIFIED`，PARTIAL；Owner 待裁决 |
 | 分类范围 | SimulatorBankingStore.spendingAnalysis | BOOKED + CNY 流水与分类表左连接，保留 UNCLASSIFIED 及其金额 | 缺少分类标签显式报告；分类合计与自身总额核对 |
-| 趋势 | `trend` + 政策 `trendMonths=6` | 包括未分类的已入账流水；六个月顺序，末月为请求账期 | 同分析末月总额冲突标 PARTIAL；不解释为正常差异，不推断修复 |
+| 月份记录 | `trend` + 政策 `trendMonths=6` | 六个月来源数值、末月为请求账期；来源可能补零，不证明历史覆盖或跨月可比性 | `TREND_COMPARABILITY_NOT_VERIFIED`，禁止推算环比/改善幅度；同分析末月总额冲突标 PARTIAL |
 | 信用卡账单 | `creditCardStatementBalance` 等 | 保留原源能力；不合并进共同账户收支总额，不复制私有卡号 | 2000 元账单不加入 1250.50 元账户支出 |
 | 数据时间 | `data.asOf`、政策 asOf、观察时间 | 独立记录来源/政策/观察时间；缺时间为 PARTIAL，未来时间拒绝 | 时间缺失/未来负例 |
 | 来源版本 | summaryVersion / analysisVersion | 当前 financial-summary-v2 / spending-analysis-v1；版本变更先评审映射 | 未知版本在客户读取前拒绝 |
@@ -51,8 +53,10 @@ SQL 和迁移；手机银行 `4652b285a0bff72dd88aaf00f6acae196b8951e0` 的 fina
 5. 宿主在每次模型调用前重查当前授权，撤权清除受限记忆。Provider 的读取检查不替代这个模型边界。
 6. 只传 `period`，不允许模型传客户选择、Profile 或授权字段。调用结果在 `data.facts` 和 `data.description`。
 
-生成宿主的完整接线与回归由配套 Builder 分支提供。沿用旧的三种账户/财富组合；新收支配方暂不与旧组合交叉，
-也不因此开放转账或预算修改。只读业务查询可能产生银行自己的审计日志，不将其宣称为数据库完全零写入。
+生成宿主的完整接线与回归由配套 Builder 分支提供。三个安装单元为账户、财富、收支两项组合，形成七个非空有限组合。
+收支两项工具成套安装，但专业方法可以仅依赖其中一项；方法并不授予权限，也不是独立工具沙箱。
+新的默认收支 Domain Pack 为 0.1.1，资产引用及实际安装 Lock 应同步更新，不手改已生成旧制品。
+不开放转账或预算修改。只读业务查询可能产生银行自己的审计日志，不将其宣称为数据库完全零写入。
 
 ## 验证入口
 
