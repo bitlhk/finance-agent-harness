@@ -68,6 +68,10 @@ class FinanceAssetGovernanceContractTest {
         assertEquals("finance-harness-asset-change-proposal.v1",
                 proposal.path("schemaVersion").asText());
         assertEquals("proposed", proposal.path("status").asText());
+        assertEquals("finance-asset-catalog.v1",
+                proposal.path("catalog").path("schemaVersion").asText());
+        assertFalse(proposal.path("catalog").path("harnessRevision").asText().isBlank());
+        assertFalse(proposal.path("catalog").path("digest").asText().isBlank());
         assertFalse(proposal.path("target").path("owner").asText().isBlank());
         assertFalse(proposal.path("verification").path("entrypoint").asText().isBlank());
         String serialized = proposal.toString().toLowerCase();

@@ -2,6 +2,14 @@
   "schemaVersion": "finance-harness-asset-change-proposal.v1",
   "proposalId": "proposal-0123456789abcdef",
   "status": "proposed",
+  "catalog": {
+    "schemaVersion": "finance-asset-catalog.v1",
+    "catalogVersion": "0.2.0",
+    "catalogRevision": "2026-09-10.1",
+    "harnessRevision": "f95a4d7993e9f5917423a4999f185d0727b7f096",
+    "source": "catalog/finance-assets.v1.json",
+    "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
   "target": {
     "kind": "domain-pack",
     "id": "wealth-employee-assisted",

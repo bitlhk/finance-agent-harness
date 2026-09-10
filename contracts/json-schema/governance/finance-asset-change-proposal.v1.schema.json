@@ -4,11 +4,24 @@
   "title": "Finance Harness Asset Change Proposal V1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "proposalId", "status", "target", "parentLock", "finding", "reproduction", "proposedChange", "verification", "builderTask", "createdAt"],
+  "required": ["schemaVersion", "proposalId", "status", "catalog", "target", "parentLock", "finding", "reproduction", "proposedChange", "verification", "builderTask", "createdAt"],
   "properties": {
     "schemaVersion": {"const": "finance-harness-asset-change-proposal.v1"},
     "proposalId": {"type": "string", "pattern": "^proposal-[a-f0-9]{16}$"},
     "status": {"const": "proposed"},
+    "catalog": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["schemaVersion", "catalogVersion", "catalogRevision", "harnessRevision", "source", "digest"],
+      "properties": {
+        "schemaVersion": {"const": "finance-asset-catalog.v1"},
+        "catalogVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "catalogRevision": {"type": "string", "minLength": 1, "maxLength": 128},
+        "harnessRevision": {"type": "string", "pattern": "^[a-f0-9]{7,64}$"},
+        "source": {"type": "string", "minLength": 1, "maxLength": 512},
+        "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+      }
+    },
     "target": {
       "type": "object",
       "additionalProperties": false,
@@ -80,5 +93,18 @@
       }
     },
     "createdAt": {"type": "string", "format": "date-time"}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "target": {
+            "properties": {"kind": {"const": "external-environment"}}
+          }
+        }
+      },
+      "then": {"properties": {"catalog": {"type": "null"}}},
+      "else": {"properties": {"catalog": {"type": "object"}}}
+    }
+  ]
 }
