@@ -15,7 +15,7 @@
   "profileRef": {
     "id": "customer-self-service",
     "version": "0.1.0",
-    "source": "repo://domain-packs/wealth/customer-self-service"
+    "source": "repo://profiles"
   },
   "domainPackRefs": [
     {

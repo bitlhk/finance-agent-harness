@@ -15,7 +15,7 @@
   "profileRef": {
     "id": "employee-assisted",
     "version": "0.1.0",
-    "source": "repo://domain-packs/wealth/employee-assisted"
+    "source": "repo://profiles"
   },
   "domainPackRefs": [
     {

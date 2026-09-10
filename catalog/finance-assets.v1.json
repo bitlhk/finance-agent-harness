@@ -378,7 +378,7 @@
       "id": "wealth-management",
       "version": "0.2.3",
       "displayName": "财富管理评测包",
-      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/wealth-management",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git@e960d2e#packs/finance/wealth-management",
       "governanceRef": "finance-skill-eval",
       "compatibility": {
         "profiles": [
