@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitlhk.github.io/finance-agent-harness/schema/finance-asset-catalog.v1.schema.json",
+  "title": "Finance Asset Catalog V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "catalogVersion",
+    "catalogRevision",
+    "governancePolicies",
+    "runtimeIntegrations",
+    "profiles",
+    "domainPacks",
+    "capabilityPacks",
+    "providers",
+    "evalPacks"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "finance-asset-catalog.v1"},
+    "catalogVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+    "catalogRevision": {"type": "string", "minLength": 1, "maxLength": 128},
+    "governancePolicies": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/governancePolicy"}
+    },
+    "runtimeIntegrations": {"$ref": "#/$defs/assetCollection"},
+    "profiles": {"$ref": "#/$defs/assetCollection"},
+    "domainPacks": {"$ref": "#/$defs/assetCollection"},
+    "capabilityPacks": {"$ref": "#/$defs/assetCollection"},
+    "providers": {"$ref": "#/$defs/assetCollection"},
+    "evalPacks": {"$ref": "#/$defs/assetCollection"}
+  },
+  "$defs": {
+    "assetCollection": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/asset"}
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "displayName", "source", "governanceRef"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,127}$"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "displayName": {"type": "string", "minLength": 1, "maxLength": 160},
+        "source": {"type": "string", "minLength": 1, "maxLength": 512},
+        "artifactRef": {"type": "string", "minLength": 1, "maxLength": 512},
+        "profile": {"type": "string", "minLength": 1, "maxLength": 64},
+        "capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 3, "maxLength": 128}},
+        "requiresCapabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 3, "maxLength": 128}},
+        "dependencies": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/assetIdentity"}},
+        "compatibility": {"$ref": "#/$defs/compatibility"},
+        "governanceRef": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$"}
+      }
+    },
+    "assetIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version"],
+      "properties": {
+        "kind": {"enum": ["runtime-integration", "profile", "domain-pack", "capability-pack", "provider", "eval-pack"]},
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runtimeFamilies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 64}},
+        "runtimeLanguages": {"type": "array", "uniqueItems": true, "items": {"enum": ["java", "python", "typescript"]}},
+        "profiles": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 64}}
+      }
+    },
+    "governancePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "repository", "changeMode", "allowedChangeScopes", "approvalPolicy", "verification"],
+      "properties": {
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{2,199}$"},
+        "repository": {"type": "string", "pattern": "^https://", "maxLength": 512},
+        "changeMode": {"const": "proposal-only"},
+        "allowedChangeScopes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 100}},
+        "approvalPolicy": {"type": "string", "minLength": 1, "maxLength": 100},
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": {"enum": ["command", "document"]},
+            "value": {"type": "string", "minLength": 1, "maxLength": 512}
+          }
+        }
+      }
+    }
+  }
+}

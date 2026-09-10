@@ -4,6 +4,9 @@ version: 0.1.0
 profile: customer-self-service
 capabilities:
   - fraud.transfer-risk.assess
+capabilityPackRefs:
+  - id: risk-review-basics
+    version: 0.1.0
 scope:
   - 转账前查询已知涉诈风险
   - 输出风险结论、原因和最小证据

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,6 +19,7 @@ class OpenJiuwenDomainPackInstallerTest {
     void wealthSkillInstructionsAreInstalledAndRemovedAsRuntimePromptSection() throws Exception {
         FinanceDomainPackLoader.LoadedDomainPack pack = new FinanceDomainPackLoader().load(root().resolve(
                 "domain-packs/wealth/employee-assisted/pack.yaml"));
+        assertEquals("wealth-manager-previsit", pack.pack().capabilityPackRefs().getFirst().id());
         ReActAgent agent = new ReActAgent(AgentCard.builder()
                 .id("wealth-domain-pack-agent")
                 .name("Wealth Domain Pack Agent")

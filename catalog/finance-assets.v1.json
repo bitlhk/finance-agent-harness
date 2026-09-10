@@ -1,20 +1,41 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.1.0",
+  "catalogVersion": "0.2.0",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "OpenJiuwen Java Integration",
       "source": "repo://integrations/openjiuwen-java",
-      "artifactRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     },
     {
       "id": "employee-agent-java",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "Employee Agent Java Host Integration",
       "source": "repo://integrations/employee-agent-java",
-      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-employee-agent-java:0.1.0-SNAPSHOT"
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-employee-agent-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -22,25 +43,29 @@
       "id": "shared-read-only",
       "version": "0.1.0",
       "displayName": "共同财富只读（候选）",
-      "source": "repo://profiles/shared-read-only.md"
+      "source": "repo://profiles/shared-read-only.md",
+      "governanceRef": "finance-harness-core"
     },
     {
       "id": "customer-self-service",
       "version": "0.1.0",
       "displayName": "客户自服务",
-      "source": "repo://profiles"
+      "source": "repo://profiles",
+      "governanceRef": "finance-harness-core"
     },
     {
       "id": "employee-assisted",
       "version": "0.1.0",
       "displayName": "员工辅助",
-      "source": "repo://profiles"
+      "source": "repo://profiles",
+      "governanceRef": "finance-harness-core"
     },
     {
       "id": "internal-control",
       "version": "0.1.0",
       "displayName": "内部审核",
-      "source": "repo://profiles"
+      "source": "repo://profiles",
+      "governanceRef": "finance-harness-core"
     }
   ],
   "domainPacks": [
@@ -49,42 +74,137 @@
       "version": "0.1.0",
       "displayName": "财富事实描述（候选）",
       "profile": "shared-read-only",
-      "source": "repo://domain-packs/wealth/shared-facts"
+      "source": "repo://domain-packs/wealth/shared-facts",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "wealth.facts.describe"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-facts-description",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "shared-read-only"
+        ]
+      }
     },
     {
       "id": "wealth-customer-self-service",
       "version": "0.1.0",
       "displayName": "客户财富诊断",
       "profile": "customer-self-service",
-      "source": "repo://domain-packs/wealth/customer-self-service"
+      "source": "repo://domain-packs/wealth/customer-self-service",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "wealth.customer-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     },
     {
       "id": "wealth-employee-assisted",
       "version": "0.1.0",
       "displayName": "财富经理访前诊断",
       "profile": "employee-assisted",
-      "source": "repo://domain-packs/wealth/employee-assisted"
+      "source": "repo://domain-packs/wealth/employee-assisted",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "wealth.previsit-context.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-manager-previsit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "insurance-employee-assisted",
       "version": "0.1.0",
       "displayName": "保险顾问访前诊断",
       "profile": "employee-assisted",
-      "source": "repo://domain-packs/insurance/employee-assisted"
+      "source": "repo://domain-packs/insurance/employee-assisted",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "insurance.customer-context.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "insurance-advisor-previsit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "risk-review-internal-control",
       "version": "0.1.0",
       "displayName": "转账风险审核",
       "profile": "internal-control",
-      "source": "repo://domain-packs/risk/internal-control"
+      "source": "repo://domain-packs/risk/internal-control",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "account.balance.query",
+        "fraud.transfer-risk.assess"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "retail-banking-basics",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "risk-review-basics",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
     },
     {
       "id": "transfer-anti-fraud",
       "version": "0.1.0",
       "displayName": "面客转账反诈",
       "profile": "customer-self-service",
-      "source": "repo://domain-packs/anti-fraud"
+      "source": "repo://domain-packs/anti-fraud",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "fraud.transfer-risk.assess"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "risk-review-basics",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     }
   ],
   "capabilityPacks": [
@@ -92,31 +212,74 @@
       "id": "wealth-facts-description",
       "version": "0.1.0",
       "displayName": "财富共同事实只读能力（候选）",
-      "source": "repo://capability-packs/wealth-facts-description"
+      "source": "repo://capability-packs/wealth-facts-description",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "wealth.facts.describe"
+      ],
+      "compatibility": {
+        "profiles": [
+          "shared-read-only"
+        ]
+      }
     },
     {
       "id": "retail-banking-basics",
       "version": "0.1.0",
       "displayName": "零售银行基础能力",
-      "source": "repo://capability-packs/retail-banking-basics"
+      "source": "repo://capability-packs/retail-banking-basics",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "account.balance.query",
+        "transfer.internal.create"
+      ]
     },
     {
       "id": "wealth-manager-previsit",
       "version": "0.1.0",
       "displayName": "财富经理访前能力",
-      "source": "repo://capability-packs/wealth-manager-previsit"
+      "source": "repo://capability-packs/wealth-manager-previsit",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "wealth.previsit-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "insurance-advisor-previsit",
       "version": "0.1.0",
       "displayName": "保险顾问访前能力",
-      "source": "repo://capability-packs/insurance-advisor-previsit"
+      "source": "repo://capability-packs/insurance-advisor-previsit",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "insurance.customer-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "risk-review-basics",
       "version": "0.1.0",
       "displayName": "转账风险审核基础能力",
-      "source": "repo://capability-packs/risk-review-basics"
+      "source": "repo://capability-packs/risk-review-basics",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "account.balance.query",
+        "fraud.transfer-risk.assess"
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control",
+          "customer-self-service"
+        ]
+      }
     }
   ],
   "providers": [
@@ -125,7 +288,15 @@
       "version": "0.1.0",
       "displayName": "有授权源的财富投影 Adapter（候选）",
       "source": "repo://packages/java/wealth",
-      "capabilities": ["wealth.facts.describe"]
+      "capabilities": [
+        "wealth.facts.describe"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "shared-read-only"
+        ]
+      }
     },
     {
       "id": "non-ai-banking-reference",
@@ -135,7 +306,13 @@
       "capabilities": [
         "account.balance.query",
         "transfer.internal.create"
-      ]
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     },
     {
       "id": "fraud-mining-reference",
@@ -144,7 +321,14 @@
       "source": "repo://providers/fraud-mining",
       "capabilities": [
         "fraud.transfer-risk.assess"
-      ]
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "internal-control",
+          "customer-self-service"
+        ]
+      }
     },
     {
       "id": "employee-agent-reference",
@@ -153,7 +337,13 @@
       "source": "repo://providers/employee-agent",
       "capabilities": [
         "wealth.previsit-context.query"
-      ]
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "employee-agent-insurance-reference",
@@ -162,7 +352,13 @@
       "source": "repo://providers/employee-agent",
       "capabilities": [
         "insurance.customer-context.query"
-      ]
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -170,25 +366,94 @@
       "id": "wealth-facts-controlled",
       "version": "0.1.0",
       "displayName": "共同财富合同受控案例（非模型质量评测）",
-      "source": "repo://conformance/fixtures/wealth/v0.1"
+      "source": "repo://conformance/fixtures/wealth/v0.1",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "shared-read-only"
+        ]
+      }
     },
     {
       "id": "wealth-management",
       "version": "0.2.3",
       "displayName": "财富管理评测包",
-      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/wealth-management"
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/wealth-management",
+      "governanceRef": "finance-skill-eval",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "investment-research",
       "version": "0.1.0",
       "displayName": "投研助手评测包",
-      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/investment-research"
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/investment-research",
+      "governanceRef": "finance-skill-eval"
     },
     {
       "id": "risk-review",
       "version": "1.0.0",
       "displayName": "转账风险审核评测包",
-      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/risk-review"
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/risk-review",
+      "governanceRef": "finance-skill-eval",
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
     }
-  ]
+  ],
+  "catalogRevision": "2026-09-10.1",
+  "governancePolicies": {
+    "finance-harness-core": {
+      "owner": "finance-harness-maintainers",
+      "repository": "https://github.com/bitlhk/finance-agent-harness",
+      "changeMode": "proposal-only",
+      "allowedChangeScopes": [
+        "catalog-metadata",
+        "contract",
+        "implementation",
+        "tests"
+      ],
+      "approvalPolicy": "owner-review",
+      "verification": {
+        "kind": "command",
+        "value": "mvn -q test"
+      }
+    },
+    "finance-harness-integration": {
+      "owner": "finance-harness-maintainers",
+      "repository": "https://github.com/bitlhk/finance-agent-harness",
+      "changeMode": "proposal-only",
+      "allowedChangeScopes": [
+        "catalog-metadata",
+        "integration",
+        "tests"
+      ],
+      "approvalPolicy": "owner-review",
+      "verification": {
+        "kind": "command",
+        "value": "mvn -q -pl integrations/openjiuwen-java -am test"
+      }
+    },
+    "finance-skill-eval": {
+      "owner": "finance-skill-eval-maintainers",
+      "repository": "https://github.com/bitlhk/finance-skill-eval",
+      "changeMode": "proposal-only",
+      "allowedChangeScopes": [
+        "evaluation-pack",
+        "datasets",
+        "tests"
+      ],
+      "approvalPolicy": "owner-review",
+      "verification": {
+        "kind": "document",
+        "value": "https://github.com/bitlhk/finance-skill-eval"
+      }
+    }
+  }
 }

@@ -11,6 +11,7 @@ public record FinanceDomainPackV1(
         String version,
         String profile,
         List<String> capabilities,
+        List<AssetRef> capabilityPackRefs,
         List<Skill> skills,
         List<String> scope,
         List<String> outOfScope,
@@ -27,11 +28,20 @@ public record FinanceDomainPackV1(
         version = required(version, "version");
         profile = required(profile, "profile");
         capabilities = immutableStrings(capabilities);
+        capabilityPackRefs = capabilityPackRefs == null ? List.of() : List.copyOf(capabilityPackRefs);
+        capabilityPackRefs.forEach(ref -> Objects.requireNonNull(ref, "capabilityPackRef"));
         skills = skills == null ? List.of() : List.copyOf(skills);
         scope = immutableStrings(scope);
         outOfScope = immutableStrings(outOfScope);
         sourceReferences = immutableStrings(sourceReferences);
         skills.forEach(skill -> Objects.requireNonNull(skill, "skill"));
+    }
+
+    public record AssetRef(String id, String version) {
+        public AssetRef {
+            id = matching(id, "capabilityPackRef.id", PACK_ID);
+            version = required(version, "capabilityPackRef.version");
+        }
     }
 
     public record Skill(String directory, String entry) {

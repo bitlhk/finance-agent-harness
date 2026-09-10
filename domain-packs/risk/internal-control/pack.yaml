@@ -5,6 +5,11 @@ profile: internal-control
 capabilities:
   - account.balance.query
   - fraud.transfer-risk.assess
+capabilityPackRefs:
+  - id: retail-banking-basics
+    version: 0.1.0
+  - id: risk-review-basics
+    version: 0.1.0
 skills:
   - directory: transfer-risk-review
     entry: skills/transfer-risk-review/SKILL.md
