@@ -8,7 +8,7 @@
     "catalogRevision": "2026-09-10.1",
     "harnessRevision": "f95a4d7993e9f5917423a4999f185d0727b7f096",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    "digest": "sha256:0d7c3dda8e79026286727c4635f9faaa49b720c2e7a31b22a754023aa890943a"
   },
   "target": {
     "kind": "domain-pack",
