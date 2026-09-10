@@ -1,7 +1,7 @@
 ---
 name: cashflow-review
 description: Explain an authorized customer's account statement cashflow and booked categories/trend for an explicit month.
-version: 0.1.0
+version: 0.1.1
 allowed-tools: finance_transaction_summary finance_spending_analysis
 ---
 
@@ -31,6 +31,13 @@ Summary and analysis can differ in account range, status and time. Do not add th
 TREND_TOTALS_CONFLICT within an analysis is an unresolved source inconsistency, not an ordinary
 coverage difference. Report it without choosing or repairing a total.
 Credit-card statement balances are not extra cashflow. Do not convert currencies or call cashflow household wealth.
+
+The reference account statement groups by UTC month; the analysis SQL has no explicit business
+timezone. Disclose ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED rather than asserting both use one zone.
+PERIOD_COVERAGE_NOT_VERIFIED means a returned zero does not prove no activity across a fully covered
+period, including future or unrecorded months. TREND_COMPARABILITY_NOT_VERIFIED prohibits percentage
+changes, improvement/deterioration claims or inferred earlier totals. Show source monthly values with
+this limitation; no missing or non-comparable prior period may be invented.
 
 ## Customer Output
 

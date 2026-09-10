@@ -217,7 +217,7 @@
     },
     {
       "id": "cashflow-customer-self-service",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "收支说明专业方法（候选）",
       "profile": "customer-self-service",
       "source": "repo://domain-packs/cashflow/customer-self-service",

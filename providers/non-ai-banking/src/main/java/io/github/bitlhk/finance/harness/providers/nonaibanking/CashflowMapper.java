@@ -58,6 +58,8 @@ public final class CashflowMapper {
         if (asOf != null && asOf.isAfter(observedAt)) throw new IllegalArgumentException("CASHFLOW_SOURCE_TIME_INVALID");
         List<Category> categories = new ArrayList<>(); List<TrendPoint> trend = new ArrayList<>();
         if (analysis) {
+            gaps.add("ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED");
+            gaps.add("TREND_COMPARABILITY_NOT_VERIFIED");
             if (data.get("categories") == null) gaps.add("CATEGORIES_NOT_RETURNED");
             else {
                 Set<String> names = new HashSet<>();
@@ -97,6 +99,8 @@ public final class CashflowMapper {
             gaps.add("SOURCE_BOOKED_STATUS_NOT_VERIFIED");
         }
         gaps.add("OTHER_BANKS_AND_CURRENCIES_NOT_COVERED");
+        // Source zero-fill is not evidence that the requested historical period was covered.
+        gaps.add("PERIOD_COVERAGE_NOT_VERIFIED");
         gaps.add("CREDIT_CARD_BILLS_NOT_ADDED_TO_CASHFLOW");
         Source source = new Source("non-ai-banking", subject, sourceSystem, version, asOf, observedAt,
                 string(policy.get("evidenceRef")), Instant.parse(string(readiness.get("asOf"))));

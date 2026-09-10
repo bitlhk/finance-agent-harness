@@ -172,6 +172,23 @@ class CashflowProviderTest {
         assertEquals("8999.50", facts.totals().netCashflow());
         assertEquals("8998.50", facts.trend().getLast().totals().netCashflow());
     }
+    @Test void sourcePeriodsAndHistoryDoNotBecomeVerifiedCoverage() throws Exception {
+        data = fixture("analysis"); policy = fixture("analysis-policy");
+        var facts = map(Section.ANALYSIS, data, policy);
+        assertTrue(facts.gaps().contains("ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED"));
+        assertTrue(facts.gaps().contains("PERIOD_COVERAGE_NOT_VERIFIED"));
+        assertTrue(facts.gaps().contains("TREND_COMPARABILITY_NOT_VERIFIED"));
+        assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(facts).completeness());
+        assertFalse(CashflowConsumer.comparable(facts, facts));
+    }
+    @Test void emptyFutureMonthIsSourceZeroNotVerifiedFinancialCompleteness() {
+        data.put("period", "9999-01");
+        data.put("totalIncome", "0.00"); data.put("totalExpense", "0.00"); data.put("netCashflow", "0.00");
+        var facts = CashflowMapper.map(Section.SUMMARY, "9999-01", "customer-a", "controlled-bank", data, policy, NOW);
+        assertEquals("0.00", facts.totals().income());
+        assertTrue(facts.gaps().contains("PERIOD_COVERAGE_NOT_VERIFIED"));
+        assertEquals(CashflowConsumer.Completeness.PARTIAL, CashflowConsumer.describe(facts).completeness());
+    }
     private static String json(Object value) {
         try { return HarnessJson.mapper().writeValueAsString(value); }
         catch (java.io.IOException error) { throw new IllegalStateException(error); }

@@ -1,6 +1,6 @@
 schemaVersion: finance-domain-pack.v1
 packId: cashflow-customer-self-service
-version: 0.1.0
+version: 0.1.1
 profile: customer-self-service
 capabilities: [finance.transaction-summary.query, finance.spending-analysis.query]
 skills:
