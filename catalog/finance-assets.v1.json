@@ -305,7 +305,8 @@
       "source": "repo://providers/non-ai-banking",
       "capabilities": [
         "account.balance.query",
-        "transfer.internal.create"
+        "transfer.internal.create",
+        "wealth.customer-context.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
