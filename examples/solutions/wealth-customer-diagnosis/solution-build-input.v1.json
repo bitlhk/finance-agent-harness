@@ -24,6 +24,13 @@
       "source": "repo://domain-packs/wealth/customer-self-service"
     }
   ],
+  "capabilityPackRefs": [
+    {
+      "id": "wealth-customer-context",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/wealth-customer-context"
+    }
+  ],
   "providerRefs": [
     {
       "id": "non-ai-banking-reference",

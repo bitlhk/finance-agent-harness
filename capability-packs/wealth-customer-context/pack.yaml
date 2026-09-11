@@ -1,0 +1,19 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-customer-context
+version: 0.1.0
+systemPrompt: |
+  Use wealth_customer_context_query only for the customer already authorized by the host.
+  Customer identity comes from FinanceContext and must not be supplied by model parameters.
+  State missing information explicitly. Do not make product recommendations or return promises.
+capabilities:
+  - capabilityId: wealth.customer-context.query
+    toolName: wealth_customer_context_query
+    name: 财富客户上下文查询
+    description: 查询宿主当前已授权客户的财富上下文、数据状态、缺失项与来源证据。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties: {}
+    requiredScopes:
+      - wealth:customer:read

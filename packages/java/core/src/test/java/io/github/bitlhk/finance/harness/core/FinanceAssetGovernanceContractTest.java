@@ -7,8 +7,10 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -56,6 +58,27 @@ class FinanceAssetGovernanceContractTest {
                 assertTrue(assets.containsKey(identity), entry.getKey() + " requires " + identity);
             }
         }
+        for (Map.Entry<String, JsonNode> entry : assets.entrySet()) {
+            if (!entry.getKey().startsWith("domain-pack:")) {
+                continue;
+            }
+            Set<String> installedCapabilities = new HashSet<>();
+            for (JsonNode dependency : entry.getValue().path("dependencies")) {
+                if (!"capability-pack".equals(dependency.path("kind").asText())) {
+                    continue;
+                }
+                String identity = "capability-pack:" + dependency.path("id").asText()
+                        + "@" + dependency.path("version").asText();
+                for (JsonNode capability : assets.get(identity).path("capabilities")) {
+                    installedCapabilities.add(capability.asText());
+                }
+            }
+            for (JsonNode required : entry.getValue().path("requiresCapabilities")) {
+                assertTrue(installedCapabilities.contains(required.asText()),
+                        entry.getKey() + " does not install required capability " + required.asText());
+            }
+        }
+
         JsonNode wealth = assets.get("domain-pack:wealth-employee-assisted@0.1.0");
         assertEquals("wealth-manager-previsit",
                 wealth.path("dependencies").path(0).path("id").asText());

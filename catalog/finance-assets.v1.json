@@ -102,6 +102,13 @@
       "requiresCapabilities": [
         "wealth.customer-context.query"
       ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-customer-context",
+          "version": "0.1.0"
+        }
+      ],
       "compatibility": {
         "profiles": [
           "customer-self-service"
@@ -208,6 +215,21 @@
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "wealth-customer-context",
+      "version": "0.1.0",
+      "displayName": "客户财富上下文能力",
+      "source": "repo://capability-packs/wealth-customer-context",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "wealth.customer-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
+    },
     {
       "id": "wealth-facts-description",
       "version": "0.1.0",
@@ -408,7 +430,7 @@
       }
     }
   ],
-  "catalogRevision": "2026-09-10.1",
+  "catalogRevision": "2026-09-11.1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

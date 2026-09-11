@@ -70,6 +70,37 @@ class OpenJiuwenSolutionAssemblerTest {
     }
 
     @Test
+    void customerWealthBuilderInputInstallsRequiredCapabilityWithoutBusinessCalls() throws Exception {
+        Path inputFile = root().resolve(
+                "examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json");
+        JsonNode input = new ObjectMapper().readTree(inputFile.toFile());
+        String providerId = input.path("providerRefs").get(0).path("id").asText();
+        var captured = new AtomicReference<CapabilityRequestV1>();
+        var agent = cleanAgent("builder-input-wealth-customer-diagnosis");
+
+        try (var assembled = new OpenJiuwenSolutionAssembler().assemble(
+                root(),
+                inputFile,
+                agent,
+                Map.of(providerId, describedProvider(
+                        providerId,
+                        "wealth.customer-context.query",
+                        CapabilityRequestV1.Operation.QUERY,
+                        captured,
+                        Map.of())),
+                customerWealthDefaults(),
+                true)) {
+            assertNotNull(agent.getAbilityManager().get("wealth_customer_context_query"));
+            assertTrue(assembled.lock().assets().stream().anyMatch(asset ->
+                    asset.kind().equals("CAPABILITY_PACK")
+                            && asset.id().equals("wealth-customer-context")));
+            assertNull(captured.get(), "Assembly must not query the source");
+        }
+
+        assertNull(agent.getAbilityManager().get("wealth_customer_context_query"));
+    }
+
+    @Test
     void explicitResolutionCannotConcealWrongVersionsOrBeInferredFromASource() throws Exception {
         var json = new ObjectMapper();
         var original = root().resolve("examples/solutions/insurance-advisor-previsit/solution-build-input.v1.json");
@@ -597,6 +628,17 @@ class OpenJiuwenSolutionAssemblerTest {
                 "RETAIL_BANKING",
                 FinanceContextV1.AuthenticationLevel.STRONG,
                 Set.of("account:read", "transfer:create"));
+    }
+
+    private static OpenJiuwenFinanceBridge.InvocationDefaults customerWealthDefaults() {
+        return new OpenJiuwenFinanceBridge.InvocationDefaults(
+                "customer-wealth-001",
+                "customer-wealth-001",
+                FinanceContextV1.PrincipalType.CUSTOMER,
+                "openjiuwen-wealth-customer-example",
+                "WEALTH_DIAGNOSIS",
+                FinanceContextV1.AuthenticationLevel.STRONG,
+                Set.of("wealth:customer:read"));
     }
 
     private static OpenJiuwenFinanceBridge.InvocationDefaults employeeDefaults() {
