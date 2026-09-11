@@ -474,9 +474,16 @@
           "internal-control"
         ]
       }
+    },
+    {
+      "id": "cashflow-controlled",
+      "version": "0.1.0",
+      "displayName": "收支合同受控案例（非模型质量评测）",
+      "source": "repo://conformance/fixtures/cashflow/v0.1",
+      "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-11.2",
+  "catalogRevision": "2026-09-11.3",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
