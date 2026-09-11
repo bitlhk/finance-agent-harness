@@ -5,10 +5,10 @@
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
     "catalogVersion": "0.2.0",
-    "catalogRevision": "2026-09-10.1",
-    "harnessRevision": "f95a4d7993e9f5917423a4999f185d0727b7f096",
+    "catalogRevision": "2026-09-11.1",
+    "harnessRevision": "182073c87af97c70472a8f11cfe7bcf72411ab62",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:0d7c3dda8e79026286727c4635f9faaa49b720c2e7a31b22a754023aa890943a"
+    "digest": "sha256:3f8dad371be2abf2be4a634a6843efd1e91c399564b148ad017e7f0e6676ff25"
   },
   "target": {
     "kind": "domain-pack",
