@@ -46,6 +46,16 @@ def main():
         return Draft202012Validator(schemas[name], registry=registry, format_checker=FORMATS)
 
     count = 0
+    observation = {"schemaVersion": "finance-observation.v0.1", "requestId": "request", "processBootId": "boot",
+                   "instanceId": "instance", "sequence": 1, "spanId": "span", "component": "model",
+                   "operation": "attempt", "phase": "END", "outcome": "DENIED", "dispatch": "NOT_SENT",
+                   "at": "2026-09-11T00:00:00Z", "elapsedNanos": 10, "durationNanos": 10, "links": {}}
+    observation_validator = validator("observation-event.v0.1")
+    observation_validator.validate(observation)
+    for field, value in [("dispatch", "ASSUMED_SENT"), ("durationNanos", -1), ("links", {"body": "private"})]:
+        probe = dict(observation, **{field: value})
+        assert not observation_validator.is_valid(probe), f"Invalid observation accepted: {field}"
+    count += 4
     for path in sorted((ROOT / "conformance/fixtures/v1").rglob("*.json")):
         data = json.loads(path.read_text())
         name = path.name.split(".")[0] + ".v1"

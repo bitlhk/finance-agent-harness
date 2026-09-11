@@ -23,6 +23,11 @@ class CashflowProviderTest {
     private BoundFinanceProvider provider;
     private Map<String,Object> data, policy;
     private String bodyOverride;
+    private final List<io.github.bitlhk.finance.harness.core.observation.ObservationEventV01> observed = new ArrayList<>();
+    private io.github.bitlhk.finance.harness.core.observation.ObservationSink sink = observed::add;
+    private final io.github.bitlhk.finance.harness.core.observation.ObservationRun observationRun =
+            new io.github.bitlhk.finance.harness.core.observation.ObservationRun(
+                    "controlled-request", "boot", "instance", event -> sink.append(event));
 
     @BeforeEach void setup() throws Exception {
         data = fixture("summary"); policy = fixture("summary-policy");
@@ -43,13 +48,32 @@ class CashflowProviderTest {
         session = new AtomicReference<>(new NonAiBankingProvider.HostSession("synthetic-bank-session", "customer-a",
                 "customer-a", "session-a", Instant.now().plusSeconds(60)));
         var source = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
-                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(3), session::get));
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(3), session::get)
+                .observations(() -> observationRun));
         grant = new AtomicReference<>(grant(Set.of("cashflow:read")));
         provider = new BoundFinanceProvider(source, grant::get, Map.of(
                 NonAiBankingProvider.TRANSACTION_SUMMARY_QUERY, Set.of("cashflow:read"),
                 NonAiBankingProvider.SPENDING_ANALYSIS_QUERY, Set.of("cashflow:read")));
     }
     @AfterEach void stop() { server.stop(0); assertEquals(0, writes.get()); }
+
+    @Test void sourceAttemptsHaveActualDispatchAndNoCustomerPayload() {
+        var result = provider.query(request(Map.of("period", "2026-08")));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals(6, observed.size());
+        assertEquals(List.of(1L, 2L, 3L, 4L, 5L, 6L), observed.stream().map(e -> e.sequence()).toList());
+        assertEquals(2, observed.stream().filter(e -> e.phase().name().equals("START")).count());
+        assertEquals(2, observed.stream().filter(e -> e.phase().name().equals("END")
+                && e.dispatch().name().equals("SENT") && e.links().get("httpStatus").equals("200")).count());
+        assertFalse(json(observed).contains("customer-a"));
+        assertFalse(json(observed).contains("8749.50"));
+        assertTrue(json(observed).contains("/api/v1/finance/transaction-summary/readiness"));
+    }
+    @Test void observationSinkFailureCannotChangeFinancialResult() {
+        sink = event -> { throw new IllegalStateException("storage unavailable"); };
+        assertEquals(CapabilityResultV1.Status.COMPLETED, provider.query(request(Map.of("period", "2026-08"))).status());
+        assertEquals(1, reads.get()); assertEquals(1, policies.get());
+    }
 
     @Test void summaryUsesBankPolicyCurrencyAndDoesNotAddCardBills() {
         var result = provider.query(request(Map.of("period", "2026-08")));

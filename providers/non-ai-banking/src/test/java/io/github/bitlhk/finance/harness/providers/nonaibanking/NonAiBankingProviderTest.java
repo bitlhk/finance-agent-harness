@@ -30,6 +30,44 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NonAiBankingProviderTest {
+    @Test void explicitLoginRetryRecordsEveryTransportAttempt() throws Exception {
+        var events = new java.util.ArrayList<io.github.bitlhk.finance.harness.core.observation.ObservationEventV01>();
+        var run = new io.github.bitlhk.finance.harness.core.observation.ObservationRun("req", "boot", "instance", events::add);
+        server.removeContext("/api/v1/accounts");
+        server.createContext("/api/v1/accounts", exchange -> {
+            int attempt = accountHits.incrementAndGet();
+            writeJson(exchange, attempt == 1 ? 401 : 200, attempt == 1 ? "{}"
+                    : "{\"status\":\"SUCCESS\",\"data\":{\"accounts\":[]}}");
+        });
+        var observed = new NonAiBankingProvider(NonAiBankingProvider.Config.simulator(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), "test-login", "test-secret")
+                .observations(() -> run));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, observed.query(request(Map.of())).status());
+        assertEquals(2, accountHits.get()); assertEquals(2, sessionHits.get());
+        assertEquals(4, events.stream().filter(e -> e.phase().name().equals("SIGNAL") && e.dispatch().name().equals("SENT")).count());
+        assertEquals(List.of("200", "401", "200", "200"), events.stream()
+                .filter(e -> e.phase().name().equals("END")).map(e -> e.links().get("httpStatus")).toList());
+    }
+
+    @Test void transportTimeoutRecordsAttemptAndDoesNotInventResponse() throws Exception {
+        var events = new java.util.ArrayList<io.github.bitlhk.finance.harness.core.observation.ObservationEventV01>();
+        var run = new io.github.bitlhk.finance.harness.core.observation.ObservationRun("req", "boot", "instance", events::add);
+        server.removeContext("/api/v1/accounts");
+        server.createContext("/api/v1/accounts", exchange -> {
+            accountHits.incrementAndGet();
+            try { Thread.sleep(300); } catch (InterruptedException failure) { Thread.currentThread().interrupt(); }
+            exchange.close();
+        });
+        var observed = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), java.time.Duration.ofMillis(100),
+                () -> new NonAiBankingProvider.HostSession("bank", "customer-demo-001", "customer-demo-001",
+                        "session-contract-001", Instant.now().plusSeconds(60))).observations(() -> run));
+        assertEquals(CapabilityResultV1.Status.FAILED, observed.query(request(Map.of())).status());
+        assertEquals(1, accountHits.get()); assertEquals(0, sessionHits.get());
+        assertEquals("ERROR", events.getLast().outcome().name());
+        assertEquals("SENT", events.getLast().dispatch().name());
+        assertFalse(events.getLast().links().containsKey("httpStatus"));
+    }
     @Test
     void hostSessionIsRecheckedWithoutAutomaticLogin() {
         var grant = new AtomicReference<>(new NonAiBankingProvider.HostSession("host-bank-session", "customer-demo-001",

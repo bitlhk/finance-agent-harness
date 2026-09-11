@@ -824,6 +824,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     }
 
     public static final class Config {
+        private Supplier<io.github.bitlhk.finance.harness.core.observation.ObservationRun> observationRun = () -> null;
         private Supplier<HostSession> hostSession;
         private Consumer<HttpObservation> observer = observation -> { };
         private final URI baseUri;
@@ -834,6 +835,12 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         private final String appVersion;
         private final Duration timeout;
         private final String stepUpCode;
+
+        /** Trusted host request scope; never supplied by model arguments. */
+        public Config observations(Supplier<io.github.bitlhk.finance.harness.core.observation.ObservationRun> current) {
+            this.observationRun = Objects.requireNonNull(current);
+            return this;
+        }
 
         /** The supplier must revalidate the bank session and current host authorization on every call. */
         public static Config hostSession(URI baseUri, Duration timeout, Supplier<HostSession> currentSession) {
@@ -935,7 +942,6 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 ensureSession(context);
                 HttpResponse<String> response = sendGet(path, query, context, sessionId.get());
-                config.observer.accept(new HttpObservation("GET", observationRoute(path), response.statusCode(), Instant.now()));
                 if (response.statusCode() == 401 && config.hostSession == null) {
                     sessionId.set(null);
                     strongAuthentication = false;
@@ -960,7 +966,6 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 ensureSession(context);
                 HttpResponse<String> response = sendGet(path, Map.of(), context, sessionId.get());
-                config.observer.accept(new HttpObservation("GET", observationRoute(path), response.statusCode(), Instant.now()));
                 if (response.statusCode() != 200) throw transportFailure(context, "SOURCE_POLICY_UNAVAILABLE", "Source policy is unavailable");
                 JsonNode tree = JSON.readTree(response.body());
                 if (tree == null || !tree.isObject()) throw transportFailure(context, "SOURCE_POLICY_INVALID", "Source policy must be an object");
@@ -1048,8 +1053,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                     .POST(HttpRequest.BodyPublishers.ofString(
                             JSON.writeValueAsString(body), StandardCharsets.UTF_8))
                     .build();
-            Response response = parse(http.send(request,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)), context);
+            Response response = parse(observedSend(request, "/api/v1/sessions", context), context);
             Object value = response.data().get("sessionId");
             if (value == null || String.valueOf(value).isBlank()) {
                 throw new ProviderFailure(
@@ -1064,7 +1068,14 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         }
 
         private static String observationRoute(String path) {
-            return path.startsWith("/api/v1/accounts/") ? "/api/v1/accounts/{accountId}" : path;
+            if (path.startsWith("/api/v1/accounts/")) return "/api/v1/accounts/{accountId}";
+            if (path.startsWith("/api/v1/tasks/")) return "/api/v1/tasks/{taskId}";
+            return Set.of("/api/v1/accounts", "/api/v1/sessions", "/api/v1/sessions/current",
+                    "/api/v1/sessions/step-up", "/api/v1/wealth/aggregate",
+                    "/api/v1/finance/risk-assessment", "/api/v1/finance/transaction-summary",
+                    "/api/v1/finance/transaction-summary/readiness", "/api/v1/finance/spending-analysis",
+                    "/api/v1/finance/spending-analysis/readiness", "/api/v1/tasks",
+                    "/api/v1/preferences/channel").contains(path) ? path : "/unclassified";
         }
 
         private void verifySessionCustomer(FinanceContextV1 context) {
@@ -1079,11 +1090,11 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                 Map<String, String> query,
                 FinanceContextV1 context,
                 String session) throws Exception {
-            return http.send(requestBuilder(path + encodeQuery(query), context)
+            return observedSend(requestBuilder(path + encodeQuery(query), context)
                             .header(SESSION_HEADER, session)
                             .GET()
                             .build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    path, context);
         }
 
         private HttpResponse<String> sendPost(
@@ -1091,13 +1102,39 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                 Object body,
                 FinanceContextV1 context,
                 String session) throws Exception {
-            return http.send(requestBuilder(path, context)
+            return observedSend(requestBuilder(path, context)
                             .header(SESSION_HEADER, session)
                             .header("Content-Type", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(
                                     JSON.writeValueAsString(body), StandardCharsets.UTF_8))
                             .build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    path, context);
+        }
+
+        private HttpResponse<String> observedSend(HttpRequest request, String path,
+                                                   FinanceContextV1 context) throws Exception {
+            io.github.bitlhk.finance.harness.core.observation.ObservationRun.Span span = null;
+            try {
+                var run = config.observationRun.get();
+                if (run != null) span = run.start(null, "provider-http", "attempt", Map.of(
+                        "route", observationRoute(path), "method", request.method(),
+                        "harnessRequestId", context.requestId(), "harnessTraceId", context.traceId()));
+            } catch (RuntimeException ignored) { }
+            try {
+                if (span != null) span.dispatched();
+                var response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                if (span != null) span.finish(
+                        io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.RETURNED,
+                        Map.of("httpStatus", Integer.toString(response.statusCode())));
+                try { if ("GET".equals(request.method())) config.observer.accept(new HttpObservation(request.method(), observationRoute(path),
+                        response.statusCode(), Instant.now())); } catch (RuntimeException ignored) { }
+                return response;
+            } catch (Exception failure) {
+                if (span != null) span.finish(
+                        io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.ERROR,
+                        Map.of("exceptionType", failure.getClass().getSimpleName()));
+                throw failure;
+            } finally { if (span != null) span.close(); }
         }
 
         private HttpRequest.Builder requestBuilder(String path, FinanceContextV1 context) {
