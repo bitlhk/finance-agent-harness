@@ -79,7 +79,8 @@ def main():
     proposal_schema = validator("finance-asset-change-proposal.v1")
     proposal_schema.validate(proposal)
     count += 1
-    expected_catalog_digest = "sha256:" + hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+    canonical_catalog = catalog_path.read_text().encode()
+    expected_catalog_digest = "sha256:" + hashlib.sha256(canonical_catalog).hexdigest()
     assert proposal["catalog"]["schemaVersion"] == catalog["schemaVersion"], (
         "Proposal catalog schema does not match the published Catalog"
     )
