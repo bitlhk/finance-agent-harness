@@ -367,6 +367,7 @@ class OpenJiuwenSolutionAssemblerTest {
     @Test
     void riskReviewSolutionBindsEachCapabilityToItsDeclaredProvider() throws Exception {
         Path root = root();
+        Path catalogResolvedInput = catalogResolvedRiskReviewInput();
         AtomicReference<CapabilityRequestV1> accountRequest = new AtomicReference<>();
         AtomicReference<CapabilityRequestV1> fraudRequest = new AtomicReference<>();
         FinanceProvider accountProvider = describedProvider(
@@ -386,7 +387,7 @@ class OpenJiuwenSolutionAssemblerTest {
         OpenJiuwenSolutionAssembler.AssembledSolution solution =
                 new OpenJiuwenSolutionAssembler().assemble(
                         root,
-                        root.resolve("examples/solutions/openjiuwen-risk-review/solution.yaml"),
+                        catalogResolvedInput,
                         cleanAgent,
                         Map.of(
                                 "non-ai-banking-reference", accountProvider,
@@ -426,6 +427,37 @@ class OpenJiuwenSolutionAssemblerTest {
 
         assertNull(cleanAgent.getAbilityManager().get("account_balance_query"));
         assertNull(cleanAgent.getAbilityManager().get("fraud_transfer_risk_assess"));
+    }
+
+    private Path catalogResolvedRiskReviewInput() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        var input = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(root().resolve(
+                "examples/solutions/risk-review/solution-build-input.v1.json").toFile());
+        JsonNode catalog = json.readTree(root().resolve("catalog/finance-assets.v1.json").toFile());
+        JsonNode domain = java.util.stream.StreamSupport.stream(
+                        catalog.path("domainPacks").spliterator(), false)
+                .filter(asset -> asset.path("id").asText().equals("risk-review-internal-control"))
+                .findFirst()
+                .orElseThrow();
+        var capabilityPackRefs = input.putArray("capabilityPackRefs");
+        for (JsonNode dependency : domain.path("dependencies")) {
+            if (!dependency.path("kind").asText().equals("capability-pack")) {
+                continue;
+            }
+            JsonNode capabilityPack = java.util.stream.StreamSupport.stream(
+                            catalog.path("capabilityPacks").spliterator(), false)
+                    .filter(asset -> asset.path("id").asText().equals(dependency.path("id").asText())
+                            && asset.path("version").asText().equals(dependency.path("version").asText()))
+                    .findFirst()
+                    .orElseThrow();
+            capabilityPackRefs.addObject()
+                    .put("id", capabilityPack.path("id").asText())
+                    .put("version", capabilityPack.path("version").asText())
+                    .put("source", capabilityPack.path("source").asText());
+        }
+        Path candidate = temporaryDirectory.resolve("catalog-resolved-risk-review.json");
+        json.writeValue(candidate.toFile(), input);
+        return candidate;
     }
 
     @Test

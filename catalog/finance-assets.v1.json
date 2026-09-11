@@ -175,11 +175,6 @@
       "dependencies": [
         {
           "kind": "capability-pack",
-          "id": "retail-banking-basics",
-          "version": "0.1.0"
-        },
-        {
-          "kind": "capability-pack",
           "id": "risk-review-basics",
           "version": "0.1.0"
         }
@@ -430,7 +425,7 @@
       }
     }
   ],
-  "catalogRevision": "2026-09-11.1",
+  "catalogRevision": "2026-09-11.2",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
