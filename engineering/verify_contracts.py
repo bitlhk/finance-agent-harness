@@ -1,6 +1,7 @@
 """Offline JSON Schema and fixture gate; never resolves references over the network."""
 
 import copy
+import hashlib
 import json
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
@@ -77,6 +78,20 @@ def main():
     proposal = json.loads(proposal_path.read_text())
     proposal_schema = validator("finance-asset-change-proposal.v1")
     proposal_schema.validate(proposal)
+    count += 1
+    expected_catalog_digest = "sha256:" + hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+    assert proposal["catalog"]["schemaVersion"] == catalog["schemaVersion"], (
+        "Proposal catalog schema does not match the published Catalog"
+    )
+    assert proposal["catalog"]["catalogVersion"] == catalog["catalogVersion"], (
+        "Proposal catalog version does not match the published Catalog"
+    )
+    assert proposal["catalog"]["catalogRevision"] == catalog["catalogRevision"], (
+        "Proposal catalog revision does not match the published Catalog"
+    )
+    assert proposal["catalog"]["digest"] == expected_catalog_digest, (
+        "Proposal catalog digest does not match the published Catalog"
+    )
     count += 1
 
     invalid_catalog = copy.deepcopy(catalog)
