@@ -44,3 +44,11 @@ provider/provider-descriptor.v1.schema.json
 - 不引用 OpenJiuwen、手机银行或 non-ai-banking 私有类型。
 
 Principal、Profile、Policy、Approval 和 Runtime Capability 暂不作为独立运行合同。只有真实链路证明四个运行合同无法表达时，才通过 ADR 增加。
+资产发现与跨仓治理使用两个构建期合同：
+
+```text
+catalog/finance-asset-catalog.v1.schema.json
+governance/finance-asset-change-proposal.v1.schema.json
+```
+
+Catalog 记录资产身份、依赖、兼容关系和治理策略。Change Proposal 记录 Builder 发现的外部资产问题、父 Lock、脱敏复现条件和验证入口；它只是一份待 Owner 审核的建议，不授予 Builder 修改、提交或发布 Harness 资产的权限。

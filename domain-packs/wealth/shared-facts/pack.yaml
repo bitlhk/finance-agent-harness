@@ -4,6 +4,9 @@ version: 0.1.0
 profile: shared-read-only
 capabilities:
   - wealth.facts.describe
+capabilityPackRefs:
+  - id: wealth-facts-description
+    version: 0.1.0
 skills:
   - directory: wealth-facts-description
     entry: skills/wealth-facts-description/SKILL.md

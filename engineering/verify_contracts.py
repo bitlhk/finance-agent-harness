@@ -1,6 +1,7 @@
 """Offline JSON Schema and fixture gate; never resolves references over the network."""
 
 import copy
+import hashlib
 import json
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
@@ -27,8 +28,18 @@ def main():
         Draft202012Validator.check_schema(schema)
         schemas[path.name.removesuffix(".schema.json")] = schema
         registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
-    required = {"finance-context.v1", "capability-request.v1", "capability-result.v1", "evidence-receipt.v1",
-                "provider-descriptor.v1", "capability-pack.v1", "domain-pack.v1", "solution-build-input.v1"}
+    required = {
+        "finance-context.v1",
+        "capability-request.v1",
+        "capability-result.v1",
+        "evidence-receipt.v1",
+        "provider-descriptor.v1",
+        "capability-pack.v1",
+        "domain-pack.v1",
+        "solution-build-input.v1",
+        "finance-asset-catalog.v1",
+        "finance-asset-change-proposal.v1",
+    }
     assert required <= schemas.keys(), f"Missing required schemas: {required - schemas.keys()}"
 
     def validator(name):
@@ -56,6 +67,109 @@ def main():
         if path.name in {"solution.yaml", "solution-without-domain.yaml", "solution-build-input.v1.json"}:
             validator("solution-build-input.v1").validate(yaml.safe_load(path.read_text()))
             count += 1
+
+    catalog_path = ROOT / "catalog/finance-assets.v1.json"
+    catalog = json.loads(catalog_path.read_text())
+    catalog_schema = validator("finance-asset-catalog.v1")
+    catalog_schema.validate(catalog)
+    count += 1
+
+    proposal_path = ROOT / "examples/governance/finance-asset-change-proposal.v1.json"
+    proposal = json.loads(proposal_path.read_text())
+    proposal_schema = validator("finance-asset-change-proposal.v1")
+    proposal_schema.validate(proposal)
+    count += 1
+    canonical_catalog = catalog_path.read_text().encode()
+    expected_catalog_digest = "sha256:" + hashlib.sha256(canonical_catalog).hexdigest()
+    assert proposal["catalog"]["schemaVersion"] == catalog["schemaVersion"], (
+        "Proposal catalog schema does not match the published Catalog"
+    )
+    assert proposal["catalog"]["catalogVersion"] == catalog["catalogVersion"], (
+        "Proposal catalog version does not match the published Catalog"
+    )
+    assert proposal["catalog"]["catalogRevision"] == catalog["catalogRevision"], (
+        "Proposal catalog revision does not match the published Catalog"
+    )
+    assert proposal["catalog"]["digest"] == expected_catalog_digest, (
+        "Proposal catalog digest does not match the published Catalog"
+    )
+    count += 1
+
+    invalid_catalog = copy.deepcopy(catalog)
+    invalid_catalog["reviewInvalidField"] = True
+    assert not catalog_schema.is_valid(invalid_catalog), "Catalog accepted an unknown field"
+    count += 1
+
+    invalid_proposal = copy.deepcopy(proposal)
+    invalid_proposal["reviewInvalidField"] = True
+    assert not proposal_schema.is_valid(invalid_proposal), "Proposal accepted an unknown field"
+    count += 1
+
+    for required_snapshot_field in ("harnessRevision", "digest"):
+        invalid_proposal = copy.deepcopy(proposal)
+        invalid_proposal["catalog"].pop(required_snapshot_field)
+        assert not proposal_schema.is_valid(invalid_proposal), (
+            f"Proposal accepted catalog without {required_snapshot_field}"
+        )
+        count += 1
+
+    invalid_proposal = copy.deepcopy(proposal)
+    invalid_proposal["status"] = "accepted"
+    assert not proposal_schema.is_valid(invalid_proposal), "Proposal accepted a non-proposed status"
+    count += 1
+
+    external_proposal = copy.deepcopy(proposal)
+    external_proposal["target"]["kind"] = "external-environment"
+    external_proposal["catalog"] = None
+    proposal_schema.validate(external_proposal)
+    count += 1
+
+    invalid_external_proposal = copy.deepcopy(external_proposal)
+    invalid_external_proposal["catalog"] = proposal["catalog"]
+    assert not proposal_schema.is_valid(invalid_external_proposal), (
+        "External-environment proposal accepted a catalog snapshot"
+    )
+    count += 1
+
+    invalid_asset_proposal = copy.deepcopy(proposal)
+    invalid_asset_proposal["catalog"] = None
+    assert not proposal_schema.is_valid(invalid_asset_proposal), (
+        "Catalog-managed asset proposal accepted a null catalog snapshot"
+    )
+    count += 1
+
+    catalog_capability_packs = {
+        (asset["id"], asset["version"]): asset
+        for asset in catalog["capabilityPacks"]
+    }
+    for domain_asset in catalog["domainPacks"]:
+        dependency_keys = [
+            (dependency["id"], dependency["version"])
+            for dependency in domain_asset.get("dependencies", [])
+            if dependency["kind"] == "capability-pack"
+        ]
+        source = domain_asset["source"]
+        if not source.startswith("repo://"):
+            continue
+        manifest_path = ROOT / source.removeprefix("repo://") / "pack.yaml"
+        manifest = yaml.safe_load(manifest_path.read_text())
+        manifest_keys = [
+            (reference["id"], reference["version"])
+            for reference in manifest.get("capabilityPackRefs", [])
+        ]
+        assert dependency_keys == manifest_keys, (
+            f"Catalog and Domain Pack dependencies differ: {domain_asset['id']}"
+        )
+        capability_owner = {}
+        for dependency_key in dependency_keys:
+            capability_pack = catalog_capability_packs[dependency_key]
+            for capability in capability_pack.get("capabilities", []):
+                previous = capability_owner.setdefault(capability, dependency_key)
+                assert previous == dependency_key, (
+                    f"{domain_asset['id']} installs duplicate capability {capability} "
+                    f"from {previous[0]} and {dependency_key[0]}"
+                )
+        count += 1
 
     result_schema = validator("capability-result.v1")
     original = json.loads((ROOT / "conformance/fixtures/v1/valid/capability-result.need-confirmation.json").read_text())

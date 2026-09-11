@@ -4,6 +4,9 @@ version: 0.1.0
 profile: employee-assisted
 capabilities:
   - insurance.customer-context.query
+capabilityPackRefs:
+  - id: insurance-advisor-previsit
+    version: 0.1.0
 skills:
   - directory: insurance-previsit-diagnosis
     entry: skills/insurance-previsit-diagnosis/SKILL.md

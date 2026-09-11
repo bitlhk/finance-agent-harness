@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "finance-harness-asset-change-proposal.v1",
+  "proposalId": "proposal-0123456789abcdef",
+  "status": "proposed",
+  "catalog": {
+    "schemaVersion": "finance-asset-catalog.v1",
+    "catalogVersion": "0.2.0",
+    "catalogRevision": "2026-09-11.2",
+    "harnessRevision": "7a76a224d82ffce59adcbf4a1387330a7771c9dd",
+    "source": "catalog/finance-assets.v1.json",
+    "digest": "sha256:b9fe5888b5062bcffa510b7cb02f7e0e817cf6d187918e139173db42f52ca4d3"
+  },
+  "target": {
+    "kind": "domain-pack",
+    "id": "wealth-employee-assisted",
+    "version": "0.1.0",
+    "source": "repo://domain-packs/wealth/employee-assisted",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "governanceRef": "finance-harness-core",
+    "owner": "finance-harness-maintainers"
+  },
+  "parentLock": {
+    "solutionId": "wealth-manager-previsit-demo",
+    "lockDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "finding": {
+    "id": "finding-domain-pack-001",
+    "category": "solution-assets",
+    "summary": "The published domain guidance requires owner review.",
+    "evidenceRefs": [{"kind": "workspace-path", "locator": "evidence/evaluation-report.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]
+  },
+  "reproduction": {
+    "conditions": ["Use the frozen evaluation snapshot referenced by the parent report."],
+    "redaction": "public-safe"
+  },
+  "proposedChange": {
+    "summary": "Review the affected guidance and publish a new immutable asset version.",
+    "scopes": ["implementation", "tests"]
+  },
+  "verification": {
+    "entrypoint": "mvn -q test",
+    "priorResultRefs": [{"kind": "workspace-path", "locator": "evidence/evaluation-report.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]
+  },
+  "builderTask": {
+    "taskId": "wealth-manager-previsit-build",
+    "sourceRevision": "b5041157461d2c09732412272a028bdc957b4e1d"
+  },
+  "createdAt": "2026-09-10T11:30:00Z"
+}

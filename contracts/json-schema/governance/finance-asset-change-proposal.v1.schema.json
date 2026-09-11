@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitlhk.github.io/finance-agent-harness/schema/finance-asset-change-proposal.v1.schema.json",
+  "title": "Finance Harness Asset Change Proposal V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "proposalId", "status", "catalog", "target", "parentLock", "finding", "reproduction", "proposedChange", "verification", "builderTask", "createdAt"],
+  "properties": {
+    "schemaVersion": {"const": "finance-harness-asset-change-proposal.v1"},
+    "proposalId": {"type": "string", "pattern": "^proposal-[a-f0-9]{16}$"},
+    "status": {"const": "proposed"},
+    "catalog": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["schemaVersion", "catalogVersion", "catalogRevision", "harnessRevision", "source", "digest"],
+      "properties": {
+        "schemaVersion": {"const": "finance-asset-catalog.v1"},
+        "catalogVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "catalogRevision": {"type": "string", "minLength": 1, "maxLength": 128},
+        "harnessRevision": {"type": "string", "pattern": "^[a-f0-9]{7,64}$"},
+        "source": {"type": "string", "minLength": 1, "maxLength": 512},
+        "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "version", "source", "digest", "governanceRef", "owner"],
+      "properties": {
+        "kind": {"enum": ["runtime-integration", "profile", "domain-pack", "capability-pack", "provider", "eval-pack", "external-environment"]},
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "source": {"type": "string", "minLength": 1, "maxLength": 512},
+        "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "governanceRef": {"type": "string", "minLength": 1, "maxLength": 64},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 200}
+      }
+    },
+    "parentLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["solutionId", "lockDigest"],
+      "properties": {
+        "solutionId": {"type": "string", "minLength": 1, "maxLength": 128},
+        "lockDigest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "category", "summary", "evidenceRefs"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "category": {"type": "string", "minLength": 1, "maxLength": 100},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "evidenceRefs": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "reproduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conditions", "redaction"],
+      "properties": {
+        "conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "redaction": {"const": "public-safe"}
+      }
+    },
+    "proposedChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "scopes"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "scopes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 100}}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entrypoint", "priorResultRefs"],
+      "properties": {
+        "entrypoint": {"type": "string", "minLength": 1, "maxLength": 512},
+        "priorResultRefs": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "builderTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "sourceRevision"],
+      "properties": {
+        "taskId": {"type": "string", "minLength": 1, "maxLength": 200},
+        "sourceRevision": {"type": "string", "pattern": "^[a-f0-9]{7,64}$"}
+      }
+    },
+    "createdAt": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "target": {
+            "properties": {"kind": {"const": "external-environment"}}
+          }
+        }
+      },
+      "then": {"properties": {"catalog": {"type": "null"}}},
+      "else": {"properties": {"catalog": {"type": "object"}}}
+    }
+  ]
+}

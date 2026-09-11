@@ -4,6 +4,9 @@ version: 0.1.0
 profile: customer-self-service
 capabilities:
   - wealth.customer-context.query
+capabilityPackRefs:
+  - id: wealth-customer-context
+    version: 0.1.0
 skills:
   - directory: wealth-customer-diagnosis
     entry: skills/wealth-customer-diagnosis/SKILL.md

@@ -4,6 +4,9 @@ version: 0.1.0
 profile: employee-assisted
 capabilities:
   - wealth.previsit-context.query
+capabilityPackRefs:
+  - id: wealth-manager-previsit
+    version: 0.1.0
 skills:
   - directory: wealth-previsit-diagnosis
     entry: skills/wealth-previsit-diagnosis/SKILL.md

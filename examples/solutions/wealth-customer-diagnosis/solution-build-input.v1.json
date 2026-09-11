@@ -15,13 +15,20 @@
   "profileRef": {
     "id": "customer-self-service",
     "version": "0.1.0",
-    "source": "repo://domain-packs/wealth/customer-self-service"
+    "source": "repo://profiles"
   },
   "domainPackRefs": [
     {
       "id": "wealth-customer-self-service",
       "version": "0.1.0",
       "source": "repo://domain-packs/wealth/customer-self-service"
+    }
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "wealth-customer-context",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/wealth-customer-context"
     }
   ],
   "providerRefs": [
