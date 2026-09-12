@@ -24,6 +24,9 @@ The original all-capability candidate remains immutable; the UI generation adds
 catalog/version alignment and a quota test that respects operator configuration.
 
 Evidence root: `/home/ubuntu/outputs/model-snapshot-release-v01/`.
+The repository manifest `evidence/model-snapshot-release-v01.json` records
+SHA-256 and byte counts of fifteen explicit reports, environment inventories and
+Locks. It excludes login/session material and captured model/customer bodies.
 
 | Evidence | Actual result | Boundary |
 | --- | --- | --- |
@@ -32,7 +35,7 @@ Evidence root: `/home/ubuntu/outputs/model-snapshot-release-v01/`.
 | history/report.json | 51 checks | Controlled slow/failure/interruption/recovery with capture enabled |
 | long-context-2/report.json | 142 checks | Actual native prepared request reaches BYTE_LIMIT; no injected truncation marker |
 | live/report.json | 22 checks | Configured deepseek-v4-flash, full synthetic bank, summary/analysis/balance/wealth plus revocation |
-| ui-runtime-tests.xml | 457 Python tests passed | Builder module regression |
+| final-builder-tests.xml | 457 Python tests passed, 11.08 s | Final Builder module regression; earlier ui-runtime-tests.xml also passed |
 | ui-build-3/report.json | 11 checks | Actual page balance generation, Lock, history filtering and actual truncation |
 | layout-fix-3/report.json | 9 checks | Request/response at 1440/768/390 widths, full model-step screenshots, no history reexecution |
 
@@ -115,3 +118,17 @@ Actual-model smoke uses separately supplied server-side model and synthetic bank
 configuration. Do not put credentials in generated artifacts. Historical reads
 require the owner session plus separate snapshot-view authorization.
 See Builder `docs/model-snapshots-v01.md` for settings and capture limitations.
+
+## Five-stage delivery state
+
+| Stage | State |
+| --- | --- |
+| Java Runtime upgrade | Qualified 0.1.15, PR12/13 merged by parent; stable service not upgraded |
+| Java observation / snapshots | Candidate evidence complete; PR14 pending review, isolated reviewer only |
+| Python Builder integration | Not implemented; fixed colleague Builder artifact / Host contract needed |
+| Python SDK observation boundary | 0.1.18 isolated probe: 15 checks; see companion Python boundary report |
+| Central dashboard | Future scope, not implemented |
+
+Builder final docs commit is `96ea1a8c`; runtime-affecting snapshot Host remains
+the ccedabdd version, with subsequent page/catalog fixes and effective-quota test
+e303665f. No final documentation SHA is substituted into old generated Locks.

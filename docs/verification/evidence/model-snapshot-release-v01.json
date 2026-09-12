@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "verification-manifest.v0.1",
+  "scope": "local synthetic release evidence; no stable deployment",
+  "files": [
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/controlled/report.json",
+      "sha256": "15a511859fdd49aded2187446e21211c5c9726bcdd48bd5b54d9e070dfad6ec6",
+      "bytes": 3789,
+      "checkCount": 134
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/history/report.json",
+      "sha256": "a7f3e42a780242595d90607b074290fc904e855ed0fd7499c288ddb29d6d8cf5",
+      "bytes": 2014,
+      "checkCount": 51
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/live/report.json",
+      "sha256": "82579d7edf7a6a1b8a6df538e67e6af5e34645c22830041569d5a24a1819a931",
+      "bytes": 3466,
+      "checkCount": 22
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/long-context-2/report.json",
+      "sha256": "b5e808da96a4fc3dcbdd2699f4e4f0d7c7ccf1b6d681c5c5fc2c336d01ac7472",
+      "bytes": 4107,
+      "checkCount": 142
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/overhead/report.json",
+      "sha256": "a7dc42b13170da28eaf52ac3f4d363bbe3c0fca63c5f264e03b1b8d248fed17d",
+      "bytes": 3009,
+      "checkCount": null
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/ui-build-3/report.json",
+      "sha256": "dacdaa7019ca6e9cb3fffbf5fd06aba51a59493dca90b59f054c2fd82c5df73e",
+      "bytes": 822,
+      "checkCount": 11
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/layout-fix-3/report.json",
+      "sha256": "cd71c515ee499572f3f885b293335410f5a4de0dfa370b6b0f8ec7295d15a94f",
+      "bytes": 533,
+      "checkCount": 9
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/python-018-final-3/report.json",
+      "sha256": "f8b8879881c54d6ef47568b40f15e49edfa5eaca7acdb81cd853ab68ed66502d",
+      "bytes": 1125,
+      "checkCount": 15
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/python-018-final-3/dependencies.json",
+      "sha256": "cf01d9905cc8fdec12dd531919f22cc21c2c2315d791175c010b41247c3acfc7",
+      "bytes": 4193
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/python-018-final-3/sdk-source-hashes.json",
+      "sha256": "aab5b2494e6b26ed8e9865a54f933c189626e509e0b24d7e2ef3d19208c8665b",
+      "bytes": 321845
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/python-018-wheel.json",
+      "sha256": "d99425435acb3f61c17712ed75cd98b6d0bb4a7f9705f5530da83cb6efd65d4e",
+      "bytes": 327
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/final-builder-tests.xml",
+      "sha256": "5a344536e48b14fb9af1e840856373a0ea59eb231e7919a3a66b23a3a8bedcbf",
+      "bytes": 4254788
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/candidate-all/candidate/service-lock.json",
+      "sha256": "c2da48e3dae377007b1a67169faaed6d5306fc935afb86a33025b21c0ac4ca71",
+      "bytes": 21151
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/candidate-all/build-report.json",
+      "sha256": "11e5e7474cd99cb4f3472dc35237d0a944c2f8555e0db3f83303e5484ebfe823",
+      "bytes": 1319,
+      "checkCount": null
+    },
+    {
+      "path": "/home/ubuntu/outputs/model-snapshot-release-v01/reviewer/workspace/workbench/agent-43398f94a1ef49b6/candidate/service-lock.json",
+      "sha256": "7818b700bd0881518ebe73ab8c5624db9ef81092960c7c6adb50b019ce295c3f",
+      "bytes": 23028
+    }
+  ]
+}
