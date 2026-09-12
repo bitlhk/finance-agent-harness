@@ -34,6 +34,89 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test
+    void preparedQueryUsesFrozenDefinitionsAndSameBindingWithoutJavaAgent() throws Exception {
+        var captured = new AtomicReference<CapabilityRequestV1>();
+        String capability = "wealth.customer-context.query";
+        var provider = describedProvider("non-ai-banking-reference", capability, CapabilityRequestV1.Operation.QUERY,
+                captured, Map.of("amount", "90071992547409.91", "currency", "CNY"));
+        var providers = new java.util.HashMap<String, FinanceProvider>();
+        providers.put("non-ai-banking-reference", provider);
+        var assembler = new OpenJiuwenSolutionAssembler();
+        var prepared = assembler.prepare(root(), root().resolve(
+                "examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json"), providers);
+        assertNull(captured.get());
+        assertNull(Runner.resourceMgr().getTool("wealth_customer_context_query"));
+        assertThrows(UnsupportedOperationException.class, () -> prepared.capabilityPacks().clear());
+        assertThrows(UnsupportedOperationException.class, () -> prepared.capabilityPacks().getFirst()
+                .capabilities().getFirst().inputSchema().put("additionalProperties", true));
+        assertThrows(UnsupportedOperationException.class, () -> prepared.domainPacks().getFirst().skills().clear());
+        providers.clear();
+        var queries = prepared.openQueries(customerWealthDefaults(), true, "frozen-session");
+        assertThrows(SecurityException.class, () -> queries.query("account.balance.query", Map.of(), "not-installed"));
+        assertThrows(IllegalArgumentException.class, () -> queries.query(capability, Map.of("principal", "fake"), "invalid"));
+        assertNull(captured.get());
+        var result = queries.query(capability, Map.of(), "frozen-query");
+        assertEquals("90071992547409.91", result.data().get("amount"));
+        assertEquals("frozen-session", captured.get().context().sessionRef());
+        var direct = assembler.install(prepared, cleanAgent("prepared"), customerWealthDefaults(), true,
+                new TaskCheckpointStore.Memory(), "direct-session");
+        try {
+            assertEquals(new ObjectMapper().valueToTree(direct.lock().assets()),
+                    new ObjectMapper().valueToTree(prepared.snapshot().get("assets")));
+        } finally { direct.close(); }
+    }
+
+    @Test
+    void readOnlyPlanRejectsTasksAndInsufficientGrants() throws Exception {
+        var assembler = new OpenJiuwenSolutionAssembler();
+        var taskPlan = assembler.prepare(root(), root().resolve("examples/solutions/openjiuwen-retail-banking/solution.yaml"),
+                Map.of("non-ai-banking-reference", provider()));
+        assertThrows(IllegalArgumentException.class, () -> taskPlan.openQueries(defaults(), true, "task-session"));
+        var captured = new AtomicReference<CapabilityRequestV1>();
+        var plan = assembler.prepare(root(), root().resolve("examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json"),
+                Map.of("non-ai-banking-reference", describedProvider("non-ai-banking-reference", "wealth.customer-context.query",
+                        CapabilityRequestV1.Operation.QUERY, captured, Map.of())));
+        var denied = plan.openQueries(defaults(), true, "no-wealth-grant").query("wealth.customer-context.query", Map.of(), "denied");
+        assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, denied.status());
+        assertNull(captured.get(), "A balance grant cannot authorize wealth");
+    }
+
+    @Test
+    void prepareRejectsDuplicateCapabilityAndToolAcrossPacks() throws Exception {
+        var mapper = new ObjectMapper();
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        Path original = root().resolve("examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json");
+        for (boolean sameId : List.of(true, false)) {
+            Path assets = temporaryDirectory.resolve("duplicates-" + sameId); Files.createDirectories(assets);
+            var input = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(original.toFile());
+            input.remove("profileRef"); input.remove("evaluationPackRef"); input.putArray("domainPackRefs");
+            ((com.fasterxml.jackson.databind.node.ObjectNode) input.path("providerRefs").get(0))
+                    .put("source", "maven://io.github.bitlhk.finance:finance-provider-non-ai-banking:0.1.0-SNAPSHOT");
+            var refs = input.putArray("capabilityPackRefs");
+            for (String packId : List.of("first-pack", "second-pack")) {
+                var pack = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(root().resolve("capability-packs/wealth-customer-context/pack.yaml").toFile());
+                pack.put("packId", packId);
+                if (!sameId && packId.equals("second-pack"))
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) pack.path("capabilities").get(0)).put("capabilityId", "other.facts.query");
+                yaml.writeValue(assets.resolve(packId + ".yaml").toFile(), pack);
+                refs.addObject().put("id", packId).put("version", "0.1.0").put("source", "repo://" + packId + ".yaml");
+            }
+            mapper.writeValue(assets.resolve("solution.json").toFile(), input);
+            var provider = new DescribedFinanceProvider() {
+                public ProviderDescriptorV1 descriptor() { return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION,
+                    "non-ai-banking-reference", "0.1.0-SNAPSHOT", List.of(
+                    new ProviderDescriptorV1.CapabilitySupport("wealth.customer-context.query", CapabilityRequestV1.Operation.QUERY),
+                    new ProviderDescriptorV1.CapabilitySupport("other.facts.query", CapabilityRequestV1.Operation.QUERY))); }
+                public CapabilityResultV1 query(CapabilityRequestV1 r) { throw new AssertionError("no business call"); }
+                public CapabilityResultV1 executeTask(CapabilityRequestV1 r) { throw new AssertionError("no task"); }
+            };
+            var error = assertThrows(IllegalArgumentException.class, () -> new OpenJiuwenSolutionAssembler().prepare(
+                    assets, assets.resolve("solution.json"), Map.of("non-ai-banking-reference", provider)));
+            assertTrue(error.getMessage().contains(sameId ? "more than one installed pack" : "Duplicate installed toolName"), error.getMessage());
+        }
+    }
+
     @org.junit.jupiter.api.TestFactory
     List<org.junit.jupiter.api.DynamicTest> existingEmployeeBuilderInputsInstallWithoutBusinessCalls() {
         return List.of("insurance-advisor-previsit", "wealth-manager-previsit").stream().map(scenario ->

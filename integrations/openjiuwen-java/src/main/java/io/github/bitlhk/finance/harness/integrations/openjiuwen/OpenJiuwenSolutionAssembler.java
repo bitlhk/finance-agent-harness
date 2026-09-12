@@ -58,9 +58,16 @@ public final class OpenJiuwenSolutionAssembler {
             boolean simulated,
             TaskCheckpointStore checkpoints,
             String hostSessionRef) throws IOException {
+        Objects.requireNonNull(agent, "agent");
+        return install(prepare(repositoryRoot, solutionFile, providers), agent, defaults,
+                simulated, checkpoints, hostSessionRef);
+    }
+
+    /** Resolve and validate once without registering tools or creating a Java Agent. */
+    public PreparedSolution prepare(Path repositoryRoot, Path solutionFile,
+                                    Map<String, FinanceProvider> providers) throws IOException {
         Objects.requireNonNull(repositoryRoot, "repositoryRoot");
         Objects.requireNonNull(solutionFile, "solutionFile");
-        Objects.requireNonNull(agent, "agent");
         Objects.requireNonNull(providers, "providers");
         SolutionSpec spec = yaml.readValue(solutionFile.toFile(), SolutionSpec.class);
         validate(spec);
@@ -118,6 +125,29 @@ public final class OpenJiuwenSolutionAssembler {
         validateCapabilityCoverage(loadedDomainPacks, loadedCapabilityPacks);
         Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> providerBindings =
                 resolveProviderBindings(spec, providers, loadedCapabilityPacks);
+        Set<String> toolNames = new LinkedHashSet<>();
+        for (FinanceCapabilityPackV1 pack : loadedCapabilityPacks) {
+            for (var capability : pack.capabilities()) {
+                if (!toolNames.add(capability.toolName())) throw new IllegalArgumentException("Duplicate installed toolName");
+                if (capability.operation() == FinanceCapabilityPackV1.Operation.QUERY)
+                    new QueryInputValidator(capability.inputSchema());
+            }
+        }
+        return new PreparedSolution(spec, loadedDomainPacks, loadedCapabilityPacks,
+                lockedAssets, observedRuntime, providerBindings);
+    }
+
+    public AssembledSolution install(PreparedSolution prepared, BaseAgent agent,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults, boolean simulated,
+            TaskCheckpointStore checkpoints, String hostSessionRef) {
+        Objects.requireNonNull(prepared, "prepared");
+        Objects.requireNonNull(agent, "agent");
+        var spec = prepared.spec;
+        var loadedDomainPacks = prepared.domainPacks;
+        var loadedCapabilityPacks = prepared.capabilityPacks;
+        var lockedAssets = prepared.assets;
+        var observedRuntime = prepared.observedRuntime;
+        var providerBindings = prepared.bindings;
 
         List<OpenJiuwenDomainPackInstaller.Installation> domainInstallations = new ArrayList<>();
         List<OpenJiuwenCapabilityInstaller.Installation> installations = new ArrayList<>();
@@ -168,6 +198,90 @@ public final class OpenJiuwenSolutionAssembler {
                 installedDomainPacks,
                 installedPacks);
         return new AssembledSolution(spec.solutionId(), domainInstallations, installations, lock, json);
+    }
+
+    public static final class PreparedSolution {
+        private final SolutionSpec spec;
+        private final List<FinanceDomainPackLoader.LoadedDomainPack> domainPacks;
+        private final List<FinanceCapabilityPackV1> capabilityPacks;
+        private final List<LockedAsset> assets;
+        private final RuntimeArtifacts observedRuntime;
+        private final Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings;
+
+        private PreparedSolution(SolutionSpec spec, List<FinanceDomainPackLoader.LoadedDomainPack> domains,
+                List<FinanceCapabilityPackV1> packs, List<LockedAsset> assets, RuntimeArtifacts runtime,
+                Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings) {
+            this.spec = spec;
+            this.domainPacks = List.copyOf(domains);
+            this.capabilityPacks = List.copyOf(packs);
+            this.assets = List.copyOf(assets);
+            this.observedRuntime = runtime;
+            this.bindings = Map.copyOf(bindings);
+        }
+
+        public List<FinanceCapabilityPackV1> capabilityPacks() { return capabilityPacks; }
+        public List<FinanceDomainPackLoader.LoadedDomainPack> domainPacks() { return domainPacks; }
+
+        public Map<String, Object> snapshot() {
+            List<Map<String, Object>> capabilities = new ArrayList<>();
+            for (var pack : capabilityPacks) for (var capability : pack.capabilities()) {
+                var binding = bindings.get(capability.capabilityId());
+                capabilities.add(Map.of("packId", pack.packId(), "packVersion", pack.version(),
+                        "definition", capability, "providerId", binding.providerId(),
+                        "providerVersion", binding.providerVersion()));
+            }
+            List<Map<String, Object>> methods = new ArrayList<>();
+            for (var pack : domainPacks) methods.add(Map.of("packId", pack.pack().packId(),
+                    "version", pack.pack().version(), "capabilities", pack.pack().capabilities(), "skills", pack.skills()));
+            return Map.of("schemaVersion", "finance-installation-plan.v0.1", "solutionId", spec.solutionId(),
+                    "status", "VALIDATED_NOT_RUNTIME_REGISTERED", "bridgeRuntime", observedRuntime,
+                    "assets", assets, "capabilities", List.copyOf(capabilities), "methods", List.copyOf(methods),
+                    "capabilityPrompts", capabilityPacks.stream().map(FinanceCapabilityPackV1::systemPrompt).toList());
+        }
+
+        public ReadOnlyInstallation openQueries(OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+                                               boolean simulated, String hostSessionRef) {
+            return new ReadOnlyInstallation(this, defaults, simulated, hostSessionRef);
+        }
+    }
+
+    /** Owns only QUERY bindings, never a Runtime, task controller, or model client. */
+    public static final class ReadOnlyInstallation {
+        private final PreparedSolution prepared;
+        private final Map<String, OpenJiuwenFinanceBridge> bridges = new LinkedHashMap<>();
+        private final Map<String, FinanceCapabilityPackV1.Capability> capabilities = new LinkedHashMap<>();
+        private final Map<String, QueryInputValidator> validators = new LinkedHashMap<>();
+
+        private ReadOnlyInstallation(PreparedSolution prepared, OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+                                     boolean simulated, String session) {
+            this.prepared = prepared;
+            if (session == null || session.isBlank()) throw new IllegalArgumentException("Host session required");
+            for (var pack : prepared.capabilityPacks) for (var capability : pack.capabilities()) {
+                if (capability.operation() != FinanceCapabilityPackV1.Operation.QUERY)
+                    throw new IllegalArgumentException("READONLY_INSTALLATION_REJECTS_TASK");
+                var binding = prepared.bindings.get(capability.capabilityId());
+                capabilities.put(capability.capabilityId(), capability);
+                validators.put(capability.capabilityId(), new QueryInputValidator(capability.inputSchema()));
+                bridges.put(capability.capabilityId(), new OpenJiuwenFinanceBridge(binding.provider(), binding.providerId(),
+                        defaults, Set.of(capability.capabilityId()), simulated).hostSession(session));
+            }
+        }
+
+        public Set<String> capabilityIds() { return Set.copyOf(capabilities.keySet()); }
+        public Set<String> requiredScopes() {
+            Set<String> result = new LinkedHashSet<>();
+            capabilities.values().forEach(capability -> result.addAll(capability.requiredScopes()));
+            return Set.copyOf(result);
+        }
+        public Map<String, Object> plan() { return prepared.snapshot(); }
+
+        public OpenJiuwenExecutionV1 query(String capabilityId, Map<String, Object> arguments, String requestId) {
+            var capability = capabilities.get(capabilityId);
+            if (capability == null) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
+            validators.get(capabilityId).validate(arguments);
+            return bridges.get(capabilityId).query(new OpenJiuwenInvocationV1(requestId, capabilityId,
+                    prepared.spec.solutionId(), capability.requiredScopes(), arguments, Map.of()));
+        }
     }
 
     private static RuntimeArtifacts lockRuntime(RuntimeRef declared, List<LockedAsset> assets) throws IOException {
