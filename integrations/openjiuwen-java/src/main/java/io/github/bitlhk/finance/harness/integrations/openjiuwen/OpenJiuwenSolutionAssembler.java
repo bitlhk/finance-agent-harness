@@ -8,6 +8,10 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
+import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01;
+import io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01;
+import io.github.bitlhk.finance.harness.core.observation.ObservationAssessmentV01;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -66,6 +70,13 @@ public final class OpenJiuwenSolutionAssembler {
     /** Resolve and validate once without registering tools or creating a Java Agent. */
     public PreparedSolution prepare(Path repositoryRoot, Path solutionFile,
                                     Map<String, FinanceProvider> providers) throws IOException {
+        return prepare(repositoryRoot, solutionFile, providers, null, List.of());
+    }
+
+    /** Explicit opt-in: old strict Solution/Pack V1 files keep their original JSON shapes. */
+    public PreparedSolution prepare(Path repositoryRoot, Path solutionFile,
+            Map<String, FinanceProvider> providers, ObservationRequirementsV01.Reference observationRequirements,
+            List<ObservationCapabilitiesV01> trustedCollectors) throws IOException {
         Objects.requireNonNull(repositoryRoot, "repositoryRoot");
         Objects.requireNonNull(solutionFile, "solutionFile");
         Objects.requireNonNull(providers, "providers");
@@ -133,8 +144,30 @@ public final class OpenJiuwenSolutionAssembler {
                     new QueryInputValidator(capability.inputSchema());
             }
         }
+        ObservationRequirementsV01 requirements = null;
+        if (observationRequirements != null) {
+            if (observationRequirements.digest() == null)
+                throw new IllegalArgumentException("Observation requirements digest is mandatory");
+            Path source = resolveLocalSource(repositoryRoot, observationRequirements.source()).toRealPath();
+            if (!source.startsWith(repositoryRoot.toRealPath()) || !Files.isRegularFile(source)
+                    || Files.size(source) > 65_536)
+                throw new IllegalArgumentException("Observation requirements must be a bounded local asset");
+            byte[] bytes = Files.readAllBytes(source);
+            String digest;
+            try { digest = "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
+            catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+            verifyDigest(observationRequirements.digest(), digest, observationRequirements.id());
+            requirements = HarnessJson.mapper().readValue(bytes, ObservationRequirementsV01.class);
+            if (!requirements.id().equals(observationRequirements.id())
+                    || !requirements.version().equals(observationRequirements.version()))
+                throw new IllegalArgumentException("Observation requirements reference mismatch");
+            lockedAssets.add(new LockedAsset("OBSERVATION_REQUIREMENTS", requirements.id(), requirements.version(),
+                    observationRequirements.source(), digest));
+        }
+        var assessment = ObservationAssessmentV01.assess(requirements, List.copyOf(trustedCollectors), providerBindings.keySet());
+        assessment.requireReady();
         return new PreparedSolution(spec, loadedDomainPacks, loadedCapabilityPacks,
-                lockedAssets, observedRuntime, providerBindings);
+                lockedAssets, observedRuntime, providerBindings, assessment);
     }
 
     public AssembledSolution install(PreparedSolution prepared, BaseAgent agent,
@@ -207,20 +240,23 @@ public final class OpenJiuwenSolutionAssembler {
         private final List<LockedAsset> assets;
         private final RuntimeArtifacts observedRuntime;
         private final Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings;
+        private final ObservationAssessmentV01 observation;
 
         private PreparedSolution(SolutionSpec spec, List<FinanceDomainPackLoader.LoadedDomainPack> domains,
                 List<FinanceCapabilityPackV1> packs, List<LockedAsset> assets, RuntimeArtifacts runtime,
-                Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings) {
+                Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings, ObservationAssessmentV01 observation) {
             this.spec = spec;
             this.domainPacks = List.copyOf(domains);
             this.capabilityPacks = List.copyOf(packs);
             this.assets = List.copyOf(assets);
             this.observedRuntime = runtime;
             this.bindings = Map.copyOf(bindings);
+            this.observation = observation;
         }
 
         public List<FinanceCapabilityPackV1> capabilityPacks() { return capabilityPacks; }
         public List<FinanceDomainPackLoader.LoadedDomainPack> domainPacks() { return domainPacks; }
+        public ObservationAssessmentV01 observationAssessment() { return observation; }
 
         public Map<String, Object> snapshot() {
             List<Map<String, Object>> capabilities = new ArrayList<>();
@@ -233,10 +269,15 @@ public final class OpenJiuwenSolutionAssembler {
             List<Map<String, Object>> methods = new ArrayList<>();
             for (var pack : domainPacks) methods.add(Map.of("packId", pack.pack().packId(),
                     "version", pack.pack().version(), "capabilities", pack.pack().capabilities(), "skills", pack.skills()));
-            return Map.of("schemaVersion", "finance-installation-plan.v0.1", "solutionId", spec.solutionId(),
+            var snapshot = new LinkedHashMap<String, Object>(Map.of("schemaVersion", "finance-installation-plan.v0.1", "solutionId", spec.solutionId(),
                     "status", "VALIDATED_NOT_RUNTIME_REGISTERED", "bridgeRuntime", observedRuntime,
                     "assets", assets, "capabilities", List.copyOf(capabilities), "methods", List.copyOf(methods),
-                    "capabilityPrompts", capabilityPacks.stream().map(FinanceCapabilityPackV1::systemPrompt).toList());
+                    "capabilityPrompts", capabilityPacks.stream().map(FinanceCapabilityPackV1::systemPrompt).toList()));
+            if (observation.status() != ObservationAssessmentV01.Status.LEGACY_UNASSESSED) {
+                snapshot.put("schemaVersion", "finance-installation-plan.v0.2");
+                snapshot.put("observationAssessment", observation);
+            }
+            return Map.copyOf(snapshot);
         }
 
         public ReadOnlyInstallation openQueries(OpenJiuwenFinanceBridge.InvocationDefaults defaults,

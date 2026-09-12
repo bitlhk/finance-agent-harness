@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "readonly-observation",
+  "version": "0.1.0",
+  "requirements": [
+    {
+      "semanticId": "execution.history",
+      "semanticVersion": "0.1",
+      "obligation": "REQUIRED",
+      "boundary": "HOST",
+      "content": "METADATA",
+      "fields": ["requestId", "outcome"],
+      "capabilityIds": []
+    }
+  ]
+}

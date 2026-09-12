@@ -201,6 +201,13 @@ def main():
     probe["task"]["confirmationRequired"] = False
     assert not result_schema.is_valid(probe), "Missing confirmation flag accepted"
     print(f"PASS: {len(schemas)} schemas, {count + 1} fixtures/assets/state probes")
+    observation = json.loads((ROOT / "contracts/fixtures/observation/readonly-requirements.v0.1.json").read_text())
+    observation_cases = json.loads((ROOT / "contracts/fixtures/observation/requirements-cases.json").read_text())
+    for case in observation_cases:
+        value = copy.deepcopy(observation)
+        if "field" in case: value[case["field"]] = case["value"]
+        assert validator("observation-requirements.v0.1").is_valid(value) == case["valid"], case["name"]
+    print(f"PASS: {len(observation_cases)} shared observation requirement cases (also consumed by Java)")
 
 
 if __name__ == "__main__":

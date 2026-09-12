@@ -35,6 +35,47 @@ class OpenJiuwenSolutionAssemblerTest {
     Path temporaryDirectory;
 
     @Test
+    void observationSidecarIsExplicitDigestLockedAndCheckedBeforeRegistration() throws Exception {
+        var captured = new AtomicReference<CapabilityRequestV1>();
+        var providers = Map.<String, FinanceProvider>of("non-ai-banking-reference",
+                describedProvider("non-ai-banking-reference", "wealth.customer-context.query",
+                        CapabilityRequestV1.Operation.QUERY, captured, Map.of()));
+        var assembler = new OpenJiuwenSolutionAssembler();
+        Path input = root().resolve("examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json");
+        String source = "contracts/fixtures/observation/readonly-requirements.v0.1.json";
+        String digest = "sha256:" + java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(root().resolve(source))));
+        var ref = new io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Reference(
+                "readonly-observation", "0.1.0", "repo://" + source, digest);
+        var legacy = assembler.prepare(root(), input, providers);
+        assertEquals("finance-installation-plan.v0.1", legacy.snapshot().get("schemaVersion"));
+        assertFalse(legacy.snapshot().containsKey("observationAssessment"));
+        assertEquals("LEGACY_UNASSESSED", legacy.observationAssessment().status().name());
+        assertThrows(IllegalStateException.class, () -> assembler.prepare(root(), input, providers, ref, List.of()));
+        var descriptor = new io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01(
+                "finance-observation-capabilities.v0.1", "test-archive", "0.1", List.of(
+                new io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Capability(
+                        "execution.history", "0.1",
+                        io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Boundary.HOST,
+                        Set.of("requestId", "outcome"),
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Support.SUPPORTED,
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Verification.VERIFIED,
+                        List.of("fixture:assembler-only-not-host-acceptance"),
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Availability.ENABLED,
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Authorization.NOT_REQUIRED)));
+        var prepared = assembler.prepare(root(), input, providers, ref, List.of(descriptor));
+        assertEquals("finance-installation-plan.v0.2", prepared.snapshot().get("schemaVersion"));
+        assertEquals("READY", prepared.observationAssessment().status().name());
+        var assets = new ObjectMapper().valueToTree(prepared.snapshot().get("assets"));
+        assertTrue(assets.toString().contains(digest));
+        assertTrue(assets.toString().contains("OBSERVATION_REQUIREMENTS"));
+        assertNull(captured.get(), "Observation preparation must not read any bank data");
+        assertThrows(IllegalArgumentException.class, () -> assembler.prepare(root(), input, providers,
+                new io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Reference(
+                        "readonly-observation", "0.1.0", "repo://" + source, "sha256:" + "0".repeat(64)), List.of(descriptor)));
+    }
+
+    @Test
     void preparedQueryUsesFrozenDefinitionsAndSameBindingWithoutJavaAgent() throws Exception {
         var captured = new AtomicReference<CapabilityRequestV1>();
         String capability = "wealth.customer-context.query";

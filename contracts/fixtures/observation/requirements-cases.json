@@ -1,0 +1,8 @@
+[
+  {"name": "valid-common-default", "valid": true},
+  {"name": "unsupported-version", "field": "schemaVersion", "value": "finance-observation-requirements.v9", "valid": false},
+  {"name": "unknown-privilege-field", "field": "trusted", "value": true, "valid": false},
+  {"name": "empty-id", "field": "id", "value": "", "valid": false},
+  {"name": "null-version", "field": "version", "value": null, "valid": false},
+  {"name": "empty-requirements", "field": "requirements", "value": [], "valid": false}
+]
