@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "runtime-qualification-artifacts.v0.1",
+  "status": "CANDIDATE_NOT_FOR_DEPLOYMENT",
+  "java": {
+    "0.1.13": {"coordinate": "com.openjiuwen:agent-core-java:0.1.13", "sha256": "65561515ace2d44a1f2448d54fcdf2a2e09eadb8ba5be715836975f3fc4d64ea"},
+    "0.1.15": {"coordinate": "com.openjiuwen:agent-core-java:0.1.15", "sha256": "0d0b58b2109e77216b892ed5f18dc42d84ce3c897de62434dab288130dc21e6a", "releaseTagCommit": "2f5ab88bbe4d571022bc3a436fd6eaba68dacc0d"}
+  },
+  "python": {
+    "version": "0.1.18", "artifact": "openjiuwen-0.1.18-py3-none-any.whl",
+    "pypiDeclaredSha256": "b5fdc79cfa121324b473d9002d5c8be7514b3932f8866e22a1723147004d6d8a",
+    "requiresPython": ">=3.11,<3.14", "executionStatus": "NOT_RUN"
+  }
+}

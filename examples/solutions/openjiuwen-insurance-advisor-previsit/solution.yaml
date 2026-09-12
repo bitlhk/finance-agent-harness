@@ -4,7 +4,7 @@ displayName: OpenJiuwen 保险顾问访前助手
 runtime:
   family: openjiuwen
   language: java
-  templateRef: maven://com.openjiuwen:agent-core-java:0.1.13
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.15
   integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
 profileRef:
   id: employee-assisted
