@@ -16,6 +16,12 @@ public final class OpenJiuwenObservationAdapter {
     private final Map<String, ObservationRun.Span> pending = new HashMap<>();
     private final Map<String, ObservationRun.ParentScope> scopes = new HashMap<>();
 
+    /** Correlates optional client snapshots without inventing a transport attempt. */
+    public synchronized String activeModelSpanId() {
+        var span = pending.get("model");
+        return span == null ? null : span.id();
+    }
+
     public synchronized void attach(ObservationRun run, String parent) {
         detach(); this.run = run; this.parent = parent;
     }
