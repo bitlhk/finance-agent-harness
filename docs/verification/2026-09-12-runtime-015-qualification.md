@@ -34,7 +34,8 @@ Runtime artifact hashes are in `engineering/runtime-qualification-artifacts.json
 | Model-tool-model and post-tool revocation | Identical two-test/four-path probe passed on 0.1.13 and 0.1.15 | Both Runner modes: normal HTTP=2, revoked HTTP=1, query=1; result and tool-call ID present in normal follow-up |
 | Native stream first-chunk failure / truncated transport | Controlled tests passed: first-chunk failure yields 0 chunks; truncated stream yields 1 chunk then exception; HTTP=1 | maxRetries=0, no complete response claim; not a streaming snapshot product |
 | Explicit caller retry | Two failures produce two prepared callbacks and two received HTTP requests | Explicit test caller loop; SDK retries disabled, no blanket internal-retry visibility claim |
-| SDK-internal retry and concurrent snapshot correlation | NOT_VERIFIED | Callback counts cannot stand in for transport attempts |
+| SDK-internal retry | NOT_VERIFIED | Callback counts cannot stand in for transport attempts |
+| Concurrent snapshot correlation | Subsequent B candidate has a two-client isolation/scope-cleanup test | PR #14 evidence, not this A candidate's original lock; synchronous invoke only |
 | Real model plus simulated bank on 0.1.15 | Subsequent B candidate passed 22 checks across four read-only capabilities | See model-snapshot-v01/live-1; model quality NOT_SCORED, not this A candidate's original lock |
 
 The initial version-only build correctly failed strict runtime reference checks.
@@ -53,15 +54,15 @@ CLIENT_REQUEST_PREPARED, never automatically as HTTP_SENT.
 
 Native `withRequestTraceCallback` is available and tested without reflection or
 SDK edits. Historical messages, tool definitions and synthetic tool results are
-included in the tested client map. This is not a completed body snapshot feature.
-Existing history archives contain timing and version evidence, not complete
-model request/response bodies.
-
-Pending implementation and acceptance: immutable allowlisted/redacted capture,
-parsed-response scope, independent capture/view permissions, truncation and
-failure flags, immutable business labels, storage quotas and overhead comparison.
-Do not deploy a snapshot collector or enable raw bodies on the strength of the
-current probe. No hidden reasoning or secret collection is authorized.
+included in the tested client map. This A branch provides the hook probes only;
+the separate dependent PR #14 implements a synthetic, non-streaming snapshot
+candidate with independent capture/view permissions, immutable projection,
+storage fault tests and UI. Its P2 closeout corrects dynamic schema properties
+and loss reporting. Consult that branch's model-snapshot verification matrix
+for the exact Builder, candidate lock and evidence; A's older artifacts were
+not retroactively upgraded. Native request-trace callback coexistence and
+institutional data policy remain unqualified. No deployment, hidden reasoning
+or secret collection is authorized by the A probe.
 
 ## C / D: Python discovery
 
@@ -91,6 +92,7 @@ Reproduce the supplementary probe from the Harness candidate root:
 ```sh
 mvn -pl integrations/openjiuwen-java -am -Dtest=NativeModelRequestTraceTest -Dsurefire.failIfNoSpecifiedTests=false test
 mvn -pl integrations/openjiuwen-java -am -Dtest=RuntimeToolChainBoundaryTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl integrations/openjiuwen-java -am -Dtest=NativeStreamFailureTest -Dsurefire.failIfNoSpecifiedTests=false test
 python3 engineering/verify_runtime_artifacts.py
 ```
 
