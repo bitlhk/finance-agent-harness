@@ -215,7 +215,7 @@ class OpenJiuwenSolutionAssemblerTest {
             assertEquals("openjiuwen", solution.lock().runtime().family());
             assertEquals(7, solution.lock().assets().size());
             assertTrue(solution.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_TEMPLATE")
-                    && a.id().equals(solution.lock().runtime().templateRef()) && a.version().equals("0.1.13")));
+                    && a.id().equals(solution.lock().runtime().templateRef()) && a.version().equals("0.1.15")));
             assertTrue(solution.lock().assets().stream().anyMatch(a -> a.kind().equals("RUNTIME_INTEGRATION")
                     && a.id().equals(solution.lock().runtime().integrationRef()) && a.version().equals("0.1.0-SNAPSHOT")));
             assertTrue(solution.lock().assets().getFirst().digest().matches("sha256:[a-f0-9]{64}"));

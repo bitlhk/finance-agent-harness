@@ -5,10 +5,10 @@
   "runtime": {
     "family": "openjiuwen",
     "language": "java",
-    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
     "integrationRef": "repo://integrations/openjiuwen-java",
     "resolvedArtifacts": {
-      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.13",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
       "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
     }
   },
