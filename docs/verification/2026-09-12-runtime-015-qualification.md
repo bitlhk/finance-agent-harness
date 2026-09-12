@@ -32,9 +32,10 @@ Runtime artifact hashes are in `engineering/runtime-qualification-artifacts.json
 | Native request callback | Invoke/stream request JSON matches controlled receiver; 500 case captured | Client request preparation, not send acknowledgement |
 | Follow-up native probe | Three tests passed, including disconnected endpoint and tool-result history | Supplementary test-only change after candidate generation |
 | Model-tool-model and post-tool revocation | Identical two-test/four-path probe passed on 0.1.13 and 0.1.15 | Both Runner modes: normal HTTP=2, revoked HTTP=1, query=1; result and tool-call ID present in normal follow-up |
-| Streaming exception/retry matrix | NOT_RUN as a dedicated Runner streaming matrix | Required before declaring the entire requested A matrix complete |
+| Native stream first-chunk failure / truncated transport | Controlled tests passed: first-chunk failure yields 0 chunks; truncated stream yields 1 chunk then exception; HTTP=1 | maxRetries=0, no complete response claim; not a streaming snapshot product |
+| Explicit caller retry | Two failures produce two prepared callbacks and two received HTTP requests | Explicit test caller loop; SDK retries disabled, no blanket internal-retry visibility claim |
 | SDK-internal retry and concurrent snapshot correlation | NOT_VERIFIED | Callback counts cannot stand in for transport attempts |
-| Real model plus simulated bank on 0.1.15 | NOT_RUN | Controlled results do not establish model quality |
+| Real model plus simulated bank on 0.1.15 | Subsequent B candidate passed 22 checks across four read-only capabilities | See model-snapshot-v01/live-1; model quality NOT_SCORED, not this A candidate's original lock |
 
 The initial version-only build correctly failed strict runtime reference checks.
 Candidate input references were migrated; mismatch validation was not relaxed.
