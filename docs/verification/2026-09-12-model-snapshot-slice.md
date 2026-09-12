@@ -31,6 +31,11 @@ response capture. No hidden reasoning or automatic root-cause conclusion is show
 
 ## Actual evidence
 
+This table is the pre-P2 slice evidence. The current closeout is recorded in
+[P2 correctness closeout](2026-09-12-model-snapshot-p2-closeout.md), with a new
+Builder commit and freshly generated candidate. Old snapshots are not repaired
+or relabelled by the new filter.
+
 Evidence root: `/home/ubuntu/outputs/model-snapshot-v01/`.
 
 | Validation | Observed result / exact scope |
@@ -50,7 +55,9 @@ Evidence root: `/home/ubuntu/outputs/model-snapshot-v01/`.
 f2731a71, both clean, Runtime 0.1.15. Lock SHA-256:
 `d5c78649182bd85948ee0af1ba70f024344c9cfcd9779db0c36a731e6b7d6756`.
 Later Harness changes only synchronize a Python test expectation, not runtime
-code. Earlier live/overhead runs have their own lock
+code. Builder 9e1906cd subsequently changed only the history reader and its test:
+unverified body references show BODY_NOT_VERIFIED. It is not the source SHA of
+the f2731a71 generated Host. Earlier live/overhead runs have their own lock
 `3f7a9192cbf6f29f8745fcdee5912d4fc4625b2d0d43d6159b3f362db820e7d8`;
 they must not be relabeled as runs of the final candidate. The metadata-failure
 guard was added after the seven-composition run and verified in the fresh all
@@ -66,6 +73,9 @@ The first overhead observation had median milliseconds off=69.68, Trace=187.45,
 snapshot=195.03, with stored bytes 0 / 915941 / 1862539 respectively. Includes
 incremental fsync and local fixture behavior. No zero-overhead or financial
 quality claim follows from this small experiment.
+The Trace increase is a performance investigation item: separately measure
+synchronous event fsync and business-stage time before proposing changes. The
+P2 correction does not reduce durability or introduce a new storage platform.
 
 ## Reproduction and isolated entry
 
