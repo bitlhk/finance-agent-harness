@@ -31,7 +31,8 @@ Runtime artifact hashes are in `engineering/runtime-qualification-artifacts.json
 | Runner invoke and stream | Normal HTTP count 1; force-finish HTTP count 0 | Simple text Runner probes, not a streaming tool-chain qualification |
 | Native request callback | Invoke/stream request JSON matches controlled receiver; 500 case captured | Client request preparation, not send acknowledgement |
 | Follow-up native probe | Three tests passed, including disconnected endpoint and tool-result history | Supplementary test-only change after candidate generation |
-| Streaming model-tool-model, exceptions and revocation | NOT_RUN as a dedicated Runner streaming matrix | Required before declaring the entire requested A matrix complete |
+| Model-tool-model and post-tool revocation | Identical two-test/four-path probe passed on 0.1.13 and 0.1.15 | Both Runner modes: normal HTTP=2, revoked HTTP=1, query=1; result and tool-call ID present in normal follow-up |
+| Streaming exception/retry matrix | NOT_RUN as a dedicated Runner streaming matrix | Required before declaring the entire requested A matrix complete |
 | SDK-internal retry and concurrent snapshot correlation | NOT_VERIFIED | Callback counts cannot stand in for transport attempts |
 | Real model plus simulated bank on 0.1.15 | NOT_RUN | Controlled results do not establish model quality |
 
@@ -88,6 +89,7 @@ Reproduce the supplementary probe from the Harness candidate root:
 
 ```sh
 mvn -pl integrations/openjiuwen-java -am -Dtest=NativeModelRequestTraceTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl integrations/openjiuwen-java -am -Dtest=RuntimeToolChainBoundaryTest -Dsurefire.failIfNoSpecifiedTests=false test
 python3 engineering/verify_runtime_artifacts.py
 ```
 
@@ -97,3 +99,9 @@ existing candidate locks; those records continue to identify the actual build.
 
 No real-day retention, human onboarding, Python runtime, complete snapshots,
 or deployment acceptance is claimed by this checkpoint.
+
+The tool-chain test was also copied unchanged into a detached faff145 worktree
+using 0.1.13. Both versions passed; no SDK source or stable host was modified.
+Its first compilation exposed a test accessor error (request IDs belong to
+Context); this was corrected before execution. These supplementary tests are
+not presented as a fresh full-reactor run or regenerated composition artifacts.
