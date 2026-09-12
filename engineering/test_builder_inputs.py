@@ -19,7 +19,7 @@ class BuilderInputTest(unittest.TestCase):
                 self.schema.validate(value)
                 runtime = value["runtime"]
                 self.assertTrue(runtime["integrationRef"].startswith("repo://"))
-                self.assertEqual("maven://com.openjiuwen:agent-core-java:0.1.13", runtime["resolvedArtifacts"]["templateRef"])
+                self.assertEqual("maven://com.openjiuwen:agent-core-java:0.1.15", runtime["resolvedArtifacts"]["templateRef"])
                 self.assertEqual("maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT",
                                  runtime["resolvedArtifacts"]["integrationRef"])
         self.assertIn("#agents/domain-runtime", self.inputs[1]["runtime"]["templateRef"])
