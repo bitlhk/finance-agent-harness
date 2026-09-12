@@ -1,0 +1,60 @@
+{
+  "analysisVersion": "spending-analysis-v1",
+  "period": "2026-08",
+  "totalIncome": "10000.00",
+  "totalExpense": "1000.50",
+  "netCashflow": "8999.50",
+  "categories": [
+    {
+      "category": "synthetic",
+      "income": "10000.00",
+      "expense": "1000.50",
+      "transactionCount": 4,
+      "classificationVersion": "classification-v1"
+    }
+  ],
+  "trend": [
+    {
+      "period": "2026-03",
+      "income": "10000.00",
+      "expense": "1250.50",
+      "netCashflow": "8749.50"
+    },
+    {
+      "period": "2026-04",
+      "income": "10000.00",
+      "expense": "1250.50",
+      "netCashflow": "8749.50"
+    },
+    {
+      "period": "2026-05",
+      "income": "10000.00",
+      "expense": "1250.50",
+      "netCashflow": "8749.50"
+    },
+    {
+      "period": "2026-06",
+      "income": "10000.00",
+      "expense": "1250.50",
+      "netCashflow": "8749.50"
+    },
+    {
+      "period": "2026-07",
+      "income": "10000.00",
+      "expense": "1250.50",
+      "netCashflow": "8749.50"
+    },
+    {
+      "period": "2026-08",
+      "income": "10000.00",
+      "expense": "1000.50",
+      "netCashflow": "8999.50"
+    }
+  ],
+  "anomalies": [
+    {
+      "customerName": "DO_NOT_EXPOSE_RAW"
+    }
+  ],
+  "asOf": "2026-09-01T01:00:00Z"
+}

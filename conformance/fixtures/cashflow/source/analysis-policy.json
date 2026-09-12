@@ -1,0 +1,18 @@
+{
+  "gate": "PASS",
+  "productionReady": false,
+  "asOf": "2026-09-01T01:00:00Z",
+  "policies": [
+    {
+      "policyId": "spending-analysis-default",
+      "analysisVersion": "spending-analysis-v1",
+      "currency": "CNY",
+      "transactionStatus": "BOOKED",
+      "customerScopeRequired": true,
+      "ledgerWriteAllowed": false,
+      "riskConclusionAllowed": false,
+      "trendMonths": 6,
+      "evidenceRef": "D05-002-SPENDING-GOVERNANCE"
+    }
+  ]
+}

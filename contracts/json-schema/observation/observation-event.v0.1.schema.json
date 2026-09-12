@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/observation-event.v0.1.schema.json",
+  "title": "Candidate metadata-only execution observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "processBootId", "instanceId", "sequence", "spanId", "component", "operation", "phase", "outcome", "dispatch", "at", "elapsedNanos", "links"],
+  "properties": {
+    "schemaVersion": {"const": "finance-observation.v0.1"},
+    "requestId": {"$ref": "#/$defs/id"},
+    "processBootId": {"$ref": "#/$defs/id"},
+    "instanceId": {"$ref": "#/$defs/id"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "spanId": {"$ref": "#/$defs/id"},
+    "parentSpanId": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "component": {"$ref": "#/$defs/id"},
+    "operation": {"$ref": "#/$defs/id"},
+    "phase": {"enum": ["START", "END", "SIGNAL"]},
+    "outcome": {"enum": ["PENDING", "RETURNED", "COMPLETED", "ERROR", "DENIED", "SKIPPED", "INCOMPLETE", "CANCEL_REQUESTED", "CANCELLED"]},
+    "dispatch": {"enum": ["NOT_OBSERVED", "NOT_SENT", "SENT"]},
+    "at": {"type": "string", "format": "date-time"},
+    "elapsedNanos": {"type": "integer", "minimum": 0},
+    "durationNanos": {"type": ["integer", "null"], "minimum": 0},
+    "links": {
+      "type": "object",
+      "propertyNames": {"enum": ["sdkTraceId", "toolCallId", "harnessRequestId", "harnessTraceId", "capabilityId", "providerId", "route", "method", "httpStatus", "businessStatus", "attempt", "runtimeLockDigest", "exceptionType"]},
+      "additionalProperties": {"type": "string", "pattern": "^[A-Za-z0-9_.:/{}-]{1,200}$"}
+    }
+  },
+  "$defs": {"id": {"type": "string", "pattern": "^[A-Za-z0-9_.:/{}-]{1,160}$"}}
+}

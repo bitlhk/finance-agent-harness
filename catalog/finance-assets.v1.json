@@ -66,6 +66,13 @@
       "displayName": "内部审核",
       "source": "repo://profiles",
       "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "cashflow-read-only",
+      "version": "0.1.0",
+      "displayName": "收支只读（候选）",
+      "source": "repo://profiles/cashflow-read-only.md",
+      "governanceRef": "finance-harness-core"
     }
   ],
   "domainPacks": [
@@ -207,6 +214,30 @@
           "customer-self-service"
         ]
       }
+    },
+    {
+      "id": "cashflow-customer-self-service",
+      "version": "0.1.1",
+      "displayName": "收支说明专业方法（候选）",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/cashflow/customer-self-service",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "cashflow-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     }
   ],
   "capabilityPacks": [
@@ -297,6 +328,23 @@
           "customer-self-service"
         ]
       }
+    },
+    {
+      "id": "cashflow-readonly",
+      "version": "0.1.0",
+      "displayName": "摘要与分类趋势只读能力（候选）",
+      "source": "repo://capability-packs/cashflow-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "cashflow-read-only"
+        ]
+      }
     }
   ],
   "providers": [
@@ -323,7 +371,10 @@
       "capabilities": [
         "account.balance.query",
         "transfer.internal.create",
-        "wealth.customer-context.query"
+        "wealth.customer-context.query",
+        "channel.preferences.update",
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
@@ -423,9 +474,16 @@
           "internal-control"
         ]
       }
+    },
+    {
+      "id": "cashflow-controlled",
+      "version": "0.1.0",
+      "displayName": "收支合同受控案例（非模型质量评测）",
+      "source": "repo://conformance/fixtures/cashflow/v0.1",
+      "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-11.2",
+  "catalogRevision": "2026-09-11.3",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "finance-integration-record.v0.1",
+  "recordedDate": "2026-09-09",
+  "components": {
+    "mobileUpstream": {
+      "repository": "wuxiaojingjing/mobile-banking-3.0",
+      "commit": "4652b285a0bff72dd88aaf00f6acae196b8951e0",
+      "participation": "SOURCE_BASELINE_NOT_GENERATED_AGENT_DEPENDENCY"
+    },
+    "mobileFork": {
+      "repository": "bitlhk/mobile-banking-3.0",
+      "main": "4652b285a0bff72dd88aaf00f6acae196b8951e0",
+      "integrationCommit": "cce6c336a36f58a4e6b82a41da4195e5813cfe6f",
+      "participation": "THIN_BRIDGE_TESTED_FULL_APP_NOT_RUN",
+      "pullRequest": "https://github.com/bitlhk/mobile-banking-3.0/pull/1"
+    },
+    "harness": {
+      "repository": "bitlhk/finance-agent-harness",
+      "commit": "07d173dfb7f533a9c9d815360e29d492de6465bb",
+      "worktreeDirty": false
+    },
+    "builder": {
+      "repository": "Euphoria_Yan/agent-store-builder-dev-wo-fork",
+      "base": "cc315956a6f3041474c52634012eae7ab49cfa2b",
+      "commit": "cf94d12f0527e1f2fb98f534056e4cf3014de6b7",
+      "branch": "feat/harness-cashflow-builder-v01",
+      "worktreeDirty": false,
+      "upstreamAcceptance": "PENDING"
+    },
+    "simulator": {
+      "repository": "wuxiaojingjing/non-ai-banking",
+      "commit": "162ef4e587c9e9b781bab60bf89591cf4255e579",
+      "participation": "SOURCE_CONTRACT_INSPECTED_FULL_SIMULATOR_NOT_RUN"
+    },
+    "runtime": {
+      "artifact": "com.openjiuwen:agent-core-java:0.1.13",
+      "sourceModified": false
+    },
+    "ea": {
+      "participation": "NOT_PARTICIPATING"
+    }
+  },
+  "candidate": {
+    "relativeDirectory": "build/cashflow-readonly-final/candidate",
+    "buildId": "cashflow-readonly-v01",
+    "lockSha256": "30a11fd453e9f940a1cbd0632a61c790978204808c1d5bb62deacec534241528",
+    "buildReportSha256": "aea7e2dddc86bd0f20941f24c5fbcc3b854f9d497886b4a5ae4dfbbf7b91aa8f",
+    "controlledReportSha256": "8731cb73f59c25ad9b9cb4d2406877fbb2a42aca6378aad14a5b2a6e2dbccf8a",
+    "buildElapsedMillis": 31339,
+    "cacheCondition": "WARM_LOCAL_MAVEN_CACHE",
+    "running": false,
+    "dependencyJars": 98,
+    "harnessJars": {
+      "target/dependency/finance-harness-cashflow-0.1.0-SNAPSHOT.jar": "dbcc1034ca2be8f6e5c7cb8da9b9f0a86fee6de2e3e1a1e102f1da2afc9d9078",
+      "target/dependency/finance-harness-core-0.1.0-SNAPSHOT.jar": "6482c64707120316cd2690e76eda35f0220aef4d915d8e94c7b37f177afa7835",
+      "target/dependency/finance-harness-openjiuwen-java-0.1.0-SNAPSHOT.jar": "1bf60ae3a7e3700ae108d7781ff6a41ebe623709513a7f37efb3a8f6e1700526",
+      "target/dependency/finance-harness-wealth-0.1.0-SNAPSHOT.jar": "4b749d086bb3c849020b4659dc24c9f23e4f9bd93121a0d0ea2f4db375896384",
+      "target/dependency/finance-provider-non-ai-banking-0.1.0-SNAPSHOT.jar": "61a20431689145150d3365f9e18d25140c41900e18b027a74aa59cdc8d5de057"
+    },
+    "selectedCapabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "controlledChecks": [
+      "actual_instance_matches_lock",
+      "cashflow_jar_present",
+      "session_authorized",
+      "only_two_cashflow_query_tools",
+      "native_cashflow_turn_1",
+      "native_cashflow_turn_2",
+      "summary_exact_scope",
+      "analysis_preserves_different_coverage",
+      "native_multiturn_history",
+      "domain_method_actually_loaded",
+      "raw_source_fields_not_sent_to_model",
+      "missing_period_no_customer_read",
+      "uninstalled_balance_not_callable",
+      "fresh_after_disabled_tool",
+      "missing_not_zero_or_execution_unknown",
+      "revocation_blocks_model_and_customer_reads",
+      "pack_does_not_grant_cashflow_scope",
+      "fresh_for_inflight_revocation",
+      "inflight_bank_request_observed",
+      "revoked_tool_result_not_sent_to_model",
+      "zero_business_mutation_attempts"
+    ],
+    "customerReadAttempts": 4,
+    "sourcePolicyReads": 4,
+    "modelRequests": 9,
+    "modelMode": "CONTROLLED_TEST",
+    "realModelQuality": "NOT_RUN",
+    "realAuthorization": "NOT_RUN",
+    "realSecondProvider": "NOT_RUN",
+    "independentHuman": "PENDING"
+  },
+  "validation": {
+    "java": {
+      "tests": 191,
+      "passed": 184,
+      "skipped": 7,
+      "failures": 0,
+      "errors": 0
+    },
+    "jsonSchema": {
+      "schemas": 10,
+      "fixturesAndProbes": 69
+    },
+    "pythonHarness": 21,
+    "pythonBuilder": 374,
+    "generatedCashflow": 21,
+    "generatedExistingCombinedFinal": 35,
+    "controlledWealthCliConfigurations": 5,
+    "implementationCi": "https://github.com/bitlhk/finance-agent-harness/actions/runs/34366769993"
+  },
+  "knownSourceLimitations": [
+    "SUMMARY_SQL_DOES_NOT_FILTER_BOOKED_STATUS",
+    "ANALYSIS_PRESERVES_UNCLASSIFIED",
+    "SUMMARY_MAX_100_ACCOUNTS"
+  ],
+  "previousRuns": {
+    "archive": "build/cashflow-prior-runs-evidence.tar.gz",
+    "excludes": [
+      "target",
+      "assets"
+    ],
+    "runnable": false
+  }
+}

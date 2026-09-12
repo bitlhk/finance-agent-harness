@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.dev/schemas/cashflow-facts.v0.1",
+  "title": "Candidate cashflow facts V0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "section",
+    "period",
+    "currency",
+    "coverage",
+    "totals",
+    "categories",
+    "trend",
+    "source",
+    "gaps"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-cashflow-facts.v0.1"
+    },
+    "section": {
+      "enum": [
+        "SUMMARY",
+        "ANALYSIS"
+      ]
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "currency": {
+      "const": "CNY"
+    },
+    "coverage": {
+      "enum": [
+        "OWN_BANK_ACCOUNT_STATEMENT",
+        "OWN_BANK_BOOKED_WITH_CATEGORIES"
+      ]
+    },
+    "totals": {
+      "$ref": "#/$defs/totals"
+    },
+    "categories": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "totals",
+          "transactionCount",
+          "classificationVersion"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "totals": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/totals"
+              },
+              {
+                "required": [
+                  "income",
+                  "expense",
+                  "netCashflow"
+                ],
+                "properties": {
+                  "income": {
+                    "type": "string"
+                  },
+                  "expense": {
+                    "type": "string"
+                  },
+                  "netCashflow": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "transactionCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "classificationVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      }
+    },
+    "trend": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "period",
+          "totals"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+          },
+          "totals": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/totals"
+              },
+              {
+                "required": [
+                  "income",
+                  "expense",
+                  "netCashflow"
+                ],
+                "properties": {
+                  "income": {
+                    "type": "string"
+                  },
+                  "expense": {
+                    "type": "string"
+                  },
+                  "netCashflow": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "subjectRef",
+        "system",
+        "recordVersion",
+        "observedAt",
+        "policyRef",
+        "policyAsOf"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "subjectRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "recordVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "asOf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "policyRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "policyAsOf": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]+$"
+      }
+    }
+  },
+  "$defs": {
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "income": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(0|[1-9][0-9]{0,29})\\.[0-9]{2}$"
+        },
+        "expense": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(0|[1-9][0-9]{0,29})\\.[0-9]{2}$"
+        },
+        "netCashflow": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?(0|[1-9][0-9]{0,29})\\.[0-9]{2}$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "section": {
+            "const": "SUMMARY"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "const": "OWN_BANK_ACCOUNT_STATEMENT"
+          },
+          "categories": {
+            "maxItems": 0
+          },
+          "trend": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "coverage": {
+            "const": "OWN_BANK_BOOKED_WITH_CATEGORIES"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "totals": {
+            "not": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/totals"
+                },
+                {
+                  "required": [
+                    "income",
+                    "expense",
+                    "netCashflow"
+                  ],
+                  "properties": {
+                    "income": {
+                      "type": "string"
+                    },
+                    "expense": {
+                      "type": "string"
+                    },
+                    "netCashflow": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gaps": {
+            "contains": {
+              "const": "TOTALS_NOT_RETURNED"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "not": {
+              "required": [
+                "asOf"
+              ],
+              "properties": {
+                "asOf": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gaps": {
+            "contains": {
+              "const": "SOURCE_TIME_NOT_RETURNED"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "section": {
+            "const": "ANALYSIS"
+          },
+          "trend": {
+            "maxItems": 0
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gaps": {
+            "contains": {
+              "const": "TREND_NOT_RETURNED"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "section": {
+            "const": "ANALYSIS"
+          },
+          "trend": {
+            "minItems": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "trend": {
+            "minItems": 6
+          }
+        }
+      }
+    }
+  ]
+}

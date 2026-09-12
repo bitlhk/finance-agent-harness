@@ -9,6 +9,8 @@ import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.InputCollectionProvider;
+import io.github.bitlhk.finance.harness.cashflow.CashflowFactsV1;
+import io.github.bitlhk.finance.harness.cashflow.CashflowConsumer;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -38,6 +40,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
     public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
+    public static final String TRANSACTION_SUMMARY_QUERY = "finance.transaction-summary.query";
+    public static final String SPENDING_ANALYSIS_QUERY = "finance.spending-analysis.query";
     public static final String CHANNEL_PREFERENCES_UPDATE = "channel.preferences.update";
     public static final String TRANSFER_INTERNAL_CREATE = "transfer.internal.create";
 
@@ -80,6 +84,10 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                         new ProviderDescriptorV1.CapabilitySupport(
                                 WEALTH_CUSTOMER_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY),
                         new ProviderDescriptorV1.CapabilitySupport(
+                                TRANSACTION_SUMMARY_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                SPENDING_ANALYSIS_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
                                 CHANNEL_PREFERENCES_UPDATE, CapabilityRequestV1.Operation.TASK),
                         new ProviderDescriptorV1.CapabilitySupport(
                                 TRANSFER_INTERNAL_CREATE, CapabilityRequestV1.Operation.TASK)));
@@ -96,12 +104,55 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             return switch (request.capabilityId()) {
                 case ACCOUNT_BALANCE_QUERY -> accountBalance(request);
                 case WEALTH_CUSTOMER_CONTEXT_QUERY -> wealthCustomerContext(request);
+                case TRANSACTION_SUMMARY_QUERY -> cashflow(request, CashflowFactsV1.Section.SUMMARY);
+                case SPENDING_ANALYSIS_QUERY -> cashflow(request, CashflowFactsV1.Section.ANALYSIS);
                 default -> localFailure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
                         "unsupported query capability: " + request.capabilityId(),
                         List.of("CHECK_CAPABILITY_ID"));
             };
         } catch (ProviderFailure failure) {
             return upstreamFailure(request, failure);
+        }
+    }
+
+    private CapabilityResultV1 cashflow(CapabilityRequestV1 request, CashflowFactsV1.Section section) {
+        if (!request.parameters().keySet().stream().allMatch("period"::equals))
+            return localFailure(request, "INVALID_INPUT", "CASHFLOW_PARAMETERS_INVALID", false,
+                    "Only an explicit period is accepted", List.of("CHECK_PERIOD"));
+        Object periodValue = request.parameters().get("period");
+        if (periodValue == null || "".equals(periodValue))
+            return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(), request.context().traceId(),
+                    CapabilityResultV1.Status.NEED_USER, "Provide an absolute period in YYYY-MM; no default month is used.",
+                    Map.of(), List.of("period"), List.of("PROVIDE_PERIOD"), PROVIDER_ID, Instant.now(), null, null);
+        String period;
+        try {
+            if (!(periodValue instanceof String text)) throw new IllegalArgumentException();
+            CashflowFactsV1.month(text); period = text;
+        } catch (IllegalArgumentException invalid) {
+            return localFailure(request, "INVALID_INPUT", "CASHFLOW_PERIOD_INVALID", false,
+                    "Provide a valid absolute month", List.of("CHECK_PERIOD"));
+        }
+        String route = "/api/v1/finance/" + (section == CashflowFactsV1.Section.SUMMARY ? "transaction-summary" : "spending-analysis");
+        Map<String, Object> policy = client.getDocument(route + "/readiness", request.context());
+        try {
+            CashflowMapper.validatePolicy(section, policy, Instant.now());
+        } catch (RuntimeException invalid) {
+            return localFailure(request, "PRECONDITION_CHANGED", "CASHFLOW_SOURCE_POLICY_BLOCKED", false,
+                    "Source policy does not allow this read-only description", List.of("VERIFY_SOURCE_POLICY"));
+        }
+        Response response = client.get(route, Map.of("period", period), request.context());
+        try {
+            CashflowFactsV1 facts = CashflowMapper.map(section, period, request.context().subjectRef(),
+                    response.sourceSystem(), response.data(), policy, Instant.now());
+            Map<String, Object> data = new LinkedHashMap<>();
+            var type = new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {};
+            data.put("facts", HarnessJson.mapper().convertValue(facts, type));
+            data.put("description", HarnessJson.mapper().convertValue(CashflowConsumer.describe(facts), type));
+            return completed(request, "Cashflow facts available within the declared scope; no transaction or risk decision.",
+                    data, response.sourceSystem(), response.asOf());
+        } catch (RuntimeException invalid) {
+            return localFailure(request, "UPSTREAM_FAILURE", "CASHFLOW_SOURCE_INVALID", false,
+                    "Cashflow facts or policy cannot be mapped; no source data exposed", List.of("VERIFY_SOURCE_CONTRACT"));
         }
     }
 
@@ -773,6 +824,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     }
 
     public static final class Config {
+        private Supplier<io.github.bitlhk.finance.harness.core.observation.ObservationRun> observationRun = () -> null;
         private Supplier<HostSession> hostSession;
         private Consumer<HttpObservation> observer = observation -> { };
         private final URI baseUri;
@@ -783,6 +835,12 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         private final String appVersion;
         private final Duration timeout;
         private final String stepUpCode;
+
+        /** Trusted host request scope; never supplied by model arguments. */
+        public Config observations(Supplier<io.github.bitlhk.finance.harness.core.observation.ObservationRun> current) {
+            this.observationRun = Objects.requireNonNull(current);
+            return this;
+        }
 
         /** The supplier must revalidate the bank session and current host authorization on every call. */
         public static Config hostSession(URI baseUri, Duration timeout, Supplier<HostSession> currentSession) {
@@ -884,7 +942,6 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 ensureSession(context);
                 HttpResponse<String> response = sendGet(path, query, context, sessionId.get());
-                config.observer.accept(new HttpObservation("GET", observationRoute(path), response.statusCode(), Instant.now()));
                 if (response.statusCode() == 401 && config.hostSession == null) {
                     sessionId.set(null);
                     strongAuthentication = false;
@@ -903,6 +960,21 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                 throw transportFailure(context, "UPSTREAM_TRANSPORT",
                         "upstream request failed: " + safeMessage(exception));
             }
+        }
+
+        private Map<String, Object> getDocument(String path, FinanceContextV1 context) {
+            try {
+                ensureSession(context);
+                HttpResponse<String> response = sendGet(path, Map.of(), context, sessionId.get());
+                if (response.statusCode() != 200) throw transportFailure(context, "SOURCE_POLICY_UNAVAILABLE", "Source policy is unavailable");
+                JsonNode tree = JSON.readTree(response.body());
+                if (tree == null || !tree.isObject()) throw transportFailure(context, "SOURCE_POLICY_INVALID", "Source policy must be an object");
+                return JSON.convertValue(tree, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            } catch (SecurityException denied) { throw identityFailure(context); }
+            catch (ProviderFailure failure) { throw failure; }
+            catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt(); throw transportFailure(context, "REQUEST_INTERRUPTED", "Source policy query interrupted");
+            } catch (Exception invalid) { throw transportFailure(context, "SOURCE_POLICY_INVALID", "Source policy query failed"); }
         }
 
         private Response post(String path, Object body, FinanceContextV1 context) {
@@ -981,8 +1053,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                     .POST(HttpRequest.BodyPublishers.ofString(
                             JSON.writeValueAsString(body), StandardCharsets.UTF_8))
                     .build();
-            Response response = parse(http.send(request,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)), context);
+            Response response = parse(observedSend(request, "/api/v1/sessions", context), context);
             Object value = response.data().get("sessionId");
             if (value == null || String.valueOf(value).isBlank()) {
                 throw new ProviderFailure(
@@ -997,7 +1068,14 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         }
 
         private static String observationRoute(String path) {
-            return path.startsWith("/api/v1/accounts/") ? "/api/v1/accounts/{accountId}" : path;
+            if (path.startsWith("/api/v1/accounts/")) return "/api/v1/accounts/{accountId}";
+            if (path.startsWith("/api/v1/tasks/")) return "/api/v1/tasks/{taskId}";
+            return Set.of("/api/v1/accounts", "/api/v1/sessions", "/api/v1/sessions/current",
+                    "/api/v1/sessions/step-up", "/api/v1/wealth/aggregate",
+                    "/api/v1/finance/risk-assessment", "/api/v1/finance/transaction-summary",
+                    "/api/v1/finance/transaction-summary/readiness", "/api/v1/finance/spending-analysis",
+                    "/api/v1/finance/spending-analysis/readiness", "/api/v1/tasks",
+                    "/api/v1/preferences/channel").contains(path) ? path : "/unclassified";
         }
 
         private void verifySessionCustomer(FinanceContextV1 context) {
@@ -1012,11 +1090,11 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                 Map<String, String> query,
                 FinanceContextV1 context,
                 String session) throws Exception {
-            return http.send(requestBuilder(path + encodeQuery(query), context)
+            return observedSend(requestBuilder(path + encodeQuery(query), context)
                             .header(SESSION_HEADER, session)
                             .GET()
                             .build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    path, context);
         }
 
         private HttpResponse<String> sendPost(
@@ -1024,13 +1102,39 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                 Object body,
                 FinanceContextV1 context,
                 String session) throws Exception {
-            return http.send(requestBuilder(path, context)
+            return observedSend(requestBuilder(path, context)
                             .header(SESSION_HEADER, session)
                             .header("Content-Type", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(
                                     JSON.writeValueAsString(body), StandardCharsets.UTF_8))
                             .build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    path, context);
+        }
+
+        private HttpResponse<String> observedSend(HttpRequest request, String path,
+                                                   FinanceContextV1 context) throws Exception {
+            io.github.bitlhk.finance.harness.core.observation.ObservationRun.Span span = null;
+            try {
+                var run = config.observationRun.get();
+                if (run != null) span = run.start(null, "provider-http", "attempt", Map.of(
+                        "route", observationRoute(path), "method", request.method(),
+                        "harnessRequestId", context.requestId(), "harnessTraceId", context.traceId()));
+            } catch (RuntimeException ignored) { }
+            try {
+                if (span != null) span.dispatched();
+                var response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                if (span != null) span.finish(
+                        io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.RETURNED,
+                        Map.of("httpStatus", Integer.toString(response.statusCode())));
+                try { if ("GET".equals(request.method())) config.observer.accept(new HttpObservation(request.method(), observationRoute(path),
+                        response.statusCode(), Instant.now())); } catch (RuntimeException ignored) { }
+                return response;
+            } catch (Exception failure) {
+                if (span != null) span.finish(
+                        io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.ERROR,
+                        Map.of("exceptionType", failure.getClass().getSimpleName()));
+                throw failure;
+            } finally { if (span != null) span.close(); }
         }
 
         private HttpRequest.Builder requestBuilder(String path, FinanceContextV1 context) {

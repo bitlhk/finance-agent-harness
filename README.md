@@ -1,5 +1,8 @@
 # Finance Agent Harness
 
+[收支只读切片 V0.1](docs/cashflow-readonly-v01.md)：基于固定手机银行/模拟器合同，
+新增两个只读事实能力与一个方法包，复用 Core 和 Runtime；业务口径与真实接入单独验收。
+
 干净 Runtime 的下一步交付见 [Builder 只读参考模板与验收边界](docs/integration-acceptance/clean-runtime-builder-v01.md)：
 Builder 独立生成，金融规则继续消费 Harness 制品；受控运行与真实授权/完整手机银行分别验收。
 
