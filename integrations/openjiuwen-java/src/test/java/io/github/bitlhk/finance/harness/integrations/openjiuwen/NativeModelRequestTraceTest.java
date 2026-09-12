@@ -20,6 +20,24 @@ class NativeModelRequestTraceTest {
     @Test void requestSnapshotDoesNotImplySuccessfulResponse() throws Exception {
         probe(false, true);
     }
+    @Test void callbackCanCaptureRequestWithoutAListeningModelServer() throws Exception {
+        int port;
+        try (var socket = new java.net.ServerSocket(0, 0, java.net.InetAddress.getLoopbackAddress())) {
+            port = socket.getLocalPort();
+        }
+        var captured = new AtomicReference<String>();
+        var client = new OpenAiCompatibleModelClient(ModelRequestConfig.builder().modelName("probe").build(),
+                ModelClientConfig.builder().clientProvider("OpenAI").apiKey("synthetic")
+                        .apiBase("http://127.0.0.1:" + port + "/v1").timeout(2).maxRetries(0).build());
+        assertThrows(Exception.class, () -> client.withRequestTraceCallback(value -> {
+            try { captured.set(HarnessJson.mapper().writeValueAsString(value)); }
+            catch (Exception failure) { throw new IllegalStateException(failure); }
+        }, () -> client.invoke(List.of(Map.of("role", "user", "content", "synthetic unsent")),
+                List.of(), null, null, null, null, null, null, null, Map.of())));
+        assertNotNull(captured.get());
+        assertTrue(captured.get().contains("synthetic unsent"));
+        // Client preparation is observable even though there is no receiving model endpoint.
+    }
     private void probe(boolean stream, boolean error) throws Exception {
         var received = new AtomicReference<String>();
         var captured = new AtomicReference<String>();
@@ -41,9 +59,12 @@ class NativeModelRequestTraceTest {
                     .temperature(0.2).maxTokens(64).build(), ModelClientConfig.builder().clientProvider("OpenAI")
                     .apiKey("synthetic-secret-not-to-record").apiBase("http://127.0.0.1:" + server.getAddress().getPort() + "/v1")
                     .timeout(5).maxRetries(0).verifySsl(true).build());
-            var messages = List.of(Map.of("role", "system", "content", "synthetic system"),
+            List<Map<String, Object>> messages = List.of(Map.of("role", "system", "content", "synthetic system"),
                     Map.of("role", "user", "content", "synthetic historical turn"),
                     Map.of("role", "assistant", "content", "synthetic historical answer"),
+                    Map.of("role", "assistant", "tool_calls", List.of(Map.of("id", "probe-call-1",
+                            "type", "function", "function", Map.of("name", "balance_probe", "arguments", "{}")))),
+                    Map.of("role", "tool", "tool_call_id", "probe-call-1", "content", "synthetic balance 12345.67 CNY"),
                     Map.of("role", "user", "content", "synthetic current turn"));
             var tools = List.of(Map.of("type", "function", "function", Map.of("name", "balance_probe",
                     "description", "Synthetic balance", "parameters", Map.of("type", "object", "properties", Map.of()))));
@@ -64,6 +85,8 @@ class NativeModelRequestTraceTest {
             assertFalse(captured.get().contains("synthetic-secret-not-to-record"));
             assertTrue(captured.get().contains("synthetic historical turn"));
             assertTrue(captured.get().contains("balance_probe"));
+            assertTrue(captured.get().contains("synthetic balance 12345.67 CNY"));
+            assertTrue(captured.get().contains("probe-call-1"));
         } finally { server.stop(0); }
     }
 }
