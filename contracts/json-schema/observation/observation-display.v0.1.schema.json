@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.dev/schemas/observation-display.v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "capabilities",
+    "sources"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-observation-display.v0.1"
+    },
+    "capabilities": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capabilityId",
+          "packId",
+          "version",
+          "title"
+        ],
+        "properties": {
+          "capabilityId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "packId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "^(?!.*[\\u0000-\\u001f\\u007f-\\u009f])(?=.*\\S).*$"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerId",
+          "version",
+          "operations"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "operations": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operationId",
+                "method",
+                "route",
+                "title",
+                "description"
+              ],
+              "properties": {
+                "operationId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+                },
+                "method": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3,10}$"
+                },
+                "route": {
+                  "type": "string",
+                  "pattern": "^/[A-Za-z0-9_./{}-]{0,199}$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "pattern": "^(?!.*[\\u0000-\\u001f\\u007f-\\u009f])(?=.*\\S).*$"
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "pattern": "^(?!.*[\\u0000-\\u001f\\u007f-\\u009f])(?=.*\\S).*$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

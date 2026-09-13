@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/observation-selection.v0.1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "common", "units"],
+  "properties": {
+    "schemaVersion": {"const": "finance-observation-selection.v0.1"},
+    "id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "common": {"type": "array", "items": {"$ref": "#/$defs/reference"}},
+    "units": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "capabilityIds", "source"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "capabilityIds": {"type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}},
+        "source": {"$ref": "#/$defs/reference"}
+      }
+    }}
+  },
+  "$defs": {"reference": {"type": "string", "pattern": "^repo://[A-Za-z0-9_./-]+$"}}
+}

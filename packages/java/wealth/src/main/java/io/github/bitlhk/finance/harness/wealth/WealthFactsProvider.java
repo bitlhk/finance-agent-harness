@@ -40,7 +40,10 @@ public final class WealthFactsProvider implements DescribedFinanceProvider, Invo
         return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION, PROVIDER, "0.1.0",
                 List.of(new ProviderDescriptorV1.CapabilitySupport(CAPABILITY, CapabilityRequestV1.Operation.QUERY)));
     }
-    public List<Class<?>> artifactTypes() {
+    @Override public List<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel> observationLabels() {
+        return source.observationLabels();
+    }
+    @Override public List<Class<?>> artifactTypes() {
         List<Class<?>> types = new ArrayList<>(source.artifactTypes());
         types.add(getClass()); return types.stream().distinct().toList();
     }

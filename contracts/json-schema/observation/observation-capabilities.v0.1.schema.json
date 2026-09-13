@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/observation-capabilities.v0.1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "collectorId", "version", "capabilities"],
+  "properties": {
+    "schemaVersion": {"const": "finance-observation-capabilities.v0.1"},
+    "collectorId": {"$ref": "#/$defs/token"},
+    "version": {"$ref": "#/$defs/token"},
+    "capabilities": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["semanticId", "semanticVersion", "boundary", "fields", "support", "sdkSupport", "verification", "evidenceRefs", "availability", "authorization"],
+      "properties": {
+        "semanticId": {"$ref": "#/$defs/token"}, "semanticVersion": {"$ref": "#/$defs/token"},
+        "boundary": {"enum": ["HOST", "INTEGRATOR", "PROVIDER", "MODEL_CLIENT", "MODEL_HTTP"]},
+        "fields": {"type": "array", "items": {"$ref": "#/$defs/token"}},
+        "support": {"$ref": "#/$defs/support"}, "sdkSupport": {"$ref": "#/$defs/support"},
+        "verification": {"enum": ["VERIFIED", "NOT_CHECKED"]},
+        "evidenceRefs": {"type": "array", "items": {"$ref": "#/$defs/token"}},
+        "availability": {"enum": ["ENABLED", "DISABLED", "UNKNOWN", "FAILED"]},
+        "authorization": {"enum": ["AUTHORIZED", "NOT_AUTHORIZED", "NOT_REQUIRED", "UNKNOWN"]}
+      },
+      "allOf": [{"if": {"properties": {"verification": {"const": "VERIFIED"}}},
+                 "then": {"properties": {"support": {"const": "SUPPORTED"}, "evidenceRefs": {"minItems": 1}}}}]
+    }}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},
+    "support": {"enum": ["SUPPORTED", "UNSUPPORTED", "UNKNOWN"]}
+  }
+}

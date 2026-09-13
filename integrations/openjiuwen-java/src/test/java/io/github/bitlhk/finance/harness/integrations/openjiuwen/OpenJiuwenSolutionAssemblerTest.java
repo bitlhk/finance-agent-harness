@@ -34,6 +34,75 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test void componentDisplayUsesPackAndProviderWithoutChangingLegacyPlanOrCallingBusiness() throws Exception {
+        var source = new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel(
+                "custom-source", "2.0", List.of(new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.OperationLabel(
+                "facts", "GET", "/facts", "Custom source facts", "Explicit adapter-owned description")));
+        var provider = new DescribedFinanceProvider() {
+            public ProviderDescriptorV1 descriptor() {
+                return OpenJiuwenSolutionAssemblerTest.descriptor("non-ai-banking-reference", "wealth.customer-context.query", CapabilityRequestV1.Operation.QUERY);
+            }
+            public List<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel> observationLabels() { return List.of(source); }
+            public CapabilityResultV1 query(CapabilityRequestV1 request) { throw new AssertionError("No business call for display"); }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new AssertionError("No task call for display"); }
+        };
+        var bound = new io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider(provider,
+                () -> { throw new AssertionError("Display must not request grants"); }, Map.of());
+        var observed = new io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider(bound,
+                "non-ai-banking-reference", () -> { throw new AssertionError("Display must not emit business events"); });
+        assertEquals(List.of(source), bound.observationLabels());
+        assertEquals(List.of(source), observed.observationLabels());
+        var prepared = new OpenJiuwenSolutionAssembler().prepare(root(), root().resolve(
+                "examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json"), Map.of("non-ai-banking-reference", observed));
+        var before = prepared.snapshot();
+        var labels = prepared.displayMetadata();
+        assertEquals(prepared.capabilityPacks().getFirst().capabilities().getFirst().name(), labels.capabilities().getFirst().title());
+        assertEquals(source, labels.sources().getFirst());
+        assertEquals(before, prepared.snapshot());
+        assertFalse(before.containsKey("displayMetadata"));
+    }
+
+    @Test
+    void observationSidecarIsExplicitDigestLockedAndCheckedBeforeRegistration() throws Exception {
+        var captured = new AtomicReference<CapabilityRequestV1>();
+        var providers = Map.<String, FinanceProvider>of("non-ai-banking-reference",
+                describedProvider("non-ai-banking-reference", "wealth.customer-context.query",
+                        CapabilityRequestV1.Operation.QUERY, captured, Map.of()));
+        var assembler = new OpenJiuwenSolutionAssembler();
+        Path input = root().resolve("examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json");
+        String source = "contracts/fixtures/observation/readonly-requirements.v0.1.json";
+        String digest = "sha256:" + java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(root().resolve(source))));
+        var ref = new io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Reference(
+                "readonly-observation", "0.1.0", "repo://" + source, digest);
+        var legacy = assembler.prepare(root(), input, providers);
+        assertEquals("finance-installation-plan.v0.1", legacy.snapshot().get("schemaVersion"));
+        assertFalse(legacy.snapshot().containsKey("observationAssessment"));
+        assertEquals("LEGACY_UNASSESSED", legacy.observationAssessment().status().name());
+        assertThrows(IllegalStateException.class, () -> assembler.prepare(root(), input, providers, ref, List.of()));
+        var descriptor = new io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01(
+                "finance-observation-capabilities.v0.1", "test-archive", "0.1", List.of(
+                new io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Capability(
+                        "execution.history", "0.1",
+                        io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Boundary.HOST,
+                        Set.of("requestId", "outcome"),
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Support.SUPPORTED,
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Verification.VERIFIED,
+                        List.of("fixture:assembler-only-not-host-acceptance"),
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Availability.ENABLED,
+                        io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01.Authorization.NOT_REQUIRED)));
+        var prepared = assembler.prepare(root(), input, providers, ref, List.of(descriptor));
+        assertEquals("finance-installation-plan.v0.2", prepared.snapshot().get("schemaVersion"));
+        assertEquals("READY", prepared.observationAssessment().status().name());
+        var assets = new ObjectMapper().valueToTree(prepared.snapshot().get("assets"));
+        assertTrue(assets.toString().contains(digest));
+        assertTrue(assets.toString().contains("OBSERVATION_REQUIREMENTS"));
+        assertNull(captured.get(), "Observation preparation must not read any bank data");
+        assertThrows(IllegalArgumentException.class, () -> assembler.prepare(root(), input, providers,
+                new io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.Reference(
+                        "readonly-observation", "0.1.0", "repo://" + source, "sha256:" + "0".repeat(64)), List.of(descriptor)));
+    }
+
     @Test
     void preparedQueryUsesFrozenDefinitionsAndSameBindingWithoutJavaAgent() throws Exception {
         var captured = new AtomicReference<CapabilityRequestV1>();

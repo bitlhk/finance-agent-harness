@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "readonly-balance-observation",
+  "version": "0.1.0",
+  "requirements": [
+    {
+      "semanticId": "capability.result",
+      "semanticVersion": "0.1",
+      "obligation": "REQUIRED",
+      "boundary": "PROVIDER",
+      "content": "METADATA",
+      "fields": [
+        "capabilityId",
+        "providerId",
+        "harnessRequestId",
+        "businessStatus",
+        "at"
+      ],
+      "capabilityIds": [
+        "account.balance.query"
+      ]
+    }
+  ]
+}

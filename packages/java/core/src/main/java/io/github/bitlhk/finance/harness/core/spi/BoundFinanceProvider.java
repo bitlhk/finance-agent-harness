@@ -23,6 +23,8 @@ public final class BoundFinanceProvider implements DescribedFinanceProvider, Inv
     }
 
     public ProviderDescriptorV1 descriptor() { return delegate.descriptor(); }
+    @Override public java.util.List<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel>
+            observationLabels() { return delegate.observationLabels(); }
     public java.util.List<Class<?>> artifactTypes() {
         java.util.List<Class<?>> types = new java.util.ArrayList<>(delegate.artifactTypes());
         types.add(getClass()); return types.stream().distinct().toList();

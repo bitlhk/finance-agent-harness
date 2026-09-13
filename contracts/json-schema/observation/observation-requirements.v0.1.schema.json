@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/observation-requirements.v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "requirements"],
+  "properties": {
+    "schemaVersion": {"const": "finance-observation-requirements.v0.1"},
+    "id": {"$ref": "#/$defs/identifier"},
+    "version": {"$ref": "#/$defs/identifier"},
+    "requirements": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["semanticId", "semanticVersion", "obligation", "boundary", "content", "fields", "capabilityIds"],
+        "properties": {
+          "semanticId": {"$ref": "#/$defs/identifier"},
+          "semanticVersion": {"$ref": "#/$defs/identifier"},
+          "obligation": {"enum": ["REQUIRED", "OPTIONAL", "AUTHORIZED_DIAGNOSTIC"]},
+          "boundary": {"enum": ["HOST", "INTEGRATOR", "PROVIDER", "MODEL_CLIENT", "MODEL_HTTP"]},
+          "content": {"enum": ["METADATA", "DIAGNOSTIC_BODY"]},
+          "fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+          "capabilityIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}}
+        }
+      }
+    }
+  },
+  "$defs": {"identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"}}
+}

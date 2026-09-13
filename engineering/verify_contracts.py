@@ -201,6 +201,31 @@ def main():
     probe["task"]["confirmationRequired"] = False
     assert not result_schema.is_valid(probe), "Missing confirmation flag accepted"
     print(f"PASS: {len(schemas)} schemas, {count + 1} fixtures/assets/state probes")
+    display_cases = json.loads((ROOT / "contracts/fixtures/observation/display-cases.json").read_text())
+    for case in display_cases:
+        assert validator("observation-display.v0.1").is_valid(case["value"]) == case["valid"], case["name"]
+    print(f"PASS: {len(display_cases)} shared display cases; duplicate identities/routes additionally checked by Java and history reader")
+    observation = json.loads((ROOT / "contracts/fixtures/observation/readonly-requirements.v0.1.json").read_text())
+    observation_cases = json.loads((ROOT / "contracts/fixtures/observation/requirements-cases.json").read_text())
+    for case in observation_cases:
+        value = copy.deepcopy(observation)
+        if "field" in case: value[case["field"]] = case["value"]
+        assert validator("observation-requirements.v0.1").is_valid(value) == case["valid"], case["name"]
+    print(f"PASS: {len(observation_cases)} shared observation requirement cases (also consumed by Java)")
+    collector = json.loads((ROOT / "contracts/fixtures/observation/collector.v0.1.json").read_text())
+    collector_cases = json.loads((ROOT / "contracts/fixtures/observation/collector-cases.json").read_text())
+    for case in collector_cases:
+        value = copy.deepcopy(collector)
+        if "field" in case: value["capabilities"][0][case["field"]] = case["value"]
+        assert validator("observation-capabilities.v0.1").is_valid(value) == case["valid"], case["name"]
+    print(f"PASS: {len(collector_cases)} shared collector cases (also consumed by Java)")
+    selection = json.loads((ROOT / "observation-packs/readonly/selection.json").read_text())
+    validator("observation-selection.v0.1").validate(selection)
+    for unit in selection["units"]:
+        value = json.loads((ROOT / unit["source"].removeprefix("repo://")).read_text())
+        validator("observation-requirements.v0.1").validate(value)
+        assert set(value["requirements"][0]["capabilityIds"]) == set(unit["capabilityIds"])
+    print(f"PASS: selection and {len(selection['units'])} unit requirement declarations")
 
 
 if __name__ == "__main__":
