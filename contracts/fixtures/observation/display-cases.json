@@ -1,0 +1,213 @@
+[
+  {
+    "name": "valid",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "Custom facts"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": true
+  },
+  {
+    "name": "html-text",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "<img src=x onerror=alert(1)>"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": true
+  },
+  {
+    "name": "version",
+    "value": {
+      "schemaVersion": "unknown",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "Custom facts"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "extra",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "Custom facts"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ],
+      "secret": "not-allowed"
+    },
+    "valid": false
+  },
+  {
+    "name": "bad-route",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "Custom facts"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom?id=private",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "control",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "bad"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "oversize",
+    "value": {
+      "schemaVersion": "finance-observation-display.v0.1",
+      "capabilities": [
+        {
+          "capabilityId": "custom.query",
+          "packId": "custom",
+          "version": "1.0",
+          "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "sources": [
+        {
+          "providerId": "custom",
+          "version": "1.0",
+          "operations": [
+            {
+              "operationId": "facts",
+              "method": "GET",
+              "route": "/custom/{id}",
+              "title": "Source facts",
+              "description": "Provider-owned reference operation"
+            }
+          ]
+        }
+      ]
+    },
+    "valid": false
+  }
+]

@@ -34,6 +34,34 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test void componentDisplayUsesPackAndProviderWithoutChangingLegacyPlanOrCallingBusiness() throws Exception {
+        var source = new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel(
+                "custom-source", "2.0", List.of(new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.OperationLabel(
+                "facts", "GET", "/facts", "Custom source facts", "Explicit adapter-owned description")));
+        var provider = new DescribedFinanceProvider() {
+            public ProviderDescriptorV1 descriptor() {
+                return OpenJiuwenSolutionAssemblerTest.descriptor("non-ai-banking-reference", "wealth.customer-context.query", CapabilityRequestV1.Operation.QUERY);
+            }
+            public List<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel> observationLabels() { return List.of(source); }
+            public CapabilityResultV1 query(CapabilityRequestV1 request) { throw new AssertionError("No business call for display"); }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new AssertionError("No task call for display"); }
+        };
+        var bound = new io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider(provider,
+                () -> { throw new AssertionError("Display must not request grants"); }, Map.of());
+        var observed = new io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider(bound,
+                "non-ai-banking-reference", () -> { throw new AssertionError("Display must not emit business events"); });
+        assertEquals(List.of(source), bound.observationLabels());
+        assertEquals(List.of(source), observed.observationLabels());
+        var prepared = new OpenJiuwenSolutionAssembler().prepare(root(), root().resolve(
+                "examples/solutions/wealth-customer-diagnosis/solution-build-input.v1.json"), Map.of("non-ai-banking-reference", observed));
+        var before = prepared.snapshot();
+        var labels = prepared.displayMetadata();
+        assertEquals(prepared.capabilityPacks().getFirst().capabilities().getFirst().name(), labels.capabilities().getFirst().title());
+        assertEquals(source, labels.sources().getFirst());
+        assertEquals(before, prepared.snapshot());
+        assertFalse(before.containsKey("displayMetadata"));
+    }
+
     @Test
     void observationSidecarIsExplicitDigestLockedAndCheckedBeforeRegistration() throws Exception {
         var captured = new AtomicReference<CapabilityRequestV1>();

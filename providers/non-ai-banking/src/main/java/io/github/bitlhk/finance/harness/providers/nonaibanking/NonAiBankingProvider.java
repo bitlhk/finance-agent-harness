@@ -72,6 +72,10 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         this.client = new Client(Objects.requireNonNull(config, "config"));
     }
 
+    @Override public List<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel> observationLabels() {
+        return ReferenceObservationLabels.descriptions();
+    }
+
     @Override
     public ProviderDescriptorV1 descriptor() {
         return new ProviderDescriptorV1(
@@ -1117,7 +1121,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             try {
                 var run = config.observationRun.get();
                 if (run != null) span = run.start(null, "provider-http", "attempt", Map.of(
-                        "route", observationRoute(path), "method", request.method(),
+                        "route", observationRoute(path), "method", request.method(), "providerId", PROVIDER_ID,
                         "harnessRequestId", context.requestId(), "harnessTraceId", context.traceId()));
             } catch (RuntimeException ignored) { }
             try {

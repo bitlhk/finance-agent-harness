@@ -201,6 +201,10 @@ def main():
     probe["task"]["confirmationRequired"] = False
     assert not result_schema.is_valid(probe), "Missing confirmation flag accepted"
     print(f"PASS: {len(schemas)} schemas, {count + 1} fixtures/assets/state probes")
+    display_cases = json.loads((ROOT / "contracts/fixtures/observation/display-cases.json").read_text())
+    for case in display_cases:
+        assert validator("observation-display.v0.1").is_valid(case["value"]) == case["valid"], case["name"]
+    print(f"PASS: {len(display_cases)} shared display cases; duplicate identities/routes additionally checked by Java and history reader")
     observation = json.loads((ROOT / "contracts/fixtures/observation/readonly-requirements.v0.1.json").read_text())
     observation_cases = json.loads((ROOT / "contracts/fixtures/observation/requirements-cases.json").read_text())
     for case in observation_cases:

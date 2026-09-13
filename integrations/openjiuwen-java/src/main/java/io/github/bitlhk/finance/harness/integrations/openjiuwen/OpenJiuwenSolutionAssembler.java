@@ -265,6 +265,23 @@ public final class OpenJiuwenSolutionAssembler {
         public List<FinanceDomainPackLoader.LoadedDomainPack> domainPacks() { return domainPacks; }
         public ObservationAssessmentV01 observationAssessment() { return observation; }
 
+        /** Display snapshot accessor: does not change existing installation-plan JSON shapes. */
+        public io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01 displayMetadata() {
+            var labels = new ArrayList<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.CapabilityLabel>();
+            var sources = new java.util.TreeMap<String, io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel>();
+            for (var pack : capabilityPacks) for (var capability : pack.capabilities()) {
+                labels.add(new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.CapabilityLabel(
+                        capability.capabilityId(), pack.packId(), pack.version(), capability.name()));
+                if (bindings.get(capability.capabilityId()).provider() instanceof io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider described)
+                    for (var source : described.observationLabels()) {
+                        var previous = sources.putIfAbsent(source.providerId(), source);
+                        if (previous != null && !previous.equals(source)) throw new IllegalStateException("AMBIGUOUS_SOURCE_DISPLAY");
+                    }
+            }
+            return new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01(
+                    io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.VERSION, labels, new ArrayList<>(sources.values()));
+        }
+
         public Map<String, Object> snapshot() {
             List<Map<String, Object>> capabilities = new ArrayList<>();
             for (var pack : capabilityPacks) for (var capability : pack.capabilities()) {

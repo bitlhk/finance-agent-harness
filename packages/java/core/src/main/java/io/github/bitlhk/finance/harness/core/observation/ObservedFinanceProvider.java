@@ -24,6 +24,9 @@ public final class ObservedFinanceProvider implements InputCollectionProvider, I
             throw new IllegalStateException("DESCRIBED_PROVIDER_REQUIRED");
         return described.descriptor();
     }
+    @Override public java.util.List<ObservationDisplayV01.SourceLabel> observationLabels() {
+        return delegate instanceof DescribedFinanceProvider described ? described.observationLabels() : java.util.List.of();
+    }
     @Override public java.util.List<Class<?>> artifactTypes() {
         var types = new java.util.ArrayList<Class<?>>();
         types.add(ObservedFinanceProvider.class);
