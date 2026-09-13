@@ -35,6 +35,9 @@ jobs:
           cache-dependency-path: engineering/requirements-conformance.txt
       - name: Install contract validator
         run: python -m pip install -r engineering/requirements-conformance.txt
+      - name: Collector dependency byte reproducibility
+        if: matrix.python == '3.12'
+        run: python engineering/verify_reproducible_jars.py --report "$RUNNER_TEMP/harness-reproducibility/report.json"
       - name: Offline schema and negative fixture gate
         run: python engineering/verify_contracts.py
       - name: Unit tests and local HTTP fault injection
@@ -54,3 +57,4 @@ jobs:
             **/target/surefire-reports/*.xml
             integrations/openjiuwen-java/target/java-instant-cases.json
             examples/solutions/wealth-facts-kit/target/runs/**
+            ${{ runner.temp }}/harness-reproducibility/*

@@ -36,6 +36,8 @@
         <openjiuwen.core.version>0.1.15</openjiuwen.core.version>
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.surefire.version>3.5.4</maven.surefire.version>
+        <!-- Archive metadata is not an execution timestamp. Actual times remain in evidence. -->
+        <project.build.outputTimestamp>2026-01-01T00:00:00Z</project.build.outputTimestamp>
     </properties>
 
     <dependencyManagement>
@@ -60,6 +62,11 @@
     <build>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
