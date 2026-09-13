@@ -52,3 +52,35 @@ SPI confirmation fixture; they do not establish trusted browser confirmation.
   transactions in the stable read-only recipe or relax Python's TASK gate.
 
 This change is a necessary boundary repair, not completion of those milestones.
+
+## Native tool / Adapter integration follow-up
+
+`TransferHostRecoveryTest` in the retail example now joins the native installed
+tool, public Installation confirmation API, file store, BoundFinanceProvider and
+real NonAiBankingProvider against an isolated HTTP bank. It does not bypass the
+Installer by directly constructing an SPI confirmation in the Provider call.
+
+Eleven cases pass: file-store reopen with identical confirmation binding,
+terminal duplicate confirmation, four model-text variants without approval,
+revoked grant after reopen, different host scope, changed amount/expired approval,
+decline, malformed submit plus temporary observation failure, and malformed create
+plus attempted parameter change. Actual HTTP create/confirm/submit/query/reconcile
+counts are asserted. Reopening installations is an in-JVM recovery test, not a
+multi-process crash test. Fixture approval events are still not browser/IAM proof.
+
+Commands from the repository root:
+
+```bash
+mvn -q -pl examples/solutions/openjiuwen-retail-banking -am test \
+  -Dtest=TransferHostRecoveryTest -Dsurefire.failIfNoSpecifiedTests=false
+mvn -q verify
+```
+
+This run: 264 Java tests, 257 passed, 7 explicit live Smoke skips, zero failures
+or errors. Initial test development had a checked-exception compile error and
+an incomplete fixture tool schema; both were corrected, using the shipped retail
+Capability schema before the passing run. These are not claimed as product
+regressions reproduced on an old implementation.
+
+No new transfer UI, Candidate, deployment or live bank acceptance is claimed by
+this follow-up. The remaining list above continues to apply.
