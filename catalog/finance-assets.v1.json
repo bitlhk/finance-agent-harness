@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.2",
+  "catalogVersion": "0.2.3",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -225,7 +225,7 @@
     },
     {
       "id": "cashflow-customer-self-service",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "displayName": "收支说明专业方法（候选）",
       "profile": "customer-self-service",
       "source": "repo://domain-packs/cashflow/customer-self-service",
@@ -511,7 +511,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-13.chinese-methods-1",
+  "catalogRevision": "2026-09-13.chinese-methods-2",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

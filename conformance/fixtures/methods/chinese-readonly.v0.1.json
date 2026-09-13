@@ -3,11 +3,30 @@
   "harnessBaseline": "db8c18f17f246384baa1dd19ec144c00222d1d5a",
   "builderBaseline": "8e3657936bcce55d6387a9dbff1ebb528b67f41d",
   "scope": "TEXT_CONSTRAINT_PRESERVATION_NOT_MODEL_ADHERENCE",
+  "upstream": {
+    "repository": "wuxiaojingjing/mobile-banking-3.0",
+    "commit": "4652b285a0bff72dd88aaf00f6acae196b8951e0",
+    "path": "agents/finance-assistant/assets/skills/spending-analysis-journey/SKILL.md",
+    "snapshot": "docs/source-evidence/spending-analysis-journey-4652b28.md",
+    "gitBlob": "b0cf4ef7bf913d7480272bc5132d800ccc8d772c",
+    "adaptation": "domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md",
+    "preserved": [
+      ["先对时", "先确定月份，再查进出，再做分类/趋势"],
+      ["后两步共用该", "同一明确月份"],
+      ["再查进出", "先调用 `finance_transaction_summary`，再调用 `finance_spending_analysis`"],
+      ["锚点月往前共 6 个月", "锚点月往前共 6 个月"],
+      ["不要把「半年」塞进", "不把“半年”填入 `period`"],
+      ["已给绝对月份 → 不对时", "用户已给绝对月份时不再对时"],
+      ["上个月再减一月", "上个月需减一月"],
+      ["不调用且慢 `AnalyzeIncomeExpense`", "不调用且慢 `AnalyzeIncomeExpense`"],
+      ["不办预算，不查交易明细", "不查交易明细"]
+    ]
+  },
   "methods": [
     {
       "source": "harness",
       "path": "domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "constraints": [
         ["absolute YYYY-MM", "YYYY-MM 月份"],
         ["trusted host-supplied", "宿主提供的可信业务日期"],

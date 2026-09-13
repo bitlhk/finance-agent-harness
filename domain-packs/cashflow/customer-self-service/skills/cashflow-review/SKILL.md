@@ -1,11 +1,15 @@
 ---
 name: cashflow-review
 description: 按明确月份，解释获授权客户的账户流水收支及已入账分类与趋势，并说明来源口径和缺口。
-version: 0.1.2
+version: 0.1.3
+license: Apache-2.0
 allowed-tools: finance_transaction_summary finance_spending_analysis
 ---
 
 # 月度收支核验
+
+保留上游 `spending-analysis-journey@0.3.0` 的方法：先确定月份，再查进出，再做分类/趋势。
+本适配使用当前已安装的 Harness 工具；方法本身不授予权限。
 
 ## 确认查询月份
 
@@ -16,8 +20,14 @@ allowed-tools: finance_transaction_summary finance_spending_analysis
 
 - 仅查询月度收支数字汇总时，只调用 `finance_transaction_summary`。
 - 仅查询分类或趋势时，只调用 `finance_spending_analysis`。
-- 用户要求完整收支分析时，使用同一明确月份调用以上两个工具。
+- 用户要求完整收支分析时，使用同一明确月份，先调用 `finance_transaction_summary`，再调用 `finance_spending_analysis`。
 - 不得编造工具、客户选择参数、scope、来源策略或权限。
+
+来源趋势政策为 `TREND_MONTHS=6`：锚点月往前共 6 个月，不改跨度，也不把“半年”填入 `period`。
+用户已给绝对月份时不再对时；本月、上个月等相对月份按可信业务日期换算，上个月需减一月。
+改口查询明细、余额、预算或且慢收入支出分析时，不继续套用本方法；按已安装能力及授权处理，未安装则说明不支持。
+不调用且慢 `AnalyzeIncomeExpense`，不查交易明细。当前未安装上游且慢对时工具，不能编造该工具调用；
+无可信日期时询问月份，不使用上游演示配置中的固定月份兜底。
 
 ## 先核对口径，再解释数字
 
