@@ -89,6 +89,25 @@ def main():
     catalog_schema = validator("finance-asset-catalog.v1")
     catalog_schema.validate(catalog)
     count += 1
+    derivation_schema = validator("finance-method-derivation.v0.1")
+    derived = {"schemaVersion": "finance-method-derivation.v0.1",
+        "componentId": "account.balance.query", "componentVersion": "0.1.0",
+        "directoryRevision": "a" * 64, "capabilityIds": ["account.balance.query"],
+        "basePackages": [{"kind": "capability-pack", "id": "account-balance-readonly", "version": "0.1.0",
+                          "source": "repo://capability-packs/account-balance-readonly", "digest": "sha256:" + "b" * 64}],
+        "copiedFrom": [{"kind": "host-method", "id": "account-balance", "version": "content-addressed",
+                        "source": "builder-template://methods/account-balance.md", "digest": "sha256:" + "c" * 64}],
+        "replacement": "REPLACE_SCOPED_METHOD_NOT_CAPABILITY"}
+    derivation_schema.validate(derived)
+    count += 1
+    for mutation in ("missing-base", "bad-digest", "grant", "unknown-kind"):
+        invalid = copy.deepcopy(derived)
+        if mutation == "missing-base": invalid["basePackages"] = []
+        if mutation == "bad-digest": invalid["copiedFrom"][0]["digest"] = "latest"
+        if mutation == "grant": invalid["grantedScopes"] = ["*"]
+        if mutation == "unknown-kind": invalid["basePackages"][0]["kind"] = "executable"
+        assert not derivation_schema.is_valid(invalid), mutation
+        count += 1
 
     proposal_path = ROOT / "examples/governance/finance-asset-change-proposal.v1.json"
     proposal = json.loads(proposal_path.read_text())

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.0",
+  "catalogVersion": "0.2.1",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -73,6 +73,13 @@
       "displayName": "收支只读（候选）",
       "source": "repo://profiles/cashflow-read-only.md",
       "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "local-read-only",
+      "version": "0.1.0",
+      "displayName": "本地客户只读宿主",
+      "source": "repo://profiles/local-read-only.md",
+      "governanceRef": "finance-harness-core"
     }
   ],
   "domainPacks": [
@@ -95,7 +102,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "shared-read-only"
+          "shared-read-only",
+          "local-read-only"
         ]
       }
     },
@@ -235,7 +243,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "customer-self-service"
+          "customer-self-service",
+          "local-read-only"
         ]
       }
     }
@@ -267,7 +276,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "shared-read-only"
+          "shared-read-only",
+          "local-read-only"
         ]
       }
     },
@@ -342,7 +352,23 @@
       "compatibility": {
         "profiles": [
           "customer-self-service",
-          "cashflow-read-only"
+          "cashflow-read-only",
+          "local-read-only"
+        ]
+      }
+    },
+    {
+      "id": "account-balance-readonly",
+      "version": "0.1.0",
+      "displayName": "账户余额只读能力",
+      "source": "repo://capability-packs/account-balance-readonly",
+      "capabilities": [
+        "account.balance.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
         ]
       }
     }
@@ -359,7 +385,8 @@
       "governanceRef": "finance-harness-core",
       "compatibility": {
         "profiles": [
-          "shared-read-only"
+          "shared-read-only",
+          "local-read-only"
         ]
       }
     },
@@ -379,7 +406,8 @@
       "governanceRef": "finance-harness-core",
       "compatibility": {
         "profiles": [
-          "customer-self-service"
+          "customer-self-service",
+          "local-read-only"
         ]
       }
     },
@@ -483,7 +511,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-11.3",
+  "catalogRevision": "2026-09-13.business-assets-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
