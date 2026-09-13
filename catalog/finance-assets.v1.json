@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.1",
+  "catalogVersion": "0.2.2",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -85,7 +85,7 @@
   "domainPacks": [
     {
       "id": "wealth-shared-facts",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "财富事实描述（候选）",
       "profile": "shared-read-only",
       "source": "repo://domain-packs/wealth/shared-facts",
@@ -225,7 +225,7 @@
     },
     {
       "id": "cashflow-customer-self-service",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "displayName": "收支说明专业方法（候选）",
       "profile": "customer-self-service",
       "source": "repo://domain-packs/cashflow/customer-self-service",
@@ -511,7 +511,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-13.business-assets-1",
+  "catalogRevision": "2026-09-13.chinese-methods-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

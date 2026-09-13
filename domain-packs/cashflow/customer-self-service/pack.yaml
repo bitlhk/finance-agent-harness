@@ -1,6 +1,6 @@
 schemaVersion: finance-domain-pack.v1
 packId: cashflow-customer-self-service
-version: 0.1.1
+version: 0.1.2
 profile: customer-self-service
 capabilityPackRefs:
   - id: cashflow-readonly
@@ -9,5 +9,5 @@ capabilities: [finance.transaction-summary.query, finance.spending-analysis.quer
 skills:
   - directory: cashflow-review
     entry: skills/cashflow-review/SKILL.md
-scope: [monthly cashflow explanation, classification coverage, information gaps]
-outOfScope: [payments, budgets, investment recommendations, fraud conclusions]
+scope: [月度收支说明, 分类覆盖范围, 信息缺口]
+outOfScope: [支付, 预算, 投资推荐, 欺诈结论]

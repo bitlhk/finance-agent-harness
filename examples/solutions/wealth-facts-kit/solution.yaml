@@ -12,7 +12,7 @@ profileRef:
   source: repo://profiles/shared-read-only.md
 domainPackRefs:
   - id: wealth-shared-facts
-    version: 0.1.0
+    version: 0.1.1
     source: repo://domain-packs/wealth/shared-facts
 capabilityPackRefs:
   - id: wealth-facts-description
