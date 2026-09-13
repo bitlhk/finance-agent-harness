@@ -28,7 +28,8 @@ public record ObservationCapabilitiesV01(String schemaVersion, String collectorI
                              Availability availability, Authorization authorization) {
         public Capability {
             ObservationRequirementsV01.token(semanticId); ObservationRequirementsV01.token(semanticVersion);
-            fields = Set.copyOf(fields); fields.forEach(ObservationRequirementsV01::token);
+            fields = java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(fields));
+            fields.forEach(ObservationRequirementsV01::token);
             evidenceRefs = List.copyOf(evidenceRefs); evidenceRefs.forEach(ObservationRequirementsV01::token);
             if (boundary == null || support == null || verification == null || availability == null || authorization == null)
                 throw new IllegalArgumentException("Incomplete collector capability");

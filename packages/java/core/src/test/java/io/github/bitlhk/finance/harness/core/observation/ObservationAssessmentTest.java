@@ -10,6 +10,15 @@ import static io.github.bitlhk.finance.harness.core.observation.ObservationAsses
 import static org.junit.jupiter.api.Assertions.*;
 
 class ObservationAssessmentTest {
+    @Test void frozenSetsSerializeInCanonicalOrder() throws Exception {
+        var mapper = HarnessJson.mapper();
+        var requirement = requirements(Obligation.REQUIRED, Content.METADATA);
+        assertEquals(List.of("outcome", "requestId"), mapper.convertValue(
+                mapper.valueToTree(requirement).at("/requirements/0/fields"), List.class));
+        var actual = collector("0.1", Availability.ENABLED, Authorization.AUTHORIZED, Verification.VERIFIED);
+        assertEquals(List.of("outcome", "requestId"), mapper.convertValue(
+                mapper.valueToTree(actual).at("/capabilities/0/fields"), List.class));
+    }
     @Test void sharedSchemaCasesAlsoMatchJavaLoader() throws Exception {
         var root = java.nio.file.Path.of("").toAbsolutePath();
         while (!java.nio.file.Files.isDirectory(root.resolve("contracts/fixtures/observation"))) root = root.getParent();

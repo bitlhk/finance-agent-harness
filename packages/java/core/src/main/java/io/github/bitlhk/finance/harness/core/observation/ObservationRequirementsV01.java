@@ -36,7 +36,8 @@ public record ObservationRequirementsV01(String schemaVersion, String id, String
             token(semanticId); token(semanticVersion);
             if (obligation == null || boundary == null || content == null)
                 throw new IllegalArgumentException("Observation requirement kind");
-            fields = Set.copyOf(fields); capabilityIds = Set.copyOf(capabilityIds);
+            fields = java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(fields));
+            capabilityIds = java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(capabilityIds));
             if (fields.isEmpty()) throw new IllegalArgumentException("Observation fields required");
             fields.forEach(ObservationRequirementsV01::token);
             capabilityIds.forEach(ObservationRequirementsV01::token);
