@@ -23,6 +23,9 @@ public record ObservationAssessmentV01(String schemaVersion, Status status, List
     public static ObservationAssessmentV01 assess(ObservationRequirementsV01 requirements,
             List<ObservationCapabilitiesV01> collectors, Set<String> installedCapabilities) {
         if (requirements == null) return result(Status.LEGACY_UNASSESSED, List.of());
+        var collectorIds = new java.util.HashSet<String>();
+        for (var collector : collectors) if (!collectorIds.add(collector.collectorId()))
+            throw new IllegalArgumentException("Duplicate observation collector identity");
         List<Item> items = new ArrayList<>();
         for (var requirement : requirements.requirements()) {
             if (!installedCapabilities.containsAll(requirement.capabilityIds()))
@@ -44,7 +47,16 @@ public record ObservationAssessmentV01(String schemaVersion, Status status, List
     }
 
     public void requireReady() {
-        if (status == Status.REJECTED) throw new IllegalStateException("OBSERVATION_REQUIREMENTS_UNMET");
+        if (status == Status.REJECTED) throw new UnmetRequirements(this);
+    }
+
+    public static final class UnmetRequirements extends IllegalStateException {
+        private final ObservationAssessmentV01 assessment;
+        private UnmetRequirements(ObservationAssessmentV01 assessment) {
+            super("OBSERVATION_REQUIREMENTS_UNMET");
+            this.assessment = assessment;
+        }
+        public ObservationAssessmentV01 assessment() { return assessment; }
     }
 
     private static Readiness readiness(Requirement required, Capability actual) {

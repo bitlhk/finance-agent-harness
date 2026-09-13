@@ -38,9 +38,9 @@ shape without upgrading. Do not add these fields silently to a v0.1 plan.
 
 The common fixture requires only execution.history metadata at the Host boundary.
 Empty capabilityIds means a common requirement for the entire selected plan. Nonempty
-sets must refer to installed capabilities. Unit-specific requirements will build on
-this common declaration; SOP authors do not write SDK callbacks. The three-unit
-inheritance/merge and generated Host startup path are still pending implementation.
+sets must refer to installed capabilities. The explicit three-unit selection composes
+this common declaration with scoped capability-result requirements. SOP authors do not
+write SDK callbacks. Final generated-artifact acceptance remains pending.
 
 REQUIRED gaps reject prepare before tool installation or bank reads. OPTIONAL and
 AUTHORIZED_DIAGNOSTIC gaps remain explicit. DIAGNOSTIC_BODY always requires explicit
@@ -61,12 +61,12 @@ Implemented in the companion candidate Host: startup probe, immutable per-reques
 assessment in the request header, and bounded common UI projection. Build and current
 runtime assessments remain separate; only environment/capture state is excluded from
 the frozen plan comparison, never requirements, versions or capability bindings.
-Snapshot enablement currently remains UNKNOWN until its separate storage probe exists;
-a required body-snapshot configuration cannot pass just because the history store works.
+Snapshots have a separate non-destructive directory/quota/write probe; a required
+body-snapshot configuration cannot pass just because the history store works.
 
-Pending: canonical collector lock entry, schema for collector
-description, three-unit/seven-combination controlled generation, history compatibility,
-and O2 Provider display metadata. Existing history-labels remains a presentation-only
+Pending: final three-unit/seven-combination controlled generation with qualification
+records, historical receipt verification, and O2 Provider display metadata.
+Existing history-labels remains a presentation-only
 dictionary until that migration is actually implemented.
 
 Negative tests currently cover missing/disabled/unverified/mismatched support,
@@ -74,3 +74,20 @@ diagnostic authorization, invalid evidence claims, unknown extensions, uninstall
 capability and ambiguous bindings. Assembler tests cover explicit opt-in, old shape,
 digest tamper rejection, locked requirement reference and zero Provider invocation.
 These are not production authorization or independent human onboarding acceptance.
+## O1 gap-correction status
+
+The candidate now separates SDK support from collector support, hashes collector
+declarations in the installation lock, and preserves rejected assessment details.
+The strict descriptor schema and Java consume eight shared positive/negative cases.
+
+`observation-packs/readonly/selection.json` is an explicit solution-level composition
+entry, not a new field silently added to Capability Pack V1. It combines common history
+metadata with balance, wealth and cashflow capability-result requirements. All selected
+source bytes and the derived declaration are locked. Business status and observation
+timestamp are required metadata; this is not a claim to store customer facts or valuation
+timestamps. Selection does not enable a collector or grant access.
+
+Builder Host qualification must now refer to matching current collector/runtime artifacts
+and digest-checked local evidence. Supported but unqualified collectors remain NOT_CHECKED.
+The current prototype workflow and O2 display metadata are still under validation; prior
+5459adf/1fe9270f matrix results do not validate later edits. No merge/deploy is authorized.

@@ -10,6 +10,30 @@ import static io.github.bitlhk.finance.harness.core.observation.ObservationAsses
 import static org.junit.jupiter.api.Assertions.*;
 
 class ObservationAssessmentTest {
+    @Test void sharedCollectorCasesMatchJavaLoader() throws Exception {
+        var root = java.nio.file.Path.of("").toAbsolutePath();
+        while (!java.nio.file.Files.isDirectory(root.resolve("contracts/fixtures/observation"))) root = root.getParent();
+        var mapper = HarnessJson.mapper();
+        var original = mapper.readTree(root.resolve("contracts/fixtures/observation/collector.v0.1.json").toFile());
+        var cases = mapper.readTree(root.resolve("contracts/fixtures/observation/collector-cases.json").toFile());
+        for (var item : cases) {
+            var value = original.deepCopy();
+            if (item.has("field")) ((com.fasterxml.jackson.databind.node.ObjectNode) value.at("/capabilities/0"))
+                    .set(item.path("field").asText(), item.get("value"));
+            boolean valid;
+            try { mapper.treeToValue(value, ObservationCapabilitiesV01.class); valid = true; }
+            catch (Exception invalid) { valid = false; }
+            assertEquals(item.path("valid").asBoolean(), valid, item.path("name").asText());
+        }
+    }
+    @Test void collectorDeclarationDoesNotPretendSdkVerificationOrFreezeGrants() {
+        var enabled = collector("0.1", Availability.ENABLED, Authorization.AUTHORIZED, Verification.VERIFIED);
+        var disabled = collector("0.1", Availability.DISABLED, Authorization.NOT_AUTHORIZED, Verification.VERIFIED);
+        assertEquals(Support.UNKNOWN, enabled.capabilities().getFirst().sdkSupport());
+        assertEquals(enabled.identityDigest(), disabled.identityDigest());
+        assertNotEquals(enabled.identityDigest(), collector("9", Availability.ENABLED,
+                Authorization.AUTHORIZED, Verification.VERIFIED).identityDigest());
+    }
     @Test void frozenSetsSerializeInCanonicalOrder() throws Exception {
         var mapper = HarnessJson.mapper();
         var requirement = requirements(Obligation.REQUIRED, Content.METADATA);

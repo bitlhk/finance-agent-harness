@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "finance-observation-selection.v0.1",
+  "id": "readonly-observation-selection",
+  "version": "0.1.0",
+  "common": [
+    "repo://contracts/fixtures/observation/readonly-requirements.v0.1.json"
+  ],
+  "units": [
+    {
+      "id": "balance",
+      "capabilityIds": [
+        "account.balance.query"
+      ],
+      "source": "repo://observation-packs/readonly/balance.json"
+    },
+    {
+      "id": "wealth",
+      "capabilityIds": [
+        "wealth.facts.describe"
+      ],
+      "source": "repo://observation-packs/readonly/wealth.json"
+    },
+    {
+      "id": "cashflow",
+      "capabilityIds": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "source": "repo://observation-packs/readonly/cashflow.json"
+    }
+  ]
+}

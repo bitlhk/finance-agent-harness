@@ -1,0 +1,10 @@
+[
+  {"name": "unverified-supported-is-valid-description", "valid": true},
+  {"name": "verified-without-evidence", "field": "verification", "value": "VERIFIED", "valid": false},
+  {"name": "sdk-support-must-be-explicit", "field": "sdkSupport", "value": null, "valid": false},
+  {"name": "unknown-body-field", "field": "body", "value": "not-allowed", "valid": false},
+  {"name": "invalid-boundary", "field": "boundary", "value": "NETWORK_GUESS", "valid": false},
+  {"name": "disabled-remains-description", "field": "availability", "value": "DISABLED", "valid": true},
+  {"name": "invalid-semantic-id", "field": "semanticId", "value": "", "valid": false},
+  {"name": "null-evidence", "field": "evidenceRefs", "value": null, "valid": false}
+]

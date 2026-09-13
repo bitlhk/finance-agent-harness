@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "finance-observation-capabilities.v0.1",
+  "collectorId": "controlled-host",
+  "version": "0.1.0",
+  "capabilities": [{
+    "semanticId": "execution.history",
+    "semanticVersion": "0.1",
+    "boundary": "HOST",
+    "fields": ["requestId", "outcome"],
+    "support": "SUPPORTED",
+    "sdkSupport": "UNKNOWN",
+    "verification": "NOT_CHECKED",
+    "evidenceRefs": [],
+    "availability": "UNKNOWN",
+    "authorization": "NOT_REQUIRED"
+  }]
+}

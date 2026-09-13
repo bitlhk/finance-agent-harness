@@ -166,6 +166,13 @@ public final class OpenJiuwenSolutionAssembler {
         }
         var assessment = ObservationAssessmentV01.assess(requirements, List.copyOf(trustedCollectors), providerBindings.keySet());
         assessment.requireReady();
+        if (requirements != null) {
+            var matched = assessment.items().stream().map(ObservationAssessmentV01.Item::collectorId)
+                    .filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+            for (var collector : trustedCollectors) if (matched.contains(collector.collectorId()))
+                lockedAssets.add(new LockedAsset("OBSERVATION_COLLECTOR_DECLARATION", collector.collectorId(),
+                        collector.version(), "host-declaration://" + collector.collectorId(), collector.identityDigest()));
+        }
         return new PreparedSolution(spec, loadedDomainPacks, loadedCapabilityPacks,
                 lockedAssets, observedRuntime, providerBindings, assessment);
     }
