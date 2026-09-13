@@ -1,0 +1,376 @@
+{
+  "schemaVersion": "o2-review-evidence.v0.1",
+  "matrix": [
+    {
+      "phase": "qualifying",
+      "runtime": "java",
+      "combination": 7,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 41,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "7e4067248c6d718fb015ef5faaa2a85e6b3cc2bcdca666c0ac0efdc166d5c2cd",
+      "frozenLabelRequests": 20,
+      "preAssemblyRequests": 1,
+      "lockedFilesVerified": 170
+    },
+    {
+      "phase": "qualifying",
+      "runtime": "python",
+      "combination": 7,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 58,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "19a0b26cd8364100bca49383b08a3a158d1f7de741bbe040d7cc95e209c7565c",
+      "frozenLabelRequests": 20,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 351
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 7,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 41,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "5ed0ccc448236a40d5dcd437062dacb386f13ac48b84c4209dafcad7a8f00466",
+      "frozenLabelRequests": 20,
+      "preAssemblyRequests": 1,
+      "lockedFilesVerified": 177
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 7,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 58,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "59e571a2167cc2f28f9ca91b2c319fcc802efb43b85161dcaed42584f176405b",
+      "frozenLabelRequests": 20,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 358
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 1,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 17,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "572ba603a1abbb93ea8fb20024b1b1f909ac2307fa987905511a6d6ccceefd1f",
+      "frozenLabelRequests": 5,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 169
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 1,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 28,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "77f304f910e8c43258871e86017a1945a57cbd8bf37a7cbcc7fa97c3525103b9",
+      "frozenLabelRequests": 5,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 350
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 2,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 19,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "250a728489f29e03befa5b0e77ba7fdc9e4c79698caa9001cb065dcf147db1b1",
+      "frozenLabelRequests": 6,
+      "preAssemblyRequests": 1,
+      "lockedFilesVerified": 171
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 2,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 30,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "6e6366ee9947f0df89296fb2f4581d083918b5f78a51d2342c950f782551dbf7",
+      "frozenLabelRequests": 6,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 352
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 3,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 24,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "a12e55635c04872684bc6a4ded22a3f3403a4361a44a45586fb037d855cb3eac",
+      "frozenLabelRequests": 9,
+      "preAssemblyRequests": 1,
+      "lockedFilesVerified": 173
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 3,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 37,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "b5fbc88d938c70be9b5890d20ff4d2a15d256c10b7d8d73d2518aa3734e6ad1b",
+      "frozenLabelRequests": 9,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 354
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 4,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 29,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "a0e1ea8bc0196dc650f137c1c801ad5562deea1facc77417e9da4a7c58fd4b6c",
+      "frozenLabelRequests": 13,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 171
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 4,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 42,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "b71339b2e885246acae615063947eab2a772dc4645ae39eecf7761082737e281",
+      "frozenLabelRequests": 13,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 352
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 5,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 34,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "254d32528ab85affbdd91d117e36a9fb5f8633b9a3faeec3b4d3e1f0316e262b",
+      "frozenLabelRequests": 16,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 173
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 5,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 49,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "88edf3809d2566f29f27513d43784758082c1aa2af346f4d8406c6876bb1e32d",
+      "frozenLabelRequests": 16,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 354
+    },
+    {
+      "phase": "admitted",
+      "runtime": "java",
+      "combination": 6,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 36,
+      "collectorIdentity": "d01edf93fd7ea822f69ece88146de24dccf0200cd721b9a731c5c662bf90bb92",
+      "metadataVerified": true,
+      "lockSha256": "0bcd7651a5834bdac6e78b52a4e00a0b27171e01859a36e04abbd5c4b7dae6b9",
+      "frozenLabelRequests": 17,
+      "preAssemblyRequests": 1,
+      "lockedFilesVerified": 175
+    },
+    {
+      "phase": "admitted",
+      "runtime": "python",
+      "combination": 6,
+      "sources": {
+        "harness": {
+          "commit": "81422084e985f1156f1d94333371a6d182d77002",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "e0a1bb02ec5241029c010819a5ff75ac0b4b4536",
+          "worktreeDirty": false
+        }
+      },
+      "checks": 51,
+      "collectorIdentity": "42230ab8d2aa13202efd4c368a559c94e1d7bdd909ad66fabc16f86d2dfbb62d",
+      "metadataVerified": true,
+      "lockSha256": "93f4de44b70cfe64c92ff7cded923cf776385f5ce1c11e7c4a5d3dfae6b9c9f6",
+      "frozenLabelRequests": 17,
+      "preAssemblyRequests": 0,
+      "lockedFilesVerified": 356
+    }
+  ],
+  "junit": [
+    {
+      "path": "harness",
+      "classes": 43,
+      "tests": 243,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 7
+    },
+    {
+      "path": "generated-host-template",
+      "classes": 7,
+      "tests": 31,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "scope": "controlled native runtimes and synthetic bank; no production IAM or human onboarding"
+}

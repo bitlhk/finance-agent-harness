@@ -1,7 +1,8 @@
 # Business observation requirements: candidate O1
 
 Implementation baseline: Harness main1ec961b / Builder finance9a403538.
-This is a candidate design and incremental implementation, not completed O1 acceptance.
+O1/O2 controlled candidate acceptance is complete at Harness8142208 / Buildere0a1bb02.
+See [fixed-source verification](verification/2026-09-13-observation-o1-o2.md).
 No production release or financial-compliance certification is implied.
 
 ## Separation of responsibilities
@@ -40,14 +41,15 @@ The common fixture requires only execution.history metadata at the Host boundary
 Empty capabilityIds means a common requirement for the entire selected plan. Nonempty
 sets must refer to installed capabilities. The explicit three-unit selection composes
 this common declaration with scoped capability-result requirements. SOP authors do not
-write SDK callbacks. Final generated-artifact acceptance remains pending.
+write SDK callbacks. Seven combinations have controlled generated-artifact acceptance;
+this does not qualify arbitrary future packages.
 
 REQUIRED gaps reject prepare before tool installation or bank reads. OPTIONAL and
 AUTHORIZED_DIAGNOSTIC gaps remain explicit. DIAGNOSTIC_BODY always requires explicit
 capture authorization, including when the obligation is REQUIRED. Two ambiguous
 claims are rejected, not unioned to manufacture end-to-end coverage.
 
-## Required next wiring and acceptance
+## Host wiring and acceptance
 
 The Host must re-evaluate real archive availability and current authorization at
 startup. The companion Builder branch now performs a write/force/delete probe and
@@ -64,10 +66,11 @@ the frozen plan comparison, never requirements, versions or capability bindings.
 Snapshots have a separate non-destructive directory/quota/write probe; a required
 body-snapshot configuration cannot pass just because the history store works.
 
-Pending: final three-unit/seven-combination controlled generation with qualification
-records, historical receipt verification, and O2 Provider display metadata.
-Existing history-labels remains a presentation-only
-dictionary until that migration is actually implemented.
+Three-unit/seven-combination generation and O2 Provider display metadata are verified
+at the fixed sources above. New records use immutable component descriptions linked to
+installation locks; UI dictionaries remain only for explicitly identified legacy records.
+Model receipt projection still does not verify body contents. Opening the body separately
+checks permission and digest. See [O2 ownership](observation-display-o2-v01.md).
 
 Negative tests currently cover missing/disabled/unverified/mismatched support,
 diagnostic authorization, invalid evidence claims, unknown extensions, uninstalled
@@ -89,5 +92,7 @@ timestamps. Selection does not enable a collector or grant access.
 
 Builder Host qualification must now refer to matching current collector/runtime artifacts
 and digest-checked local evidence. Supported but unqualified collectors remain NOT_CHECKED.
-The current prototype workflow and O2 display metadata are still under validation; prior
-5459adf/1fe9270f matrix results do not validate later edits. No merge/deploy is authorized.
+The qualification workflow and O2 descriptions have fixed-source controlled verification;
+earlier matrices are historical, not substitutes for these results. The qualification
+record is trusted operator assertion, not a hash proving report adequacy. No merge/deploy
+is authorized; production IAM and independent human acceptance remain separate.

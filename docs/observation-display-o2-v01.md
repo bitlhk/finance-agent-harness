@@ -4,7 +4,9 @@ O2 adds presentation metadata, not an execution engine or an authorization rule.
 `ObservationDisplayV01` is runtime-neutral. `CapabilityLabel` consumes existing
 Capability Pack `name`, ID and version. `DescribedFinanceProvider.observationLabels()`
 defaults to empty and supplies versioned source operations: provider ID, stable operation
-ID, exact method, allowlisted route template, title and description. Do not include URLs,
+ID, exact method, allowlisted route template, title and description. The source-label
+version versions the description; actual Provider artifacts are identified in the Lock.
+Do not include URLs,
 query values, customer identifiers, secrets or response bodies in labels.
 
 `BoundFinanceProvider`, `ObservedFinanceProvider` and `WealthFactsProvider` delegate
