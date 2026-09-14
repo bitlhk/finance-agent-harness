@@ -1,5 +1,9 @@
 # Shared TASK component candidate V0.1
 
+Fixed-version deployment and later acceptance are recorded in
+[Shared TASK release V0.1](shared-task-release-v02.md). The development-snapshot
+results below retain their original scope.
+
 ## Scope
 
 The `internal-transfer` and `channel-preferences` packs declare independent TASK
