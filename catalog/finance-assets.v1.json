@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.4",
+  "catalogVersion": "0.2.5",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -261,7 +261,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "customer-self-service"
+          "customer-self-service",
+          "local-read-only"
         ]
       }
     },
@@ -520,7 +521,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-14.embedded-transfer-1",
+  "catalogRevision": "2026-09-14.component-selection-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

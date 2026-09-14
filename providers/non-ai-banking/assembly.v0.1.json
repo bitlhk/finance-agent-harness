@@ -9,6 +9,11 @@
   "connectionKind": "synthetic-bank-http.v1",
   "supports": [
     {
+      "pack": {"id": "wealth-customer-context", "version": "0.1.0"},
+      "capabilityIds": ["wealth.customer-context.query"],
+      "operation": "QUERY"
+    },
+    {
       "pack": {
         "id": "account-balance-readonly",
         "version": "0.1.0"
