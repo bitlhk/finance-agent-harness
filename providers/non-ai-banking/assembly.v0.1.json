@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "non-ai-banking-reference",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-non-ai-banking:0.1.0-SNAPSHOT",
+  "connectionKind": "synthetic-bank-http.v1",
+  "supports": [
+    {
+      "pack": {
+        "id": "account-balance-readonly",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "account.balance.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "cashflow-readonly",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}
