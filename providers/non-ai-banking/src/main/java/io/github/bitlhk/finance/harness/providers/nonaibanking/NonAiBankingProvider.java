@@ -397,7 +397,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         return taskResult(
                 request,
                 CapabilityResultV1.Status.NEED_CONFIRMATION,
-                "请核对转账摘要并回复「确认提交」。",
+                "请通过宿主确认界面核对转账摘要并授权原任务。",
                 data,
                 created,
                 taskRef,
@@ -445,9 +445,15 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             }
             // Both confirm and submit are mutation boundaries. Unreadable responses require observation.
             try {
+                if (transfer) {
+                    CapabilityResultV1 authentication = ensureTransferAuthentication(request);
+                    if (authentication != null) return authentication;
+                }
                 if ("CREATED".equals(status)) {
+                    // Translate an already verified Host approval to the simulator's legacy API dialect.
+                    // This branch is unreachable without the structured positive confirmation above.
                     observed = client.post("/api/v1/tasks/" + request.taskRef() + "/confirm",
-                            Map.of("confirmationText", confirmation.confirmationText()), request.context());
+                            Map.of("confirmationText", "确认提交；" + confirmation.confirmationText()), request.context());
                     status = text(observed.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
                     terminal = terminalTask(request, observed, status, transfer);
                     if (terminal != null) return terminal;
@@ -501,7 +507,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     }
 
     private CapabilityResultV1 ensureTransferAuthentication(CapabilityRequestV1 request) {
-        if (client.strongAuthenticationAvailable()) return null;
+        if (client.strongAuthenticationAvailable(request.context())) return null;
         if (client.hasStepUpCode()) {
             client.stepUp(request.context());
             return null;
@@ -1015,7 +1021,23 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                     context.requestId(), context.traceId(), "non-ai-banking", Instant.now());
         }
 
-        private boolean strongAuthenticationAvailable() {
+        private synchronized boolean strongAuthenticationAvailable(FinanceContextV1 context) {
+            if (config.hostSession != null) {
+                // Host sessions never inherit this client's legacy step-up cache.
+                // The bank owns authentication strength; a model/context label cannot upgrade it.
+                Response observed = get("/api/v1/sessions/current", Map.of(), context);
+                Map<String, Object> identity = observed.data();
+                try {
+                    if (!context.subjectRef().equals(identity.get("customerRef"))
+                            || !sessionId.get().equals(identity.get("sessionId"))
+                            || !(identity.get("expiresAt") instanceof String expires)
+                            || !Instant.parse(expires).isAfter(Instant.now()))
+                        throw identityFailure(context);
+                } catch (java.time.format.DateTimeParseException invalid) {
+                    throw identityFailure(context);
+                }
+                return "I2".equals(identity.get("identityStrength")) || "I3".equals(identity.get("identityStrength"));
+            }
             return strongAuthentication;
         }
 

@@ -45,6 +45,12 @@ class NonAiBankingTransferProviderTest {
     private final AtomicReference<String> submittedState = new AtomicReference<>("COMPLETED");
     private final AtomicBoolean observationUnavailable = new AtomicBoolean();
     private String capabilityId = NonAiBankingProvider.TRANSFER_INTERNAL_CREATE;
+    private final AtomicReference<String> hostStrength = new AtomicReference<>("I2");
+    private final AtomicReference<String> observedCustomer = new AtomicReference<>("customer-demo-001");
+    private final AtomicReference<String> observedSession = new AtomicReference<>("session-transfer");
+    private final AtomicReference<Instant> observedExpiry = new AtomicReference<>(Instant.now().plusSeconds(300));
+    private final AtomicInteger introspectionHits = new AtomicInteger();
+    private final AtomicBoolean downgradeOnConfirm = new AtomicBoolean();
 
     @BeforeEach
     void startServer() throws IOException {
@@ -101,6 +107,94 @@ class NonAiBankingTransferProviderTest {
     @AfterEach
     void stopServer() {
         if (server != null) server.stop(0);
+    }
+
+    private NonAiBankingProvider hostProvider() {
+        server.createContext("/api/v1/sessions/current", exchange -> {
+            introspectionHits.incrementAndGet();
+            assertEquals("GET", exchange.getRequestMethod());
+            assertEquals("session-transfer", exchange.getRequestHeaders().getFirst("X-Session-Id"));
+            var data = Map.of("sessionId", observedSession.get(), "customerRef", observedCustomer.get(),
+                    "identityStrength", hostStrength.get(), "expiresAt", observedExpiry.get().toString());
+            writeJson(exchange, 200, io.github.bitlhk.finance.harness.core.HarnessJson.mapper().writeValueAsString(
+                    Map.of("status", "SUCCESS", "data", data, "asOf", Instant.now().toString(), "sourceSystem", "iam-simulator")));
+        });
+        return new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(5),
+                () -> new NonAiBankingProvider.HostSession("session-transfer", "customer-demo-001",
+                        "customer-demo-001", "session-transfer-001", Instant.now().plusSeconds(300))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"I2", "I3"})
+    void hostSessionUsesCurrentAuthoritativeStrongAuthentication(String strength) {
+        hostStrength.set(strength);
+        var source = hostProvider();
+        var result = source.executeTask(request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 1),
+                "host-strong", null, Map.of(), null));
+        assertEquals(CapabilityResultV1.Status.NEED_CONFIRMATION, result.status());
+        assertEquals(1, introspectionHits.get());
+        assertEquals(1, createHits.get());
+        assertEquals(0, stepUpHits.get());
+        assertEquals(0, confirmHits.get());
+        assertEquals(0, submitHits.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"I1", "", "UNKNOWN"})
+    void hostAuthenticationCannotBeInferredFromContextOrOldSession(String strength) {
+        hostStrength.set(strength);
+        var result = hostProvider().executeTask(request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 1),
+                "host-weak", null, Map.of(), null));
+        assertEquals(CapabilityResultV1.Status.NEED_USER, result.status());
+        assertEquals(1, introspectionHits.get());
+        assertEquals(0, createHits.get());
+        assertEquals(0, confirmHits.get());
+        assertEquals(0, submitHits.get());
+    }
+
+    @Test
+    void downgradedHostAuthenticationBlocksConfirmationAndSubmission() {
+        var source = hostProvider();
+        var started = source.executeTask(request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 1),
+                "host-downgrade", null, Map.of(), null));
+        assertEquals(CapabilityResultV1.Status.NEED_CONFIRMATION, started.status());
+        hostStrength.set("I1");
+        var resumed = source.executeTask(request(Map.of(), "host-downgrade", started.task().taskRef(),
+                started.task().continuation(), new CapabilityRequestV1.Confirmation(true, "host event", Instant.now())));
+        assertEquals(CapabilityResultV1.Status.NEED_USER, resumed.status());
+        assertEquals(2, introspectionHits.get());
+        assertEquals(0, confirmHits.get());
+        assertEquals(0, submitHits.get());
+    }
+
+    @Test
+    void downgradeAfterConfirmationDoesNotSubmit() {
+        var source = hostProvider();
+        var started = source.executeTask(request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 1),
+                "host-late-downgrade", null, Map.of(), null));
+        downgradeOnConfirm.set(true);
+        var result = source.executeTask(request(Map.of(), "host-late-downgrade", started.task().taskRef(),
+                started.task().continuation(), new CapabilityRequestV1.Confirmation(true, "host event", Instant.now())));
+        assertEquals(CapabilityResultV1.Status.NEED_USER, result.status());
+        assertEquals(3, introspectionHits.get());
+        assertEquals(1, confirmHits.get());
+        assertEquals(0, submitHits.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"customer", "session", "expiry"})
+    void mismatchedBankIntrospectionCannotAuthorizeTransfer(String mismatch) {
+        if (mismatch.equals("customer")) observedCustomer.set("other-customer");
+        if (mismatch.equals("session")) observedSession.set("other-session");
+        if (mismatch.equals("expiry")) observedExpiry.set(Instant.now().minusSeconds(1));
+        var result = hostProvider().executeTask(request(Map.of("fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 1),
+                "host-mismatch", null, Map.of(), null));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals(1, introspectionHits.get());
+        assertEquals(0, createHits.get());
+        assertEquals(0, confirmHits.get());
+        assertEquals(0, submitHits.get());
     }
 
     @Test
@@ -210,6 +304,7 @@ class NonAiBankingTransferProviderTest {
         }
         if (path.endsWith("/confirm")) {
             confirmHits.incrementAndGet();
+            if (downgradeOnConfirm.get()) hostStrength.set("I1");
             taskStatus.set("CONFIRMED");
             writeTask(exchange, 200, "CONFIRMED", false);
             return;
