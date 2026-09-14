@@ -450,8 +450,10 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                     if (authentication != null) return authentication;
                 }
                 if ("CREATED".equals(status)) {
+                    // Translate an already verified Host approval to the simulator's legacy API dialect.
+                    // This branch is unreachable without the structured positive confirmation above.
                     observed = client.post("/api/v1/tasks/" + request.taskRef() + "/confirm",
-                            Map.of("confirmationText", confirmation.confirmationText()), request.context());
+                            Map.of("confirmationText", "确认提交；" + confirmation.confirmationText()), request.context());
                     status = text(observed.data().get("status"), "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
                     terminal = terminalTask(request, observed, status, transfer);
                     if (terminal != null) return terminal;

@@ -107,6 +107,21 @@ atomicity during an in-flight write, concurrent processes, real bank IAM,
 authenticated browser approval, or complete simulator ledger reconciliation.
 The trusted Host/UI and full simulator acceptance remain outstanding.
 
+## Full simulator confirmation dialect follow-up
+
+The isolated Builder Host exposed a source protocol mismatch: the public trusted
+approval uses an English Host event reference, while this simulator's legacy
+confirm endpoint requires the Chinese confirmation token. The Provider now
+translates the already verified positive approval to that source dialect, retaining
+the Host event reference. It does not infer approval from model text or resume.
+
+`nativeHostApprovalUsesTheBanksConfirmationDialect` failed before the change and
+passes after it; it asserts the actual HTTP confirmation payload and one confirm
+and submit. No Core confirmation contract changed. The isolated Builder candidate
+also exercised the full synthetic bank ledger, duplicate confirmation and killing
+its own Host after bank commit but before response delivery. Those cross-repository
+results are development evidence, not this repository's production acceptance.
+
 Full `mvn -q verify` on this integrated branch: 267 tests in 44 classes,
 260 passed, 7 explicit live Smoke skips, zero failures/errors. Runtime is
 OpenJiuwen Java 0.1.15. No deployed service was changed by these tests.

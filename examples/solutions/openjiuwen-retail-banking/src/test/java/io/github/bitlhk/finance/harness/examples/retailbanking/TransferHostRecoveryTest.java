@@ -42,6 +42,7 @@ class TransferHostRecoveryTest {
     final AtomicInteger creates = new AtomicInteger(), confirms = new AtomicInteger(),
             submits = new AtomicInteger(), queries = new AtomicInteger(), reconciles = new AtomicInteger();
     final List<Map<String, Object>> createBodies = new ArrayList<>();
+    final List<Map<String, Object>> confirmBodies = new ArrayList<>();
     volatile boolean granted = true, unavailable, brokenSubmit, brokenCreate;
     String bankStatus = "CREATED";
 
@@ -198,6 +199,15 @@ class TransferHostRecoveryTest {
                 .get("parameters")).get("amount").toString()));
     }
 
+    @Test void nativeHostApprovalUsesTheBanksConfirmationDialect() {
+        String handle = create(); var event = approval(handle);
+        assertEquals("COMPLETED", installed.confirm(handle, event).get("status"));
+        String text = String.valueOf(confirmBodies.getFirst().get("confirmationText"));
+        assertTrue(text.contains("确认"), "The simulator's legacy confirm API requires its confirmation dialect");
+        assertTrue(text.contains(event.eventId()), "Keep the trusted event reference in the adapter request");
+        assertEquals(1, confirms.get()); assertEquals(1, submits.get());
+    }
+
     @ParameterizedTest @ValueSource(strings = {"", "no", "query progress", "confirm submit"})
     void modelSuppliedConfirmationNeverBecomesHostApproval(String text) {
         String handle = create();
@@ -270,6 +280,7 @@ class TransferHostRecoveryTest {
             createBodies.add(HarnessJson.mapper().readValue(exchange.getRequestBody(), Map.class));
             if (brokenCreate) { malformed(exchange); return; }
         } else if (path.endsWith("/confirm")) {
+            confirmBodies.add(HarnessJson.mapper().readValue(exchange.getRequestBody(), Map.class));
             confirms.incrementAndGet(); bankStatus = "CONFIRMED";
         } else if (path.endsWith("/submit")) {
             submits.incrementAndGet(); bankStatus = brokenSubmit ? "UNKNOWN" : "COMPLETED";
