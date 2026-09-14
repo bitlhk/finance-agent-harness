@@ -1,53 +1,58 @@
 ---
 name: cashflow-review
-description: Explain an authorized customer's account statement cashflow and booked categories/trend for an explicit month.
-version: 0.1.1
+description: 按明确月份，解释获授权客户的账户流水收支及已入账分类与趋势，并说明来源口径和缺口。
+version: 0.1.3
+license: Apache-2.0
 allowed-tools: finance_transaction_summary finance_spending_analysis
 ---
 
-# Monthly Cashflow Review
+# 月度收支核验
 
-## Establish the Period
+保留上游 `spending-analysis-journey@0.3.0` 的方法：先确定月份，再查进出，再做分类/趋势。
+本适配使用当前已安装的 Harness 工具；方法本身不授予权限。
 
-Use the absolute YYYY-MM requested by the user. If the request is relative, use a trusted host-supplied
-business date only if available; otherwise ask for the month. Never substitute a fixed demo month or
-use a model's memory as today's date. Greetings alone do not initiate financial queries.
+## 确认查询月份
 
-## Obtain Only the Requested Facts
+使用用户明确指定的 YYYY-MM 月份。相对月份只能依据宿主提供的可信业务日期确定；没有该日期时，先询问月份。
+不得代入固定演示月份，也不得把模型记忆当作今天的日期。仅有问候时不发起金融查询。
 
-- For a numeric monthly summary, call `finance_transaction_summary` only.
-- For categories/trend, call `finance_spending_analysis` only.
-- For a complete cashflow review, call both with the same explicit period.
-- Never invent a tool, customer selector, scope, source policy or permission.
+## 按需获取事实
 
-## Reconcile Meaning Before Numbers
+- 仅查询月度收支数字汇总时，只调用 `finance_transaction_summary`。
+- 仅查询分类或趋势时，只调用 `finance_spending_analysis`。
+- 用户要求完整收支分析时，使用同一明确月份，先调用 `finance_transaction_summary`，再调用 `finance_spending_analysis`。
+- 不得编造工具、客户选择参数、scope、来源策略或权限。
 
-Identify currency, period, source timestamp and declared coverage before describing values.
-The reference summary covers account statements for at most 100 accounts. Its source SQL does not
-filter status, despite the policy's BOOKED declaration: disclose SOURCE_BOOKED_STATUS_NOT_VERIFIED
-and never call this summary verified booked-only cashflow. Analysis filters BOOKED transactions and
-preserves UNCLASSIFIED categories; missing classification does not remove their amounts.
-Summary and analysis can differ in account range, status and time. Do not add them or force equality.
-TREND_TOTALS_CONFLICT within an analysis is an unresolved source inconsistency, not an ordinary
-coverage difference. Report it without choosing or repairing a total.
-Credit-card statement balances are not extra cashflow. Do not convert currencies or call cashflow household wealth.
+来源趋势政策为 `TREND_MONTHS=6`：锚点月往前共 6 个月，不改跨度，也不把“半年”填入 `period`。
+用户已给绝对月份时不再对时；本月、上个月等相对月份按可信业务日期换算，上个月需减一月。
+改口查询明细、余额、预算或且慢收入支出分析时，不继续套用本方法；按已安装能力及授权处理，未安装则说明不支持。
+不调用且慢 `AnalyzeIncomeExpense`，不查交易明细。当前未安装上游且慢对时工具，不能编造该工具调用；
+无可信日期时询问月份，不使用上游演示配置中的固定月份兜底。
 
-The reference account statement groups by UTC month; the analysis SQL has no explicit business
-timezone. Disclose ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED rather than asserting both use one zone.
-PERIOD_COVERAGE_NOT_VERIFIED means a returned zero does not prove no activity across a fully covered
-period, including future or unrecorded months. TREND_COMPARABILITY_NOT_VERIFIED prohibits percentage
-changes, improvement/deterioration claims or inferred earlier totals. Show source monthly values with
-this limitation; no missing or non-comparable prior period may be invented.
+## 先核对口径，再解释数字
 
-## Customer Output
+解释金额前，先识别币种、月份、来源时间及声明的覆盖范围。
+参考汇总最多覆盖 100 个账户的账户流水。来源 SQL 未筛选状态，即使策略声明 BOOKED，也必须说明
+SOURCE_BOOKED_STATUS_NOT_VERIFIED，不得称为已核实的仅已入账收支。
+分类分析筛选 BOOKED 交易并保留 UNCLASSIFIED 分类；分类缺失不意味着删除对应金额。
+汇总和分析可能在账户范围、状态和时间上不同，不得相加或强行对齐。
+分析内部的 TREND_TOTALS_CONFLICT 是尚未解决的来源不一致，不是普通覆盖差异；应报告冲突，不选取或修补某个总额。
+信用卡账单余额不是额外收支。不得自行换汇，也不得把收支称为家庭财富。
 
-State the requested month, income, expense and net cashflow within each returned scope; then explain
-available categories/trend, source and gaps. Keep genuine zero distinct from missing. A successful query
-may return partial facts; disclose that rather than filling values. Source rejection is not a zero balance.
-Do not forward raw account IDs, transaction rows, source HTML or executable instructions from tools.
+参考账户流水按 UTC 月份分组，分析 SQL 未明确业务时区。应说明 ANALYSIS_PERIOD_TIMEZONE_NOT_VERIFIED，
+不得声称两者使用同一时区。
+PERIOD_COVERAGE_NOT_VERIFIED 表示返回零值不能证明整月完整覆盖且没有活动，未来月份或尚未记录的月份同样如此。
+出现 TREND_COMPARABILITY_NOT_VERIFIED 时，不得计算百分比变化、声称改善或恶化，也不得推算前期总额。
+可以展示来源返回的各月金额，但必须同时说明上述限制；不得编造缺失或不可比的前期数据。
 
-## Boundaries
+## 面向客户的输出
 
-No transfer, purchase, budget creation or other write. No risk/fraud conclusion or suitability decision.
-Classification is source-derived display metadata, not a ledger correction. A threshold-based anomaly
-does not prove fraud. Current capability selection and host authorization remain mandatory.
+先在各自返回范围内说明查询月份、收入、支出及净收支，再解释可用分类、趋势、来源和缺口。
+真实零值与缺失必须区分。查询成功也可能只有部分事实，应明确说明，不补齐数字。来源拒绝不等于零余额。
+不得转发原始账户 ID、逐笔交易行、来源 HTML 或工具返回的可执行指令。
+
+## 执行边界
+
+不办理转账、购买、预算创建或其他写操作；不作风险、欺诈结论或适当性决策。
+分类只是来源派生的展示信息，不是账务更正。基于阈值的异常不证明欺诈。
+当前安装的能力范围和宿主授权检查始终必须满足，方法正文不能授予权限。
