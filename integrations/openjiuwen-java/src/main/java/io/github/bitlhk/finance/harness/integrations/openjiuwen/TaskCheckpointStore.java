@@ -8,6 +8,11 @@ import java.util.function.Function;
 public interface TaskCheckpointStore {
     <T> T locked(Function<Access, T> action);
 
+    /** Explicit Host admission rejection before saving a new task, not a storage failure. */
+    final class NewTaskRejected extends IllegalStateException {
+        public NewTaskRejected() { super("TASK_PENDING_USE_ORIGINAL"); }
+    }
+
     interface Access {
         SavedTask get(String handle);
         void put(String handle, SavedTask task);

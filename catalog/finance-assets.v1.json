@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.3",
+  "catalogVersion": "0.2.6",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -80,6 +80,13 @@
       "displayName": "本地客户只读宿主",
       "source": "repo://profiles/local-read-only.md",
       "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "local-simulator-task",
+      "version": "0.1.0",
+      "displayName": "本地模拟银行受控办理",
+      "source": "repo://profiles/local-simulator-task.md",
+      "governanceRef": "finance-harness-core"
     }
   ],
   "domainPacks": [
@@ -103,7 +110,8 @@
       "compatibility": {
         "profiles": [
           "shared-read-only",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -244,7 +252,8 @@
       "compatibility": {
         "profiles": [
           "customer-self-service",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     }
@@ -261,7 +270,9 @@
       ],
       "compatibility": {
         "profiles": [
-          "customer-self-service"
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -277,7 +288,24 @@
       "compatibility": {
         "profiles": [
           "shared-read-only",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
+    },
+    {
+      "id": "internal-transfer",
+      "version": "0.1.0",
+      "displayName": "行内转账能力（宿主确认接线必需）",
+      "source": "repo://capability-packs/internal-transfer",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "transfer.internal.create"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "local-simulator-task"
         ]
       }
     },
@@ -353,7 +381,8 @@
         "profiles": [
           "customer-self-service",
           "cashflow-read-only",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -368,7 +397,23 @@
       "governanceRef": "finance-harness-core",
       "compatibility": {
         "profiles": [
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
+    },
+    {
+      "id": "channel-preferences",
+      "version": "0.1.0",
+      "displayName": "渠道展示偏好",
+      "source": "repo://capability-packs/channel-preferences",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "channel.preferences.update"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-simulator-task"
         ]
       }
     }
@@ -386,7 +431,8 @@
       "compatibility": {
         "profiles": [
           "shared-read-only",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -407,7 +453,8 @@
       "compatibility": {
         "profiles": [
           "customer-self-service",
-          "local-read-only"
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -511,7 +558,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-13.chinese-methods-2",
+  "catalogRevision": "2026-09-14.shared-task-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

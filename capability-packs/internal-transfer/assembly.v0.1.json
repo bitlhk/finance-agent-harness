@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {"id": "internal-transfer", "version": "0.1.0"},
+  "requiredFeatures": ["task.v1", "trusted-grants.v1", "trusted-confirmation.v1", "persistent-task.v1", "observation.v0.1"],
+  "defaultDomainPacks": []
+}

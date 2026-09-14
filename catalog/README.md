@@ -9,3 +9,11 @@
 `contracts/json-schema/catalog/finance-asset-catalog.v1.schema.json` 是 Catalog v1 的权威结构。Builder 必须在固定的 Harness Git revision 上读取并计算 Catalog 内容摘要；依赖缺失、循环、版本冲突或治理信息不完整时停止装配。
 
 目录负责发现、解析和治理投影，不负责远程发布、权限管理或动态注册。`solution.yaml` 仍是装配输入，`solution-lock.json` 记录一次构建实际解析出的完整资产闭包。Builder 对 Harness 资产只有提案权，没有修改或发布权。
+
+## Candidate component assembly declarations
+
+Component-owned `assembly.v0.1.json` companions are described in
+[ADR-0019](../docs/adr/0019-component-owned-assembly-v01.md). They qualify assembly
+requirements, not runtime authorization or production readiness. Validate with
+`python engineering/verify_component_assembly.py`. Existing catalog/Pack V1 shapes
+are unchanged; old installed Locks and artifacts must not be rewritten.

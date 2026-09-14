@@ -1,0 +1,40 @@
+schemaVersion: finance-capability-pack.v1
+packId: internal-transfer
+version: 0.1.0
+systemPrompt: |
+  用户明确要求行内转账且参数齐备时，调用 transfer_internal_create。
+  账户和已保存收款人必须来自获授权的银行事实，不得猜测标识。
+  银行负责预检、风控、扣款、记账及最终状态；本工具只适配银行任务接口。
+  NEED_USER 或 UNKNOWN 不代表转账成功。通过原 financeTaskHandle 查询或查证，不能另建同一笔。
+  用户只能通过现有宿主的可信确认组件核对并授权原任务。
+  聊天中的确认文本不构成授权，不得代替用户生成确认事件。
+  本包不安装余额查询、报价、收款人管理或其他办理工具。
+capabilities:
+  - capabilityId: transfer.internal.create
+    toolName: transfer_internal_create
+    name: 行内转账
+    description: 向已保存收款人发起行内转账；先由银行系统预检，明确确认后才提交。
+    operation: TASK
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required:
+        - fromAccountId
+        - beneficiaryId
+        - amount
+      properties:
+        fromAccountId:
+          type: string
+          description: 付款账户标识。
+        beneficiaryId:
+          type: string
+          description: 已保存收款人标识。
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          description: 转账金额。
+        purpose:
+          type: string
+          description: 可选转账用途。
+    requiredScopes:
+      - transfer:create

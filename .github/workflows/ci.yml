@@ -40,6 +40,8 @@ jobs:
         run: python engineering/verify_reproducible_jars.py --report "$RUNNER_TEMP/harness-reproducibility/report.json"
       - name: Offline schema and negative fixture gate
         run: python engineering/verify_contracts.py
+      - name: Candidate component assembly declarations
+        run: python engineering/verify_component_assembly.py
       - name: Unit tests and local HTTP fault injection
         run: mvn -B -ntp verify
       - name: Java timestamp compatibility on supported Python versions

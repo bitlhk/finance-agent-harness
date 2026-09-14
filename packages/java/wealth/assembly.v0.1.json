@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "wealth-facts-adapter",
+    "version": "0.1.0"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-harness-wealth:0.1.0-SNAPSHOT",
+  "connectionKind": "synthetic-bank-http.v1",
+  "supports": [
+    {
+      "pack": {
+        "id": "wealth-facts-description",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "wealth.facts.describe"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}

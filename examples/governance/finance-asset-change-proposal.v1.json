@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.3",
-    "catalogRevision": "2026-09-13.chinese-methods-2",
+    "catalogVersion": "0.2.6",
+    "catalogRevision": "2026-09-14.shared-task-1",
     "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:b5e26d5239ff64f717cd48f04d5e0ca5ee8ea37b7e358aed551f22986442ae45"
+    "digest": "sha256:164e0734e28e91f4921a4041ee24827e17ab20c9540c9fd4f146308d1a430eaa"
   },
   "target": {
     "kind": "domain-pack",
@@ -27,19 +27,36 @@
     "id": "finding-domain-pack-001",
     "category": "solution-assets",
     "summary": "The published domain guidance requires owner review.",
-    "evidenceRefs": [{"kind": "workspace-path", "locator": "evidence/evaluation-report.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]
+    "evidenceRefs": [
+      {
+        "kind": "workspace-path",
+        "locator": "evidence/evaluation-report.json",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
   },
   "reproduction": {
-    "conditions": ["Use the frozen evaluation snapshot referenced by the parent report."],
+    "conditions": [
+      "Use the frozen evaluation snapshot referenced by the parent report."
+    ],
     "redaction": "public-safe"
   },
   "proposedChange": {
     "summary": "Review the affected guidance and publish a new immutable asset version.",
-    "scopes": ["implementation", "tests"]
+    "scopes": [
+      "implementation",
+      "tests"
+    ]
   },
   "verification": {
     "entrypoint": "mvn -q test",
-    "priorResultRefs": [{"kind": "workspace-path", "locator": "evidence/evaluation-report.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}]
+    "priorResultRefs": [
+      {
+        "kind": "workspace-path",
+        "locator": "evidence/evaluation-report.json",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
   },
   "builderTask": {
     "taskId": "wealth-manager-previsit-build",
