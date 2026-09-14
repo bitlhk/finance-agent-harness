@@ -23,11 +23,70 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class OpenJiuwenCapabilityInstallerTest {
     private static final String AGENT_ID = "clean-openjiuwen-agent";
     private static final String ACCOUNT_TOOL = "account_balance_query";
     private static final String TRANSFER_TOOL = "transfer_internal_create";
+
+    @Test
+    void independentTransferDeclarationMatchesExistingBankCapability() throws Exception {
+        var loader = new FinanceCapabilityPackLoader();
+        var legacy = loader.load(root().resolve("capability-packs/retail-banking-basics/pack.yaml"));
+        var standalone = loader.load(root().resolve("capability-packs/internal-transfer/pack.yaml"));
+        assertEquals(1, standalone.capabilities().size());
+        assertEquals(legacy.capabilities().stream().filter(c -> c.capabilityId().equals("transfer.internal.create"))
+                .findFirst().orElseThrow(), standalone.capabilities().getFirst());
+    }
+
+    @Test
+    void transferEmbedsIntoExistingAgentWithoutInstallingBalanceOrAcceptingChatApproval() throws Exception {
+        var pack = new FinanceCapabilityPackLoader().load(root().resolve("capability-packs/internal-transfer/pack.yaml"));
+        var agent = new ReActAgent(AgentCard.builder().id("embedded-transfer").name("Existing application Agent").build());
+        agent.addPromptBuilderSection("existing-host-method", "Retain the existing application method.", 80);
+        var requests = new ArrayList<CapabilityRequestV1>();
+        var queries = new AtomicReference<CapabilityRequestV1>();
+        try (var installed = new OpenJiuwenCapabilityInstaller().install(agent,
+                provider(queries, requests), "reference-bank-provider", defaults(), pack, true)) {
+            assertEquals(Set.of(TRANSFER_TOOL), installed.toolNames());
+            assertNull(agent.getAbilityManager().get(ACCOUNT_TOOL));
+            assertTrue(agent.getSystemPromptBuilder().hasSection("existing-host-method"));
+            @SuppressWarnings("unchecked")
+            var first = (Map<String, Object>) installed.tool(TRANSFER_TOOL).invoke(Map.of(
+                    "fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 0.01));
+            assertEquals("NEED_USER", first.get("status"));
+            var handle = String.valueOf(first.get(OpenJiuwenCapabilityInstaller.TASK_HANDLE_ARGUMENT));
+            @SuppressWarnings("unchecked")
+            var resumed = (Map<String, Object>) installed.tool(TRANSFER_TOOL).invoke(Map.of(
+                    "financeTaskHandle", handle, "confirmationText", "确认提交"));
+            assertEquals("NEED_USER", resumed.get("status"));
+            assertTrue(requests.stream().allMatch(r -> r.confirmation() == null));
+            var now = Instant.now();
+            var approval = new HostTaskConfirmation("authenticated-ui-event", installed.confirmationBinding(handle),
+                    now, now.plusSeconds(60));
+            assertEquals("COMPLETED", installed.confirm(handle, approval).get("status"));
+            int beforeDuplicate = requests.size();
+            assertEquals("COMPLETED", installed.confirm(handle, approval).get("status"));
+            assertEquals(beforeDuplicate, requests.size());
+            assertNull(queries.get());
+        }
+        assertNull(agent.getAbilityManager().get(TRANSFER_TOOL));
+        assertTrue(agent.getSystemPromptBuilder().hasSection("existing-host-method"));
+    }
+
+    @Test
+    void unselectedTransferCannotBeCalledFromBalanceInstallation() throws Exception {
+        var pack = new FinanceCapabilityPackLoader().load(root().resolve("capability-packs/account-balance-readonly/pack.yaml"));
+        var agent = new ReActAgent(AgentCard.builder().id("balance-without-transfer").name("Balance Agent").build());
+        var requests = new ArrayList<CapabilityRequestV1>();
+        try (var installed = new OpenJiuwenCapabilityInstaller().install(agent,
+                provider(new AtomicReference<>(), requests), "reference-bank-provider", defaults(), pack, true)) {
+            assertNull(agent.getAbilityManager().get(TRANSFER_TOOL));
+            assertThrows(IllegalArgumentException.class, () -> installed.tool(TRANSFER_TOOL));
+            assertTrue(requests.isEmpty());
+        }
+    }
 
     @Test
     void packMakesToolsVisibleAndExecutableThenUninstallsThem() throws Exception {

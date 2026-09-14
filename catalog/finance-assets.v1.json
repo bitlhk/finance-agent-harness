@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.3",
+  "catalogVersion": "0.2.4",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -282,6 +282,15 @@
       }
     },
     {
+      "id": "internal-transfer",
+      "version": "0.1.0",
+      "displayName": "行内转账能力（宿主确认接线必需）",
+      "source": "repo://capability-packs/internal-transfer",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["transfer.internal.create"],
+      "compatibility": {"profiles": ["customer-self-service"]}
+    },
+    {
       "id": "retail-banking-basics",
       "version": "0.1.0",
       "displayName": "零售银行基础能力",
@@ -511,7 +520,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-09-13.chinese-methods-2",
+  "catalogRevision": "2026-09-14.embedded-transfer-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
