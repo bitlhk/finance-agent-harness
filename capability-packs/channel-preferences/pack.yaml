@@ -1,0 +1,30 @@
+schemaVersion: finance-capability-pack.v1
+packId: channel-preferences
+version: 0.1.0
+systemPrompt: |
+  Only prepare channel preference changes on an explicit user request.
+  The bank supplies the current preference version and validates permitted values.
+  User approval must use the Host confirmation control, never model text or parameters.
+  Resume the original financeTaskHandle to check outcomes; do not recreate an uncertain task.
+  Report the actual bank result, not a predicted success. This capability does not transfer money.
+capabilities:
+  - capabilityId: channel.preferences.update
+    toolName: channel_preferences_update
+    name: 渠道展示偏好
+    description: 更新语言、大字或无障碍展示偏好，由银行预检并经宿主明确确认后提交。
+    operation: TASK
+    inputSchema:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        language:
+          type: string
+        largeTextEnabled:
+          type: boolean
+        screenReaderEnabled:
+          type: boolean
+        accessibilityMode:
+          type: boolean
+    requiredScopes:
+      - channel:write

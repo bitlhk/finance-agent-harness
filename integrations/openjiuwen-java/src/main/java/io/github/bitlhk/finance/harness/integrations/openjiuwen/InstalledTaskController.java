@@ -111,7 +111,10 @@ final class InstalledTaskController {
                         capability.requiredScopes(), business, Map.of());
                 prior = new TaskCheckpointStore.SavedTask(scope, capabilityId, taskId, business,
                         bridge.initialCheckpoint(initial), null);
-                access.put(handle, prior);
+                try { access.put(handle, prior); }
+                catch (TaskCheckpointStore.NewTaskRejected rejected) {
+                    return error("TASK_PENDING_USE_ORIGINAL", "宿主仍保留原待办，请先处理或查证原任务，不能重复创建。");
+                }
             }
             if (approval != null && !approval.validFor(
                     String.valueOf(prior.checkpoint().get(OpenJiuwenFinanceBridge.CK_BINDING)), Instant.now())) {
