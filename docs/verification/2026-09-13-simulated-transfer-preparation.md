@@ -84,3 +84,29 @@ regressions reproduced on an old implementation.
 
 No new transfer UI, Candidate, deployment or live bank acceptance is claimed by
 this follow-up. The remaining list above continues to apply.
+
+## Separate JVM follow-up (2026-09-14)
+
+The feature branch incorporates main 7899fd5 without changing the read-only
+release. Three additional cases launch fresh Java processes with the original
+FileTaskCheckpointStore and the same isolated HTTP bank. Fourteen cases in
+TransferHostRecoveryTest pass, including the existing eleven.
+
+- A new process consumes the original bound approval; another new process
+  receives the cached terminal result. Create/confirm/submit each occur once.
+- A fresh process with a revoked fixture grant, or a different Host scope,
+  performs no task query, confirm or submit.
+- A malformed submit response followed by temporary observation failure retains
+  the handle across fresh processes. A later process reconciles the task without
+  another create, confirm or submit.
+
+Each child has a bounded timeout and is reaped by the test. Approval timestamps,
+event ID and binding are preserved, not renewed during recovery. These tests
+prove sequential process replacement with an isolated HTTP fixture, not crash
+atomicity during an in-flight write, concurrent processes, real bank IAM,
+authenticated browser approval, or complete simulator ledger reconciliation.
+The trusted Host/UI and full simulator acceptance remain outstanding.
+
+Full `mvn -q verify` on this integrated branch: 267 tests in 44 classes,
+260 passed, 7 explicit live Smoke skips, zero failures/errors. Runtime is
+OpenJiuwen Java 0.1.15. No deployed service was changed by these tests.

@@ -19,10 +19,13 @@ import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,7 +42,7 @@ class TransferHostRecoveryTest {
     final AtomicInteger creates = new AtomicInteger(), confirms = new AtomicInteger(),
             submits = new AtomicInteger(), queries = new AtomicInteger(), reconciles = new AtomicInteger();
     final List<Map<String, Object>> createBodies = new ArrayList<>();
-    boolean granted = true, unavailable, brokenSubmit, brokenCreate;
+    volatile boolean granted = true, unavailable, brokenSubmit, brokenCreate;
     String bankStatus = "CREATED";
 
     @BeforeEach void start() throws Exception {
@@ -63,11 +66,16 @@ class TransferHostRecoveryTest {
 
     void install(String owner) throws Exception {
         if (installed != null) installed.close();
+        installed = installation(directory, server.getAddress().getPort(), owner, () -> granted);
+    }
+
+    static OpenJiuwenCapabilityInstaller.Installation installation(
+            Path directory, int port, String owner, BooleanSupplier granted) throws Exception {
         var source = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
-                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(2),
+                URI.create("http://127.0.0.1:" + port), Duration.ofSeconds(2),
                 () -> new NonAiBankingProvider.HostSession("bank-session", "customer-a", "customer-a",
                         owner, Instant.now().plusSeconds(300))));
-        var provider = new BoundFinanceProvider(source, () -> granted ? new BoundFinanceProvider.Grant(
+        var provider = new BoundFinanceProvider(source, () -> granted.getAsBoolean() ? new BoundFinanceProvider.Grant(
                 "customer-a", FinanceContextV1.PrincipalType.CUSTOMER, Set.of("customer-a"), Set.of("TRANSFER"),
                 SCOPES, owner, "isolated-host-fixture", Instant.now().plusSeconds(300)) : null,
                 Map.of(CAP, SCOPES));
@@ -77,7 +85,7 @@ class TransferHostRecoveryTest {
         var pack = new FinanceCapabilityPackV1(FinanceCapabilityPackV1.SCHEMA_VERSION,
                 "isolated-transfer", "0.1.0", retail.systemPrompt(),
                 retail.capabilities().stream().filter(capability -> CAP.equals(capability.capabilityId())).toList());
-        installed = new OpenJiuwenCapabilityInstaller().install(
+        return new OpenJiuwenCapabilityInstaller().install(
                 new ReActAgent(AgentCard.builder().id("isolated-transfer-agent").name("Transfer test").build()),
                 Map.of(CAP, new OpenJiuwenCapabilityInstaller.ProviderBinding(
                         NonAiBankingProvider.PROVIDER_ID, source.descriptor().version(), provider)),
@@ -85,6 +93,79 @@ class TransferHostRecoveryTest {
                         FinanceContextV1.PrincipalType.CUSTOMER, "fixture", "TRANSFER",
                         FinanceContextV1.AuthenticationLevel.BASIC, SCOPES),
                 pack, true, new FileTaskCheckpointStore(directory), owner);
+    }
+
+    /** Separate JVMs share only the durable store and the isolated HTTP bank. */
+    public static final class RecoveryProcess {
+        public static void main(String[] args) throws Exception {
+            try (var installation = installation(Path.of(args[0]), Integer.parseInt(args[1]),
+                    args[2], () -> Boolean.parseBoolean(args[3]))) {
+                Object result = args[4].equals("confirm")
+                        ? installation.confirm(args[5], new HostTaskConfirmation(args[6], args[7],
+                                Instant.parse(args[8]), Instant.parse(args[9])))
+                        : installation.tool(TOOL).invoke(Map.of(HANDLE, args[5]));
+                Files.write(Path.of(args[10]), HarnessJson.mapper().writeValueAsBytes(result));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> inNewProcess(String action, String handle, HostTaskConfirmation event,
+            String owner, boolean authorized) throws Exception {
+        Path result = directory.resolve("result-" + UUID.randomUUID() + ".json");
+        Path log = directory.resolve("process-" + UUID.randomUUID() + ".log");
+        var command = List.of(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("surefire.test.class.path", System.getProperty("java.class.path")),
+                RecoveryProcess.class.getName(), directory.toString(),
+                Integer.toString(server.getAddress().getPort()), owner, Boolean.toString(authorized),
+                action, handle, event.eventId(), event.bindingFingerprint(),
+                event.confirmedAt().toString(), event.expiresAt().toString(), result.toString());
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start();
+        try {
+            assertTrue(process.waitFor(30, TimeUnit.SECONDS), "Recovery child timed out");
+            assertEquals(0, process.exitValue(), () -> {
+                try { return Files.readString(log); }
+                catch (IOException failure) { return "Child failed; log unavailable"; }
+            });
+            return HarnessJson.mapper().readValue(Files.readAllBytes(result), Map.class);
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                assertTrue(process.waitFor(10, TimeUnit.SECONDS), "Owned child did not exit");
+            }
+        }
+    }
+
+    @Test void separateProcessesRecoverAndCacheTheSameTransfer() throws Exception {
+        String handle = create(); var event = approval(handle);
+        installed.close(); installed = null;
+        assertEquals("COMPLETED", inNewProcess("confirm", handle, event, "host-a", true).get("status"));
+        assertEquals("COMPLETED", inNewProcess("confirm", handle, event, "host-a", true).get("status"));
+        assertEquals(1, creates.get()); assertEquals(1, confirms.get()); assertEquals(1, submits.get());
+    }
+
+    @Test void separateProcessChecksCurrentAuthorizationNotSavedGrant() throws Exception {
+        String handle = create(); var event = approval(handle);
+        installed.close(); installed = null;
+        assertEquals("AUTHORIZATION_DENIED",
+                inNewProcess("confirm", handle, event, "host-a", false).get("errorCode"));
+        assertEquals(0, queries.get()); assertEquals(0, confirms.get()); assertEquals(0, submits.get());
+        assertEquals("FINANCE_TASK_HANDLE_NOT_FOUND",
+                inNewProcess("resume", handle, event, "host-b", true).get("errorCode"));
+        assertEquals(0, queries.get()); assertEquals(0, submits.get());
+    }
+
+    @Test void separateProcessReconcilesUnknownWithoutReplayingSubmission() throws Exception {
+        String handle = create(); var event = approval(handle);
+        brokenSubmit = true;
+        installed.close(); installed = null;
+        assertEquals(handle, inNewProcess("confirm", handle, event, "host-a", true).get(HANDLE));
+        unavailable = true;
+        assertEquals(handle, inNewProcess("resume", handle, event, "host-a", true).get(HANDLE));
+        unavailable = false;
+        assertEquals("COMPLETED", inNewProcess("resume", handle, event, "host-a", true).get("status"));
+        assertEquals(1, creates.get()); assertEquals(1, confirms.get()); assertEquals(1, submits.get());
+        assertEquals(1, reconciles.get());
     }
 
     @SuppressWarnings("unchecked") Map<String, Object> invoke(Map<String, Object> input) {
