@@ -53,6 +53,12 @@ controlled fault-timing checks; neither replaces the other.
 The earlier query matrix remains a separate baseline, not a newly executed
 full Cartesian product of all combinations and faults.
 
+A subsequent public model repeat supplied `accountId={}` instead of a string.
+Runtime input-schema validation rejected that tool call and the UI reported a
+failed run. This is retained as a model-output bad case, not relabeled successful.
+The representative successful live runs do not establish a model reliability
+rate or guarantee valid arguments on every invocation.
+
 ## Observation scope
 
 The six managed packs cover seven capabilities. Common `execution.history` and
