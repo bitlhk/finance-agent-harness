@@ -90,3 +90,35 @@ times, not token usage, monetary cost, model-only latency or evidence that B is
 faster. Full response quality and business-owner label acceptance remain outside
 this experiment. B therefore remains opt-in; Builder integration and C remain
 deferred.
+
+## Date, account and compound-task closure
+
+The provisional product rules are now explicit in the candidate assets and test
+suite. An absolute year-month is used directly; a relative month is resolved only
+from a trusted Host business date; a bare month is clarified. An omitted account
+selector means all accounts currently authorized by the Provider. A canonical
+account ID may narrow the query, while a natural-language alias or ordinal requires
+a trusted Host mapping and is otherwise clarified. Capability metadata never
+creates that mapping or authority.
+
+In a three-repeat, ten-case Java policy run, B passed 28/30 automated checks. The
+two failures were correct clarifications expressed as `账户ID` or `账户标识`, which the
+initial lexical evidence list did not accept. After correcting that scorer, the
+affected alias case passed B in 5/5 repeated runs; A invoked the balance tool in
+5/5. This is engineering evidence, not business-owner acceptance.
+
+The read-only compound baseline used the existing Java Runtime, Harness installer,
+deterministic Provider and the Java reference Host limit of eight iterations. Across
+eight cases repeated three times, A passed 16/24 and B passed 15/24. B improved one
+pair, regressed two and failed with A in seven. Most failures completed after calling
+only one requested tool; none were Runtime failures, incomplete runs, TASK calls or
+bank transports. B therefore has no demonstrated compound-task advantage.
+
+A separately frozen OpenJiuwen Python 0.1.18 Candidate with the delegated Java
+financial bridge completed 7/8 compound cases in one live-model run; the relative
+date case made no tool call because that Host has no trusted business-date input.
+This single run establishes feasibility, not repeat stability, and it used the
+Candidate's original descriptions rather than B. No planner, Router SPI or Builder
+business branch is introduced. The next changes, if approved, are limited to a
+runtime-neutral trusted business-date/context input and generic propagation of the
+already frozen description catalog into the Python installation plan.

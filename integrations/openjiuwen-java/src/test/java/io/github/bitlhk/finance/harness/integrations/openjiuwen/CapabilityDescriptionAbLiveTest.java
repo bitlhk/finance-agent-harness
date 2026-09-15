@@ -66,6 +66,26 @@ class CapabilityDescriptionAbLiveTest {
                 "Max iterations reached without completion", "");
         assertEquals("WRONG_CALL", wrongAndIncomplete.outcome());
         assertEquals("MAX_ITERATIONS", wrongAndIncomplete.completionStatus());
+        JsonNode compound = HarnessJson.mapper().readTree("""
+                {"expected":"CALL_CAPABILITIES","expectedCalls":[
+                  {"capabilityId":"account.balance.query","expectedArguments":{}},
+                  {"capabilityId":"wealth.facts.describe","expectedArguments":{}}
+                ],"responseMustContainAll":["余额","风险"]}
+                """);
+        var compoundAssessment = assess(compound, List.of(
+                new ToolSelection("wealth_facts_describe", Map.of()),
+                new ToolSelection("account_balance_query", Map.of())), "余额与风险", "");
+        assertEquals("CORRECT_COMPOUND_CALL", compoundAssessment.outcome());
+        assertTrue(compoundAssessment.passed());
+        var duplicateAssessment = assess(compound, List.of(
+                new ToolSelection("wealth_facts_describe", Map.of()),
+                new ToolSelection("account_balance_query", Map.of()),
+                new ToolSelection("account_balance_query", Map.of())), "余额与风险", "");
+        assertEquals("WRONG_CALL", duplicateAssessment.outcome());
+        assertFalse(duplicateAssessment.passed());
+        assertFalse(expectedArgumentsMatch(HarnessJson.mapper().readTree("""
+                {"_absent":["accountId"]}
+                """), Map.of("accountId", "")));
         assertEquals("2026-07", controlledData("finance.transaction-summary.query",
                 Map.of("period", "2026-07")).get("period"));
     }
@@ -114,6 +134,7 @@ class CapabilityDescriptionAbLiveTest {
         int limit = Integer.parseInt(System.getenv().getOrDefault("FH_AB_CASE_LIMIT",
                 Integer.toString(suite.path("cases").size())));
         int repetitions = Integer.parseInt(System.getenv().getOrDefault("FH_AB_REPETITIONS", "1"));
+        int maxIterations = Integer.parseInt(System.getenv().getOrDefault("FH_AB_MAX_ITERATIONS", "2"));
         Set<String> selectedIds = csvSet(System.getenv("FH_AB_CASE_IDS"));
         List<Map<String, Object>> results = new ArrayList<>();
         List<JsonNode> selected = new ArrayList<>();
@@ -127,7 +148,7 @@ class CapabilityDescriptionAbLiveTest {
             for (int index = 0; index < selected.size(); index++) {
                 List<String> order = (index + repetition) % 2 == 0 ? List.of("A", "B") : List.of("B", "A");
                 for (String variant : order)
-                    results.add(runCase(root, variant, selected.get(index), repetition));
+                    results.add(runCase(root, variant, selected.get(index), repetition, maxIterations));
             }
         }
         Map<String, Object> report = new LinkedHashMap<>();
@@ -139,6 +160,7 @@ class CapabilityDescriptionAbLiveTest {
         report.put("suite", root.relativize(suitePath).toString());
         report.put("casesPerVariant", selected.size());
         report.put("repetitions", repetitions);
+        report.put("maxIterations", maxIterations);
         report.put("results", results);
         report.put("summary", summarize(results));
         Path output = Path.of(System.getenv().getOrDefault("FH_AB_REPORT",
@@ -148,7 +170,8 @@ class CapabilityDescriptionAbLiveTest {
         assertEquals(selected.size() * repetitions * 2, results.size());
     }
 
-    private Map<String, Object> runCase(Path root, String variant, JsonNode testCase, int repetition) throws Exception {
+    private Map<String, Object> runCase(
+            Path root, String variant, JsonNode testCase, int repetition, int maxIterations) throws Exception {
         Set<String> installed = new LinkedHashSet<>();
         if (testCase.has("installedCapabilities")) testCase.path("installedCapabilities").forEach(v -> installed.add(v.asText()));
         else installed.addAll(ALL);
@@ -165,7 +188,7 @@ class CapabilityDescriptionAbLiveTest {
         long started = System.nanoTime();
         String error = "";
         try {
-            ReActAgent agent = agent(session);
+            ReActAgent agent = agent(session, maxIterations);
             agent.registerCallback(AgentCallbackEvent.BEFORE_TOOL_CALL, context -> {
                 if (context.getInputs() instanceof ToolCallInputs input) {
                     calls.add(new ToolSelection(input.getToolName(), arguments(input.getToolArgs())));
@@ -233,6 +256,14 @@ class CapabilityDescriptionAbLiveTest {
         JsonNode finalExpectation = expectations.getLast();
         String expected = finalExpectation.path("expected").asText();
         String expectedId = finalExpectation.path("capabilityId").asText("");
+        List<String> expectedIds = new ArrayList<>();
+        if (!expectedId.isBlank()) {
+            expectedIds.add(expectedId);
+        }
+        if (finalExpectation.path("expectedCalls").isArray()) {
+            finalExpectation.path("expectedCalls").forEach(call ->
+                    expectedIds.add(call.path("capabilityId").asText()));
+        }
         List<ToolSelection> evaluatedCalls = callsByTurn.isEmpty() ? List.of() : callsByTurn.getLast();
         boolean unexpectedTaskSelection = false;
         for (int index = 0; index < callsByTurn.size(); index++) {
@@ -255,7 +286,9 @@ class CapabilityDescriptionAbLiveTest {
                 Map.entry("repetition", repetition),
                 Map.entry("category", testCase.path("category").asText()),
                 Map.entry("variant", variant), Map.entry("expected", expected),
-                Map.entry("expectedCapabilityId", expectedId), Map.entry("toolCalls", List.copyOf(calls)),
+                Map.entry("expectedCapabilityId", expectedId),
+                Map.entry("expectedCapabilityIds", List.copyOf(expectedIds)),
+                Map.entry("toolCalls", List.copyOf(calls)),
                 Map.entry("toolCallsByTurn", List.copyOf(callsByTurn)),
                 Map.entry("evaluatedToolCalls", evaluatedCalls), Map.entry("responsesByTurn", responsesByTurn),
                 Map.entry("completionStatusesByTurn", completionStatusesByTurn),
@@ -286,12 +319,21 @@ class CapabilityDescriptionAbLiveTest {
 
     private ReActAgent agent(String session) {
         String url = System.getenv("FH_MODEL_URL"), name = System.getenv("FH_MODEL_NAME"), key = System.getenv("FH_MODEL_KEY");
-        return agent(session, url, name, key);
+        return agent(session, url, name, key, 2);
     }
 
     private ReActAgent agent(String session, String url, String name, String key) {
+        return agent(session, url, name, key, 2);
+    }
+
+    private ReActAgent agent(String session, int maxIterations) {
+        String url = System.getenv("FH_MODEL_URL"), name = System.getenv("FH_MODEL_NAME"), key = System.getenv("FH_MODEL_KEY");
+        return agent(session, url, name, key, maxIterations);
+    }
+
+    private ReActAgent agent(String session, String url, String name, String key, int maxIterations) {
         var agent = new ReActAgent(AgentCard.builder().id(session).name("FH A/B evaluator").build());
-        var config = ReActAgentConfig.builder().maxIterations(2).promptTemplate(List.of(Map.of("role", "system", "content",
+        var config = ReActAgentConfig.builder().maxIterations(maxIterations).promptTemplate(List.of(Map.of("role", "system", "content",
                 "你是银行助手。宿主提供的可信业务日期为2026-09-15，可用于解析上个月等相对时间。"
                 + "用户只说某个月份但没有年份、且会话中没有明确年份时，必须先询问年份，不得默认当前年。"
                 + "只处理当前用户请求，只能调用已安装工具。咨询、否定、取消和未支持请求不得调用办理工具；缺少办理参数时先澄清。")))
@@ -382,6 +424,32 @@ class CapabilityDescriptionAbLiveTest {
                     oneExpected && parametersMatch, oneExpected && !parametersMatch
                             ? "TOOL_ARGUMENTS_MISMATCH" : "", completion, selections);
         }
+        if (expected.equals("CALL_CAPABILITIES")) {
+            List<JsonNode> expectedCalls = new ArrayList<>();
+            expectation.path("expectedCalls").forEach(expectedCalls::add);
+            List<ToolSelection> unmatched = new ArrayList<>(selections);
+            boolean callsMatch = expectedCalls.size() == selections.size();
+            for (JsonNode expectedCall : expectedCalls) {
+                int match = -1;
+                for (int index = 0; index < unmatched.size(); index++) {
+                    ToolSelection candidate = unmatched.get(index);
+                    if (toolCapability(candidate.toolName()).equals(expectedCall.path("capabilityId").asText())
+                            && expectedArgumentsMatch(expectedCall.path("expectedArguments"), candidate.arguments())) {
+                        match = index;
+                        break;
+                    }
+                }
+                if (match < 0) callsMatch = false;
+                else unmatched.remove(match);
+            }
+            boolean responseMatch = !response.isBlank()
+                    && containsAll(response, expectation.path("responseMustContainAll"));
+            boolean passed = callsMatch && responseMatch;
+            String detail = !callsMatch ? "COMPOUND_CALLS_MISMATCH"
+                    : response.isBlank() ? "EMPTY_RESPONSE" : "COMPOUND_RESPONSE_NOT_EVIDENCED";
+            return assessed(passed ? "CORRECT_COMPOUND_CALL" : "WRONG_CALL", passed,
+                    passed ? "" : detail, completion, selections);
+        }
         if (expected.equals("CLARIFY")) {
             boolean hasExpectedLanguage = !response.isBlank() && containsAny(response,
                     expectation.path("responseMustContainAny"));
@@ -422,9 +490,12 @@ class CapabilityDescriptionAbLiveTest {
         var fields = expected.fields();
         while (fields.hasNext()) {
             var field = fields.next();
+            if (field.getKey().equals("_absent")) continue;
             JsonNode actualValue = HarnessJson.mapper().valueToTree(actual.get(field.getKey()));
             if (!field.getValue().equals(actualValue)) return false;
         }
+        JsonNode absent = expected.path("_absent");
+        if (absent.isArray()) for (JsonNode field : absent) if (actual.containsKey(field.asText())) return false;
         return true;
     }
 
@@ -432,6 +503,12 @@ class CapabilityDescriptionAbLiveTest {
         if (!candidates.isArray() || candidates.isEmpty()) return true;
         for (JsonNode candidate : candidates) if (response.contains(candidate.asText())) return true;
         return false;
+    }
+
+    private static boolean containsAll(String response, JsonNode candidates) {
+        if (!candidates.isArray()) return true;
+        for (JsonNode candidate : candidates) if (!response.contains(candidate.asText())) return false;
+        return true;
     }
 
     @SuppressWarnings("unchecked")
