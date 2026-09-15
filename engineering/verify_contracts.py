@@ -40,6 +40,8 @@ def main():
         "finance-asset-catalog.v1",
         "finance-asset-change-proposal.v1",
         "finance-business-component-package.v0.1",
+        "capability-descriptions.v0.1",
+        "terminology-pack.v0.1",
     }
     assert required <= schemas.keys(), f"Missing required schemas: {required - schemas.keys()}"
 
@@ -68,6 +70,12 @@ def main():
         for path in sorted((ROOT / directory).rglob("pack.yaml")):
             validator(schema_name).validate(yaml.safe_load(path.read_text()))
             count += 1
+    for path in sorted((ROOT / "routing/capability-descriptions").glob("*.json")):
+        validator("capability-descriptions.v0.1").validate(json.loads(path.read_text()))
+        count += 1
+    for path in sorted((ROOT / "routing/terminology").glob("*.json")):
+        validator("terminology-pack.v0.1").validate(json.loads(path.read_text()))
+        count += 1
     wealth_fixtures = sorted((ROOT / "conformance/fixtures/wealth/v0.1").rglob("*.json"))
     assert wealth_fixtures, "Wealth contract fixtures must not be empty"
     for path in wealth_fixtures:

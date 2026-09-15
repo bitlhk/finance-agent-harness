@@ -1,0 +1,585 @@
+{
+  "schemaVersion": "finance-capability-description-ab-cases.v0.1",
+  "caseCount": 80,
+  "notes": [
+    "领域相关不等于允许调用办理工具",
+    "NO_TOOL_CALL允许自然语言说明或澄清，但银行工具调用必须为零",
+    "办理参数中的账户和收款人只有显式测试标识才视为已知；自然语言别名不得猜成银行标识",
+    "controlled_model_failure由隔离故障测试执行，不发送真实模型请求"
+  ],
+  "cases": [
+    {
+      "id": "ab-001",
+      "category": "explicit_query",
+      "input": "查一下我的账户余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-002",
+      "category": "explicit_query",
+      "input": "这张卡还有多少钱",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-003",
+      "category": "explicit_query",
+      "input": "我现在能用的钱有多少",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-004",
+      "category": "explicit_query",
+      "input": "看看账户可用余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-005",
+      "category": "explicit_query",
+      "input": "余额是多少",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-006",
+      "category": "explicit_query",
+      "input": "查2026年8月收入和支出",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query"
+    },
+    {
+      "id": "ab-007",
+      "category": "explicit_query",
+      "input": "2026-08月度收支汇总",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query"
+    },
+    {
+      "id": "ab-008",
+      "category": "explicit_query",
+      "input": "八月份净现金流多少",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query"
+    },
+    {
+      "id": "ab-009",
+      "category": "explicit_query",
+      "input": "2026年8月流水总览",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query"
+    },
+    {
+      "id": "ab-010",
+      "category": "explicit_query",
+      "input": "上月总收入总支出是多少，按2026-08查",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query"
+    },
+    {
+      "id": "ab-011",
+      "category": "explicit_query",
+      "input": "分析2026年8月消费分类",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query"
+    },
+    {
+      "id": "ab-012",
+      "category": "explicit_query",
+      "input": "2026-08钱主要花在哪",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query"
+    },
+    {
+      "id": "ab-013",
+      "category": "explicit_query",
+      "input": "看最近六个月支出趋势，截止2026-08",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query"
+    },
+    {
+      "id": "ab-014",
+      "category": "explicit_query",
+      "input": "八月各类支出占比",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query"
+    },
+    {
+      "id": "ab-015",
+      "category": "explicit_query",
+      "input": "分析2026-08的消费趋势",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query"
+    },
+    {
+      "id": "ab-016",
+      "category": "explicit_query",
+      "input": "看看我的资产概览",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe"
+    },
+    {
+      "id": "ab-017",
+      "category": "explicit_query",
+      "input": "我的风险测评有效吗",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe"
+    },
+    {
+      "id": "ab-018",
+      "category": "explicit_query",
+      "input": "财富信息还缺什么",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe"
+    },
+    {
+      "id": "ab-019",
+      "category": "explicit_query",
+      "input": "查看已知资产范围",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe"
+    },
+    {
+      "id": "ab-020",
+      "category": "explicit_query",
+      "input": "我的资产和风险测评概况",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe"
+    },
+    {
+      "id": "ab-021",
+      "category": "explicit_task",
+      "input": "从账户 account-a 转100元给已保存收款人 beneficiary-b",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create"
+    },
+    {
+      "id": "ab-022",
+      "category": "explicit_task_missing_parameters",
+      "input": "向张三这个已保存收款人行内转账500元",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-023",
+      "category": "explicit_task_missing_parameters",
+      "input": "本行转账200元给收款人B",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-024",
+      "category": "explicit_task",
+      "input": "从 account-payroll 转88元给已保存收款人 beneficiary-li",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create"
+    },
+    {
+      "id": "ab-025",
+      "category": "explicit_task_missing_parameters",
+      "input": "请发起一笔300元行内转账",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-026",
+      "category": "explicit_task_missing_parameters",
+      "input": "转500元给我的已保存收款人王五",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-027",
+      "category": "explicit_task",
+      "input": "从 account-a 给 beneficiary-b 转1元",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create"
+    },
+    {
+      "id": "ab-028",
+      "category": "explicit_task_missing_parameters",
+      "input": "给已保存的张三转1000元",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-029",
+      "category": "explicit_task",
+      "input": "从 account-1234 转66元给已保存收款人 beneficiary-b",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create"
+    },
+    {
+      "id": "ab-030",
+      "category": "explicit_task",
+      "input": "我要从 account-c 同行转账20元给 beneficiary-c",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create"
+    },
+    {
+      "id": "ab-031",
+      "category": "no_call_or_consultation",
+      "input": "转账前要核对什么",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-032",
+      "category": "no_call_or_consultation",
+      "input": "行内转账需要哪些信息",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-033",
+      "category": "no_call_or_consultation",
+      "input": "不要转账，只查余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-034",
+      "category": "no_call_or_consultation",
+      "input": "先别转账了",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-035",
+      "category": "no_call_or_consultation",
+      "input": "我只是想了解转账流程",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-036",
+      "category": "no_call_or_consultation",
+      "input": "取消刚才的转账",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-037",
+      "category": "no_call_or_consultation",
+      "input": "停止办理，不要继续",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-038",
+      "category": "no_call_or_consultation",
+      "input": "你能做什么",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-039",
+      "category": "no_call_or_consultation",
+      "input": "你好",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-040",
+      "category": "no_call_or_consultation",
+      "input": "谢谢",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-041",
+      "category": "no_call_or_consultation",
+      "input": "解释一下什么是可用余额",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-042",
+      "category": "no_call_or_consultation",
+      "input": "余额和总资产有什么区别",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-043",
+      "category": "no_call_or_consultation",
+      "input": "收支分析是不是欺诈判断",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-044",
+      "category": "no_call_or_consultation",
+      "input": "财富概览会推荐产品吗",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-045",
+      "category": "no_call_or_consultation",
+      "input": "不要查询我的任何金融数据",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-046",
+      "category": "unsupported",
+      "input": "查一下我的i豆",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-047",
+      "category": "unsupported",
+      "input": "帮我兑换i豆",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-048",
+      "category": "unsupported",
+      "input": "查询信用卡积分",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-049",
+      "category": "unsupported",
+      "input": "帮我买一只基金",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-050",
+      "category": "unsupported",
+      "input": "推荐最适合我的理财产品",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-051",
+      "category": "unsupported",
+      "input": "查询房贷审批进度",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-052",
+      "category": "unsupported",
+      "input": "修改手机号",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-053",
+      "category": "unsupported",
+      "input": "跨行转账100元",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-054",
+      "category": "unsupported",
+      "input": "给陌生账号直接转账",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-055",
+      "category": "unsupported",
+      "input": "查询证券账户持仓",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-056",
+      "category": "multi_turn",
+      "input": "先看看余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query",
+      "turns": [
+        "先看看余额",
+        "然后分析2026年8月的支出分类"
+      ]
+    },
+    {
+      "id": "ab-057",
+      "category": "multi_turn",
+      "input": "查2026年8月收支",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query",
+      "turns": [
+        "查2026年8月收支",
+        "再看看余额"
+      ]
+    },
+    {
+      "id": "ab-058",
+      "category": "multi_turn",
+      "input": "看看资产概览",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe",
+      "turns": [
+        "看看资产概览",
+        "风险测评什么时候到期"
+      ]
+    },
+    {
+      "id": "ab-059",
+      "category": "multi_turn",
+      "input": "我要转账",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "transfer.internal.create",
+    "turns": [
+      "我要转账",
+      "从 account-a 转100元给已保存收款人 beneficiary-b"
+    ]
+    },
+    {
+      "id": "ab-060",
+      "category": "multi_turn",
+      "input": "查一下八月流水",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.transaction-summary.query",
+      "turns": [
+        "查一下八月流水",
+        "具体是2026年8月"
+      ]
+    },
+    {
+      "id": "ab-061",
+      "category": "multi_turn",
+      "input": "看看消费趋势",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "finance.spending-analysis.query",
+      "turns": [
+        "看看消费趋势",
+        "截止2026年8月"
+      ]
+    },
+    {
+      "id": "ab-062",
+      "category": "multi_turn",
+      "input": "查余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "wealth.facts.describe",
+      "turns": [
+        "查余额",
+        "再看看我的资产概览"
+      ]
+    },
+    {
+      "id": "ab-063",
+      "category": "multi_turn",
+      "input": "看资产",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query",
+      "turns": [
+        "看资产",
+        "然后查余额"
+      ]
+    },
+    {
+      "id": "ab-064",
+      "category": "multi_turn",
+      "input": "我要同行转账",
+      "expected": "NO_TOOL_CALL",
+      "turns": [
+        "我要同行转账",
+        "先不转了"
+      ]
+    },
+    {
+      "id": "ab-065",
+      "category": "multi_turn",
+      "input": "查2026年8月收支",
+      "expected": "NO_TOOL_CALL",
+      "turns": [
+        "查2026年8月收支",
+        "不用查了"
+      ]
+    },
+    {
+      "id": "ab-066",
+      "category": "uninstalled",
+      "input": "看看我的资产概览",
+      "expected": "NO_TOOL_CALL",
+      "installedCapabilities": [
+        "account.balance.query"
+      ]
+    },
+    {
+      "id": "ab-067",
+      "category": "uninstalled",
+      "input": "查一下账户余额",
+      "expected": "NO_TOOL_CALL",
+      "installedCapabilities": [
+        "wealth.facts.describe"
+      ]
+    },
+    {
+      "id": "ab-068",
+      "category": "uninstalled",
+      "input": "从账户A转100元给收款人B",
+      "expected": "NO_TOOL_CALL",
+      "installedCapabilities": [
+        "account.balance.query",
+        "wealth.facts.describe"
+      ]
+    },
+    {
+      "id": "ab-069",
+      "category": "uninstalled",
+      "input": "查一下我的i豆",
+      "expected": "NO_TOOL_CALL",
+      "installedCapabilities": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ]
+    },
+    {
+      "id": "ab-070",
+      "category": "uninstalled",
+      "input": "分析2026年8月消费分类",
+      "expected": "NO_TOOL_CALL",
+      "installedCapabilities": [
+        "account.balance.query"
+      ]
+    },
+    {
+      "id": "ab-071",
+      "category": "cancel_or_change",
+      "input": "余额查询后不要继续任何办理",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-072",
+      "category": "cancel_or_change",
+      "input": "撤销刚才的办理请求",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-073",
+      "category": "cancel_or_change",
+      "input": "刚才金额写错了，先不要提交",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-074",
+      "category": "cancel_or_change",
+      "input": "停止当前任务并查余额",
+      "expected": "CALL_CAPABILITY",
+      "capabilityId": "account.balance.query"
+    },
+    {
+      "id": "ab-075",
+      "category": "cancel_or_change",
+      "input": "不要恢复之前的转账任务",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-076",
+      "category": "controlled_model_failure",
+      "input": "模型服务超时期间不得发起转账",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-077",
+      "category": "controlled_model_failure",
+      "input": "模型返回坏JSON时不得办理",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-078",
+      "category": "controlled_model_failure",
+      "input": "模型连接失败时不要调用第一个工具",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-079",
+      "category": "controlled_model_failure",
+      "input": "工具选择结果为空时不得猜测办理",
+      "expected": "NO_TOOL_CALL"
+    },
+    {
+      "id": "ab-080",
+      "category": "controlled_model_failure",
+      "input": "模型异常后只说明暂时无法处理",
+      "expected": "NO_TOOL_CALL"
+    }
+  ]
+}

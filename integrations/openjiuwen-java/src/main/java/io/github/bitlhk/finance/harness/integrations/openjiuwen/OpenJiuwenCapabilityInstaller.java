@@ -64,6 +64,32 @@ public final class OpenJiuwenCapabilityInstaller {
             boolean simulated,
             TaskCheckpointStore store,
             String hostSessionRef) {
+        return install(agent, providerBindings, defaults, pack, simulated, store, hostSessionRef, null);
+    }
+
+    /** Installs the same capability contract with an optional, frozen description catalog. */
+    public Installation install(
+            BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+            FinanceCapabilityPackV1 pack,
+            boolean simulated,
+            TaskCheckpointStore store,
+            String hostSessionRef,
+            CapabilityDescriptionCatalogV01 descriptions) {
+        return install(agent, providerBindings, defaults, pack, simulated, store, hostSessionRef, descriptions, true);
+    }
+
+    Installation install(
+            BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults,
+            FinanceCapabilityPackV1 pack,
+            boolean simulated,
+            TaskCheckpointStore store,
+            String hostSessionRef,
+            CapabilityDescriptionCatalogV01 descriptions,
+            boolean installTerminology) {
         Objects.requireNonNull(agent, "agent");
         Objects.requireNonNull(pack, "pack");
         Objects.requireNonNull(providerBindings, "providerBindings");
@@ -79,6 +105,10 @@ public final class OpenJiuwenCapabilityInstaller {
 
         if (agent instanceof ReActAgent reactAgent) {
             reactAgent.addPromptBuilderSection(promptSection, pack.systemPrompt(), 80);
+            if (installTerminology && descriptions != null && !descriptions.terminologyPrompt().isBlank()) {
+                reactAgent.addPromptBuilderSection(promptSection + ":terminology",
+                        descriptions.terminologyPrompt(), 81);
+            }
         }
 
         try {
@@ -96,7 +126,7 @@ public final class OpenJiuwenCapabilityInstaller {
                         simulated).hostSession(hostSessionRef);
                 ensureAvailable(agent, capability.toolName());
                 tasks.register(capability, bridge);
-                Tool tool = tool(agentId, capability, bridge, tasks);
+                Tool tool = tool(agentId, capability, bridge, tasks, descriptions);
                 agent.getAbilityManager().add(tool.getCard());
                 installedTools.put(capability.toolName(), tool);
                 var registered = Runner.resourceMgr().addTool(tool, List.of(agentId), true);
@@ -108,6 +138,7 @@ public final class OpenJiuwenCapabilityInstaller {
         } catch (RuntimeException exception) {
             uninstall(agent, installedTools.keySet(), agentId);
             removePromptSection(agent, promptSection);
+            if (installTerminology) removePromptSection(agent, promptSection + ":terminology");
             throw exception;
         }
 
@@ -131,21 +162,24 @@ public final class OpenJiuwenCapabilityInstaller {
                 agentId,
                 bindings,
                 Instant.now());
-        return new Installation(agent, installedTools, tasks, receipt, promptSection);
+        return new Installation(agent, installedTools, tasks, receipt, promptSection, installTerminology);
     }
 
     private static Tool tool(
             String agentId,
             FinanceCapabilityPackV1.Capability capability,
             OpenJiuwenFinanceBridge bridge,
-            InstalledTaskController tasks) {
+            InstalledTaskController tasks,
+            CapabilityDescriptionCatalogV01 descriptions) {
         Map<String, Object> inputSchema = capability.operation() == FinanceCapabilityPackV1.Operation.TASK
                 ? withTaskControls(capability.inputSchema())
                 : capability.inputSchema();
         ToolCard card = ToolCard.builder()
                 .id(capability.toolName())
                 .name(capability.toolName())
-                .description(capability.description() + " [capabilityId=" + capability.capabilityId() + "]")
+                .description(descriptions == null
+                        ? capability.description() + " [capabilityId=" + capability.capabilityId() + "]"
+                        : descriptions.description(capability.capabilityId()))
                 .inputParams(inputSchema)
                 .properties(Map.of(
                         "financeCapabilityId", capability.capabilityId(),
@@ -266,6 +300,7 @@ public final class OpenJiuwenCapabilityInstaller {
         private final InstalledTaskController tasks;
         private final InstallationReceipt receipt;
         private final String promptSection;
+        private final boolean terminologyInstalled;
         private boolean closed;
 
         private Installation(
@@ -273,12 +308,14 @@ public final class OpenJiuwenCapabilityInstaller {
                 Map<String, Tool> tools,
                 InstalledTaskController tasks,
                 InstallationReceipt receipt,
-                String promptSection) {
+                String promptSection,
+                boolean terminologyInstalled) {
             this.agent = agent;
             this.tools = Map.copyOf(tools);
             this.tasks = tasks;
             this.receipt = receipt;
             this.promptSection = promptSection;
+            this.terminologyInstalled = terminologyInstalled;
         }
 
         public InstallationReceipt receipt() {
@@ -319,6 +356,7 @@ public final class OpenJiuwenCapabilityInstaller {
             if (closed) return;
             uninstall(agent, tools.keySet(), receipt.agentId());
             removePromptSection(agent, promptSection);
+            if (terminologyInstalled) removePromptSection(agent, promptSection + ":terminology");
             closed = true;
         }
     }

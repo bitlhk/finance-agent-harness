@@ -34,6 +34,35 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test void enhancedDescriptionsAreDigestLockedAndMatchInstalledTools() throws Exception {
+        var assembler = new OpenJiuwenSolutionAssembler();
+        FinanceProvider provider = new DescribedFinanceProvider() {
+            public ProviderDescriptorV1 descriptor() {
+                return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION, "wealth-facts-adapter", "0.1.0",
+                        List.of(new ProviderDescriptorV1.CapabilitySupport("wealth.facts.describe",
+                                CapabilityRequestV1.Operation.QUERY)));
+            }
+            public CapabilityResultV1 query(CapabilityRequestV1 request) { throw new AssertionError("no business call"); }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new AssertionError("no task call"); }
+        };
+        var prepared = assembler.prepare(root(), root().resolve(
+                "examples/solutions/wealth-facts-kit/solution.yaml"),
+                Map.of("wealth-facts-adapter", provider));
+        var enhanced = assembler.withCapabilityDescriptions(root(), prepared, List.of(root().resolve(
+                "routing/capability-descriptions/wealth-facts-description.v0.1.json")), List.of(root().resolve(
+                "routing/terminology/demo-bank-zh-cn.v0.1.json")));
+        assertNotNull(enhanced.capabilityDescriptionSnapshot());
+        assertEquals(Set.of("wealth.facts.describe"), enhanced.capabilityDescriptionSnapshot().capabilities()
+                .stream().map(CapabilityDescriptionCatalogV01.SnapshotEntry::capabilityId).collect(java.util.stream.Collectors.toSet()));
+        assertTrue(enhanced.snapshot().containsKey("capabilityDescriptions"));
+        try (var installed = assembler.install(enhanced, cleanAgent("described"), customerWealthDefaults(), true,
+                new TaskCheckpointStore.Memory(), "described-session")) {
+            assertNotNull(installed.lock().capabilityDescriptions());
+            assertEquals(2, installed.lock().assets().stream().filter(asset ->
+                    asset.kind().equals("CAPABILITY_DESCRIPTIONS") || asset.kind().equals("TERMINOLOGY_PACK")).count());
+        }
+    }
+
     @Test void componentDisplayUsesPackAndProviderWithoutChangingLegacyPlanOrCallingBusiness() throws Exception {
         var source = new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel(
                 "custom-source", "2.0", List.of(new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.OperationLabel(

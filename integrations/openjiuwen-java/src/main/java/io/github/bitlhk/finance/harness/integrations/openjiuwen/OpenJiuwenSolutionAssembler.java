@@ -174,7 +174,30 @@ public final class OpenJiuwenSolutionAssembler {
                         collector.version(), "host-declaration://" + collector.collectorId(), collector.identityDigest()));
         }
         return new PreparedSolution(spec, loadedDomainPacks, loadedCapabilityPacks,
-                lockedAssets, observedRuntime, providerBindings, assessment);
+                lockedAssets, observedRuntime, providerBindings, assessment, null);
+    }
+
+    /** Adds optional B-variant descriptions without changing strict Capability Pack V1 files. */
+    public PreparedSolution withCapabilityDescriptions(
+            Path repositoryRoot,
+            PreparedSolution prepared,
+            List<Path> descriptionFiles,
+            List<Path> terminologyFiles) throws IOException {
+        Objects.requireNonNull(repositoryRoot, "repositoryRoot");
+        Objects.requireNonNull(prepared, "prepared");
+        List<Path> descriptions = checkedDescriptionAssets(repositoryRoot, descriptionFiles);
+        List<Path> terminology = checkedDescriptionAssets(repositoryRoot, terminologyFiles);
+        CapabilityDescriptionCatalogV01 catalog = CapabilityDescriptionCatalogV01.load(
+                prepared.capabilityPacks, descriptions, terminology);
+        Set<String> installed = new LinkedHashSet<>();
+        prepared.capabilityPacks.forEach(pack -> pack.capabilities().forEach(
+                capability -> installed.add(capability.capabilityId())));
+        catalog.requireExactInstallation(installed);
+        List<LockedAsset> assets = new ArrayList<>(prepared.assets);
+        for (Path file : descriptions) assets.add(descriptionAsset(repositoryRoot, file, "CAPABILITY_DESCRIPTIONS"));
+        for (Path file : terminology) assets.add(descriptionAsset(repositoryRoot, file, "TERMINOLOGY_PACK"));
+        return new PreparedSolution(prepared.spec, prepared.domainPacks, prepared.capabilityPacks,
+                assets, prepared.observedRuntime, prepared.bindings, prepared.observation, catalog);
     }
 
     public AssembledSolution install(PreparedSolution prepared, BaseAgent agent,
@@ -188,6 +211,14 @@ public final class OpenJiuwenSolutionAssembler {
         var lockedAssets = prepared.assets;
         var observedRuntime = prepared.observedRuntime;
         var providerBindings = prepared.bindings;
+        var capabilityDescriptions = prepared.capabilityDescriptions;
+
+        if (capabilityDescriptions != null) {
+            Set<String> installed = new LinkedHashSet<>();
+            loadedCapabilityPacks.forEach(pack -> pack.capabilities().forEach(
+                    capability -> installed.add(capability.capabilityId())));
+            capabilityDescriptions.requireExactInstallation(installed);
+        }
 
         List<OpenJiuwenDomainPackInstaller.Installation> domainInstallations = new ArrayList<>();
         List<OpenJiuwenCapabilityInstaller.Installation> installations = new ArrayList<>();
@@ -195,9 +226,12 @@ public final class OpenJiuwenSolutionAssembler {
             for (FinanceDomainPackLoader.LoadedDomainPack loaded : loadedDomainPacks) {
                 domainInstallations.add(domainPackInstaller.install(agent, loaded));
             }
+            boolean installTerminology = true;
             for (FinanceCapabilityPackV1 pack : loadedCapabilityPacks) {
                 installations.add(installer.install(
-                        agent, providerBindings, defaults, pack, simulated, checkpoints, hostSessionRef));
+                        agent, providerBindings, defaults, pack, simulated, checkpoints, hostSessionRef,
+                        capabilityDescriptions, installTerminology));
+                installTerminology = false;
             }
         } catch (RuntimeException exception) {
             closeCapabilityReverse(installations);
@@ -236,7 +270,8 @@ public final class OpenJiuwenSolutionAssembler {
                         spec.runtime().resolvedArtifacts() == null ? null : observedRuntime),
                 List.copyOf(lockedAssets),
                 installedDomainPacks,
-                installedPacks);
+                installedPacks,
+                capabilityDescriptions == null ? null : capabilityDescriptions.snapshot());
         return new AssembledSolution(spec.solutionId(), domainInstallations, installations, lock, json);
     }
 
@@ -248,10 +283,12 @@ public final class OpenJiuwenSolutionAssembler {
         private final RuntimeArtifacts observedRuntime;
         private final Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings;
         private final ObservationAssessmentV01 observation;
+        private final CapabilityDescriptionCatalogV01 capabilityDescriptions;
 
         private PreparedSolution(SolutionSpec spec, List<FinanceDomainPackLoader.LoadedDomainPack> domains,
                 List<FinanceCapabilityPackV1> packs, List<LockedAsset> assets, RuntimeArtifacts runtime,
-                Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings, ObservationAssessmentV01 observation) {
+                Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> bindings, ObservationAssessmentV01 observation,
+                CapabilityDescriptionCatalogV01 capabilityDescriptions) {
             this.spec = spec;
             this.domainPacks = List.copyOf(domains);
             this.capabilityPacks = List.copyOf(packs);
@@ -259,11 +296,15 @@ public final class OpenJiuwenSolutionAssembler {
             this.observedRuntime = runtime;
             this.bindings = Map.copyOf(bindings);
             this.observation = observation;
+            this.capabilityDescriptions = capabilityDescriptions;
         }
 
         public List<FinanceCapabilityPackV1> capabilityPacks() { return capabilityPacks; }
         public List<FinanceDomainPackLoader.LoadedDomainPack> domainPacks() { return domainPacks; }
         public ObservationAssessmentV01 observationAssessment() { return observation; }
+        public CapabilityDescriptionCatalogV01.Snapshot capabilityDescriptionSnapshot() {
+            return capabilityDescriptions == null ? null : capabilityDescriptions.snapshot();
+        }
 
         /** Display snapshot accessor: does not change existing installation-plan JSON shapes. */
         public io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01 displayMetadata() {
@@ -301,6 +342,7 @@ public final class OpenJiuwenSolutionAssembler {
                 snapshot.put("schemaVersion", "finance-installation-plan.v0.2");
                 snapshot.put("observationAssessment", observation);
             }
+            if (capabilityDescriptions != null) snapshot.put("capabilityDescriptions", capabilityDescriptions.snapshot());
             return Map.copyOf(snapshot);
         }
 
@@ -543,6 +585,36 @@ public final class OpenJiuwenSolutionAssembler {
         }
     }
 
+    private List<Path> checkedDescriptionAssets(Path repositoryRoot, List<Path> files) throws IOException {
+        if (files == null) return List.of();
+        Path root = repositoryRoot.toRealPath();
+        List<Path> result = new ArrayList<>();
+        for (Path configured : files) {
+            Objects.requireNonNull(configured, "Capability description asset path");
+            Path candidate = (configured.isAbsolute() ? configured : root.resolve(configured)).normalize();
+            if (!candidate.startsWith(root) || Files.isSymbolicLink(candidate)) {
+                throw new IllegalArgumentException("Capability description asset must be a bounded repository file");
+            }
+            Path file = candidate.toRealPath();
+            if (!file.startsWith(root) || !Files.isRegularFile(file)
+                    || Files.size(file) > 65_536) {
+                throw new IllegalArgumentException("Capability description asset must be a bounded repository file");
+            }
+            result.add(file);
+        }
+        return List.copyOf(result);
+    }
+
+    private LockedAsset descriptionAsset(Path repositoryRoot, Path file, String kind) throws IOException {
+        var node = json.readTree(file.toFile());
+        String id = node.path("assetId").asText();
+        String version = node.path("version").asText();
+        if (id.isBlank() || version.isBlank()) throw new IllegalArgumentException("Description asset identity is required");
+        String source = "repo://" + repositoryRoot.toRealPath().relativize(file.toRealPath())
+                .toString().replace('\\', '/');
+        return new LockedAsset(kind, id, version, source, sha256(file));
+    }
+
     private static void rejectSymlinks(Path directory) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
             if (paths.anyMatch(Files::isSymbolicLink)) throw new IllegalArgumentException("Asset symlinks are not supported");
@@ -680,7 +752,9 @@ public final class OpenJiuwenSolutionAssembler {
             LockedRuntime runtime,
             List<LockedAsset> assets,
             List<InstalledDomainPack> domainInstallations,
-            List<InstalledPack> installations) {
+            List<InstalledPack> installations,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            CapabilityDescriptionCatalogV01.Snapshot capabilityDescriptions) {
         public SolutionLock {
             assets = List.copyOf(assets);
             domainInstallations = List.copyOf(domainInstallations);

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "account-balance-routing-zh-cn",
+  "version": "0.1.0",
+  "packId": "account-balance-readonly",
+  "packVersion": "0.1.0",
+  "capabilities": [{
+    "capabilityId": "account.balance.query",
+    "useCases": ["查询本人或宿主已授权账户的当前可用余额"],
+    "exampleUtterances": ["查一下我的余额", "这张卡还有多少钱", "账户现在可用多少"],
+    "negativeExamples": ["分析这个月花了多少钱", "把钱转给收款人", "我总共有多少资产"]
+  }]
+}

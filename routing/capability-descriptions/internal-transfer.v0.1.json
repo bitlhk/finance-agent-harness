@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "internal-transfer-routing-zh-cn",
+  "version": "0.1.0",
+  "packId": "internal-transfer",
+  "packVersion": "0.1.0",
+  "capabilities": [{
+    "capabilityId": "transfer.internal.create",
+    "useCases": ["用户明确要求向已保存收款人发起行内转账，且权威账户标识、收款人标识和金额齐备；随后进入银行预检和可信确认流程"],
+    "exampleUtterances": ["从 account-a 转100元给 beneficiary-b", "从 account-payroll 行内转账500元给 beneficiary-zhang", "继续句柄对应的待确认转账"],
+    "negativeExamples": ["转账前要核对什么", "不要转账只查余额", "取消刚才的转账", "查一下转账限额"]
+  }]
+}

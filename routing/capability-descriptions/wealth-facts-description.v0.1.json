@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "wealth-facts-routing-zh-cn",
+  "version": "0.1.0",
+  "packId": "wealth-facts-description",
+  "packVersion": "0.1.0",
+  "capabilities": [{
+    "capabilityId": "wealth.facts.describe",
+    "useCases": ["描述宿主已选择客户的已知资产范围、风险测评状态和信息缺口"],
+    "exampleUtterances": ["看看我的资产概览", "我的风险测评有效吗", "财富信息还缺什么"],
+    "negativeExamples": ["推荐我买哪只产品", "查询某个账户实时余额", "把资产转出去"]
+  }]
+}
