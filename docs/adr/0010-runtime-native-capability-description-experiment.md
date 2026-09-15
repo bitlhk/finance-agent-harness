@@ -1,6 +1,6 @@
 # ADR-0010: Runtime-native capability description experiment
 
-Status: Candidate V0.1, corrected evaluation complete, not enabled by default
+Status: Candidate V0.1, evaluation closure complete, not enabled by default
 
 ## Decision
 
@@ -60,3 +60,33 @@ substitution. Case labels are still awaiting business-owner review; two fixed-se
 failures also expose inconsistent expectations for a month without a year. B
 therefore remains opt-in, Builder integration remains deferred, and no independent
 Router SPI is introduced.
+
+## Evaluation closure outcome
+
+The product rule used by the test Host is now explicit: an absolute year-month is
+used as supplied, relative dates such as "last month" are resolved from the trusted
+business date, and a month without a year is clarified unless the conversation
+already contains a trusted year. Capability examples follow the same rule. The
+controlled cashflow Provider also returns the requested period instead of a fixed
+month.
+
+On the final code, the fixed 75-case run scored A at 68/75 and B at 74/75. B made
+no unexpected tool or TASK selection, had no runtime failure or incomplete run,
+but regressed once against A: one multi-turn month-only case inferred the current
+year rather than clarifying. The same case passed all three repetitions in the
+date-focused run, so model adherence remains stochastic rather than proven.
+
+The final adjacent-capability matrix scored A at 15/20 and B at 20/20. It covers
+balance versus wealth facts and transaction summary versus spending analysis with
+both capabilities installed, only the requested capability, only its neighbor,
+and neither. Four new engineering phrasings also passed B. An earlier three-repeat
+run with the pre-closure wording scored B at 60/60; this remains supporting rather
+than final-version evidence.
+
+The fixed run observed 2,045.2 description and terminology characters for B versus
+589.9 for A, an increase of 1,455.3 characters. Mean per-case wall time was 4,290.3
+ms for B and 4,698.8 ms for A. These are character counts and fresh-install wall
+times, not token usage, monetary cost, model-only latency or evidence that B is
+faster. Full response quality and business-owner label acceptance remain outside
+this experiment. B therefore remains opt-in; Builder integration and C remain
+deferred.

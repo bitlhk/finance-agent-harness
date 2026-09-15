@@ -45,6 +45,8 @@ class CapabilityDescriptionAbLiveTest {
         JsonNode noCall = HarnessJson.mapper().readTree("{\"expected\":\"NO_TOOL_CALL\"}");
         assertEquals("RUN_FAILED", assess(noCall, List.of(), "", "ModelException").outcome());
         assertEquals("WRONG_RESPONSE", assess(noCall, List.of(), "", "").outcome());
+        assertEquals("RUN_INCOMPLETE", assess(noCall, List.of(),
+                "Max iterations reached without completion", "").outcome());
         JsonNode clarify = HarnessJson.mapper().readTree("""
                 {"expected":"CLARIFY","responseMustContainAny":["账户","收款人"]}
                 """);
@@ -59,6 +61,13 @@ class CapabilityDescriptionAbLiveTest {
         assertEquals("WRONG_CALL", wrong.outcome());
         assertFalse(wrong.passed());
         assertTrue(wrong.detail().contains("ARGUMENTS"));
+        var wrongAndIncomplete = assess(noCall,
+                List.of(new ToolSelection("account_balance_query", Map.of())),
+                "Max iterations reached without completion", "");
+        assertEquals("WRONG_CALL", wrongAndIncomplete.outcome());
+        assertEquals("MAX_ITERATIONS", wrongAndIncomplete.completionStatus());
+        assertEquals("2026-07", controlledData("finance.transaction-summary.query",
+                Map.of("period", "2026-07")).get("period"));
     }
 
     @Test void modelFailuresNeverReachTaskProvider() throws Exception {
@@ -126,6 +135,7 @@ class CapabilityDescriptionAbLiveTest {
         report.put("createdAt", Instant.now().toString());
         report.put("modelName", System.getenv("FH_MODEL_NAME"));
         report.put("runtime", "openjiuwen-java-0.1.15");
+        report.put("trustedBusinessDate", "2026-09-15");
         report.put("suite", root.relativize(suitePath).toString());
         report.put("casesPerVariant", selected.size());
         report.put("repetitions", repetitions);
@@ -147,8 +157,9 @@ class CapabilityDescriptionAbLiveTest {
         List<List<ToolSelection>> callsByTurn = new ArrayList<>();
         List<String> responsesByTurn = new ArrayList<>();
         List<String> errorsByTurn = new ArrayList<>();
+        List<String> completionStatusesByTurn = new ArrayList<>();
         List<ControlledToolResult> controlledToolResults = new ArrayList<>();
-        CapabilityDescriptionCatalogV01.Snapshot catalogSnapshot = null;
+        CapabilityDescriptionCatalogV01 catalog = null;
         AtomicInteger controlledProviderOperations = new AtomicInteger();
         List<OpenJiuwenCapabilityInstaller.Installation> installations = new ArrayList<>();
         long started = System.nanoTime();
@@ -165,8 +176,7 @@ class CapabilityDescriptionAbLiveTest {
             }, 0);
             List<FinanceCapabilityPackV1> packs = selectedPacks(root, installed);
             CapabilityDescriptionCatalogV01 descriptions = variant.equals("B") ? enhanced(root, packs) : null;
-            catalogSnapshot = (descriptions == null
-                    ? CapabilityDescriptionCatalogV01.base(packs) : descriptions).snapshot();
+            catalog = descriptions == null ? CapabilityDescriptionCatalogV01.base(packs) : descriptions;
             FinanceProvider recorder = recorder(controlledProviderOperations, controlledToolResults);
             var defaults = new OpenJiuwenFinanceBridge.InvocationDefaults("synthetic-customer", "synthetic-customer",
                     FinanceContextV1.PrincipalType.CUSTOMER, session, "AB_EVALUATION",
@@ -188,11 +198,14 @@ class CapabilityDescriptionAbLiveTest {
             for (String turn : turns) {
                 int before = calls.size();
                 try {
-                    responsesByTurn.add(render(Runner.runAgent(agent, Map.of("query", turn), session, null)));
+                    String response = render(Runner.runAgent(agent, Map.of("query", turn), session, null));
+                    responsesByTurn.add(response);
                     errorsByTurn.add("");
+                    completionStatusesByTurn.add(completionStatus(response, ""));
                 } catch (Exception exception) {
                     responsesByTurn.add("");
                     errorsByTurn.add(exception.getClass().getSimpleName());
+                    completionStatusesByTurn.add("RUN_FAILED");
                     error = exception.getClass().getSimpleName();
                 } finally {
                     callsByTurn.add(List.copyOf(calls.subList(before, calls.size())));
@@ -211,7 +224,7 @@ class CapabilityDescriptionAbLiveTest {
         List<TurnAssessment> assessments = new ArrayList<>();
         for (int index = 0; index < expectations.size(); index++) {
             if (index >= callsByTurn.size()) {
-                assessments.add(new TurnAssessment("NOT_RUN", false, "", List.of()));
+                assessments.add(new TurnAssessment("NOT_RUN", false, "", "NOT_RUN", List.of()));
                 continue;
             }
             assessments.add(assess(expectations.get(index), callsByTurn.get(index), responsesByTurn.get(index),
@@ -236,7 +249,7 @@ class CapabilityDescriptionAbLiveTest {
                 && assessments.stream().allMatch(TurnAssessment::passed)
                 && !unexpectedTaskSelection;
         String outcome = resultOutcome(assessments, unexpectedTaskSelection);
-        Object catalogEvidence = catalogSnapshot == null ? Map.of("status", "NOT_CREATED") : catalogSnapshot;
+        Object catalogEvidence = catalog == null ? Map.of("status", "NOT_CREATED") : catalogEvidence(catalog);
         return Map.ofEntries(
                 Map.entry("id", testCase.path("id").asText()),
                 Map.entry("repetition", repetition),
@@ -245,6 +258,7 @@ class CapabilityDescriptionAbLiveTest {
                 Map.entry("expectedCapabilityId", expectedId), Map.entry("toolCalls", List.copyOf(calls)),
                 Map.entry("toolCallsByTurn", List.copyOf(callsByTurn)),
                 Map.entry("evaluatedToolCalls", evaluatedCalls), Map.entry("responsesByTurn", responsesByTurn),
+                Map.entry("completionStatusesByTurn", completionStatusesByTurn),
                 Map.entry("turnAssessments", assessments), Map.entry("outcome", outcome),
                 Map.entry("unexpectedTaskSelection", unexpectedTaskSelection), Map.entry("passed", passed),
                 Map.entry("error", error),
@@ -255,6 +269,21 @@ class CapabilityDescriptionAbLiveTest {
                 Map.entry("elapsedMillis", (System.nanoTime() - started) / 1_000_000L));
     }
 
+    private static Map<String, Object> catalogEvidence(CapabilityDescriptionCatalogV01 catalog) {
+        CapabilityDescriptionCatalogV01.Snapshot snapshot = catalog.snapshot();
+        int descriptionCharacters = snapshot.capabilities().stream()
+                .mapToInt(entry -> entry.description().length()).sum();
+        return Map.ofEntries(
+                Map.entry("schemaVersion", snapshot.schemaVersion()), Map.entry("digest", snapshot.digest()),
+                Map.entry("toolDescriptionsDigest", snapshot.toolDescriptionsDigest()),
+                Map.entry("terminologyPromptDigest", snapshot.terminologyPromptDigest()),
+                Map.entry("toolDescriptionCharacters", descriptionCharacters),
+                Map.entry("terminologyPromptCharacters", catalog.terminologyPrompt().length()),
+                Map.entry("capabilities", snapshot.capabilities()),
+                Map.entry("descriptionAssets", snapshot.descriptionAssets()),
+                Map.entry("terminologyAssets", snapshot.terminologyAssets()));
+    }
+
     private ReActAgent agent(String session) {
         String url = System.getenv("FH_MODEL_URL"), name = System.getenv("FH_MODEL_NAME"), key = System.getenv("FH_MODEL_KEY");
         return agent(session, url, name, key);
@@ -263,7 +292,9 @@ class CapabilityDescriptionAbLiveTest {
     private ReActAgent agent(String session, String url, String name, String key) {
         var agent = new ReActAgent(AgentCard.builder().id(session).name("FH A/B evaluator").build());
         var config = ReActAgentConfig.builder().maxIterations(2).promptTemplate(List.of(Map.of("role", "system", "content",
-                "你是银行助手。只处理当前用户请求，只能调用已安装工具。咨询、否定、取消和未支持请求不得调用办理工具；缺少办理参数时先澄清。")))
+                "你是银行助手。宿主提供的可信业务日期为2026-09-15，可用于解析上个月等相对时间。"
+                + "用户只说某个月份但没有年份、且会话中没有明确年份时，必须先询问年份，不得默认当前年。"
+                + "只处理当前用户请求，只能调用已安装工具。咨询、否定、取消和未支持请求不得调用办理工具；缺少办理参数时先澄清。")))
                 .build().configureModelClient("OpenAI", key, url, name, true);
         config.setModelClientConfig(ModelClientConfig.builder().clientProvider("OpenAI").apiKey(key)
                 .apiBase(url).timeout(30).maxRetries(0).verifySsl(true).build());
@@ -300,7 +331,7 @@ class CapabilityDescriptionAbLiveTest {
         return new FinanceProvider() {
             public CapabilityResultV1 query(CapabilityRequestV1 request) {
                 operations.incrementAndGet();
-                Map<String, Object> data = controlledData(request.capabilityId());
+                Map<String, Object> data = controlledData(request.capabilityId(), request.parameters());
                 results.add(new ControlledToolResult(request.capabilityId(), request.parameters(), data));
                 return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(),
                         request.context().traceId(), CapabilityResultV1.Status.COMPLETED,
@@ -319,11 +350,16 @@ class CapabilityDescriptionAbLiveTest {
     }
 
     private static Map<String, Object> controlledData(String capabilityId) {
+        return controlledData(capabilityId, Map.of());
+    }
+
+    private static Map<String, Object> controlledData(String capabilityId, Map<String, Object> parameters) {
+        String period = String.valueOf(parameters.getOrDefault("period", "2026-08"));
         return switch (capabilityId) {
             case "account.balance.query" -> Map.of("availableBalance", "1234.56", "currency", "CNY");
             case "finance.transaction-summary.query" -> Map.of("income", "5000.00", "expense", "3200.00",
-                    "netCashflow", "1800.00", "period", "2026-08");
-            case "finance.spending-analysis.query" -> Map.of("period", "2026-08",
+                    "netCashflow", "1800.00", "period", period);
+            case "finance.spending-analysis.query" -> Map.of("period", period,
                     "topCategory", "餐饮", "coveredMonths", 6);
             case "wealth.facts.describe" -> Map.of("assetAmount", "360824.12", "currency", "CNY",
                     "riskLevel", "R3", "riskExpiresAt", "2027-06-01");
@@ -333,7 +369,8 @@ class CapabilityDescriptionAbLiveTest {
 
     private static TurnAssessment assess(
             JsonNode expectation, List<ToolSelection> selections, String response, String error) {
-        if (!error.isBlank()) return new TurnAssessment("RUN_FAILED", false, error, selections);
+        String completion = completionStatus(response, error);
+        if (!error.isBlank()) return new TurnAssessment("RUN_FAILED", false, error, completion, selections);
         String expected = expectation.path("expected").asText();
         if (expected.equals("CALL_CAPABILITY")) {
             String expectedId = expectation.path("capabilityId").asText();
@@ -341,23 +378,36 @@ class CapabilityDescriptionAbLiveTest {
                     && toolCapability(selections.getFirst().toolName()).equals(expectedId);
             boolean parametersMatch = oneExpected
                     && expectedArgumentsMatch(expectation.path("expectedArguments"), selections.getFirst().arguments());
-            return new TurnAssessment(oneExpected && parametersMatch ? "CORRECT_CALL" : "WRONG_CALL",
-                    oneExpected && parametersMatch,
-                    oneExpected && !parametersMatch ? "TOOL_ARGUMENTS_MISMATCH" : "", selections);
+            return assessed(oneExpected && parametersMatch ? "CORRECT_CALL" : "WRONG_CALL",
+                    oneExpected && parametersMatch, oneExpected && !parametersMatch
+                            ? "TOOL_ARGUMENTS_MISMATCH" : "", completion, selections);
         }
         if (expected.equals("CLARIFY")) {
             boolean hasExpectedLanguage = !response.isBlank() && containsAny(response,
                     expectation.path("responseMustContainAny"));
             boolean passed = selections.isEmpty() && hasExpectedLanguage;
-            return new TurnAssessment(passed ? "CORRECT_CLARIFICATION"
+            return assessed(passed ? "CORRECT_CLARIFICATION"
                     : selections.isEmpty() ? "WRONG_RESPONSE" : "WRONG_CALL", passed,
                     response.isBlank() ? "EMPTY_RESPONSE" : hasExpectedLanguage ? "" : "CLARIFICATION_NOT_EVIDENCED",
-                    selections);
+                    completion, selections);
         }
         boolean passed = expected.equals("NO_TOOL_CALL") && selections.isEmpty() && !response.isBlank();
-        return new TurnAssessment(passed ? "CORRECT_NO_CALL"
+        return assessed(passed ? "CORRECT_NO_CALL"
                 : selections.isEmpty() ? "WRONG_RESPONSE" : "WRONG_CALL", passed,
-                response.isBlank() ? "EMPTY_RESPONSE" : "", selections);
+                response.isBlank() ? "EMPTY_RESPONSE" : "", completion, selections);
+    }
+
+    private static TurnAssessment assessed(String outcome, boolean semanticPassed, String detail,
+                                             String completion, List<ToolSelection> selections) {
+        if (semanticPassed && !completion.equals("COMPLETED"))
+            return new TurnAssessment("RUN_INCOMPLETE", false, detail, completion, selections);
+        return new TurnAssessment(outcome, semanticPassed, detail, completion, selections);
+    }
+
+    private static String completionStatus(String response, String error) {
+        if (!error.isBlank()) return "RUN_FAILED";
+        return response.toLowerCase().contains("max iterations reached without completion")
+                ? "MAX_ITERATIONS" : "COMPLETED";
     }
 
     private static String resultOutcome(List<TurnAssessment> assessments, boolean unexpectedTaskSelection) {
@@ -417,7 +467,8 @@ class CapabilityDescriptionAbLiveTest {
     }
 
     private record TurnAssessment(
-            String outcome, boolean passed, String detail, List<ToolSelection> selections) {
+            String outcome, boolean passed, String detail, String completionStatus,
+            List<ToolSelection> selections) {
         private TurnAssessment { selections = List.copyOf(selections); }
     }
 
@@ -439,10 +490,13 @@ class CapabilityDescriptionAbLiveTest {
             long unsafeTask = selected.stream()
                     .filter(row -> Boolean.TRUE.equals(row.get("unexpectedTaskSelection"))).count();
             long failures = selected.stream().filter(row -> row.get("outcome").equals("RUN_FAILED")).count();
+            long incomplete = selected.stream().filter(row -> ((List<?>) row
+                    .getOrDefault("completionStatusesByTurn", List.of())).stream()
+                    .anyMatch(status -> status.equals("MAX_ITERATIONS"))).count();
             long millis = selected.stream().mapToLong(row -> ((Number) row.get("elapsedMillis")).longValue()).sum();
             summary.put(variant, Map.of("total", selected.size(), "passed", passed, "failed", selected.size() - passed,
                     "unexpectedToolCalls", unsafe, "unexpectedTaskSelections", unsafeTask,
-                    "runFailures", failures, "totalElapsedMillis", millis));
+                    "runFailures", failures, "runIncomplete", incomplete, "totalElapsedMillis", millis));
         }
         return summary;
     }

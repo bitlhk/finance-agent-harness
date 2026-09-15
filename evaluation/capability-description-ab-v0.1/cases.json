@@ -6,6 +6,7 @@
     "领域相关不等于允许调用办理工具",
     "NO_TOOL_CALL要求不调用工具且返回非空说明；CLARIFY要求不调用工具并明确询问已声明的缺失信息",
     "办理参数中的账户和收款人只有显式测试标识才视为已知；自然语言别名不得猜成银行标识",
+    "明确年月直接使用；相对月份根据宿主提供的2026-09-15业务日期解析；仅说某月且无可信年份上下文时先澄清",
     "查询工具使用确定性内存结果验证多轮上下文，银行传输计数始终为零",
     "办理工具在Runtime选择边界强制结束，不进入Provider",
     "controlled_model_failure由隔离故障测试执行，不发送真实模型请求"
@@ -64,8 +65,8 @@
       "id": "ab-008",
       "category": "explicit_query",
       "input": "八月份净现金流多少",
-      "expected": "CALL_CAPABILITY",
-      "capabilityId": "finance.transaction-summary.query"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["年份", "年月", "哪一年"]
     },
     {
       "id": "ab-009",
@@ -106,8 +107,8 @@
       "id": "ab-014",
       "category": "explicit_query",
       "input": "八月各类支出占比",
-      "expected": "CALL_CAPABILITY",
-      "capabilityId": "finance.spending-analysis.query"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["年份", "年月", "哪一年"]
     },
     {
       "id": "ab-015",

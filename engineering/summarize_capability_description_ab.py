@@ -42,11 +42,23 @@ def main():
                                                 row.get("evaluatedToolCalls", row["toolCalls"])) for row in selected),
             "unexpectedTaskSelections": sum(bool(row.get("unexpectedTaskSelection")) for row in selected),
             "runFailures": sum(row["outcome"] == "RUN_FAILED" for row in selected),
+            "runIncomplete": sum(
+                "MAX_ITERATIONS" in row.get("completionStatusesByTurn", []) for row in selected
+            ),
             "controlledProviderOperations": sum(row["controlledProviderOperations"] for row in selected),
             "meanElapsedMillis": round(sum(row["elapsedMillis"] for row in selected) / len(selected), 1),
             "medianElapsedMillis": round(median(row["elapsedMillis"] for row in selected), 1),
+            "meanToolDescriptionCharacters": round(sum(
+                row.get("catalogSnapshot", {}).get("toolDescriptionCharacters", 0) for row in selected
+            ) / len(selected), 1),
+            "meanTerminologyPromptCharacters": round(sum(
+                row.get("catalogSnapshot", {}).get("terminologyPromptCharacters", 0) for row in selected
+            ) / len(selected), 1),
             "categories": categories,
         }
+        summary["variants"][variant]["meanDescriptionPayloadCharacters"] = round(
+            summary["variants"][variant]["meanToolDescriptionCharacters"]
+            + summary["variants"][variant]["meanTerminologyPromptCharacters"], 1)
     changes = Counter()
     for value in paired.values():
         before, after = value["A"]["passed"], value["B"]["passed"]
@@ -54,12 +66,17 @@ def main():
                 "both_passed" if before else "both_failed"] += 1
     summary["paired"] = {key: changes[key] for key in
                          ("both_passed", "improved", "regressed", "both_failed")}
+    if {"A", "B"}.issubset(summary["variants"]):
+        summary["descriptionPayloadDeltaCharacters"] = round(
+            summary["variants"]["B"]["meanDescriptionPayloadCharacters"]
+            - summary["variants"]["A"]["meanDescriptionPayloadCharacters"], 1)
     case_count = len(next(iter(by_variant.values())))
     summary["measurementLimits"] = [
         f"The {case_count} live executions per variant are a technical pre-experiment, not a statistically powered bank acceptance set.",
         "TASK selection stops at the Runtime boundary; deterministic QUERY results may use the in-memory Provider.",
         "No bank transport is configured or executed.",
         "Clarification scoring checks declared response evidence terms; it is not a full language-quality review.",
+        "RUN_INCOMPLETE is reported separately from semantic tool-selection outcomes.",
         "Elapsed time is per-case wall time and includes fresh Agent installation; it is not model-only latency.",
         "Token usage and monetary cost were not exposed by this Runtime path and are NOT_CAPTURED.",
         "Declared response evidence and arguments are checked, but full natural-language quality and trusted task confirmation are outside this experiment."

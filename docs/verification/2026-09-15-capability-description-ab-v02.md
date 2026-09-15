@@ -1,4 +1,4 @@
-# Capability description A/B corrected verification
+# Capability description A/B closure verification
 
 ## Scope and decision
 
@@ -27,29 +27,48 @@ not deployed.
    digests. Output boundaries state what adjacent capability must not substitute.
 6. Selecting one capability from a multi-capability Pack projects the description
    asset to the installed set while still rejecting another Pack or version.
+7. Run completion is recorded independently from semantic selection, so a wrong
+   call that also reaches the Runtime iteration limit reports both facts.
+8. Controlled cashflow results echo the requested period. The test Host applies an
+   explicit date rule: absolute year-month, trusted relative dates, otherwise
+   clarify a month without a year.
+9. Report-only metrics record final description and terminology character counts
+   without changing the production catalog Snapshot contract.
 
 ## Results
 
 | Evidence | A | B | Paired result |
 | --- | ---: | ---: | --- |
-| Fixed 75 cases, one execution | 63/75 | 73/75 | 63 both pass, 10 improved, 0 regressed, 2 both fail |
-| TASK and substitution focus, three repetitions | 22/36 | 36/36 | 22 both pass, 14 improved, 0 regressed |
-| Engineering holdout, 20 cases | 16/20 | 19/20 | 16 both pass, 3 improved, 0 regressed, 1 both fail |
+| Final fixed 75 cases, one execution | 68/75 | 74/75 | 67 both pass, 7 improved, 1 regressed |
+| Final adjacent matrix and new phrasings | 15/20 | 20/20 | 15 both pass, 5 improved, 0 regressed |
+| Date and follow-up focus, three repetitions | 11/12 | 11/12 | 10 both pass, 1 improved, 1 regressed |
 
-In the fixed run, B passed all missing-parameter TASK, multi-turn, consultation,
-uninstalled-capability and unsupported cases. It made zero unexpected tool calls,
-zero unexpected transfer selections and had zero model/runtime failures. Its two
-failures asked for a missing year while the current labels require immediate
-execution.
+In the final fixed run, B passed all explicit queries, missing-parameter TASK,
+consultation, uninstalled-capability and unsupported cases. It made zero unexpected
+tool or TASK selection, and had zero model/runtime failure or incomplete run. Its
+only failure was `ab-060`: in the first turn it inferred 2026 for "August" instead
+of clarifying. A passed that case in the paired run, so this is a recorded
+regression rather than hidden by the aggregate score.
 
-The repeated focus set covered five complete transfers, five missing-parameter
-transfers and the two original balance/wealth substitutions, each three times.
-B passed all 36 executions and never reached the TASK Provider.
+The date-focused run repeated `ab-008`, `ab-014`, `ab-060` and `ab-071` three
+times per variant. Both variants passed all six single-turn month-only executions
+and all three multi-turn date completions. Each variant missed one `ab-071` balance
+call by asking for an optional account identifier. This request's desired
+interaction remains subject to business-owner review.
 
-The holdout is an engineering set created after the initial experiment, not a
-business-confirmed or statistically independent acceptance set. B still selected
-spending analysis once when transaction summary was requested but not installed.
-This is an adjacent-capability substitution and prevents enabling B by default.
+The final adjacent suite covers balance/wealth and summary/spending with both
+installed, only the target installed, only the neighboring capability installed,
+and neither installed. B passed all 16 matrix cases and four new engineering
+phrasings. The new phrasings were written after the descriptions were frozen and
+before their first run, but are not a statistically independent or business-owner
+accepted set. An earlier three-repeat run with pre-closure examples scored B at
+60/60 and recorded two A incomplete runs in addition to its selection errors.
+
+For the fixed run, B added 1,455.3 description/terminology characters on average
+(2,045.2 versus 589.9). Mean fresh-install wall time was 4,290.3 ms for B and
+4,698.8 ms for A. Adjacent and date-focused runs observed -1.2% and +2.4%
+respectively, so no latency improvement is claimed. Character counts are not token
+usage or monetary cost.
 
 ## Offline regression
 
@@ -68,22 +87,23 @@ model connection as reported above.
 
 | File | SHA-256 |
 | --- | --- |
-| `full-fixed.json` | `268536915ee2f89d9da7b771cc720f155a6f9e6a315069bbd0da8573e64257f6` |
-| `full-fixed-summary.json` | `15dfb2020e4dd13346c152eb1458aff4b169ac5406ae805dbf427df780b1297f` |
-| `task-substitution-final-repeat.json` | `f6148a51678d46f39a4101a8b552fe813c32e31d9ea2e97bc20bb7e28e3dfab1` |
-| `task-substitution-final-repeat-summary.json` | `26ef544be0064b7b86176f615a514e13e4a5636c8cf2fe69b5826ffde749ccd4` |
-| `held-out-final.json` | `e838a4197e0148bd749fd59ae6ac4376a37616ee843ff53f7541c691fa6d985b` |
-| `held-out-final-summary.json` | `2d1d83eb6046d1efe563cf4135ce069c2d312ba48e8df52755396afaed487383` |
+| `full-final.json` | `bea0d517caa2899c31e36fd5c9667d4bd1f5d5b6b9408bde16535670d6106f8b` |
+| `full-final-summary.json` | `b8eb913ad1e8713e8a993cc2f852b3c8b827d0e336982d02aa9ef22ef66402cf` |
+| `adjacent-final.json` | `d0da2a0a65c948401c87aa62639e8ff9a2ed36a6369f97b8c9e6dd2a8200adfa` |
+| `adjacent-final-summary.json` | `9c34c9610f07fb7db5a0bfd4f6927c66f0560e277ff2e8c1b85a635227850817` |
+| `date-followup-repeat.json` | `d09fad5a8ee9c8b5186eb05d0a79a0cbf163b18fa4d27f8a61a678776583ca1d` |
+| `date-followup-repeat-summary.json` | `429a3168b269dde4d913bbb9cdd138635613d5410979491cd6983e5b81213b36` |
 
 Raw evidence is retained outside Git under
-`/home/ubuntu/outputs/capability-description-ab-v01/corrected/`. It contains model
+`/home/ubuntu/outputs/capability-description-ab-v01/closure/`. It contains model
 responses from synthetic prompts and no customer data or bank calls.
 
 ## Unresolved acceptance items
 
-- A business owner must resolve inconsistent year/month expectations and review
-  consultation, missing-parameter and multi-turn labels.
-- Adjacent-capability substitution still occurs in the engineering holdout.
+- A business owner must accept the date rule and review consultation,
+  missing-parameter, multi-turn and `ab-071` interaction labels.
+- One of four observed `ab-060` B executions still inferred a year, so stable
+  adherence to month-only clarification is not established.
 - Full natural-language quality, token cost, trusted task state and confirmation
   are outside this experiment.
 - B is not a Builder default, is not deployed, and C has not started.
