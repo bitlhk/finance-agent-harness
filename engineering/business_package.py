@@ -133,7 +133,7 @@ def build(source: Path, output: Path) -> dict:
     return {"manifest": manifest, "archiveSha256": digest(raw), "archiveSize": len(raw)}
 
 
-def inspect(package: Path) -> dict:
+def read(package: Path) -> tuple[dict, dict[str, bytes], bytes]:
     raw = package.read_bytes()
     if len(raw) > MAX_TOTAL:
         raise PackageError("PACKAGE_SIZE_EXCEEDED")
@@ -164,6 +164,11 @@ def inspect(package: Path) -> dict:
     except ValueError as error:
         raise PackageError("PACKAGE_MANIFEST_INVALID") from error
     validate_manifest(manifest, files)
+    return manifest, files, raw
+
+
+def inspect(package: Path) -> dict:
+    manifest, _, raw = read(package)
     return {"manifest": manifest, "archiveSha256": digest(raw), "archiveSize": len(raw)}
 
 
