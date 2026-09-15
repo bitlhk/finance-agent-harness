@@ -8,14 +8,20 @@ an intent engine.
 - `terminology/` explains institution terms. A term never grants permission or
   creates a tool. `KNOWN_UNSUPPORTED` explicitly has no capability binding.
 - `CapabilityDescriptionCatalogV01` compiles only installed capabilities and
-  produces a digest-locked snapshot. Installation rejects a different capability
-  set before tool registration.
+  produces a digest-locked snapshot. The snapshot separately covers every final
+  ToolCard description and the complete terminology prompt body. Installation
+  rejects a different capability set before tool registration.
 - Existing solutions that do not opt into these assets keep their original ToolCard
   descriptions and Lock shape.
 
 The current compiler is exposed through the OpenJiuwen Java Integrator because
 that is the only verified Runtime. The JSON assets are Runtime neutral. This is
 not a Router SPI, classifier, retrieval service or authorization mechanism.
+
+`outputBoundaries` is an additive V0.1 field. Current assets use it to state what
+the capability can actually return and which adjacent capability it must not
+replace. Older V0.1 assets without this field remain readable; they simply do not
+receive the additional rendered boundary text.
 
 Java hosts opt in after ordinary package resolution and before installation:
 

@@ -1,5 +1,9 @@
 # Capability description A/B V0.1 verification
 
+> This records the initial evaluator and remains unchanged as pre-correction
+> evidence. The corrected evaluator and final candidate results are documented in
+> `2026-09-15-capability-description-ab-v02.md`.
+
 ## Fixed scope
 
 - Harness baseline: `508121bd340a7a925200a0ef88087650c118d16a`

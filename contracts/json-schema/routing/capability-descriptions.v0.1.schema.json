@@ -19,6 +19,7 @@
         "properties": {
           "capabilityId": {"type": "string", "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$"},
           "useCases": {"$ref": "#/$defs/texts"},
+          "outputBoundaries": {"$ref": "#/$defs/texts"},
           "exampleUtterances": {"$ref": "#/$defs/texts"},
           "negativeExamples": {"$ref": "#/$defs/texts"}
         }

@@ -62,12 +62,13 @@ public final class CapabilityDescriptionCatalogV01 {
         List<String> descriptionVersions = new ArrayList<>();
         for (DescriptionAsset asset : descriptionAssets) {
             asset.validate();
+            String assetOwner = asset.packId() + "@" + asset.packVersion();
+            if (!owners.containsValue(assetOwner))
+                throw new IllegalArgumentException("Description asset does not match an installed pack: " + assetOwner);
             descriptionVersions.add(asset.assetId() + "@" + asset.version());
             for (Description description : asset.capabilities()) {
-                if (!installed.containsKey(description.capabilityId()))
-                    throw new IllegalArgumentException("Description references capability that is not installed: "
-                            + description.capabilityId());
-                if (!owners.get(description.capabilityId()).equals(asset.packId() + "@" + asset.packVersion()))
+                if (!installed.containsKey(description.capabilityId())) continue;
+                if (!owners.get(description.capabilityId()).equals(assetOwner))
                     throw new IllegalArgumentException("Description pack reference does not match installed pack: "
                             + description.capabilityId());
                 if (supplied.putIfAbsent(description.capabilityId(), description) != null)
@@ -107,11 +108,18 @@ public final class CapabilityDescriptionCatalogV01 {
         terminologyVersions.sort(String::compareTo);
         List<SnapshotEntry> snapshotEntries = entries.values().stream()
                 .map(Entry::snapshot).sorted(Comparator.comparing(SnapshotEntry::capabilityId)).toList();
-        Snapshot unsigned = new Snapshot(VERSION, "", snapshotEntries,
-                List.copyOf(descriptionVersions), List.copyOf(terminologyVersions));
-        String digest = digest(unsigned);
-        return new CapabilityDescriptionCatalogV01(entries, new ArrayList<>(termsById.values()),
-                new Snapshot(VERSION, digest, snapshotEntries,
+        List<Term> visibleTerms = new ArrayList<>(termsById.values());
+        String descriptionsDigest = digest(snapshotEntries);
+        String terminologyPromptDigest = digest(renderTerminologyPrompt(visibleTerms));
+        String digest = digest(Map.of(
+                "schemaVersion", VERSION,
+                "toolDescriptionsDigest", descriptionsDigest,
+                "terminologyPromptDigest", terminologyPromptDigest,
+                "capabilities", snapshotEntries,
+                "descriptionAssets", descriptionVersions,
+                "terminologyAssets", terminologyVersions));
+        return new CapabilityDescriptionCatalogV01(entries, visibleTerms,
+                new Snapshot(VERSION, digest, descriptionsDigest, terminologyPromptDigest, snapshotEntries,
                         List.copyOf(descriptionVersions), List.copyOf(terminologyVersions)));
     }
 
@@ -124,8 +132,13 @@ public final class CapabilityDescriptionCatalogV01 {
     }
 
     public String terminologyPrompt() {
+        return renderTerminologyPrompt(terms);
+    }
+
+    private static String renderTerminologyPrompt(List<Term> terms) {
         if (terms.isEmpty()) return "";
-        StringBuilder prompt = new StringBuilder("机构术语仅用于理解用户表达，不授予权限，也不新增工具。\n");
+        StringBuilder prompt = new StringBuilder("机构术语仅用于理解用户表达，不授予权限，也不新增工具。"
+                + "用户要求的目标能力未安装时，应说明当前不支持，不得用输出范围不同的相邻能力替代。\n");
         for (Term term : terms) {
             prompt.append("- ").append(term.canonicalTerm());
             if (!term.aliases().isEmpty()) prompt.append("（别名：").append(String.join("、", term.aliases())).append("）");
@@ -159,6 +172,8 @@ public final class CapabilityDescriptionCatalogV01 {
             if (description == null) return baseDescription + " [capabilityId=" + capabilityId + "]";
             StringBuilder value = new StringBuilder(baseDescription);
             value.append("\n适用：").append(String.join("；", description.useCases()));
+            if (!description.outputBoundaries().isEmpty())
+                value.append("\n输出边界：").append(String.join("；", description.outputBoundaries()));
             value.append("\n典型问法：").append(String.join("；", description.exampleUtterances()));
             value.append("\n不适用：").append(String.join("；", description.negativeExamples()));
             if (!terms.isEmpty()) value.append("\n相关机构术语：").append(terms.stream()
@@ -180,10 +195,11 @@ public final class CapabilityDescriptionCatalogV01 {
             require(!capabilities.isEmpty(), "Description capabilities must not be empty");
         }
     }
-    public record Description(String capabilityId, List<String> useCases,
+    public record Description(String capabilityId, List<String> useCases, List<String> outputBoundaries,
                               List<String> exampleUtterances, List<String> negativeExamples) {
         public Description {
-            useCases = clean(useCases); exampleUtterances = clean(exampleUtterances); negativeExamples = clean(negativeExamples);
+            useCases = clean(useCases); outputBoundaries = clean(outputBoundaries);
+            exampleUtterances = clean(exampleUtterances); negativeExamples = clean(negativeExamples);
             require(text(capabilityId), "Description capabilityId is required");
             require(!useCases.isEmpty() && !exampleUtterances.isEmpty() && !negativeExamples.isEmpty(),
                     "Description use cases, utterances and negative examples are required");
@@ -209,9 +225,12 @@ public final class CapabilityDescriptionCatalogV01 {
         }
     }
     public enum SupportStatus { SUPPORTED, KNOWN_UNSUPPORTED }
-    public record Snapshot(String schemaVersion, String digest, List<SnapshotEntry> capabilities,
+    public record Snapshot(String schemaVersion, String digest, String toolDescriptionsDigest,
+                           String terminologyPromptDigest, List<SnapshotEntry> capabilities,
                            List<String> descriptionAssets, List<String> terminologyAssets) {
         public Snapshot {
+            require(text(digest) && text(toolDescriptionsDigest) && text(terminologyPromptDigest),
+                    "Snapshot digests are required");
             capabilities = List.copyOf(capabilities); descriptionAssets = List.copyOf(descriptionAssets);
             terminologyAssets = List.copyOf(terminologyAssets);
         }

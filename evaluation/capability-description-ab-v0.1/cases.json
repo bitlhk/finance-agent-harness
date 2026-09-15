@@ -1,10 +1,13 @@
 {
   "schemaVersion": "finance-capability-description-ab-cases.v0.1",
   "caseCount": 80,
+  "labelReviewStatus": "ENGINEERING_PROVISIONAL_BUSINESS_OWNER_REVIEW_REQUIRED",
   "notes": [
     "领域相关不等于允许调用办理工具",
-    "NO_TOOL_CALL允许自然语言说明或澄清，但银行工具调用必须为零",
+    "NO_TOOL_CALL要求不调用工具且返回非空说明；CLARIFY要求不调用工具并明确询问已声明的缺失信息",
     "办理参数中的账户和收款人只有显式测试标识才视为已知；自然语言别名不得猜成银行标识",
+    "查询工具使用确定性内存结果验证多轮上下文，银行传输计数始终为零",
+    "办理工具在Runtime选择边界强制结束，不进入Provider",
     "controlled_model_failure由隔离故障测试执行，不发送真实模型请求"
   ],
   "cases": [
@@ -153,65 +156,75 @@
       "category": "explicit_task",
       "input": "从账户 account-a 转100元给已保存收款人 beneficiary-b",
       "expected": "CALL_CAPABILITY",
-      "capabilityId": "transfer.internal.create"
+      "capabilityId": "transfer.internal.create",
+      "expectedArguments": {"fromAccountId": "account-a", "beneficiaryId": "beneficiary-b", "amount": 100}
     },
     {
       "id": "ab-022",
       "category": "explicit_task_missing_parameters",
       "input": "向张三这个已保存收款人行内转账500元",
-      "expected": "NO_TOOL_CALL"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["账户", "付款"]
     },
     {
       "id": "ab-023",
       "category": "explicit_task_missing_parameters",
       "input": "本行转账200元给收款人B",
-      "expected": "NO_TOOL_CALL"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["账户", "付款"]
     },
     {
       "id": "ab-024",
       "category": "explicit_task",
       "input": "从 account-payroll 转88元给已保存收款人 beneficiary-li",
       "expected": "CALL_CAPABILITY",
-      "capabilityId": "transfer.internal.create"
+      "capabilityId": "transfer.internal.create",
+      "expectedArguments": {"fromAccountId": "account-payroll", "beneficiaryId": "beneficiary-li", "amount": 88}
     },
     {
       "id": "ab-025",
       "category": "explicit_task_missing_parameters",
       "input": "请发起一笔300元行内转账",
-      "expected": "NO_TOOL_CALL"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["账户", "收款人"]
     },
     {
       "id": "ab-026",
       "category": "explicit_task_missing_parameters",
       "input": "转500元给我的已保存收款人王五",
-      "expected": "NO_TOOL_CALL"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["账户", "付款"]
     },
     {
       "id": "ab-027",
       "category": "explicit_task",
       "input": "从 account-a 给 beneficiary-b 转1元",
       "expected": "CALL_CAPABILITY",
-      "capabilityId": "transfer.internal.create"
+      "capabilityId": "transfer.internal.create",
+      "expectedArguments": {"fromAccountId": "account-a", "beneficiaryId": "beneficiary-b", "amount": 1}
     },
     {
       "id": "ab-028",
       "category": "explicit_task_missing_parameters",
       "input": "给已保存的张三转1000元",
-      "expected": "NO_TOOL_CALL"
+      "expected": "CLARIFY",
+      "responseMustContainAny": ["账户", "付款"]
     },
     {
       "id": "ab-029",
       "category": "explicit_task",
       "input": "从 account-1234 转66元给已保存收款人 beneficiary-b",
       "expected": "CALL_CAPABILITY",
-      "capabilityId": "transfer.internal.create"
+      "capabilityId": "transfer.internal.create",
+      "expectedArguments": {"fromAccountId": "account-1234", "beneficiaryId": "beneficiary-b", "amount": 66}
     },
     {
       "id": "ab-030",
       "category": "explicit_task",
       "input": "我要从 account-c 同行转账20元给 beneficiary-c",
       "expected": "CALL_CAPABILITY",
-      "capabilityId": "transfer.internal.create"
+      "capabilityId": "transfer.internal.create",
+      "expectedArguments": {"fromAccountId": "account-c", "beneficiaryId": "beneficiary-c", "amount": 20}
     },
     {
       "id": "ab-031",
@@ -373,6 +386,10 @@
       "turns": [
         "先看看余额",
         "然后分析2026年8月的支出分类"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "account.balance.query"},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "finance.spending-analysis.query", "expectedArguments": {"period": "2026-08"}}
       ]
     },
     {
@@ -384,6 +401,10 @@
       "turns": [
         "查2026年8月收支",
         "再看看余额"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "finance.transaction-summary.query", "expectedArguments": {"period": "2026-08"}},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "account.balance.query"}
       ]
     },
     {
@@ -395,6 +416,10 @@
       "turns": [
         "看看资产概览",
         "风险测评什么时候到期"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "wealth.facts.describe"},
+        {"expected": "NO_TOOL_CALL"}
       ]
     },
     {
@@ -403,10 +428,14 @@
       "input": "我要转账",
       "expected": "CALL_CAPABILITY",
       "capabilityId": "transfer.internal.create",
-    "turns": [
-      "我要转账",
-      "从 account-a 转100元给已保存收款人 beneficiary-b"
-    ]
+      "turns": [
+        "我要转账",
+        "从 account-a 转100元给已保存收款人 beneficiary-b"
+      ],
+      "turnExpectations": [
+        {"expected": "CLARIFY", "responseMustContainAny": ["账户", "收款人", "金额"]},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "transfer.internal.create", "expectedArguments": {"fromAccountId": "account-a", "beneficiaryId": "beneficiary-b", "amount": 100}}
+      ]
     },
     {
       "id": "ab-060",
@@ -417,6 +446,10 @@
       "turns": [
         "查一下八月流水",
         "具体是2026年8月"
+      ],
+      "turnExpectations": [
+        {"expected": "CLARIFY", "responseMustContainAny": ["年份", "年月", "哪一年", "月份", "期间"]},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "finance.transaction-summary.query", "expectedArguments": {"period": "2026-08"}}
       ]
     },
     {
@@ -428,6 +461,10 @@
       "turns": [
         "看看消费趋势",
         "截止2026年8月"
+      ],
+      "turnExpectations": [
+        {"expected": "CLARIFY", "responseMustContainAny": ["月份", "期间", "时间"]},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "finance.spending-analysis.query", "expectedArguments": {"period": "2026-08"}}
       ]
     },
     {
@@ -439,6 +476,10 @@
       "turns": [
         "查余额",
         "再看看我的资产概览"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "account.balance.query"},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "wealth.facts.describe"}
       ]
     },
     {
@@ -450,6 +491,10 @@
       "turns": [
         "看资产",
         "然后查余额"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "wealth.facts.describe"},
+        {"expected": "CALL_CAPABILITY", "capabilityId": "account.balance.query"}
       ]
     },
     {
@@ -460,6 +505,10 @@
       "turns": [
         "我要同行转账",
         "先不转了"
+      ],
+      "turnExpectations": [
+        {"expected": "CLARIFY", "responseMustContainAny": ["账户", "收款人", "金额"]},
+        {"expected": "NO_TOOL_CALL"}
       ]
     },
     {
@@ -470,6 +519,10 @@
       "turns": [
         "查2026年8月收支",
         "不用查了"
+      ],
+      "turnExpectations": [
+        {"expected": "CALL_CAPABILITY", "capabilityId": "finance.transaction-summary.query", "expectedArguments": {"period": "2026-08"}},
+        {"expected": "NO_TOOL_CALL"}
       ]
     },
     {

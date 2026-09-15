@@ -7,6 +7,7 @@
   "capabilities": [{
     "capabilityId": "wealth.facts.describe",
     "useCases": ["描述宿主已选择客户的已知资产范围、风险测评状态和信息缺口"],
+    "outputBoundaries": ["返回已覆盖范围内的资产事实、风险测评与信息缺口，不代表某一账户的实时可用余额", "没有安装余额查询能力时，不得用资产概览替代实时账户余额"],
     "exampleUtterances": ["看看我的资产概览", "我的风险测评有效吗", "财富信息还缺什么"],
     "negativeExamples": ["推荐我买哪只产品", "查询某个账户实时余额", "把资产转出去"]
   }]
