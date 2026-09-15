@@ -8,6 +8,9 @@ Builder 独立生成，金融规则继续消费 Harness 制品；受控运行与
 
 Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
+[业务组件包 V0.1](docs/business-component-package-v01.md)定义 Skill、既有能力绑定、执行要求和
+验证案例的可移交 ZIP。它支持在受管理目录中发布和跨环境重新校验，不包含代码、权限或密钥。
+
 它不替代 Agent Runtime，也不重做银行业务系统。V1 只解决一个具体问题：让 Agent 通过统一合同调用金融查询和办理能力，并留下可验证的结果。
 
 > Integration 接 Agent Runtime，Provider Adapter 接银行系统。

@@ -39,6 +39,7 @@ def main():
         "solution-build-input.v1",
         "finance-asset-catalog.v1",
         "finance-asset-change-proposal.v1",
+        "finance-business-component-package.v0.1",
     }
     assert required <= schemas.keys(), f"Missing required schemas: {required - schemas.keys()}"
 

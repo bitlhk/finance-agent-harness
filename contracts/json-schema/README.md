@@ -52,3 +52,14 @@ governance/finance-asset-change-proposal.v1.schema.json
 ```
 
 Catalog 记录资产身份、依赖、兼容关系和治理策略。Change Proposal 记录 Builder 发现的外部资产问题、父 Lock、脱敏复现条件和验证入口；它只是一份待 Owner 审核的建议，不授予 Builder 修改、提交或发布 Harness 资产的权限。
+
+可移交的业务方法与既有能力绑定使用候选合同：
+
+```text
+package/finance-business-component-package.v0.1.schema.json
+```
+
+它定义一个不含可执行代码的 ZIP 清单：版本化 Skill、已确认工具绑定、执行和观测要求、
+验证案例及摘要。包中的 `requiredScopes` 只表达运行要求，不能授予调用权限。Provider、
+密钥、客户数据、模型交互正文和安装 Lock 不进入交付包；安装 Lock 由目标环境实际装配时生成。
+`engineering/business_package.py` 是公开的确定性构建和离线检查入口。
