@@ -22,7 +22,7 @@
           "payload": {
             "jsonrpc": "2.0",
             "id": "allow-to-preflight",
-            "method": "SendMessage",
+            "method": "SendStreamingMessage",
             "params": {
               "message": {
                 "role": "ROLE_USER",
@@ -58,7 +58,7 @@
           "payload": {
             "jsonrpc": "2.0",
             "id": "block-without-transfer",
-            "method": "SendMessage",
+            "method": "SendStreamingMessage",
             "params": {
               "message": {
                 "role": "ROLE_USER",
@@ -92,7 +92,7 @@
           "payload": {
             "jsonrpc": "2.0",
             "id": "risk-upstream-failed-closed",
-            "method": "SendMessage",
+            "method": "SendStreamingMessage",
             "params": {
               "message": {
                 "role": "ROLE_USER",
@@ -126,7 +126,7 @@
           "payload": {
             "jsonrpc": "2.0",
             "id": "processing-continues-original-task",
-            "method": "SendMessage",
+            "method": "SendStreamingMessage",
             "params": {
               "message": {
                 "role": "ROLE_USER",
@@ -162,7 +162,7 @@
           "payload": {
             "jsonrpc": "2.0",
             "id": "unknown-continues-original-task",
-            "method": "SendMessage",
+            "method": "SendStreamingMessage",
             "params": {
               "message": {
                 "role": "ROLE_USER",

@@ -55,7 +55,7 @@ class AntiFraudTransferConformanceTest(unittest.TestCase):
             case = cases_by_id[sample["sampleId"]]
             payload = sample["payload"]
             self.assertEqual(payload["jsonrpc"], "2.0")
-            self.assertEqual(payload["method"], "SendMessage")
+            self.assertEqual(payload["method"], "SendStreamingMessage")
             metadata = payload["params"]["metadata"]
             self.assertEqual(metadata["signals"]["intent"], "transfer.internal.create")
             self.assertEqual(metadata["arguments"], case["request"]["transfer"])
