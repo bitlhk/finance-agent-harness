@@ -175,7 +175,7 @@ final class InstalledTaskController {
         var capability = capabilities.get(saved.capabilityId());
         return result(bridges.get(saved.capabilityId()).accessDenied(new OpenJiuwenInvocationV1(
                 saved.taskId(), saved.capabilityId(), agentId, capability.requiredScopes(), Map.of(), Map.of()),
-                Instant.now()), "");
+                Instant.now(), "TASK"), "");
     }
 
     private TaskCheckpointStore.SavedTask owned(TaskCheckpointStore.Access access, String handle) {
