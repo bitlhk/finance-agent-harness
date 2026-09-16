@@ -19,7 +19,8 @@ public final class ReadOnlyTaskCollaborationV01 {
 
     public static String trustedTimeInstruction(TrustedBusinessTimeV01 value) {
         return "宿主提供的可信业务日期为 " + value.businessDate() + "，时区为 " + value.timeZone().getId()
-                + "，来源为 " + value.source() + "。相对日期只能依据该上下文解析；仅给出月份且没有可信年份时应澄清。";
+                + "，来源为 " + value.source() + "。相对日期只能依据该上下文解析；"
+                + "仅给出月份但没有年份时应澄清，不得用业务日期补年份。";
     }
 
     public static String digest() {
