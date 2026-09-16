@@ -14,6 +14,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.TrustedBusinessTimeV01;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -21,7 +22,10 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,6 +92,14 @@ class CapabilityDescriptionAbLiveTest {
                 """), Map.of("accountId", "")));
         assertEquals("2026-07", controlledData("finance.transaction-summary.query",
                 Map.of("period", "2026-07")).get("period"));
+        assertEquals("2800.00", controlledData("finance.transaction-summary.query",
+                Map.of("period", "2026-07")).get("netCashflow"));
+        assertEquals("3200.00", controlledData("finance.transaction-summary.query",
+                Map.of("period", "2026-08")).get("netCashflow"));
+        assertEquals("交通", controlledData("finance.spending-analysis.query",
+                Map.of("period", "2026-07")).get("topCategory"));
+        assertEquals("餐饮", controlledData("finance.spending-analysis.query",
+                Map.of("period", "2026-08")).get("topCategory"));
     }
 
     @Test void modelFailuresNeverReachTaskProvider() throws Exception {
@@ -156,7 +168,14 @@ class CapabilityDescriptionAbLiveTest {
         report.put("createdAt", Instant.now().toString());
         report.put("modelName", System.getenv("FH_MODEL_NAME"));
         report.put("runtime", "openjiuwen-java-0.1.15");
-        report.put("trustedBusinessDate", "2026-09-15");
+        report.put("trustedBusinessTime", Map.of(
+                "businessDate", System.getenv().getOrDefault("FH_BUSINESS_DATE", "2026-09-15"),
+                "timeZone", System.getenv().getOrDefault("FH_BUSINESS_TIME_ZONE", "Asia/Shanghai"),
+                "source", System.getenv().getOrDefault("FH_BUSINESS_DATE_SOURCE", "controlled-evaluation-host")));
+        report.put("taskCollaboration", Map.of(
+                "version", ReadOnlyTaskCollaborationV01.VERSION,
+                "instructionDigest", ReadOnlyTaskCollaborationV01.digest(),
+                "installedWithVariant", "B"));
         report.put("suite", root.relativize(suitePath).toString());
         report.put("casesPerVariant", selected.size());
         report.put("repetitions", repetitions);
@@ -176,12 +195,15 @@ class CapabilityDescriptionAbLiveTest {
         if (testCase.has("installedCapabilities")) testCase.path("installedCapabilities").forEach(v -> installed.add(v.asText()));
         else installed.addAll(ALL);
         String session = "fh-ab-" + variant.toLowerCase() + "-" + testCase.path("id").asText() + "-" + UUID.randomUUID();
-        List<ToolSelection> calls = new ArrayList<>();
-        List<List<ToolSelection>> callsByTurn = new ArrayList<>();
+        List<ToolSelection> observedSelections = Collections.synchronizedList(new ArrayList<>());
+        List<List<ToolSelection>> observedSelectionsByTurn = new ArrayList<>();
+        List<ToolSelection> executedCalls = Collections.synchronizedList(new ArrayList<>());
+        List<List<ToolSelection>> executedCallsByTurn = new ArrayList<>();
         List<String> responsesByTurn = new ArrayList<>();
         List<String> errorsByTurn = new ArrayList<>();
         List<String> completionStatusesByTurn = new ArrayList<>();
-        List<ControlledToolResult> controlledToolResults = new ArrayList<>();
+        List<ControlledToolResult> controlledToolResults = Collections.synchronizedList(new ArrayList<>());
+        List<List<ControlledToolResult>> controlledToolResultsByTurn = new ArrayList<>();
         CapabilityDescriptionCatalogV01 catalog = null;
         AtomicInteger controlledProviderOperations = new AtomicInteger();
         List<OpenJiuwenCapabilityInstaller.Installation> installations = new ArrayList<>();
@@ -191,7 +213,7 @@ class CapabilityDescriptionAbLiveTest {
             ReActAgent agent = agent(session, maxIterations);
             agent.registerCallback(AgentCallbackEvent.BEFORE_TOOL_CALL, context -> {
                 if (context.getInputs() instanceof ToolCallInputs input) {
-                    calls.add(new ToolSelection(input.getToolName(), arguments(input.getToolArgs())));
+                    observedSelections.add(new ToolSelection(input.getToolName(), arguments(input.getToolArgs())));
                     if (input.getToolName().equals("transfer_internal_create")) {
                         context.requestForceFinish(Map.of("evaluation", "TASK_SELECTION_CAPTURED_NO_EXECUTION"));
                     }
@@ -200,7 +222,7 @@ class CapabilityDescriptionAbLiveTest {
             List<FinanceCapabilityPackV1> packs = selectedPacks(root, installed);
             CapabilityDescriptionCatalogV01 descriptions = variant.equals("B") ? enhanced(root, packs) : null;
             catalog = descriptions == null ? CapabilityDescriptionCatalogV01.base(packs) : descriptions;
-            FinanceProvider recorder = recorder(controlledProviderOperations, controlledToolResults);
+            FinanceProvider recorder = recorder(controlledProviderOperations, executedCalls, controlledToolResults);
             var defaults = new OpenJiuwenFinanceBridge.InvocationDefaults("synthetic-customer", "synthetic-customer",
                     FinanceContextV1.PrincipalType.CUSTOMER, session, "AB_EVALUATION",
                     FinanceContextV1.AuthenticationLevel.STRONG,
@@ -219,7 +241,9 @@ class CapabilityDescriptionAbLiveTest {
             if (testCase.has("turns")) testCase.path("turns").forEach(value -> turns.add(value.asText()));
             else turns.add(testCase.path("input").asText());
             for (String turn : turns) {
-                int before = calls.size();
+                int selectionsBefore = observedSelections.size();
+                int executionsBefore = executedCalls.size();
+                int resultsBefore = controlledToolResults.size();
                 try {
                     String response = render(Runner.runAgent(agent, Map.of("query", turn), session, null));
                     responsesByTurn.add(response);
@@ -231,7 +255,9 @@ class CapabilityDescriptionAbLiveTest {
                     completionStatusesByTurn.add("RUN_FAILED");
                     error = exception.getClass().getSimpleName();
                 } finally {
-                    callsByTurn.add(List.copyOf(calls.subList(before, calls.size())));
+                    observedSelectionsByTurn.add(snapshot(observedSelections, selectionsBefore));
+                    executedCallsByTurn.add(snapshot(executedCalls, executionsBefore));
+                    controlledToolResultsByTurn.add(snapshot(controlledToolResults, resultsBefore));
                 }
                 if (!error.isBlank()) break;
             }
@@ -246,11 +272,11 @@ class CapabilityDescriptionAbLiveTest {
         else expectations.add(testCase);
         List<TurnAssessment> assessments = new ArrayList<>();
         for (int index = 0; index < expectations.size(); index++) {
-            if (index >= callsByTurn.size()) {
+            if (index >= executedCallsByTurn.size()) {
                 assessments.add(new TurnAssessment("NOT_RUN", false, "", "NOT_RUN", List.of()));
                 continue;
             }
-            assessments.add(assess(expectations.get(index), callsByTurn.get(index), responsesByTurn.get(index),
+            assessments.add(assess(expectations.get(index), executedCallsByTurn.get(index), responsesByTurn.get(index),
                     errorsByTurn.get(index)));
         }
         JsonNode finalExpectation = expectations.getLast();
@@ -264,13 +290,13 @@ class CapabilityDescriptionAbLiveTest {
             finalExpectation.path("expectedCalls").forEach(call ->
                     expectedIds.add(call.path("capabilityId").asText()));
         }
-        List<ToolSelection> evaluatedCalls = callsByTurn.isEmpty() ? List.of() : callsByTurn.getLast();
+        List<ToolSelection> evaluatedCalls = executedCallsByTurn.isEmpty() ? List.of() : executedCallsByTurn.getLast();
         boolean unexpectedTaskSelection = false;
-        for (int index = 0; index < callsByTurn.size(); index++) {
+        for (int index = 0; index < observedSelectionsByTurn.size(); index++) {
             JsonNode turnExpectation = index < expectations.size() ? expectations.get(index) : finalExpectation;
             boolean transferExpected = turnExpectation.path("expected").asText().equals("CALL_CAPABILITY")
                     && turnExpectation.path("capabilityId").asText().equals("transfer.internal.create");
-            if (!transferExpected && callsByTurn.get(index).stream()
+            if (!transferExpected && observedSelectionsByTurn.get(index).stream()
                     .anyMatch(call -> call.toolName().equals("transfer_internal_create"))) {
                 unexpectedTaskSelection = true;
                 break;
@@ -288,8 +314,11 @@ class CapabilityDescriptionAbLiveTest {
                 Map.entry("variant", variant), Map.entry("expected", expected),
                 Map.entry("expectedCapabilityId", expectedId),
                 Map.entry("expectedCapabilityIds", List.copyOf(expectedIds)),
-                Map.entry("toolCalls", List.copyOf(calls)),
-                Map.entry("toolCallsByTurn", List.copyOf(callsByTurn)),
+                Map.entry("toolCalls", List.copyOf(executedCalls)),
+                Map.entry("toolCallsByTurn", List.copyOf(executedCallsByTurn)),
+                Map.entry("observedToolSelections", List.copyOf(observedSelections)),
+                Map.entry("observedToolSelectionsByTurn", List.copyOf(observedSelectionsByTurn)),
+                Map.entry("toolSelectionObservation", observationStatus(observedSelectionsByTurn, executedCallsByTurn)),
                 Map.entry("evaluatedToolCalls", evaluatedCalls), Map.entry("responsesByTurn", responsesByTurn),
                 Map.entry("completionStatusesByTurn", completionStatusesByTurn),
                 Map.entry("turnAssessments", assessments), Map.entry("outcome", outcome),
@@ -297,6 +326,7 @@ class CapabilityDescriptionAbLiveTest {
                 Map.entry("error", error),
                 Map.entry("controlledProviderOperations", controlledProviderOperations.get()),
                 Map.entry("controlledToolResults", List.copyOf(controlledToolResults)),
+                Map.entry("controlledToolResultsByTurn", List.copyOf(controlledToolResultsByTurn)),
                 Map.entry("catalogSnapshot", catalogEvidence),
                 Map.entry("bankTransportOperations", 0),
                 Map.entry("elapsedMillis", (System.nanoTime() - started) / 1_000_000L));
@@ -332,9 +362,13 @@ class CapabilityDescriptionAbLiveTest {
     }
 
     private ReActAgent agent(String session, String url, String name, String key, int maxIterations) {
+        var businessTime = new TrustedBusinessTimeV01(
+                LocalDate.parse(System.getenv().getOrDefault("FH_BUSINESS_DATE", "2026-09-15")),
+                ZoneId.of(System.getenv().getOrDefault("FH_BUSINESS_TIME_ZONE", "Asia/Shanghai")),
+                System.getenv().getOrDefault("FH_BUSINESS_DATE_SOURCE", "controlled-evaluation-host"));
         var agent = new ReActAgent(AgentCard.builder().id(session).name("FH A/B evaluator").build());
         var config = ReActAgentConfig.builder().maxIterations(maxIterations).promptTemplate(List.of(Map.of("role", "system", "content",
-                "你是银行助手。宿主提供的可信业务日期为2026-09-15，可用于解析上个月等相对时间。"
+                "你是银行助手。" + ReadOnlyTaskCollaborationV01.trustedTimeInstruction(businessTime)
                 + "用户只说某个月份但没有年份、且会话中没有明确年份时，必须先询问年份，不得默认当前年。"
                 + "只处理当前用户请求，只能调用已安装工具。咨询、否定、取消和未支持请求不得调用办理工具；缺少办理参数时先澄清。")))
                 .build().configureModelClient("OpenAI", key, url, name, true);
@@ -366,14 +400,17 @@ class CapabilityDescriptionAbLiveTest {
     }
 
     private FinanceProvider recorder(AtomicInteger operations) {
-        return recorder(operations, new ArrayList<>());
+        return recorder(operations, Collections.synchronizedList(new ArrayList<>()),
+                Collections.synchronizedList(new ArrayList<>()));
     }
 
-    private FinanceProvider recorder(AtomicInteger operations, List<ControlledToolResult> results) {
+    private FinanceProvider recorder(AtomicInteger operations, List<ToolSelection> executions,
+                                     List<ControlledToolResult> results) {
         return new FinanceProvider() {
             public CapabilityResultV1 query(CapabilityRequestV1 request) {
                 operations.incrementAndGet();
                 Map<String, Object> data = controlledData(request.capabilityId(), request.parameters());
+                executions.add(new ToolSelection(capabilityTool(request.capabilityId()), request.parameters()));
                 results.add(new ControlledToolResult(request.capabilityId(), request.parameters(), data));
                 return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(),
                         request.context().traceId(), CapabilityResultV1.Status.COMPLETED,
@@ -399,10 +436,11 @@ class CapabilityDescriptionAbLiveTest {
         String period = String.valueOf(parameters.getOrDefault("period", "2026-08"));
         return switch (capabilityId) {
             case "account.balance.query" -> Map.of("availableBalance", "1234.56", "currency", "CNY");
-            case "finance.transaction-summary.query" -> Map.of("income", "5000.00", "expense", "3200.00",
-                    "netCashflow", "1800.00", "period", period);
+            case "finance.transaction-summary.query" -> period.equals("2026-07")
+                    ? Map.of("income", "7100.00", "expense", "4300.00", "netCashflow", "2800.00", "period", period)
+                    : Map.of("income", "8300.00", "expense", "5100.00", "netCashflow", "3200.00", "period", period);
             case "finance.spending-analysis.query" -> Map.of("period", period,
-                    "topCategory", "餐饮", "coveredMonths", 6);
+                    "topCategory", period.equals("2026-07") ? "交通" : "餐饮", "coveredMonths", 6);
             case "wealth.facts.describe" -> Map.of("assetAmount", "360824.12", "currency", "CNY",
                     "riskLevel", "R3", "riskExpiresAt", "2027-06-01");
             default -> Map.of();
@@ -420,9 +458,14 @@ class CapabilityDescriptionAbLiveTest {
                     && toolCapability(selections.getFirst().toolName()).equals(expectedId);
             boolean parametersMatch = oneExpected
                     && expectedArgumentsMatch(expectation.path("expectedArguments"), selections.getFirst().arguments());
-            return assessed(oneExpected && parametersMatch ? "CORRECT_CALL" : "WRONG_CALL",
-                    oneExpected && parametersMatch, oneExpected && !parametersMatch
-                            ? "TOOL_ARGUMENTS_MISMATCH" : "", completion, selections);
+            boolean responseMatch = !expectation.has("responseMustContainAll")
+                    || !response.isBlank() && containsAll(response, expectation.path("responseMustContainAll"));
+            responseMatch = responseMatch && (!expectation.has("responseMustContainAny")
+                    || !response.isBlank() && containsAny(response, expectation.path("responseMustContainAny")));
+            boolean passed = oneExpected && parametersMatch && responseMatch;
+            return assessed(passed ? "CORRECT_CALL" : "WRONG_CALL", passed,
+                    oneExpected && !parametersMatch ? "TOOL_ARGUMENTS_MISMATCH"
+                            : !responseMatch ? "RESPONSE_NOT_EVIDENCED" : "", completion, selections);
         }
         if (expected.equals("CALL_CAPABILITIES")) {
             List<JsonNode> expectedCalls = new ArrayList<>();
@@ -587,6 +630,32 @@ class CapabilityDescriptionAbLiveTest {
             case "transfer_internal_create" -> "transfer.internal.create";
             default -> "unknown:" + tool;
         };
+    }
+
+    private static String capabilityTool(String capabilityId) {
+        return switch (capabilityId) {
+            case "account.balance.query" -> "account_balance_query";
+            case "finance.transaction-summary.query" -> "finance_transaction_summary";
+            case "finance.spending-analysis.query" -> "finance_spending_analysis";
+            case "wealth.facts.describe" -> "wealth_facts_describe";
+            case "transfer.internal.create" -> "transfer_internal_create";
+            default -> "unknown:" + capabilityId;
+        };
+    }
+
+    private static <T> List<T> snapshot(List<T> values, int from) {
+        synchronized (values) {
+            return List.copyOf(values.subList(from, values.size()));
+        }
+    }
+
+    private static String observationStatus(List<List<ToolSelection>> observed,
+                                            List<List<ToolSelection>> executed) {
+        int observedCount = observed.stream().mapToInt(List::size).sum();
+        int executedCount = executed.stream().mapToInt(List::size).sum();
+        if (observedCount == executedCount) return "COMPLETE_BY_COUNT";
+        return observedCount < executedCount ? "CALLBACK_PARTIAL_PROVIDER_AUTHORITATIVE"
+                : "CALLBACK_INCLUDES_NON_EXECUTED_SELECTION";
     }
     private static Set<String> csvSet(String value) {
         if (value == null || value.isBlank()) return Set.of();

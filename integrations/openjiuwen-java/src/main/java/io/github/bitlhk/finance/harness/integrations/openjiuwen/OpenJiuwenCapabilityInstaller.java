@@ -109,6 +109,10 @@ public final class OpenJiuwenCapabilityInstaller {
                 reactAgent.addPromptBuilderSection(promptSection + ":terminology",
                         descriptions.terminologyPrompt(), 81);
             }
+            if (installTerminology && descriptions != null && descriptions.allReadOnly()) {
+                reactAgent.addPromptBuilderSection(promptSection + ":task-collaboration",
+                        ReadOnlyTaskCollaborationV01.INSTRUCTION, 82);
+            }
         }
 
         try {
@@ -139,6 +143,7 @@ public final class OpenJiuwenCapabilityInstaller {
             uninstall(agent, installedTools.keySet(), agentId);
             removePromptSection(agent, promptSection);
             if (installTerminology) removePromptSection(agent, promptSection + ":terminology");
+            if (installTerminology) removePromptSection(agent, promptSection + ":task-collaboration");
             throw exception;
         }
 
@@ -357,6 +362,7 @@ public final class OpenJiuwenCapabilityInstaller {
             uninstall(agent, tools.keySet(), receipt.agentId());
             removePromptSection(agent, promptSection);
             if (terminologyInstalled) removePromptSection(agent, promptSection + ":terminology");
+            if (terminologyInstalled) removePromptSection(agent, promptSection + ":task-collaboration");
             closed = true;
         }
     }

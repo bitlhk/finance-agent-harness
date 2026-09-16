@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "finance-capability-description-ab-cases.v0.1",
+  "suiteId": "readonly-task-collaboration-v0.1",
+  "reviewStatus": "ENGINEERING_PROVISIONAL_BUSINESS_OWNER_REVIEW_REQUIRED",
+  "notes": [
+    "范围仅为收支汇总与支出分析；预期目标只用于评分，不进入Runtime提示。",
+    "可信业务日期为2026-09-15，时区Asia/Shanghai，来源controlled-evaluation-host。",
+    "受控Provider返回与请求月份一致的合成结果，银行传输计数固定为零。"
+  ],
+  "cases": [
+    {"id":"task-single-summary","category":"single_goal","input":"汇总2026年7月收入、支出和净现金流","expected":"CALL_CAPABILITY","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"},"responseMustContainAll":["净现金流"]},
+    {"id":"task-single-spending","category":"single_goal","input":"分析2026年7月主要花在哪些类别","expected":"CALL_CAPABILITY","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"},"responseMustContainAll":["交通"]},
+    {"id":"task-two-goals","category":"two_goals","input":"汇总2026年7月收支，并分析当月主要花在哪","expected":"CALL_CAPABILITIES","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"expectedCalls":[{"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"}},{"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"}}],"responseMustContainAll":["净现金流","交通"]},
+    {"id":"task-only-summary-installed","category":"partial_capability","input":"汇总2026年7月收支，并分析当月支出类别","expected":"CALL_CAPABILITY","installedCapabilities":["finance.transaction-summary.query"],"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"},"responseMustContainAny":["未安装","不支持","无法"]},
+    {"id":"task-only-spending-installed","category":"partial_capability","input":"汇总2026年7月收支，并分析当月支出类别","expected":"CALL_CAPABILITY","installedCapabilities":["finance.spending-analysis.query"],"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"},"responseMustContainAny":["未安装","不支持","无法"]},
+    {"id":"task-neither-installed","category":"unsupported","input":"汇总2026年7月收支并分析支出类别","expected":"NO_TOOL_CALL","installedCapabilities":["wealth.facts.describe"]},
+    {"id":"task-relative-two-goals","category":"trusted_date","input":"汇总上个月收支，再分析上个月主要花在哪","expected":"CALL_CAPABILITIES","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"expectedCalls":[{"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-08"}},{"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-08"}}],"responseMustContainAll":["净现金流","餐饮"]},
+    {"id":"task-month-only","category":"ambiguity","input":"汇总八月收支并分析支出类别","expected":"CLARIFY","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"responseMustContainAny":["年份","哪一年","年月"]},
+    {"id":"task-followup-change-month","category":"multi_turn_change","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"turns":["汇总2026年7月收支并分析主要支出类别","改成上个月重新看这两项"],"turnExpectations":[{"expected":"CALL_CAPABILITIES","expectedCalls":[{"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"}},{"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"}}],"responseMustContainAll":["净现金流","交通"]},{"expected":"CALL_CAPABILITIES","expectedCalls":[{"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-08"}},{"capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-08"}}],"responseMustContainAll":["净现金流","餐饮"]}]},
+    {"id":"task-negated-analysis","category":"negation","input":"不要做支出分类，只汇总2026年7月收支","expected":"CALL_CAPABILITY","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"},"responseMustContainAll":["净现金流"]},
+    {"id":"task-cancel-and-switch","category":"multi_turn_cancel","installedCapabilities":["finance.transaction-summary.query","finance.spending-analysis.query"],"turns":["分析2026年7月支出类别","取消刚才的分析，改为只汇总同月收支"],"turnExpectations":[{"expected":"CALL_CAPABILITY","capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"},"responseMustContainAll":["交通"]},{"expected":"CALL_CAPABILITY","capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"},"responseMustContainAll":["净现金流"]}]}
+  ]
+}

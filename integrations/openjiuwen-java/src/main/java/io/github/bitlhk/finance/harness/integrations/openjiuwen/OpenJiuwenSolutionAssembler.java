@@ -328,22 +328,42 @@ public final class OpenJiuwenSolutionAssembler {
             for (var pack : capabilityPacks) for (var capability : pack.capabilities()) {
                 var binding = bindings.get(capability.capabilityId());
                 capabilities.add(Map.of("packId", pack.packId(), "packVersion", pack.version(),
-                        "definition", capability, "providerId", binding.providerId(),
+                        "definition", preparedDefinition(capability), "providerId", binding.providerId(),
                         "providerVersion", binding.providerVersion()));
             }
             List<Map<String, Object>> methods = new ArrayList<>();
             for (var pack : domainPacks) methods.add(Map.of("packId", pack.pack().packId(),
                     "version", pack.pack().version(), "capabilities", pack.pack().capabilities(), "skills", pack.skills()));
+            List<String> prompts = new ArrayList<>(capabilityPacks.stream()
+                    .map(FinanceCapabilityPackV1::systemPrompt).toList());
+            if (capabilityDescriptions != null) {
+                if (!capabilityDescriptions.terminologyPrompt().isBlank())
+                    prompts.add(capabilityDescriptions.terminologyPrompt());
+                if (capabilityDescriptions.allReadOnly()) prompts.add(ReadOnlyTaskCollaborationV01.INSTRUCTION);
+            }
             var snapshot = new LinkedHashMap<String, Object>(Map.of("schemaVersion", "finance-installation-plan.v0.1", "solutionId", spec.solutionId(),
                     "status", "VALIDATED_NOT_RUNTIME_REGISTERED", "bridgeRuntime", observedRuntime,
                     "assets", assets, "capabilities", List.copyOf(capabilities), "methods", List.copyOf(methods),
-                    "capabilityPrompts", capabilityPacks.stream().map(FinanceCapabilityPackV1::systemPrompt).toList()));
+                    "capabilityPrompts", List.copyOf(prompts)));
             if (observation.status() != ObservationAssessmentV01.Status.LEGACY_UNASSESSED) {
                 snapshot.put("schemaVersion", "finance-installation-plan.v0.2");
                 snapshot.put("observationAssessment", observation);
             }
-            if (capabilityDescriptions != null) snapshot.put("capabilityDescriptions", capabilityDescriptions.snapshot());
+            if (capabilityDescriptions != null) {
+                snapshot.put("capabilityDescriptions", capabilityDescriptions.snapshot());
+                if (capabilityDescriptions.allReadOnly()) snapshot.put("taskCollaboration", Map.of(
+                            "version", ReadOnlyTaskCollaborationV01.VERSION,
+                            "instructionDigest", ReadOnlyTaskCollaborationV01.digest()));
+            }
             return Map.copyOf(snapshot);
+        }
+
+        @SuppressWarnings("unchecked")
+        private Object preparedDefinition(FinanceCapabilityPackV1.Capability capability) {
+            if (capabilityDescriptions == null) return capability;
+            Map<String, Object> definition = HarnessJson.mapper().convertValue(capability, LinkedHashMap.class);
+            definition.put("description", capabilityDescriptions.description(capability.capabilityId()));
+            return Map.copyOf(definition);
         }
 
         public ReadOnlyInstallation openQueries(OpenJiuwenFinanceBridge.InvocationDefaults defaults,

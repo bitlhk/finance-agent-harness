@@ -56,3 +56,13 @@ Two suites are intentionally separate from the original fixed set:
 - `readonly-compound-cases.json` checks exact multi-capability calls with
   `FH_AB_MAX_ITERATIONS=8`, matching the Java reference Agent. It is a baseline,
   not evidence for an independent planner or Router SPI.
+- `readonly-task-collaboration-cases.json` narrows the experiment to cash-flow
+  summary plus spending analysis. It covers single and multiple goals, partial
+  installation, trusted dates, ambiguity, negation, cancellation, and multi-turn
+  month changes. Expected goals remain evaluator-only and never enter Runtime
+  prompts.
+
+Installing the optional description catalog also installs the generic read-only
+collaboration instruction. It asks the Runtime to check every user goal and report
+unsupported or missing parts; it does not create a plan, grant permission, or
+bypass normal tool authorization.

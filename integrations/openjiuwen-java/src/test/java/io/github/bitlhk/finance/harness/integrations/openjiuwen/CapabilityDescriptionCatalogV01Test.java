@@ -29,6 +29,7 @@ class CapabilityDescriptionCatalogV01Test {
         assertTrue(catalog.description("account.balance.query").contains("不代表总资产"));
         assertTrue(catalog.terminologyPrompt().contains("i豆"));
         assertTrue(catalog.terminologyPrompt().contains("当前没有对应能力"));
+        assertFalse(catalog.allReadOnly());
     }
 
     @Test void selectedPackProducesOnlyInstalledDirectoryAndNoRemovedCapabilityTerms() throws Exception {
@@ -40,6 +41,7 @@ class CapabilityDescriptionCatalogV01Test {
         assertTrue(catalog.terminologyPrompt().contains("可用余额"));
         assertFalse(catalog.terminologyPrompt().contains("行内转账"));
         assertTrue(catalog.terminologyPrompt().contains("i豆"));
+        assertTrue(catalog.allReadOnly());
         assertThrows(IllegalStateException.class,
                 () -> catalog.requireExactInstallation(Set.of("account.balance.query", "transfer.internal.create")));
     }
