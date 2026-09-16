@@ -55,6 +55,15 @@ class OpenJiuwenSolutionAssemblerTest {
         assertEquals(Set.of("wealth.facts.describe"), enhanced.capabilityDescriptionSnapshot().capabilities()
                 .stream().map(CapabilityDescriptionCatalogV01.SnapshotEntry::capabilityId).collect(java.util.stream.Collectors.toSet()));
         assertTrue(enhanced.snapshot().containsKey("capabilityDescriptions"));
+        assertTrue(enhanced.snapshot().containsKey("taskCollaboration"));
+        @SuppressWarnings("unchecked")
+        var capability = (Map<String, Object>) ((Map<String, Object>) ((List<?>) enhanced.snapshot()
+                .get("capabilities")).getFirst()).get("definition");
+        assertTrue(String.valueOf(capability.get("description")).contains("典型问法"));
+        @SuppressWarnings("unchecked")
+        var prompts = (List<String>) enhanced.snapshot().get("capabilityPrompts");
+        assertTrue(prompts.stream().anyMatch(prompt -> prompt.contains("逐项核对用户当前请求")));
+        assertTrue(prompts.stream().anyMatch(prompt -> prompt.contains("机构术语仅用于理解")));
         try (var installed = assembler.install(enhanced, cleanAgent("described"), customerWealthDefaults(), true,
                 new TaskCheckpointStore.Memory(), "described-session")) {
             assertNotNull(installed.lock().capabilityDescriptions());

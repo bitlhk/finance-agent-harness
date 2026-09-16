@@ -7,8 +7,10 @@ import com.openjiuwen.core.singleagent.schema.AgentCard;
 import com.openjiuwen.core.workflow.WorkflowOutput;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.TrustedBusinessTimeV01;
 import io.github.bitlhk.finance.harness.integrations.openjiuwen.OpenJiuwenFinanceBridge;
 import io.github.bitlhk.finance.harness.integrations.openjiuwen.OpenJiuwenSolutionAssembler;
+import io.github.bitlhk.finance.harness.integrations.openjiuwen.ReadOnlyTaskCollaborationV01;
 import io.github.bitlhk.finance.harness.providers.nonaibanking.NonAiBankingProvider;
 
 import java.net.URI;
@@ -16,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -88,7 +92,8 @@ public final class RetailBankingAgentApplication {
         ReActAgentConfig config = ReActAgentConfig.builder()
                 .promptTemplate(List.of(Map.of(
                         "role", "system",
-                        "content", "你是一个克制的手机银行助手。只使用已经安装的能力获取事实或办理业务；没有工具结果时不得猜测。")))
+                        "content", "你是一个克制的手机银行助手。只使用已经安装的能力获取事实或办理业务；没有工具结果时不得猜测。"
+                                + businessTimeInstruction(settings.businessTime()))))
                 .maxIterations(8)
                 .build()
                 .configureModelClient(
@@ -105,6 +110,12 @@ public final class RetailBankingAgentApplication {
                 .build());
         agent.configure(config);
         return agent;
+    }
+
+    private static String businessTimeInstruction(TrustedBusinessTimeV01 value) {
+        return value == null
+                ? "宿主未提供可信业务日期。涉及相对日期或缺少年份时必须先澄清，不得使用系统日期或模型知识补齐。"
+                : ReadOnlyTaskCollaborationV01.trustedTimeInstruction(value);
     }
 
     private static Path scriptPath(String[] args, Path repositoryRoot) {
@@ -251,7 +262,8 @@ public final class RetailBankingAgentApplication {
             String bankingLoginSecret,
             String bankingStepUpCode,
             String solutionPath,
-            String runReportPath) {
+            String runReportPath,
+            TrustedBusinessTimeV01 businessTime) {
         private static Settings fromEnvironment() {
             return new Settings(
                     requiredEnvironment("FINANCE_AGENT_MODEL_API_KEY"),
@@ -267,7 +279,27 @@ public final class RetailBankingAgentApplication {
                             "examples/solutions/openjiuwen-retail-banking/solution.yaml"),
                     environment(
                             "FINANCE_AGENT_RUN_REPORT",
-                            "examples/solutions/openjiuwen-retail-banking/target/live-demo/run-report.json"));
+                            "examples/solutions/openjiuwen-retail-banking/target/live-demo/run-report.json"),
+                    businessTimeFromEnvironment());
+        }
+
+        private static TrustedBusinessTimeV01 businessTimeFromEnvironment() {
+            String date = optionalEnvironment("FH_BUSINESS_DATE");
+            String zone = optionalEnvironment("FH_BUSINESS_TIME_ZONE");
+            String source = optionalEnvironment("FH_BUSINESS_DATE_SOURCE");
+            if (date == null && zone == null && source == null) return null;
+            if (date == null || zone == null || source == null)
+                throw new IllegalStateException("TRUSTED_BUSINESS_TIME_INCOMPLETE");
+            try {
+                return new TrustedBusinessTimeV01(LocalDate.parse(date), ZoneId.of(zone), source);
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException("TRUSTED_BUSINESS_TIME_INVALID", exception);
+            }
+        }
+
+        private static String optionalEnvironment(String name) {
+            String value = System.getenv(name);
+            return value == null || value.isBlank() ? null : value.trim();
         }
 
         private static String requiredEnvironment(String name) {

@@ -124,6 +124,9 @@ public final class CapabilityDescriptionCatalogV01 {
     }
 
     public Set<String> capabilityIds() { return entries.keySet(); }
+    public boolean allReadOnly() {
+        return entries.values().stream().allMatch(entry -> entry.operation().equals("QUERY"));
+    }
     public Snapshot snapshot() { return snapshot; }
     public String description(String capabilityId) {
         Entry entry = entries.get(capabilityId);

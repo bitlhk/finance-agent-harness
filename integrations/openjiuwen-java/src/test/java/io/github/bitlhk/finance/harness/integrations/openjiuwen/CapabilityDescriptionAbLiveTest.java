@@ -14,6 +14,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.TrustedBusinessTimeV01;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -156,7 +159,14 @@ class CapabilityDescriptionAbLiveTest {
         report.put("createdAt", Instant.now().toString());
         report.put("modelName", System.getenv("FH_MODEL_NAME"));
         report.put("runtime", "openjiuwen-java-0.1.15");
-        report.put("trustedBusinessDate", "2026-09-15");
+        report.put("trustedBusinessTime", Map.of(
+                "businessDate", System.getenv().getOrDefault("FH_BUSINESS_DATE", "2026-09-15"),
+                "timeZone", System.getenv().getOrDefault("FH_BUSINESS_TIME_ZONE", "Asia/Shanghai"),
+                "source", System.getenv().getOrDefault("FH_BUSINESS_DATE_SOURCE", "controlled-evaluation-host")));
+        report.put("taskCollaboration", Map.of(
+                "version", ReadOnlyTaskCollaborationV01.VERSION,
+                "instructionDigest", ReadOnlyTaskCollaborationV01.digest(),
+                "installedWithVariant", "B"));
         report.put("suite", root.relativize(suitePath).toString());
         report.put("casesPerVariant", selected.size());
         report.put("repetitions", repetitions);
@@ -332,9 +342,13 @@ class CapabilityDescriptionAbLiveTest {
     }
 
     private ReActAgent agent(String session, String url, String name, String key, int maxIterations) {
+        var businessTime = new TrustedBusinessTimeV01(
+                LocalDate.parse(System.getenv().getOrDefault("FH_BUSINESS_DATE", "2026-09-15")),
+                ZoneId.of(System.getenv().getOrDefault("FH_BUSINESS_TIME_ZONE", "Asia/Shanghai")),
+                System.getenv().getOrDefault("FH_BUSINESS_DATE_SOURCE", "controlled-evaluation-host"));
         var agent = new ReActAgent(AgentCard.builder().id(session).name("FH A/B evaluator").build());
         var config = ReActAgentConfig.builder().maxIterations(maxIterations).promptTemplate(List.of(Map.of("role", "system", "content",
-                "你是银行助手。宿主提供的可信业务日期为2026-09-15，可用于解析上个月等相对时间。"
+                "你是银行助手。" + ReadOnlyTaskCollaborationV01.trustedTimeInstruction(businessTime)
                 + "用户只说某个月份但没有年份、且会话中没有明确年份时，必须先询问年份，不得默认当前年。"
                 + "只处理当前用户请求，只能调用已安装工具。咨询、否定、取消和未支持请求不得调用办理工具；缺少办理参数时先澄清。")))
                 .build().configureModelClient("OpenAI", key, url, name, true);
@@ -420,9 +434,14 @@ class CapabilityDescriptionAbLiveTest {
                     && toolCapability(selections.getFirst().toolName()).equals(expectedId);
             boolean parametersMatch = oneExpected
                     && expectedArgumentsMatch(expectation.path("expectedArguments"), selections.getFirst().arguments());
-            return assessed(oneExpected && parametersMatch ? "CORRECT_CALL" : "WRONG_CALL",
-                    oneExpected && parametersMatch, oneExpected && !parametersMatch
-                            ? "TOOL_ARGUMENTS_MISMATCH" : "", completion, selections);
+            boolean responseMatch = !expectation.has("responseMustContainAll")
+                    || !response.isBlank() && containsAll(response, expectation.path("responseMustContainAll"));
+            responseMatch = responseMatch && (!expectation.has("responseMustContainAny")
+                    || !response.isBlank() && containsAny(response, expectation.path("responseMustContainAny")));
+            boolean passed = oneExpected && parametersMatch && responseMatch;
+            return assessed(passed ? "CORRECT_CALL" : "WRONG_CALL", passed,
+                    oneExpected && !parametersMatch ? "TOOL_ARGUMENTS_MISMATCH"
+                            : !responseMatch ? "RESPONSE_NOT_EVIDENCED" : "", completion, selections);
         }
         if (expected.equals("CALL_CAPABILITIES")) {
             List<JsonNode> expectedCalls = new ArrayList<>();
