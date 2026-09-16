@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "finance-readonly-compound-baseline.v0.1",
+  "observedOn": "2026-09-16",
+  "model": "deepseek-v4-flash",
+  "businessAcceptance": "NOT_RUN",
+  "independentHumanAcceptance": "NOT_RUN",
+  "javaPolicy": {
+    "runtime": "openjiuwen-java-0.1.15",
+    "casesPerVariant": 30,
+    "variantA": {"passed": 21, "unexpectedToolCalls": 9},
+    "variantB": {"passed": 28, "unexpectedToolCalls": 0},
+    "semanticReview": "TWO_B_FAILURES_WERE_CORRECT_CLARIFICATIONS_NOT_ACCEPTED_BY_INITIAL_LEXICAL_SCORER",
+    "correctedAliasRepeat": {"variantA": "0/5", "variantB": "5/5"}
+  },
+  "javaCompound": {
+    "runtime": "openjiuwen-java-0.1.15",
+    "maxIterations": 8,
+    "casesPerVariant": 24,
+    "variantA": {"passed": 16, "controlledProviderOperations": 51},
+    "variantB": {"passed": 15, "controlledProviderOperations": 54},
+    "paired": {"bothPassed": 14, "improved": 1, "regressed": 2, "bothFailed": 7},
+    "runtimeFailures": 0,
+    "incompleteRuns": 0,
+    "bankTransportOperations": 0
+  },
+  "pythonCompound": {
+    "runtime": "openjiuwen-python-0.1.18",
+    "harnessBridge": "DELEGATED_JAVA",
+    "candidateBuildId": "o1-qualifying-python-7",
+    "descriptionVariant": "A_FROZEN_CANDIDATE",
+    "repetitions": 1,
+    "passed": 7,
+    "total": 8,
+    "failedCase": "compound-relative-cashflow",
+    "syntheticBankReads": 21,
+    "bankWrites": 0
+  },
+  "rawEvidenceSha256": {
+    "routing-policy-final.json": "524871354768c39da30e143519b893a1a4014eae0c63e00a4e54886fa25d0748",
+    "routing-policy-final-summary.json": "a5387810e5932744a1805e6bd918ca4872faeb100b758396cfce9d15c7d63054",
+    "account-alias-targeted.json": "4e9cd99bc096364ed7e5c651b9c2aed2e6ea208f5770c21afced3587f2f3c3b3",
+    "readonly-compound-repeat.json": "ffd005d3aed8f7ecf3d5dcee275fd1ec9f6fb4aeaa814b6ab50d8e53c35cf501",
+    "readonly-compound-summary.json": "9cfa1add9b2c05251e30395d3adee9fe35003995b2bfdef2e091d789250a1b8f",
+    "python-compound-baseline.json": "a3b0bd391ca0283c3a25cdbfcf56e311afb08229bde4c905efb5b07298dd6459"
+  }
+}

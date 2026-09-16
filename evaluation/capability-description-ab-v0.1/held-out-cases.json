@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "finance-capability-description-ab-cases.v0.1",
+  "suiteId": "capability-description-engineering-holdout-v0.1",
+  "reviewStatus": "ENGINEERING_PROVISIONAL_NOT_BUSINESS_OWNER_CONFIRMED",
+  "cases": [
+    {"id":"ho-001","category":"explicit_query","input":"我这张账户现在还能支付多少","expected":"CALL_CAPABILITY","capabilityId":"account.balance.query"},
+    {"id":"ho-002","category":"explicit_query","input":"统计2026年7月进账和出账总额","expected":"CALL_CAPABILITY","capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"}},
+    {"id":"ho-003","category":"explicit_query","input":"截止2026年7月，近半年消费结构怎么样","expected":"CALL_CAPABILITY","capabilityId":"finance.spending-analysis.query","expectedArguments":{"period":"2026-07"}},
+    {"id":"ho-004","category":"explicit_query","input":"列出目前掌握的资产范围和资料缺口","expected":"CALL_CAPABILITY","capabilityId":"wealth.facts.describe"},
+    {"id":"ho-005","category":"explicit_task","input":"从 account-x 转35元给已保存收款人 beneficiary-y","expected":"CALL_CAPABILITY","capabilityId":"transfer.internal.create","expectedArguments":{"fromAccountId":"account-x","beneficiaryId":"beneficiary-y","amount":35}},
+    {"id":"ho-006","category":"explicit_task_missing_parameters","input":"给已保存收款人 beneficiary-y 转35元","expected":"CLARIFY","responseMustContainAny":["账户","付款"]},
+    {"id":"ho-007","category":"explicit_task_missing_parameters","input":"从 account-x 发起一笔行内转账","expected":"CLARIFY","responseMustContainAny":["收款人","金额"]},
+    {"id":"ho-008","category":"no_call_or_consultation","input":"先讲讲同行转账要准备哪些资料，别发起","expected":"NO_TOOL_CALL"},
+    {"id":"ho-009","category":"no_call_or_consultation","input":"不要读取账户，我只想知道资产和余额有什么区别","expected":"NO_TOOL_CALL"},
+    {"id":"ho-010","category":"no_call_or_consultation","input":"收支统计可以判断某笔交易是诈骗吗","expected":"NO_TOOL_CALL"},
+    {"id":"ho-011","category":"unsupported","input":"把我的积分换成话费","expected":"NO_TOOL_CALL"},
+    {"id":"ho-012","category":"unsupported","input":"帮我查看基金申购是否成交","expected":"NO_TOOL_CALL"},
+    {"id":"ho-013","category":"uninstalled","input":"给我看完整资产情况","expected":"NO_TOOL_CALL","installedCapabilities":["account.balance.query"]},
+    {"id":"ho-014","category":"uninstalled","input":"查这个账户当前还能用多少钱","expected":"NO_TOOL_CALL","installedCapabilities":["wealth.facts.describe"]},
+    {"id":"ho-015","category":"uninstalled","input":"汇总2026年7月收支","expected":"NO_TOOL_CALL","installedCapabilities":["finance.spending-analysis.query"]},
+    {"id":"ho-016","category":"uninstalled","input":"分析2026年7月消费类别","expected":"NO_TOOL_CALL","installedCapabilities":["finance.transaction-summary.query"]},
+    {"id":"ho-017","category":"uninstalled","input":"从 account-x 转35元给 beneficiary-y","expected":"NO_TOOL_CALL","installedCapabilities":["account.balance.query","wealth.facts.describe"]},
+    {"id":"ho-018","category":"cancel_or_change","input":"不要继续之前的转账，只查看余额","expected":"CALL_CAPABILITY","capabilityId":"account.balance.query"},
+    {"id":"ho-019","category":"multi_turn","input":"看看财富情况","expected":"NO_TOOL_CALL","turns":["看看财富情况","风险测评什么时候过期"],"turnExpectations":[{"expected":"CALL_CAPABILITY","capabilityId":"wealth.facts.describe"},{"expected":"NO_TOOL_CALL"}]},
+    {"id":"ho-020","category":"multi_turn","input":"我想转一笔钱","expected":"CALL_CAPABILITY","capabilityId":"transfer.internal.create","turns":["我想转一笔钱","从 account-x 转35元给已保存收款人 beneficiary-y"],"turnExpectations":[{"expected":"CLARIFY","responseMustContainAny":["账户","收款人","金额"]},{"expected":"CALL_CAPABILITY","capabilityId":"transfer.internal.create","expectedArguments":{"fromAccountId":"account-x","beneficiaryId":"beneficiary-y","amount":35}}]}
+  ]
+}

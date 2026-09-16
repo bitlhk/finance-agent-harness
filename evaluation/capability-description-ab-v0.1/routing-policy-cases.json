@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "finance-capability-description-ab-cases.v0.1",
+  "suiteId": "date-and-account-selection-policy-v0.1",
+  "reviewStatus": "ENGINEERING_PROVISIONAL_BUSINESS_OWNER_REVIEW_REQUIRED",
+  "notes": [
+    "可信业务日期固定为2026-09-15；明确年月直接使用，上个月解析为2026-08，仅月份且无可信年份上下文时澄清",
+    "用户未限定账户时不传accountId；规范accountId可以限定；自然语言别名或序号没有可信宿主映射时澄清",
+    "测试只使用受控Provider，银行传输计数必须为零"
+  ],
+  "cases": [
+    {"id":"policy-date-explicit","category":"date_policy","input":"汇总2026年7月收支","expected":"CALL_CAPABILITY","capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-07"}},
+    {"id":"policy-date-relative","category":"date_policy","input":"汇总上个月的收入支出和净现金流","expected":"CALL_CAPABILITY","capabilityId":"finance.transaction-summary.query","expectedArguments":{"period":"2026-08"}},
+    {"id":"policy-date-month-only","category":"date_policy","input":"汇总八月收支","expected":"CLARIFY","responseMustContainAny":["年份","年月","哪一年"]},
+    {"id":"policy-spending-month-only","category":"date_policy","input":"分析八月的钱花在哪","expected":"CLARIFY","responseMustContainAny":["年份","年月","哪一年"]},
+    {"id":"policy-account-all","category":"account_policy","input":"查一下我的可用余额","expected":"CALL_CAPABILITY","capabilityId":"account.balance.query","expectedArguments":{"_absent":["accountId"]}},
+    {"id":"policy-account-explicit","category":"account_policy","input":"查询acct-001账户的可用余额","expected":"CALL_CAPABILITY","capabilityId":"account.balance.query","expectedArguments":{"accountId":"acct-001"}},
+    {"id":"policy-account-alias","category":"account_policy","input":"查一下工资卡余额","expected":"CLARIFY","responseMustContainAny":["账户编号","accountId","账户ID","账户标识","哪个账户","哪一个账户","具体的账户"]},
+    {"id":"policy-account-ordinal","category":"account_policy","input":"第一张卡还有多少钱","expected":"CLARIFY","responseMustContainAny":["账户编号","accountId","哪个账户","哪一张卡","具体的账户","卡号"]},
+    {"id":"policy-account-generic","category":"account_policy","input":"余额还有多少","expected":"CALL_CAPABILITY","capabilityId":"account.balance.query","expectedArguments":{"_absent":["accountId"]}},
+    {"id":"policy-account-uninstalled","category":"account_policy","input":"查一下我的可用余额","expected":"NO_TOOL_CALL","installedCapabilities":["wealth.facts.describe"]}
+  ]
+}

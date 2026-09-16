@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "finance-terminology-pack.v0.1",
+  "assetId": "demo-bank-terminology-zh-cn",
+  "version": "0.1.0",
+  "institution": "受控模拟银行",
+  "terms": [
+    {"termId": "available-balance", "canonicalTerm": "可用余额", "aliases": ["卡里还有多少", "能用的钱"], "definition": "当前授权账户可用于支付或转出的余额，不等于客户总资产。", "scope": "账户查询", "supportStatus": "SUPPORTED", "capabilityIds": ["account.balance.query"], "sourceRef": "project-convention:account-balance-v0.1"},
+    {"termId": "monthly-cashflow", "canonicalTerm": "月度收支", "aliases": ["流水汇总", "收入支出"], "definition": "明确自然月内已覆盖账户的收入、支出和净现金流汇总。", "scope": "收支查询", "supportStatus": "SUPPORTED", "capabilityIds": ["finance.transaction-summary.query"], "sourceRef": "project-convention:cashflow-v0.1"},
+    {"termId": "spending-trend", "canonicalTerm": "支出趋势", "aliases": ["消费趋势", "钱花在哪"], "definition": "按分类及时间序列展示已覆盖账户支出，不构成欺诈判断。", "scope": "收支分析", "supportStatus": "SUPPORTED", "capabilityIds": ["finance.spending-analysis.query"], "sourceRef": "project-convention:cashflow-v0.1"},
+    {"termId": "wealth-overview", "canonicalTerm": "财富概览", "aliases": ["资产概览", "我的资产"], "definition": "描述来源已覆盖的资产事实、时点、风险测评状态和缺口，不等于家庭总资产。", "scope": "财富只读", "supportStatus": "SUPPORTED", "capabilityIds": ["wealth.facts.describe"], "sourceRef": "project-convention:wealth-facts-v0.1"},
+    {"termId": "internal-transfer", "canonicalTerm": "行内转账", "aliases": ["本行转账", "同行转账"], "definition": "向已保存收款人发起本行内部转账，办理仍需银行预检和可信确认。", "scope": "转账办理", "supportStatus": "SUPPORTED", "capabilityIds": ["transfer.internal.create"], "sourceRef": "project-convention:internal-transfer-v0.1"},
+    {"termId": "i-bean", "canonicalTerm": "i豆", "aliases": ["爱豆", "积分豆"], "definition": "机构专属积分名称；当前 Agent 未安装查询或兑换能力。", "scope": "机构积分", "supportStatus": "KNOWN_UNSUPPORTED", "capabilityIds": [], "sourceRef": "controlled-fixture:demo-bank-terms-v0.1"}
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "cashflow-routing-zh-cn",
+  "version": "0.1.0",
+  "packId": "cashflow-readonly",
+  "packVersion": "0.1.0",
+  "capabilities": [
+    {
+      "capabilityId": "finance.transaction-summary.query",
+      "useCases": ["按明确月份汇总已授权账户的收入、支出和净现金流"],
+      "outputBoundaries": ["返回指定月份的收入、支出和净现金流汇总，不返回当前账户余额、总资产或支出分类明细", "只给出月份且会话没有可信年份时先澄清；上个月等相对日期只根据宿主可信业务日期解析"],
+      "exampleUtterances": ["2026年8月收支多少", "查上个月总收入和总支出", "给我2026年八月份流水汇总"],
+      "negativeExamples": ["哪些类别花得最多", "查询账户当前余额", "替我创建预算"]
+    },
+    {
+      "capabilityId": "finance.spending-analysis.query",
+      "useCases": ["按明确月份分析已授权账户的支出分类和近六个月趋势"],
+      "outputBoundaries": ["返回支出分类和趋势，不返回当前余额、资产概览，也不判定欺诈", "只给出月份且会话没有可信年份时先澄清；上个月等相对日期只根据宿主可信业务日期解析"],
+      "exampleUtterances": ["分析2026年8月消费分类", "最近六个月支出趋势如何", "2026年八月份钱主要花在哪"],
+      "negativeExamples": ["只要本月收入支出总数", "判断这笔消费是不是诈骗", "替我转账"]
+    }
+  ]
+}
