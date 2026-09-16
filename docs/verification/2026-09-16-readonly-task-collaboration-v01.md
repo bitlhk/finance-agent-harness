@@ -2,8 +2,10 @@
 
 ## Result and fixed baseline
 
-- Harness: `d957f178abd56d5a2907eb20b62d8f2bc54f2b16`.
-- Builder: `004e9d4a2385eed7d2ff5b8c3ea10294561720c0`.
+- Harness implementation: `d957f178abd56d5a2907eb20b62d8f2bc54f2b16`; clean browser evidence
+  includes its documentation follow-up at `ee3a1d87530cb8e64a5ae5f556cd38a0d1c3c8c6`.
+- Builder: `f125de3936a57eb6dc588c142c7c1c1b9c8e9d58`, merged with upstream
+  `finance@fa783d9f` before final verification.
 - Runtime: OpenJiuwen Java `0.1.15` and Python `0.1.18` with the existing Java finance bridge.
 - Model acceptance: configured `deepseek-v4-flash`; synthetic local bank only.
 - Scope: transaction summary plus spending analysis. No Router SPI, planner, workflow engine,
@@ -83,14 +85,14 @@ Workbench produced and started a new Agent, the experience page ran five cases, 
 only that owned instance. All 20 checks passed. The final build report records both source worktrees as
 clean and all nine build stages as PASS.
 
-- Result: `/home/ubuntu/outputs/readonly-task-collaboration-v01-final/browser-workbench-clean/result.json`
-- Result SHA-256: `b92aac1418a3f79c32f2c3f251e4d8de2cdcbe9f92c8ce52228b59718b56bf51`
-- Service Lock SHA-256: `d0625071c527a6bc5af83df224a18b72bf835933c66f312490be79fe8daa2287`
+- Result: `/home/ubuntu/outputs/readonly-task-collaboration-v01-final/browser-workbench-latest-builder/result.json`
+- Result SHA-256: `4fcb01a8e972d2566b4084817b664fd3e46a710f4ca7ccfadb59bfeea6669606`
+- Service Lock SHA-256: `8102eb6fe4288bb14f4df7255c2ec40d4236a151bf9afa509b42db3d41010ebb`
 - Description catalog: `sha256:f1321af1553b9e62869ec17e4412e74d5bc546a19c46a60e73be5e3da2cdf2b8`
 - Terminology: `sha256:12af7c02914ad9e2c3b3f87fa182d3dd4892e682c73c5b9df57c4c0cba48bcc8`
 - Collaboration instruction: `sha256:04cab40897333cd90d705700906d80010ce5e3c6cde7b3cb65c3857698256fb5`
-- Desktop screenshot SHA-256: `2df8f7920b9af19efc2c0567709afc26862449c68bdc4f0db3987f123ef67a77`
-- Mobile screenshot SHA-256: `a3cf1705e850ee426f615fa6418d2568ca954aa9a05590cd73227961fd77b448`
+- Desktop screenshot SHA-256: `050a464ec821e85bd6d98a4630310c1ded1cb0a873dd8cea45785f1cd11a5817`
+- Mobile screenshot SHA-256: `633fa8018c3938b572947de25aa1d64ea041c5815adb848e76705100a6eb26a1`
 
 The simulator received no write request. These are real-model calls against synthetic bank facts, not
 real-bank or production-authorization acceptance.
@@ -114,7 +116,7 @@ planner from one callback or one missing duplicate call.
 
 - Harness `mvn -B -ntp verify`: 14 modules; 296 tests, 288 passed, 8 explicit real-environment Smokes
   skipped, 0 failures/errors.
-- Builder `pytest -q`: 992 passed, 1 skipped.
+- Builder `pytest -q` after merging current upstream `finance`: 1006 passed, 1 skipped.
 - Clean browser build: nine build stages PASS and 20 browser/runtime checks PASS.
 - Earlier direct generated-Python acceptance: 14 checks PASS; retained as a lower-level diagnostic,
   superseded for release evidence by the page-created clean Candidate above.
