@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Finance Harness · 离线开发指导</title>
+  <style>/* INLINE_STYLE */</style>
+</head>
+<body>
+  <a href="#main" class="skip-link">跳到正文</a>
+  <header class="topbar">
+    <button id="menu" class="icon-button mobile-only" title="打开文档目录" aria-label="打开文档目录" aria-controls="sidebar" aria-expanded="false">ICON_Menu</button>
+    <a id="brand" href="#" class="brand"><span class="brand-symbol">FH</span><span>Finance Harness<span class="brand-sub">开发指导</span></span></a>
+    <div class="top-actions"><span class="edition-tag">离线版 · 2026.09</span><button id="help" class="icon-button" title="阅读说明与交付边界" aria-label="阅读说明与交付边界">ICON_Info</button><button id="print" class="icon-button" title="打印当前文档" aria-label="打印当前文档">ICON_Printer</button></div>
+  </header>
+  <div id="shade" hidden></div>
+  <aside id="sidebar" aria-label="文档目录">
+    <div class="search-box"><span>ICON_Search</span><input id="search" type="search" placeholder="搜索标题、正文、接口名" aria-label="搜索全部文档"><button id="clear" class="icon-button" title="清除搜索" aria-label="清除搜索" hidden>ICON_X</button></div>
+    <label class="source-option"><input id="include-source" type="checkbox"> 包含源码与配置</label>
+    <p id="search-status" class="search-status" aria-live="polite"></p>
+    <nav id="navigation" aria-label="全部章节"></nav>
+    <div class="sidebar-footer"><strong>候选 V0.1 · 团队内部资料</strong><span id="edition-count"></span><span>代码基线 <code id="baseline"></code></span></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <div class="reading-grid">
+      <div class="document-column">
+        <div class="document-bar"><span id="category" class="category"></span><span id="read-time"></span></div>
+        <div id="notice" class="notice" hidden></div>
+        <div id="source-path" class="source-path"></div>
+        <details id="mobile-toc"><summary>本篇目录</summary><nav id="compact-toc" aria-label="本篇目录"></nav></details>
+        <article id="article"></article>
+        <footer class="doc-footer"><span id="doc-count"></span><a id="home-link" href="#">返回开发主册</a></footer>
+      </div>
+      <aside class="chapter-toc" aria-label="本页目录"><h2>本页目录</h2><nav id="toc"></nav><div class="toc-note">原报告保留历史口径。<br>构建通过、受控验证和<br>真实业务验收分别记录。</div></aside>
+    </div>
+  </main>
+  <dialog id="reference-dialog"><h2>这项资料未收录</h2><p>它可能是外部仓库文件或本机运行证据。离线包没有访问该路径；请向对应组件负责人索取。</p><pre id="reference-path"></pre><button id="close-dialog" class="command">关闭</button></dialog>
+  <noscript><div class="no-script">此阅读器需要浏览器启用 JavaScript。可改用包内 PDF 或 sources/ 中的 Markdown 原文。无需联网。</div></noscript>
+  <script type="application/json" id="book-data">BOOK_DATA</script>
+  <script>/* INLINE_SCRIPT */</script>
+</body>
+</html>

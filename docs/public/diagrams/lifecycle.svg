@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120" role="img" aria-labelledby="lifecycle-title lifecycle-desc">
+  <title id="lifecycle-title">一次金融只读工具调用与授权边界</title>
+  <desc id="lifecycle-desc">当前受管接线中，Runtime 金融工具调用 Harness Integrator/Bridge。Bridge 通过 FinanceProvider SPI 调用注入的 BoundFinanceProvider，包装器检查可信宿主提供的当前授权并委托具体 Provider，Provider 核验源身份并调用银行。结果沿原链返回，Bridge 转换并关联回执。每次模型请求前，Host 再检查当前授权。公共包装器不是 Core 调度引擎，内容检测不能替代业务授权。</desc>
+  <defs>
+    <marker id="run-call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#a52635"/></marker>
+    <marker id="run-return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#737a82" stroke-width="1.5"/></marker>
+  </defs>
+  <style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#292d32;font-size:18px;letter-spacing:0}.heading{font-size:24px;font-weight:700}.label{font-size:18px;font-weight:700;fill:#a52635}.small{font-size:16px;fill:#5d646c}.box{fill:#fff;stroke:#c9cdd2;stroke-width:1.5}.call{fill:none;stroke:#a52635;stroke-width:2;marker-end:url(#run-call)}.return{fill:none;stroke:#737a82;stroke-width:1.8;stroke-dasharray:7 5;marker-end:url(#run-return)}.context{fill:none;stroke:#a52635;stroke-width:2;stroke-dasharray:2 5;marker-end:url(#run-call)}.lifeline{stroke:#d3d7dc;stroke-width:1.5;stroke-dasharray:4 6}</style>
+  <rect width="1200" height="1120" fill="#fff"/>
+  <text x="24" y="36" class="heading">02 / 一次金融工具调用：执行归属、检查位置与结果返回</text>
+  <path d="M24 68H70" class="call"/><text x="84" y="74" class="small">调用 / 委托</text>
+  <path d="M278 68H324" class="return"/><text x="338" y="74" class="small">结果返回</text>
+  <path d="M520 68H566" class="context"/><text x="580" y="74" class="small">可信上下文供给</text>
+  <text x="828" y="74" class="small">当前受管只读链路；不表示独立服务</text>
+  <g id="trusted-host">
+    <rect x="24" y="108" width="1152" height="98" rx="4" fill="#fff5f6" stroke="#c7828b"/>
+    <text x="42" y="140" class="label">可信 Host：承载 Runtime 与 Integrator，管理登录、会话及模型连接</text>
+    <text x="42" y="170">从权威来源取得主体、客户、用途、有效期与当前实授；进入模型前检查，不能由模型参数或 Profile 增权</text>
+    <text x="42" y="195" class="small">参考宿主使用模拟银行身份与授权；这不等于真实银行 IAM 已验收。</text>
+  </g>
+  <path data-relation="context" data-from="trusted-host" data-to="bridge" d="M364 206V254" class="context"/><text x="266" y="237" class="small">Context</text>
+  <path data-relation="context" data-from="trusted-host" data-to="bound-provider" d="M600 206V254" class="context"/><text x="622" y="237" class="small">当前 Grant Supplier</text>
+  <g id="tool"><rect x="24" y="260" width="208" height="90" rx="4" class="box"/><text x="38" y="294" class="label">Runtime 金融工具</text><text x="38" y="326" class="small">已安装的原生工具</text></g>
+  <g id="bridge"><rect x="260" y="260" width="208" height="90" rx="4" class="box"/><text x="274" y="294" class="label">Integrator / Bridge</text><text x="274" y="326" class="small">Harness 提供，嵌入 Host</text></g>
+  <g id="bound-provider"><rect x="496" y="260" width="208" height="90" rx="4" fill="#fff5f6" stroke="#c7828b"/><text x="510" y="294" style="font-size:16px;font-weight:700;fill:#a52635">BoundFinanceProvider</text><text x="510" y="326" class="small">Core 中的公共检查包装器</text></g>
+  <g id="adapter"><rect x="732" y="260" width="208" height="90" rx="4" class="box"/><text x="746" y="294" class="label">具体 Provider</text><text x="746" y="326" class="small">源身份与协议／字段适配</text></g>
+  <g id="source-bank"><rect x="968" y="260" width="208" height="90" rx="4" class="box"/><text x="982" y="294" class="label">银行系统</text><text x="982" y="326" class="small">权威授权、事实与状态</text></g>
+  <path d="M128 350V941M364 350V941M600 350V898M836 350V830M1072 350V718" class="lifeline"/>
+  <path data-relation="call" data-from="tool" data-to="bridge" d="M128 399H358" class="call"/><text x="147" y="383" class="small">1. 调用已安装的金融能力</text>
+  <path data-relation="call" data-from="bridge" data-to="bound-provider" d="M364 447H594" class="call"/><text x="383" y="431" class="small">2. 通过 FinanceProvider SPI</text>
+  <rect x="506" y="474" width="420" height="79" rx="4" fill="#fff5f6" stroke="#c7828b"/><text x="522" y="504" class="label">检查：主体、客户、用途、会话、有效期、scopes</text><text x="522" y="536" class="small">同时核对能力与源身份；拒绝则不进入业务读取</text>
+  <path data-relation="call" data-from="bound-provider" data-to="adapter" d="M600 592H830" class="call"/><text x="614" y="576" class="small">3. 检查通过后委托查询</text>
+  <text x="852" y="624" class="small">校验实际源身份</text>
+  <path data-relation="call" data-from="adapter" data-to="source-bank" d="M836 665H1066" class="call"/><text x="850" y="650" class="small">4. 查询；银行保留业务授权</text>
+  <path data-relation="return" data-from="source-bank" data-to="adapter" d="M1072 718H842" class="return"/><text x="852" y="702" class="small">5. 事实 / 来源 / 业务状态</text>
+  <rect x="755" y="744" width="399" height="68" rx="4" class="box"/><text x="771" y="772">按能力进行确定性映射与字段投影</text><text x="771" y="798" class="small">保留币种、范围、时间和缺失；不臆造事实</text>
+  <path data-relation="return" data-from="adapter" data-to="bound-provider" data-contract="CapabilityResultV1" d="M836 834H606" class="return"/><text x="615" y="821" class="small">6. 统一业务结果</text>
+  <path data-relation="return" data-from="bound-provider" data-to="bridge" d="M600 879H370" class="return"/><text x="383" y="863" class="small">沿包装链返回业务结果</text>
+  <path data-relation="return" data-from="bridge" data-to="tool" d="M364 924H134" class="return"/><text x="147" y="908" class="small">7. 转换结果、关联执行回执</text>
+  <rect x="24" y="963" width="1152" height="88" rx="4" fill="#fff5f6" stroke="#c7828b"/>
+  <text x="42" y="995" class="label">每次模型请求前（含工具返回后）：Host 重查当前授权，获准结果才可进入模型和 UI</text>
+  <text x="42" y="1027">撤权则终止并清理会话；源请求已发出也不允许迟到结果进入后续模型请求。内容检测通过 ≠ 业务授权。</text>
+  <text x="24" y="1079" class="small">图示合并展示重复访问检查，不承诺每类核验只执行一次。身份核验请求与业务读取分别统计。</text>
+  <text x="24" y="1105" class="small">包装器不是 Core 调度引擎；财富链路可组合领域映射与内层源包装。办理的确认、幂等与 UNKNOWN 恢复另验。</text>
+</svg>

@@ -1,0 +1,12 @@
+{
+  "name": "finance-harness-offline-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "lucide": "0.453.0",
+    "marked": "18.0.11"
+  }
+}

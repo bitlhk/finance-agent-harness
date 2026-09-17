@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1152" viewBox="0 0 1600 1152" role="img" aria-labelledby="architecture-title architecture-desc">
+  <title id="architecture-title">Finance Harness 内部组件架构</title>
+  <desc id="architecture-desc">左侧主体展示 Integrator、四类可复用内容、Core 和 Provider。Harness 大框内右侧纵栏是覆盖各组件与内容的工程支撑，包括装配安装、测试评测。大框外最右侧 Builder 纵向覆盖 Agent 运行环境、Harness 内容和企业系统连接配置，表示跨层构建职责，不参与业务调用，也不接管企业系统。北向箭头从 Harness 上边界向上接 Runtime，南向箭头从下边界向下接企业系统，仅表示对外接入方向，不表示执行顺序。Contract 指领域业务数据合同。Builder 虚线为装配与验证集成，实际安装由生成 Host 初始化时调用 Assembler。</desc>
+  <defs>
+    <marker id="interface-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#a52635"/>
+    </marker>
+  </defs>
+  <style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#292d32;font-size:18px;letter-spacing:0}.title{font-size:28px;font-weight:700}.heading{font-size:22px;font-weight:700}.label{font-size:18px;font-weight:700;fill:#a52635}.small{font-size:15px;fill:#5d646c}.note{font-size:14px;fill:#60666d}.box{fill:#fff;stroke:#d0d3d7;stroke-width:1.5}.interface{fill:none;stroke:#a52635;stroke-width:2.5}.assembly{fill:none;stroke:#8c9198;stroke-width:1.5;stroke-dasharray:6 5}</style>
+  <rect width="1600" height="1152" fill="#fff"/>
+  <text x="24" y="38" class="title">Finance Harness · 内部组件架构</text>
+  <text x="24" y="68" class="small">主体组件 · 框内工程支撑 · 框外跨层构建</text>
+
+  <g id="agent-environment" data-owner="host">
+    <rect x="24" y="92" width="1260" height="102" rx="4" class="box"/>
+    <text x="46" y="125" class="heading">Agent 应用 / 可信宿主 / 通用 Runtime</text>
+    <text x="46" y="154">手机银行 · 员工岗位 · 其他金融 Agent</text>
+    <text x="46" y="181" class="note">当前接入：OpenJiuwen Java 0.1.13；其他 Runtime、EA TypeScript Host 接线待适配。</text>
+  </g>
+  <polyline data-relation="interface" data-from="finance-harness" data-to="agent-environment" points="500,246 500,194" class="interface" marker-end="url(#interface-arrow)"/>
+  <text x="520" y="226" class="label">北向 · Runtime 接入</text>
+
+  <g id="finance-harness" data-view="component-ownership">
+    <rect id="suite-boundary" x="24" y="246" width="1260" height="718" rx="6" fill="#fff" stroke="#a52635" stroke-width="2.5"/>
+    <text x="48" y="280" class="title" style="fill:#a52635">Finance Harness</text>
+    <text x="48" y="306" class="small">嵌入式接入套件 + 版本化金融资产</text>
+
+    <g id="integrator" data-owner="harness" data-deployment="host">
+      <rect x="48" y="326" width="904" height="90" rx="4" fill="#f1f3f5" stroke="#c6cbd1"/>
+      <text x="68" y="355" class="heading">Integrator｜北向运行时接入</text>
+      <text x="68" y="384">工具注册 · 可信上下文接入 · 结果转换 · 确认与恢复接线</text>
+      <text x="68" y="406" class="note">由 Harness 提供，嵌入 Agent 宿主运行。</text>
+    </g>
+
+    <g id="key-assets">
+      <text x="48" y="447" class="heading">四类可复用内容</text>
+      <text x="252" y="447" class="small">方法 · 能力 · 角色 · 数据含义</text>
+      <g id="domain-pack" data-kind="asset">
+        <rect x="48" y="464" width="214" height="190" rx="4" fill="#f8f9fa" stroke="#d0d3d7"/>
+        <text x="64" y="494" class="label">专业工作方法</text>
+        <text x="64" y="522" style="font-size:17px">如何完成任务</text>
+        <text x="64" y="551" class="small">Domain Pack / Skill</text>
+        <text x="64" y="587" class="note">由 Integrator 装入</text>
+        <text x="64" y="610" class="note">Runtime 方法正文</text>
+      </g>
+      <g id="capability-pack" data-kind="asset">
+        <rect x="278" y="464" width="214" height="190" rx="4" fill="#f8f9fa" stroke="#d0d3d7"/>
+        <text x="294" y="494" class="label">业务能力与工具</text>
+        <text x="294" y="522" style="font-size:17px">能做什么、如何调用</text>
+        <text x="294" y="551" class="small">Capability Pack</text>
+        <text x="294" y="587" class="note">由 Assembler /</text>
+        <text x="294" y="610" class="note">Integrator 注册工具</text>
+        <text x="294" y="641" class="note">required ≠ granted</text>
+      </g>
+      <g id="profile" data-kind="asset">
+        <rect x="508" y="464" width="214" height="190" rx="4" fill="#f8f9fa" stroke="#d0d3d7"/>
+        <text x="524" y="494" class="label">使用角色与范围</text>
+        <text x="524" y="522" style="font-size:17px">为谁、为何使用</text>
+        <text x="524" y="551" class="small">Profile</text>
+        <text x="524" y="587" class="note">由宿主与检查／投影</text>
+        <text x="524" y="610" class="note">代码落实</text>
+        <text x="524" y="641" class="note">标签不授予权限</text>
+      </g>
+      <g id="domain-contract" data-kind="asset">
+        <rect x="738" y="464" width="214" height="190" rx="4" fill="#f8f9fa" stroke="#d0d3d7"/>
+        <text x="754" y="494" class="label">统一业务数据定义</text>
+        <text x="754" y="522" style="font-size:17px">数据具体代表什么</text>
+        <text x="754" y="551" class="small">Contract</text>
+        <text x="754" y="587" class="note">供 Provider 映射与</text>
+        <text x="754" y="610" class="note">下游消费者使用</text>
+        <text x="754" y="641" class="note">补充通用请求／结果外壳</text>
+      </g>
+    </g>
+
+    <g id="asset-foundation-relation">
+      <rect x="48" y="670" width="904" height="50" rx="3" fill="#f5f6f7"/>
+      <text x="68" y="691" style="font-size:16px">专业方法、能力声明、使用边界与业务语义，共同建立在统一调用合同和公共执行约束之上。</text>
+      <text x="68" y="712" class="small">由各自的安装、检查、映射与消费代码落实。</text>
+    </g>
+
+    <g id="core" data-role="shared-foundation">
+      <rect x="48" y="736" width="904" height="90" rx="4" fill="#fff5f6" stroke="#a52635" stroke-width="1.5"/>
+      <text x="68" y="765" class="heading" style="fill:#a52635">Core｜公共合同与执行基础</text>
+      <text x="68" y="793">公共合同 · Provider SPI · 公共访问检查 · 请求与结果表达 · 基础执行回执</text>
+      <text x="68" y="816" class="small">Integrator 与 Provider 依赖 Core；领域公共合同补充业务数据表达。</text>
+    </g>
+
+    <g id="provider" data-owner="harness">
+      <rect x="48" y="842" width="904" height="98" rx="4" fill="#f1f3f5" stroke="#c6cbd1"/>
+      <text x="68" y="873" class="heading">Provider Adapter｜南向企业适配</text>
+      <text x="68" y="902">源身份绑定 · 字段映射 · 源系统协议与业务状态适配</text>
+      <text x="68" y="927" class="small">Harness 提供参考实现，支持客户扩展。</text>
+    </g>
+
+    <g id="assembly-support" data-role="support" data-scope="suite">
+      <line id="support-divider" x1="974" y1="326" x2="974" y2="940" stroke="#d0d3d7"/>
+      <rect id="support-boundary" x="992" y="326" width="268" height="614" rx="4" fill="#f5f6f7"/>
+      <text x="1012" y="361" class="heading">套件工程支撑</text>
+      <text x="1012" y="389" class="small">覆盖左侧组件与内容</text>
+
+      <g id="installation-support" data-phase="initialization">
+        <rect x="1008" y="430" width="236" height="192" rx="4" class="box"/>
+        <text x="1028" y="461" class="label">装配与安装</text>
+        <text x="1028" y="489" class="small">Assembler</text>
+        <text x="1028" y="522" class="small">核验依赖</text>
+        <text x="1028" y="547" class="small">安装方法与工具</text>
+        <text x="1028" y="572" class="small">记录安装 Lock</text>
+        <text x="1028" y="604" class="note">Host 安装／初始化时</text>
+      </g>
+      <g id="verification-support" data-phase="verification">
+        <rect x="1008" y="646" width="236" height="148" rx="4" class="box"/>
+        <text x="1028" y="677" class="label">测试与评测</text>
+        <text x="1028" y="705" class="small">Conformance / Eval</text>
+        <text x="1028" y="734" class="small">合同 · 执行边界 · 专业质量</text>
+        <text x="1028" y="777" class="note">开发 · 测试 · 验收 · 回归</text>
+      </g>
+      <text x="1012" y="840" class="note">生成 Host 初始化时</text>
+      <text x="1012" y="863" class="note">调用 Assembler 安装</text>
+      <text x="1012" y="911" class="note">工程支撑不属于业务调用链</text>
+    </g>
+  </g>
+
+  <g id="builder" data-owner="external" data-scope="cross-layer-build">
+    <rect id="builder-boundary" x="1320" y="92" width="256" height="1028" rx="4" fill="#f5f6f7" stroke="#c6cbd1" stroke-width="1.5"/>
+    <text x="1340" y="129" class="heading">Builder</text>
+    <text x="1340" y="158" class="small">跨层构建与配置</text>
+    <line x1="1340" y1="184" x2="1556" y2="184" stroke="#d0d3d7"/>
+
+    <text x="1340" y="265" class="label">选择 Agent 运行环境</text>
+    <text x="1340" y="295" class="small">Runtime · 模型 · 应用模板</text>
+    <text x="1340" y="322" class="small">宿主与连接配置</text>
+
+    <text x="1340" y="491" class="label">组合 Harness 内容</text>
+    <text x="1340" y="521" class="small">选择方法与能力包</text>
+    <text x="1340" y="548" class="small">引用适用 Profile</text>
+    <text x="1340" y="575" class="small">校验合同与版本兼容性</text>
+
+    <text x="1340" y="740" class="label">生成金融 Agent</text>
+    <text x="1340" y="770" class="small">Host · 依赖 · 配置</text>
+    <text x="1340" y="797" class="small">构建记录与制品摘要</text>
+    <text x="1340" y="826" class="note">装配与验证集成</text>
+
+    <text x="1340" y="1003" class="label">绑定企业系统</text>
+    <text x="1340" y="1033" class="small">Provider / 连接配置</text>
+    <text x="1340" y="1060" class="note">不生成或接管企业系统</text>
+    <line x1="1340" y1="1078" x2="1556" y2="1078" stroke="#d0d3d7"/>
+    <text x="1340" y="1102" class="note">不参与每次金融工具调用</text>
+  </g>
+  <path data-relation="assembly" data-from="builder" data-to="assembly-support" aria-label="装配与验证集成" d="M1320 826H1260" class="assembly"/>
+
+  <polyline data-relation="interface" data-from="finance-harness" data-to="enterprise-systems" points="500,964 500,1016" class="interface" marker-end="url(#interface-arrow)"/>
+  <text x="520" y="994" class="label">南向 · 企业适配</text>
+  <g id="enterprise-systems" data-owner="enterprise">
+    <rect x="24" y="1016" width="1260" height="104" rx="4" class="box"/>
+    <text x="46" y="1049" class="heading">企业 IT / 数据服务 / 身份授权与业务系统</text>
+    <text x="46" y="1078">CRM · ERP · 数据平台 · 身份与权限服务 · 业务系统接口</text>
+    <text x="46" y="1105" class="note">企业保留身份、授权与业务终态权威；列示系统类别不代表全部已接通。</text>
+  </g>
+  <text x="24" y="1144" class="note">南北向箭头仅表示套件对外接入方向，不表示执行顺序；虚线为装配与验证集成，Builder 跨层表示构建配置覆盖面。</text>
+</svg>
