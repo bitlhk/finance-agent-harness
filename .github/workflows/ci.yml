@@ -14,6 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  public-developer-guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: engineering/offline-docs/package-lock.json
+      - name: Install public guide renderer
+        run: npm ci --prefix engineering/offline-docs
+      - name: Verify public guide content and diagrams
+        run: node --test engineering/offline-docs/test-public-content.mjs engineering/offline-docs/public-link-policy.test.mjs engineering/offline-docs/test-public-diagrams.mjs
+      - name: Build public guide
+        run: node engineering/offline-docs/build-public.mjs "$RUNNER_TEMP/public-guide"
   offline-contracts-and-java:
     strategy:
       fail-fast: false
