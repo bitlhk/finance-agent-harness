@@ -41,7 +41,7 @@ test('all repository paths used by the new walkthrough exist on this baseline', 
 test('development handoff distinguishes declarations, execution and new test evidence', () => {
   for (const text of ['16. 从看懂资产到开发一个新特性', '不是完整正文依赖分析',
     '后续金融新特性统一交付卡', '不允许目标测试缺失被当通过', 'ServiceLoader 发现不等于目录准入',
-    '尚不代表真人已独立完成', 'Builder PR #179 候选实现']) assert.ok(source.includes(text), text);
+    '尚不代表真人已独立完成', 'Builder PR #179 等待主线合入']) assert.ok(source.includes(text), text);
 });
 
 test('guide keeps package admission and runtime authorization separate', () => {
