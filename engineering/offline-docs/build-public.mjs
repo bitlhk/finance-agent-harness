@@ -42,8 +42,8 @@ renderer.table = function(token) { return `<div class="table-scroll" tabindex="0
 const content = marked.parse(text, { renderer, gfm: true });
 const chapterCount = headings.filter(h => h.depth === 2).length;
 const id = 'public/developer-guide.md';
-const guideVersion = 'V1.0';
-const guideDate = '2026-09-17';
+const guideVersion = 'V1.1';
+const guideDate = '2026-09-19';
 const book = { title: 'Finance Harness 开发指导 · 公开版', date: guideDate, mainId: id, prefaceId: id,
   baseline: guideVersion, builderSha: null, documentCount: 1, sourceCount: 0,
   pages: [{ id, title: 'Finance Harness 开发指导', path: '公开开发版 · 架构、沉淀粒度与自助接入', repo: 'edition',

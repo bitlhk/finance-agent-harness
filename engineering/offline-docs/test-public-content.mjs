@@ -10,7 +10,7 @@ const source = fs.readFileSync(path.join(root, 'docs/public/developer-guide.md')
 const headings = marked.lexer(source).filter(token => token.type === 'heading' && token.depth === 2);
 
 test('public guide has concrete paths from upload to a newly installed Agent', () => {
-  assert.equal(headings.length, 16);
+  assert.equal(headings.length, 17);
   for (const text of [
     '0. 从哪条路径开始', '7. 路径 A', '14. 上传一个组件包',
     '15. 怎样让 Agent 准确使用你的能力', '导入组件包',
@@ -29,7 +29,19 @@ test('all repository paths used by the new walkthrough exist on this baseline', 
     'routing/capability-descriptions/cashflow-readonly.v0.1.json',
     'routing/terminology/demo-bank-zh-cn.v0.1.json',
     'evaluation/capability-description-ab-v0.1/README.md',
+    'domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md',
+    'capability-packs/cashflow-readonly/assembly.v0.1.json',
+    'providers/non-ai-banking/src/main/java/io/github/bitlhk/finance/harness/providers/nonaibanking/NonAiBankingFactoryV01.java',
+    'providers/non-ai-banking/src/main/resources/META-INF/services/io.github.bitlhk.finance.harness.core.spi.ManagedProviderFactoryV01',
+    'providers/non-ai-banking/src/test/java/io/github/bitlhk/finance/harness/providers/nonaibanking/CashflowProviderTest.java',
+    'providers/non-ai-banking/src/test/java/io/github/bitlhk/finance/harness/providers/nonaibanking/NonAiBankingFactoryTest.java',
   ]) assert.ok(fs.statSync(path.join(root, relative)).isFile(), relative);
+});
+
+test('development handoff distinguishes declarations, execution and new test evidence', () => {
+  for (const text of ['16. 从看懂资产到开发一个新特性', '不是完整正文依赖分析',
+    '后续金融新特性统一交付卡', '不允许目标测试缺失被当通过', 'ServiceLoader 发现不等于目录准入',
+    '尚不代表真人已独立完成', 'Builder PR #179 候选实现']) assert.ok(source.includes(text), text);
 });
 
 test('guide keeps package admission and runtime authorization separate', () => {

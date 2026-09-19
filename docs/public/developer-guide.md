@@ -1,12 +1,14 @@
 # Finance Harness 开发指导
 
-**公开开发版 V1.0 · 接入套件候选 V0.1 · 2026-09-17**
+**公开开发版 V1.1 · 接入套件候选 V0.1 · 2026-09-19**
 
 本版从开发者的第一步出发：使用已有能力、上传专业方法、交付新来源或新能力，再验证新 Agent 是否真的安装并使用它们。创建入口仍按场景模板、模板内业务模块、底层框架组织。26 个模块是来源目录，不代表已全部实现。文档版本不表示新的 SDK 或业务验收版本。
 
 面向场景作者、银行适配开发者、Builder 开发者与接入团队。指南版本升级不代表 SDK 或业务成熟度升级。本指南公开设计、扩展方法和自测入口，不包含私仓源码附录、部署配置、凭据或客户数据。
 
 第一次使用先看第 0 章；架构看第 1 至 4 章；上传与发布看第 14 章；接企业来源看第 8、9 章；让 Agent 正确选择能力看第 15 章。运行代码需要维护者提供获授权的仓库或开发包，阅读指南本身不需要登录。
+
+本轮新增第 16 章：从资产组成定位 Skill、工具、合同、Provider、验证和 Trace，按统一交付卡开发新特性。文件浏览对应 Builder PR #179 候选实现，尚未作为线上已发布功能承诺；没有该入口的环境仍可按相同文件与命令在开发包操作。
 
 ## 0. 从哪条路径开始
 
@@ -423,7 +425,7 @@ customer-extension/
 
 有两种接入入口，最终使用同样的安装与运行机制，不要求所有开发者先接 Builder：
 
-- **代码接入：** Host 依赖 SDK，构造受管 Provider 并接入可信身份，调用 Assembler 核验安装，然后启动会话、执行查询验证。第 7 章教程采用这一方式。
+- **代码接入：** Host 依赖 SDK，构造受管 Provider 并接入可信身份，调用 Assembler 核验安装，然后启动会话、执行查询验证。第 10 章提供已有离线入口，第 7 章是工作台方法定制路径。
 - **Builder 接入：** 选择模板与资产、配置身份来源与 Provider，生成 Host 工程和制品；生成的 Host 在初始化时调用 Assembler，再走相同的会话与查询验证路径。
 
 | 接线位置 | 必须完成 | 不能代替它的东西 |
@@ -629,3 +631,98 @@ PYTHONPATH=src:../base/src python engineering/verify_business_package_publish.py
 例如用户说“汇总上月收支，再看主要花在哪”：两个目标可以分别由收支汇总和支出分类的同月份证据满足。已有仍有效证据可以复用，不机械要求两次新调用；月份变更则旧月份证据不能充当新月份结果。能力缺失、来源不可用或参数不明时，应说明未完成部分或澄清，不让模型补造事实。当前“逐目标核对”是只读模型指导与评测断言，**不是运行时强制完成检查器**；新增场景须用未参与调优的案例重复验证，必要时再评审薄检查机制。
 
 不要把“增强描述改善部分工具选择”写成“意图理解已解决”。提交新资产时记录：安装清单、目录及摘要、正反例、实际 Provider 调用、最终答案、运行未完成和错误办理尝试。实授权限、冻结参数、确认、查证与恢复继续由执行链路落实，任何问法或高置信判断都不能跳过。
+
+## 16. 从看懂资产到开发一个新特性
+
+### 16.1 Skill 和 Harness 扩展有什么区别
+
+Skill 本身可以指导 Agent 调用工具，也可以附带资料和脚本。Harness 的增量不是“让 Skill 能调用工具”，而是把工具的安装、身份授权、参数与结果合同、确认恢复、观测及验证做成可复用接线。写在 Skill 中的“只查本人”“转账前确认”不是强制执行代码。
+
+开发一个 Harness 业务组件，通常只新增必要的资产、适配和案例，不是复制 Core，也不是每次建立一个新 Maven 模块。
+
+| 内容 | 由谁消费 | 开发者修改什么 | 不能误认为 |
+| --- | --- | --- | --- |
+| Skill / SOP | Runtime 经现有方法接线加载 | 任务步骤、工具引用、输出与案例 | 模型必然遵循、安全检查已执行 |
+| Capability / Tool | Assembler、Integrator | 标识、输入、QUERY/TASK、所需 scopes、依赖 | 声明就是接口实现，required 就是 granted |
+| Contract | Provider、消费者、合同检查 | 单位、口径、精度、缺失和状态语义 | 通用结果外壳定义了所有业务字段 |
+| Provider | 经 SPI 注入的受管执行链 | 源身份、接口协议、映射与源状态 | 上传 Skill 就能安装执行代码 |
+| 验证资产 | 测试及评测入口 | 新案例、预期、注册位置和命令 | 目录准入或旧测试通过等于新能力通过 |
+| Trace / 观测 | 已接线宿主、Integrator、观测 Sink | 业务名称、来源操作及必要阶段 | 回调发生就证明网络已发送或业务成功 |
+
+### 16.2 三个页签怎样读
+
+候选版资产详情提供“组成与文件”“工具与依赖”“验证与使用”。前者回答**有什么、改哪里**；中间回答**方法如何关联到执行实现**；后者回答**怎样验证并用于新 Agent**。
+
+包内文件必须与当前发布版下载 ZIP 一致；另一个包的文件是引用资产，Provider Maven 坐标是执行制品声明，验证报告属于生成记录。它们不能画成同一目录中的伪文件。引用不可读时只显示准确版本和缺口。发布包不能用最新草稿替代，引用源码应注明解析到的提交；该源码引用不能证明某次旧 Agent 实际安装了它。
+
+Skill 的 `allowed-tools` 用于声明对照，不是完整正文依赖分析。未声明或未解析的工具需要开发者补充核验；仅在本组件绑定中找不到，不足以证明其他依赖包也没有。页面不因此宣称可执行。
+
+同一个包可以被多个 Agent 使用。安装 Lock 和 Trace 属于具体实例与请求，不是包固有的一份文件。查看使用记录不重新执行金融业务。
+
+### 16.3 收支分析的真实文件地图
+
+以下路径在本指南开发基线存在；以取得的固定提交为准。它们是已有参考，不要求所有新组件沿用同一业务目录名。
+
+| 职责 | 仓内实际文件 | 修改后检查 |
+| --- | --- | --- |
+| 方法正文 | `domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md` | 工具引用、月份规则、缺口输出和新案例 |
+| 方法版本与依赖 | `domain-packs/cashflow/customer-self-service/pack.yaml` | 方法版本、能力引用与目录一致 |
+| 两项只读工具及内联输入 | `capability-packs/cashflow-readonly/pack.yaml` | 收支汇总与支出分类不可互相替代 |
+| 装配要求 | `capability-packs/cashflow-readonly/assembly.v0.1.json` | Runtime、Provider 与兼容条件 |
+| 通用结果外壳 | `contracts/json-schema/capability/capability-result.v1.schema.json` | 结果和错误状态；不能代替领域合同 |
+| 业务结构与消费 | `packages/java/cashflow` | 金额、统计范围、来源和信息缺口 |
+| 企业接线与映射 | `providers/non-ai-banking` | 源身份、接口政策、映射及 HTTP 观测 |
+| 语义样例 | `conformance/fixtures/cashflow` | 正常、精度、月份、缺数和冲突 |
+
+先做一个小练习：保留 Provider 和两项能力，将方法改为“收支信息缺口核验”，新增一个分类来源不可用的案例。输出须区分已取得的汇总与未完成的分类，不能默认填零或声称全部完成。更新方法版本与引用，走第 7、14 章流程。证明新方法与新案例参与了运行，再核对旧功能没有退化。
+
+### 16.4 Provider 接口、注册与 Trace 接线
+
+在获授权源码中定位以下入口；页面可提供相同固定提交的源码引用，私仓读取权限需单独申请：
+
+- `packages/java/core/src/main/java/io/github/bitlhk/finance/harness/core/spi/FinanceProvider.java`：`query` 和 `executeTask` 接收 `CapabilityRequestV1`，返回 `CapabilityResultV1`。不支持的办理明确拒绝，不返回默认成功。
+- 同目录 `ManagedProviderFactoryV01.java`、`ManagedProviderFactoriesV01.java`：受管理的构造和发现协议。参考 `providers/non-ai-banking` 下的 `NonAiBankingFactoryV01.java` 与 `src/main/resources/META-INF/services/io.github.bitlhk.finance.harness.core.spi.ManagedProviderFactoryV01`。ServiceLoader 发现不等于目录准入，也不授予权限。
+- 同目录 `BoundFinanceProvider.java`：公共当前授权检查。Provider 仍需校验本次请求与实际源身份的对应，宿主模型前撤权检查也不能省略。
+- `packages/java/core/src/main/java/io/github/bitlhk/finance/harness/core/observation/ObservedFinanceProvider.java`、`ObservationSink.java`：公共调用观测与接收接口。源码存在不代表任意宿主已接线。
+- Provider 中的 `ReferenceObservationLabels.java`：参考操作标识、业务名称、HTTP 方法与路由模板；新接口由新 Provider 声明，不改前端业务分支。
+
+顺序：明确企业接口合同 → 实现并测试 Provider → 工厂注册与制品构建 → 维护者核验目录和兼容要求 → Skill 绑定所需能力 → 构建新 Agent → 核对安装和调用。
+
+工具调用、授权、版本和基础耗时复用公共机制；企业 HTTP 尝试、特殊业务阶段和来源含义需要适配。不能用静态清单声称观测完整。验证尝试、发送实证、拒绝、异常、业务结果及记录缺失；正文采集权限与历史查看权限分开。禁止密钥、无必要客户原文和隐藏思考；观测失败不能改写已经完成的业务结果。
+
+### 16.5 从一个参考测试开始，再验证自己的修改
+
+在第 10 章规定的隔离环境和 Harness 仓根目录运行现有参考：
+
+```bash
+mvn -B -ntp -pl providers/non-ai-banking -am -Dtest=CashflowProviderTest,NonAiBankingFactoryTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+核对 `providers/non-ai-banking/target/surefire-reports/` 中这两个测试类实际执行且数量非零。命令允许依赖模块没有匹配测试，**不允许目标测试缺失被当通过**。
+
+然后在实际 Provider 模块添加自己的测试类，并把定向命令中的测试名换成新增类。命令中仅有旧类就不能证明新特性已验证。新增字段应有正常、缺失和非法值；新来源补身份、授权、坏响应；新办理补确认、冻结、查证和恢复。临时故意破坏映射，确认新增测试失败，再恢复自己的改动并重跑。最后执行第 10 章全量基线。
+
+观测回归参考 `packages/java/core/src/test/java/io/github/bitlhk/finance/harness/core/ObservedFinanceProviderTest.java` 和 `integrations/openjiuwen-java/src/test/java/io/github/bitlhk/finance/harness/integrations/openjiuwen/OpenJiuwenObservationAdapterTest.java`。新增来源阶段仍需专属断言，不能用公共测试代替。
+
+### 16.6 后续金融新特性统一交付卡
+
+每项新特性按下面模板提交，允许“不适用”但必须解释，不强迫所有特性都新增全部文件。
+
+| 项目 | 开发者填写及验收要求 |
+| --- | --- |
+| 用户任务与边界 | 为谁完成什么；明确不做什么 |
+| 复用与新增 | 组合、改 Skill、换 Provider、新能力，或新的执行协议；说明原因 |
+| 文件与版本 | 每个真实文件／外部引用／制品的职责、维护人、版本和摘要 |
+| 输入输出依据 | 接口版本、单位、口径、时间、缺失和冲突；Owner 确认状态 |
+| 执行与权限 | QUERY/TASK、当前支持的协议、可信身份及实授路径，不能由包授予权限 |
+| 验证入口 | 新测试路径、命令、实际执行数、正反例及故意破坏后的失败证据 |
+| 观测责任 | 自动复用哪些公共事件；哪些来源阶段需补；无法观测什么 |
+| 准入与使用 | 制品怎样受管安装、目录怎样注册、使用哪个固定包版本创建 Agent |
+| 兼容和回滚 | 旧 Agent 不升级、旧记录不改写；新版本回退方式 |
+| 独立接入记录 | 首次成本、平台修复后重试成本、人工求助、环境等待；真人实填 |
+
+验收区分：文件可读、包准入、安装成功、受控业务通过、真实授权验证、专业质量及独立开发者接入。不要压成一个总 PASS。
+
+相同协议的新特性原则上只新增资产、适配和案例，不修改 Builder 核心或通用页面；新审批协议、Runtime、知识或护栏接线需要单独评审真实扩展点，不能机械包装为业务工具。先记录当前参考实现限制，再决定是否扩公共机制。
+
+完成标准不是“上传成功”，而是下一位开发者能从固定版本复跑、完成一次自己的修改，取得新的验证和安装证据。当前自动测试与候选浏览器检查只是技术预验收，尚不代表真人已独立完成。
