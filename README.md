@@ -1,9 +1,11 @@
 # Finance Agent Harness
 
+开发从这里开始：[当前架构](docs/current-architecture.md) · [开发指导 V1.2](docs/public/developer-guide.md) · [文档索引](docs/INDEX.md)。以下早期切片与验收记录保留各自基线，不作为当前完整功能表。
+
 [收支只读切片 V0.1](docs/cashflow-readonly-v01.md)：基于固定手机银行/模拟器合同，
 新增两个只读事实能力与一个方法包，复用 Core 和 Runtime；业务口径与真实接入单独验收。
 
-干净 Runtime 的下一步交付见 [Builder 只读参考模板与验收边界](docs/integration-acceptance/clean-runtime-builder-v01.md)：
+干净 Runtime 的早期参考交付见 [Builder 只读参考模板与验收边界](docs/integration-acceptance/clean-runtime-builder-v01.md)：
 Builder 独立生成，金融规则继续消费 Harness 制品；受控运行与真实授权/完整手机银行分别验收。
 
 Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
@@ -15,7 +17,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 
 > Integration 接 Agent Runtime，Provider Adapter 接银行系统。
 
-## 当前状态
+## 状态与早期验收记录
 
 `Reusable Financial Agent Kit V0.1 Candidate · Controlled Runtime Validation · Live Authorization Pending`
 
@@ -25,7 +27,7 @@ Finance Agent Harness 是金融 Agent 的能力接入与验证底座。
 覆盖保险身份绑定、恢复精度、空值补参、财富来源缺口、Runtime 版本核验和受控请求白名单。
 受控验证与真实授权验收继续分别报告。
 
-下一阶段使用[财富只读双线验收](docs/wealth-readonly-acceptance-v01.md)：真实授权只读与
+长期保留[财富只读双线验收](docs/wealth-readonly-acceptance-v01.md)：真实授权只读与
 [非原作者独立接入](docs/onboarding-wealth-v01.md)分别验收。`engineering/run_onboarding.py`
 复跑现有受控门禁并记录步骤/耗时，不自动认证真实授权、人工接入或 Provider 替换。
 
@@ -38,7 +40,15 @@ V1 按两个连续阶段推进：
 1. 手机银行作为首个 Java 消费者，接入 `non-ai-banking` 参考业务环境；
 2. 从 Employee Agent 提取财富 Skill、SOP 和评测案例，验证同一 Harness 能支撑财富专业能力。
 
-## V1 架构
+## 当前架构与开发入口
+
+- [当前架构、组件边界与支持范围](docs/current-architecture.md)：以固定实现基线解释 Packager、Builder、Assembler 和 Java/Python 接线。
+- [开发指导 V1.2](docs/public/developer-guide.md)：三个入口、真实依赖图规则、方法定制发布教程、安装与运行证据。
+- [文档索引与发布规则](docs/INDEX.md)：区分当前入口、教程固定基线与历史设计；公开 HTML/PDF 从同一正文生成。
+
+以下为最初 Java V1 的实现切片，不能替代上述当前范围。
+
+## V1 架构（历史切片）
 
 ```text
 Mobile Banking                 Wealth Manager Agent
@@ -131,7 +141,7 @@ OpenJiuwen Java Bridge 已作为独立 Maven 模块交付。手机银行通过�
 - [本轮执行记录与外部验收清单](docs/financial-agent-kit-v01-worklog.md)
 - [V0.1 分项验证报告](docs/verification/2026-09-06-financial-agent-kit-v01.md)
 - [共同财富事实候选 ADR](docs/adr/0008-common-wealth-facts-candidate.md)
-- [简化版总体架构](docs/finance-agent-harness-architecture-v1.md)
+- [简化版总体架构（2026-09-01 历史设计）](docs/finance-agent-harness-architecture-v1.md)
 - [V1 范围与快速路线](docs/v1-scope-and-roadmap.md)
 - [V1 演示故事](docs/v1-demo-story.md)
 - [手机银行 V1 映射](docs/mobile-banking-v1-mapping.md)
@@ -185,4 +195,4 @@ Java V1 可通过 `mvn install` 安装到本机 Maven 仓库。当前以 Maven �
 - 不重做知识平台、模型网关和通用安全平台；
 - 不全量迁移手机银行或 Employee Agent。
 
-V1 只为外部 Builder 提供一个最小构建输入、已验证资产引用和 OpenJiuwen Java 薄装配入口。长期设计仍保留 Profile、多 Runtime、跨语言 Conformance 和持续改进方向，但不作为 V1 开工前置条件。
+最初 V1 仅提供最小构建输入与 OpenJiuwen Java 薄装配入口。此句描述历史开工范围，不是当前支持矩阵；外部 Builder、组件打包及 Python 加 Java 金融桥已另有受控实现和固定版本验收，详见当前架构入口。其他 Runtime 不能据此视为已接入。

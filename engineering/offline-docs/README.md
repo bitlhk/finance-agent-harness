@@ -1,7 +1,9 @@
 # Public developer guide
 
-`docs/public/developer-guide.md` is the reviewed public source. The two SVGs in
-`docs/public/diagrams/` are embedded into the self-contained HTML and PDF. Do
+`docs/public/developer-guide.md` is the reviewed public source; `edition.json`
+beside it fixes the version, date and implementation baseline. Three SVGs in
+`docs/public/diagrams/` and two reviewed actual UI screenshots in
+`docs/public/screenshots/` are embedded into the self-contained HTML and PDF. Do
 not publish an internal source archive or a private configuration alongside it.
 
 From the repository root:
@@ -18,6 +20,11 @@ sizes, offline resources, diagrams and navigation, then writes `handbook.pdf`.
 The reviewed publishable files are `index.html` and `handbook.pdf`; the manifest,
 screenshots and verification JSON are release evidence. Run the same verifier
 against the anonymous live URL after switching the versioned public release.
+
+The manifest records the Git source commit, dirty flag, and content/image
+hashes. Publish only from a clean, fixed commit after review; do not edit the
+deployed HTML independently. Source commit and implementation commit are
+different: a documentation release does not upgrade the running SDK or Host.
 
 The internal guide is a separate authenticated asset. This repository does not
 build it, and publication must not point its route at the public guide output.

@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
 import { icons } from 'lucide';
 import { createHash } from 'node:crypto';
-import { diagramCss, diagramPaths, readDiagram, renderPublicDiagram } from './public-diagrams.mjs';
+import { execFileSync } from 'node:child_process';
+import { diagramCss, diagramPaths, readDiagram, renderPublicDiagram, screenshotPaths, readScreenshot, renderPublicScreenshot } from './public-diagrams.mjs';
 import { isSafePublicText, reviewedPublicLinks } from './public-link-policy.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -12,6 +13,11 @@ const root = path.resolve(here, '../..');
 const output = path.resolve(process.argv[2]);
 fs.mkdirSync(output, { recursive: false });
 const text = fs.readFileSync(path.join(root, 'docs/public/developer-guide.md'), 'utf8');
+const edition = JSON.parse(fs.readFileSync(path.join(root, 'docs/public/edition.json'), 'utf8'));
+const guideVersion = edition.version;
+const guideDate = edition.date;
+if (!/^V\d+\.\d+$/.test(guideVersion) || !/^\d{4}-\d{2}-\d{2}$/.test(guideDate)
+    || !text.includes(`公开开发版 ${guideVersion} · 接入套件候选 V0.1 · ${guideDate}`)) throw new Error('Edition and source heading disagree');
 if (!isSafePublicText(text)) throw new Error('Public guide contains an unreviewed URL/address/path or secret-like text');
 const escape = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const headings = [];
@@ -23,7 +29,7 @@ renderer.link = function(token) {
     ? `<a href="${escape(token.href)}" target="_blank" rel="noopener noreferrer">${label}</a>` : label;
 };
 renderer.image = token => {
-  const figure = renderPublicDiagram('docs/public/developer-guide.md', token.href, token.text);
+  const figure = renderPublicDiagram(edition.source, token.href, token.text) || renderPublicScreenshot(edition.source, token.href, token.text);
   if (!figure) throw new Error('Public guide references an unreviewed image');
   return figure;
 };
@@ -42,8 +48,6 @@ renderer.table = function(token) { return `<div class="table-scroll" tabindex="0
 const content = marked.parse(text, { renderer, gfm: true });
 const chapterCount = headings.filter(h => h.depth === 2).length;
 const id = 'public/developer-guide.md';
-const guideVersion = 'V1.1';
-const guideDate = '2026-09-19';
 const book = { title: 'Finance Harness 开发指导 · 公开版', date: guideDate, mainId: id, prefaceId: id,
   baseline: guideVersion, builderSha: null, documentCount: 1, sourceCount: 0,
   pages: [{ id, title: 'Finance Harness 开发指导', path: '公开开发版 · 架构、沉淀粒度与自助接入', repo: 'edition',
@@ -78,5 +82,11 @@ document.querySelectorAll('.sidebar-chapters a').forEach(link => link.addEventLi
   .replace(/ICON_([A-Za-z]+)/g, (_, name) => icon(name));
 fs.writeFileSync(path.join(output, 'index.html'), html);
 fs.writeFileSync(path.join(output, 'print-guide.html'), `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Finance Harness 公开开发指导</title><style>${fs.readFileSync(path.join(here, 'reader.css'),'utf8')}${diagramCss}@media print{body{font-size:9.5pt;line-height:1.65}pre{break-inside:avoid-page}.file-caption{break-after:avoid-page}}</style><body class="print-edition"><p class="print-kicker">FINANCE HARNESS / 公开开发版 ${guideVersion} / ${guideDate}</p>${content}</body></html>`);
-fs.writeFileSync(path.join(output, 'manifest.json'), JSON.stringify({ audience: 'PUBLIC_REDACTED', guideVersion: guideVersion.slice(1), chapterCount, source: 'docs/public/developer-guide.md', sourceSha256: createHash('sha256').update(text).digest('hex'), diagrams: diagramPaths.map(p => { const { text, ...meta } = readDiagram(p); return meta; }), htmlSha256: createHash('sha256').update(html).digest('hex'), exclusions: ['private source references', 'internal deployment details', 'historic validation reports', 'credentials and live configuration'] }, null, 2));
+fs.writeFileSync(path.join(output, 'manifest.json'), JSON.stringify({ audience: 'PUBLIC_REDACTED', guideVersion: guideVersion.slice(1), chapterCount,
+  source: edition.source, sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], {cwd:root,encoding:'utf8'}).trim(),
+  sourceDirty: Boolean(execFileSync('git', ['status', '--porcelain'], {cwd:root,encoding:'utf8'}).trim()), implementationBaseline: edition,
+  sourceSha256: createHash('sha256').update(text).digest('hex'),
+  diagrams: diagramPaths.map(p => { const { text, ...meta } = readDiagram(p); return meta; }),
+  screenshots: screenshotPaths.map(p => { const { bytes, ...meta } = readScreenshot(p); return meta; }),
+  htmlSha256: createHash('sha256').update(html).digest('hex'), exclusions: ['private source appendices', 'internal deployment details', 'historic validation reports', 'credentials and live configuration'] }, null, 2));
 console.log(JSON.stringify({ output, chapters: headings.filter(h=>h.depth===2).length, bytes: Buffer.byteLength(html) }));

@@ -2,12 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
-import { diagramPaths, readDiagram } from './public-diagrams.mjs';
+import { diagramPaths, readDiagram, screenshotPaths } from './public-diagrams.mjs';
 import { isSafePublicText, reviewedPublicLinks } from './public-link-policy.mjs';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const [directory, liveUrl] = process.argv.slice(2);
 const output = path.resolve(directory);
+const edition = JSON.parse(fs.readFileSync(new URL('../../docs/public/edition.json', import.meta.url), 'utf8'));
 const url = liveUrl || pathToFileURL(path.join(output, 'index.html')).href;
 const evidence = { mode: liveUrl ? 'ANONYMOUS_PUBLIC_READER' : 'LOCAL_PUBLIC_READER', checks: [], errors: [], extraRequests: [] };
 const check = (name, passed) => { assert.ok(passed, name); evidence.checks.push(name); };
@@ -18,7 +19,7 @@ try {
   const page = await context.newPage();
   page.on('pageerror', error => evidence.errors.push(error.message));
   page.on('request', request => {
-    if (request.resourceType() !== 'document' && !request.url().startsWith('data:image/svg+xml;base64,')) evidence.extraRequests.push(request.url());
+    if (request.resourceType() !== 'document' && !/^data:image\/(svg\+xml|png);base64,/.test(request.url())) evidence.extraRequests.push(request.url());
   });
   for (const [name, width, height] of [['desktop',1440,1000], ['tablet',820,1000], ['mobile',390,844], ['narrow',320,740]]) {
     await page.setViewportSize({ width, height });
@@ -32,7 +33,10 @@ try {
     check(`${name}:only_four_reviewed_external_links`, externalLinks.length === 4 && externalLinks.every(link => reviewedPublicLinks.has(link.href) && link.rel.includes('noreferrer')));
     check(`${name}:page_fits`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     check(`${name}:seventeen_chapters`, await page.locator('.sidebar-chapters a').count() === 17);
-    check(`${name}:two_embedded_diagrams`, await page.locator('img.harness-diagram').count() === 2);
+    check(`${name}:three_embedded_diagrams`, await page.locator('img.harness-diagram').count() === diagramPaths.length);
+    check(`${name}:edition_matches`, book.baseline === edition.version && book.date === edition.date);
+    check(`${name}:real_ui_screenshots`, await page.locator('img.harness-screenshot').count() === screenshotPaths.length);
+    check(`${name}:screenshots_render`, await page.locator('img.harness-screenshot').evaluateAll(images => images.every(img => img.complete && img.naturalWidth >= 1280 && img.alt)));
     check(`${name}:diagrams_render`, await page.locator('img.harness-diagram').evaluateAll(images => images.every(img => img.complete && img.naturalWidth > 1000 && img.getBoundingClientRect().height > 100 && img.alt)));
     check(`${name}:granularity_and_self_test_guidance`, ['沉淀粒度', 'Profile', 'Integrator', 'Provider', 'run-controlled.sh', 'verify_wealth_kit.py', '独立接入'].every(term => book.pages[0].text.includes(term)));
     check(`${name}:internal_link_separate`, await page.locator('.internal-guide').getAttribute('href') === '/developer-guide/internal/');
@@ -52,6 +56,8 @@ try {
     check(`${name}:development_navigation`, book.pages[0].text.includes('后续金融新特性统一交付卡'));
     check(`${name}:development_no_overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: path.join(output, `${liveUrl ? 'live-' : ''}${name}-development.png`) });
+    await page.locator('[data-screenshot="cashflow-relations"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(output, `${liveUrl ? 'live-' : ''}${name}-relationships.png`) });
     await page.locator('.harness-figure').first().scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, `${liveUrl ? 'live-' : ''}${name}-architecture.png`) });
     if (width <= 880) {
@@ -68,12 +74,12 @@ try {
       await diagramPage.setContent(`<style>body{margin:0}</style>${text}`);
       await diagramPage.evaluate(() => document.fonts.ready);
       const overflow = await diagramPage.locator('svg').evaluate(svg => {
-        const { width, height } = svg.viewBox.baseVal;
+        const bounds = svg.getBoundingClientRect();
         return [...svg.querySelectorAll('text')].filter(text => {
-          const b = text.getBBox();
-          const x = Number(text.getAttribute('x')); const y = Number(text.getAttribute('y'));
-          const containers = [...svg.querySelectorAll('rect')].map(r => r.getBBox()).filter(r => x >= r.x && x < r.x + r.width && y > r.y && y <= r.y + r.height).sort((a,b) => a.width*a.height - b.width*b.height);
-          const parent = containers[0] || { x:0, y:0, width, height };
+          const b = text.getBoundingClientRect();
+          const {x,y} = new DOMPoint(Number(text.getAttribute('x')), Number(text.getAttribute('y'))).matrixTransform(text.getScreenCTM());
+          const containers = [...svg.querySelectorAll('rect')].map(r => r.getBoundingClientRect()).filter(r => x >= r.x && x < r.x + r.width && y > r.y && y <= r.y + r.height).sort((a,b) => a.width*a.height - b.width*b.height);
+          const parent = containers[0] || bounds;
           return b.x < parent.x || b.x + b.width > parent.x + parent.width || b.y < parent.y || b.y + b.height > parent.y + parent.height;
         }).map(t => t.textContent);
       });
@@ -88,7 +94,7 @@ try {
     check('print:diagrams_fit', await page.locator('.harness-diagram').evaluateAll(images => images.every(img => img.getBoundingClientRect().width <= document.documentElement.clientWidth)));
     await page.pdf({ path: path.join(output, 'handbook.pdf'), preferCSSPageSize: true, printBackground: true,
       displayHeaderFooter: true, headerTemplate: '<span></span>',
-      footerTemplate: '<div style="width:100%;font-size:9px;color:#777;text-align:center">Finance Harness · 公开开发版 V1.1 · <span class="pageNumber"></span> / <span class="totalPages"></span></div>' });
+      footerTemplate: `<div style="width:100%;font-size:9px;color:#777;text-align:center">Finance Harness · 公开开发版 ${edition.version} · <span class="pageNumber"></span> / <span class="totalPages"></span></div>` });
   }
   fs.writeFileSync(path.join(output, `${liveUrl ? 'live-' : ''}verification.json`), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify({ mode: evidence.mode, checks: evidence.checks.length, errors: evidence.errors, extraRequests: evidence.extraRequests }));
