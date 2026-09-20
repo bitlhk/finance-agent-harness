@@ -112,13 +112,21 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             try (var installed = call.run.start(call.parent, "host", "installation", Map.of())) {
                 installed.finish(Outcome.RETURNED, Map.of());
             }
+            var terminated = new AtomicBoolean();
             return agent.call(input.text(), context)
                     .map(message -> {
                         call.requireAuthorized("host-delivery");
                         return new Reply(message.getTextContent(), input.requestId(), identity.generation(), List.copyOf(call.executions), call.run.droppedEvents(), call.diagnosticFailures.get());
                     })
-                    .doOnError(failure -> invalidate()).doOnCancel(this::invalidate)
-                    .doFinally(signal -> { clearIfInvalid(); busy.set(false); }).contextWrite(ctx -> ctx.put(Invocation.class, call));
+                    // Release before delivering a terminal signal: downstream may start the next turn inline.
+                    .doOnSuccess(reply -> { if (terminated.compareAndSet(false, true)) busy.set(false); })
+                    .doOnError(failure -> {
+                        if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
+                    })
+                    .doOnCancel(() -> {
+                        if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
+                    })
+                    .doFinally(signal -> clearIfInvalid()).contextWrite(ctx -> ctx.put(Invocation.class, call));
         });
     }
     public void invalidate() {

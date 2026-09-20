@@ -92,6 +92,17 @@ class AgentScopeQueryTest {
         assertTrue(h.bank.requests.stream().noneMatch(row -> row.get("uri").toString().contains("spending-analysis")));
         assertEquals(0, second.droppedObservationEvents());
     }
+    @Test @Tag("multi-turn") void completedReplyAllowsImmediateReactiveContinuation() throws Exception {
+        var h = harness(text("First response."), text("Second response."), text("Third response."));
+        var reply = h.session.invoke(h.input("First turn."))
+                .flatMap(first -> h.session.invoke(h.input("Second turn.")))
+                .flatMap(second -> h.session.invoke(h.input("Third turn.")))
+                .block(Duration.ofSeconds(20));
+        assertEquals("Third response.", reply.text());
+        assertEquals(3, h.model.requests.size());
+        assertEquals(0, h.bank.customerReads());
+        assertTrue(h.session.valid());
+    }
     @RepeatedTest(3) @Tag("missing-data") void missingAnalysisRemainsFailedNotZero() throws Exception {
         var h = harness(tool("finance_transaction_summary", Map.of("period", "2026-08")),
                 tool("finance_spending_analysis", Map.of("period", "2026-08")), text("Summary retained; analysis unavailable."));
