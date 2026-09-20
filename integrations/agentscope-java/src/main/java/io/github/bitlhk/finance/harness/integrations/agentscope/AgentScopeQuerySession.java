@@ -95,7 +95,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         installationLock = prepared.lock(agent.getToolkit().getToolNames());
     }
     private static ExecutionConfig execution(Duration timeout) { return ExecutionConfig.builder().maxAttempts(1).timeout(timeout).build(); }
-    private static GenerateOptions options(Duration timeout) { return GenerateOptions.builder().stream(false).temperature(0.0).executionConfig(execution(timeout)).build(); }
+    private static GenerateOptions options(Duration timeout) { return GenerateOptions.builder().endpointPath("/chat/completions")
+            .stream(false).temperature(0.0).executionConfig(execution(timeout)).build(); }
     public Set<String> installedTools() { return Set.copyOf(agent.getToolkit().getToolNames()); }
     public Map<String, Object> lock() { return installationLock; }
     public boolean valid() { return valid.get(); }

@@ -21,6 +21,7 @@ class AgentScopeQueryTest {
     static final Path REFERENCE = ROOT.resolve("integrations/agentscope-java/reference");
     static final String RUN = System.getProperty("agentscope.evidenceRun", UUID.randomUUID().toString());
     final List<Harness> harnesses = new ArrayList<>();
+    final List<DescribedFinanceProvider> previewProviders = new ArrayList<>();
     @RegisterExtension final TestWatcher evidence = new TestWatcher() {
         public void testSuccessful(ExtensionContext c) { write(c, "PASS", ""); }
         public void testFailed(ExtensionContext c, Throwable cause) { write(c, "FAIL", cause.toString()); }
@@ -34,12 +35,32 @@ class AgentScopeQueryTest {
                 Files.write(directory.resolve(c.getRequiredTestMethod().getName() + "-" + UUID.randomUUID() + ".json"),
                         HarnessJson.mapper().writerWithDefaultPrettyPrinter().writeValueAsBytes(Map.of("test", c.getDisplayName(),
                                 "testMethod", c.getRequiredTestMethod().getName(), "checkIds", c.getTags(), "status", status, "failure", failure, "sessions", rows,
-                                "runtimeArtifacts", harnesses.isEmpty() ? List.of() : RuntimeInventory.inspect(List.of(harnesses.getFirst().provider)))));
+                                "runtimeArtifacts", RuntimeInventory.inspect(harnesses.isEmpty() ? previewProviders : List.of(harnesses.getFirst().provider)))));
             } catch (Exception failureToWrite) { throw new AssertionError(failureToWrite); }
         }
     };
     @AfterEach void cleanup() { harnesses.forEach(Harness::close); }
     Harness harness(Response... responses) throws Exception { var h = new Harness(responses); harnesses.add(h); return h; }
+
+    @Test @Tag("host-plan-api") void preparedMetadataDoesNotInvokeRuntimeOrLoseOriginalDefinitions() throws Exception {
+        var sourceCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var provider = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(java.net.URI.create("http://127.0.0.1:1"),
+                Duration.ofSeconds(1), () -> { sourceCalls.incrementAndGet(); throw new AssertionError("PREVIEW_MUST_NOT_REQUEST_IDENTITY"); }));
+        previewProviders.add(provider);
+        var prepared = prepare(provider, testAuthority(provider));
+        var first = HarnessJson.mapper().valueToTree(prepared.snapshot());
+        assertEquals(first, HarnessJson.mapper().valueToTree(prepared.snapshot()));
+        assertEquals("VALIDATED_NOT_RUNTIME_REGISTERED", first.path("status").asText());
+        assertEquals("agentscope", first.path("bridgeRuntime").path("family").asText());
+        assertEquals(3, first.path("capabilities").size());
+        assertEquals("cashflow-customer-self-service", first.path("methods").get(0).path("packId").asText());
+        assertEquals(3, prepared.displayMetadata().capabilities().size());
+        assertThrows(UnsupportedOperationException.class, () -> prepared.snapshot().put("status", "REGISTERED"));
+        assertEquals(0, sourceCalls.get());
+        assertEquals(HarnessJson.mapper().valueToTree(prepared.assets()), first.path("assets"));
+        assertThrows(IllegalArgumentException.class, () -> new AgentScopeQueryAssembler().prepare(REFERENCE, ROOT,
+                REFERENCE.resolve("solution.json"), REFERENCE.resolve("support.json"), Map.of(provider.descriptor().providerId(), provider), testAuthority(provider)));
+    }
 
     @Test @Tag("native-query") void nativeBalanceJsonAndReceipt() throws Exception {
         var h = harness(tool("account_balance_query", Map.of()), text("Balance 12345.67 CNY from controlled source."));
@@ -53,6 +74,17 @@ class AgentScopeQueryTest {
         assertEquals(Set.of("account_balance_query", "finance_transaction_summary", "finance_spending_analysis"), h.session.installedTools());
         assertFalse(sent.path("stream").asBoolean()); assertNotNull(reply.executions().getFirst().receipt());
         assertParents(h);
+    }
+    @Test @Tag("managed-model-endpoint") void managedRootEndpointDoesNotAcquireImplicitVersionPath() throws Exception {
+        var h = harness(text("Explicit managed endpoint."));
+        h.session.close();
+        h.session = h.prepared.openSession(new AgentScopeQuerySession.Identity(h.principal, FinanceContextV1.PrincipalType.CUSTOMER,
+                h.subject, h.sessionId, "customer-self-service", "isolated", FinanceContextV1.AuthenticationLevel.STRONG, 2), h.grant::get,
+                new ModelConnection(h.model.uri().resolve("/"), "controlled", "fixture-key", Duration.ofSeconds(10)));
+        assertEquals("Explicit managed endpoint.", h.call("Hello.").text());
+        assertEquals(1, h.model.requests.size());
+        assertEquals("/chat/completions", h.model.requests.getFirst().get("uri"));
+        assertEquals(0, h.bank.customerReads());
     }
     @RepeatedTest(3) @Tag("compound") void compoundOriginalProviderAndMethod() throws Exception {
         var h = harness(tool("finance_transaction_summary", Map.of("period", "2026-08")),

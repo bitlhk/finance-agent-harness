@@ -64,8 +64,17 @@ public final class AgentScopeQueryAssembler {
 
     public Prepared prepare(Path root, Path solution, Path supportFile, Map<String, DescribedFinanceProvider> providers,
                             RuntimeQualification qualification) throws IOException {
+        return prepare(root, root, solution, supportFile, providers, qualification);
+    }
+
+    /** Candidate control files and repo-relative assets have separate, explicitly bounded roots. */
+    public Prepared prepare(Path candidateRoot, Path root, Path solution, Path supportFile,
+                            Map<String, DescribedFinanceProvider> providers, RuntimeQualification qualification) throws IOException {
         Objects.requireNonNull(qualification, "Host-pinned runtime qualification is required");
-        SolutionSpec spec = YAML.readValue(bounded(root, solution), SolutionSpec.class);
+        if (Files.isSymbolicLink(root) || !Files.isDirectory(root)
+                || !root.toRealPath().startsWith(candidateRoot.toRealPath()))
+            throw new IllegalArgumentException("ASSET_ROOT_OUTSIDE_CANDIDATE");
+        SolutionSpec spec = YAML.readValue(bounded(candidateRoot, solution), SolutionSpec.class);
         if (!"finance-agent-solution-build.v1".equals(spec.schemaVersion()) || spec.solutionId() == null
                 || spec.solutionId().isBlank() || spec.runtime() == null
                 || !"agentscope".equals(spec.runtime().family()) || !"java".equals(spec.runtime().language())
@@ -76,10 +85,10 @@ public final class AgentScopeQueryAssembler {
             if (!Map.of("templateRef", spec.runtime().templateRef(), "integrationRef", spec.runtime().integrationRef()).equals(spec.runtime().resolvedArtifacts()))
                 throw new IllegalArgumentException("AGENTSCOPE_RESOLVED_REFERENCE_MISMATCH");
         }
-        Support support = HarnessJson.mapper().readValue(bounded(root, supportFile), Support.class);
+        Support support = HarnessJson.mapper().readValue(bounded(candidateRoot, supportFile), Support.class);
         List<LockedAsset> assets = new ArrayList<>();
-        assets.add(new LockedAsset("SOLUTION", spec.solutionId(), "1", relative(root, solution), AssetDigests.sha256(solution)));
-        assets.add(new LockedAsset("SUPPORT_PROFILE", "agentscope-query-single", "0.1", relative(root, supportFile), AssetDigests.sha256(supportFile)));
+        assets.add(new LockedAsset("SOLUTION", spec.solutionId(), "1", relative(candidateRoot, solution), AssetDigests.sha256(solution)));
+        assets.add(new LockedAsset("SUPPORT_PROFILE", "agentscope-query-single", "0.1", relative(candidateRoot, supportFile), AssetDigests.sha256(supportFile)));
         List<FinanceCapabilityPackV1> packs = new ArrayList<>();
         Set<String> packIds = new HashSet<>();
         Map<String, FinanceCapabilityPackV1.Capability> capabilities = new LinkedHashMap<>();
@@ -277,6 +286,42 @@ public final class AgentScopeQueryAssembler {
         public Set<String> capabilityIds() { return bindings.keySet(); }
         public ObservationAssessmentV01 observationAssessment() { return assessment; }
         public List<LockedAsset> assets() { return assets; }
+        /** Read-only installation evidence; no Agent, grant or model connection is created. */
+        public Map<String, Object> snapshot() {
+            List<Map<String, Object>> capabilities = new ArrayList<>();
+            for (var pack : packs) for (var capability : pack.capabilities()) {
+                var provider = bindings.get(capability.capabilityId()).provider().descriptor();
+                capabilities.add(Map.of("packId", pack.packId(), "packVersion", pack.version(),
+                        "definition", capability, "providerId", provider.providerId(), "providerVersion", provider.version()));
+            }
+            var value = new LinkedHashMap<String, Object>();
+            value.put("schemaVersion", "finance-installation-plan.v0.2");
+            value.put("solutionId", spec.solutionId());
+            value.put("status", "VALIDATED_NOT_RUNTIME_REGISTERED");
+            value.put("bridgeRuntime", spec.runtime());
+            value.put("assets", assets);
+            value.put("capabilities", List.copyOf(capabilities));
+            value.put("methods", domains.stream().map(d -> Map.of("packId", d.pack().packId(),
+                    "version", d.pack().version(), "capabilities", d.pack().capabilities(), "skills", d.skills())).toList());
+            value.put("capabilityPrompts", packs.stream().map(FinanceCapabilityPackV1::systemPrompt).toList());
+            value.put("capabilityDescriptions", catalog.snapshot());
+            value.put("observationAssessment", assessment);
+            return Collections.unmodifiableMap(value);
+        }
+        public io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01 displayMetadata() {
+            var labels = new ArrayList<io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.CapabilityLabel>();
+            var sources = new TreeMap<String, io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.SourceLabel>();
+            for (var pack : packs) for (var capability : pack.capabilities()) {
+                labels.add(new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.CapabilityLabel(
+                        capability.capabilityId(), pack.packId(), pack.version(), capability.name()));
+                for (var source : bindings.get(capability.capabilityId()).provider().observationLabels()) {
+                    var previous = sources.putIfAbsent(source.providerId(), source);
+                    if (previous != null && !previous.equals(source)) throw new IllegalStateException("AMBIGUOUS_SOURCE_DISPLAY");
+                }
+            }
+            return new io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01(
+                    io.github.bitlhk.finance.harness.core.observation.ObservationDisplayV01.VERSION, labels, new ArrayList<>(sources.values()));
+        }
         public AgentScopeQuerySession openSession(AgentScopeQuerySession.Identity identity,
                 java.util.function.Supplier<BoundFinanceProvider.Grant> grants, ModelConnection connection) {
             if (!profile.principalTypes().contains(identity.principalType()) || !profile.purposes().contains(identity.purpose()))
