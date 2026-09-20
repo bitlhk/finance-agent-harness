@@ -6,13 +6,13 @@ No push, deployment, root catalog publication or Builder modification.
 ## Fixed Controlled Artifact
 
 Final output on this verification machine:
-`/home/ubuntu/outputs/agentscope-onboarding-v01/formal-final-1`.
+`/home/ubuntu/finance-harness-agentscope-query/target/agentscope-fixed-final-2`.
 This is an immutable run directory, not the portable script's required location.
 
 ```bash
 FH_MAVEN_REPO=/home/ubuntu/outputs/agentscope-onboarding-v01/m2-agentscope \
   bash integrations/agentscope-java/isolatedHost/verify.sh \
-  /home/ubuntu/outputs/agentscope-onboarding-v01/formal-final-1
+  "$PWD/target/agentscope-fixed-final-2"
 ```
 
 Result: 30 tests, zero failures/errors/skips. Qualification checks actual packaged classes
@@ -23,10 +23,10 @@ Provider dependencies and no Builder service classes.
 
 - Raw controlled suite: 69 model HTTP requests, 63 bank HTTP requests including direct
   Provider comparisons. See `qualification/summary.json`, `qualification/raw/`, and `raw/`.
-- Separate packaged CLI balance check: 2 model HTTP requests, 1 bank customer read.
+- Two separate JVM packaged CLI balance checks: each 2 model HTTP requests, 1 bank customer read.
   See `controlled-host/model-http.json`, `bank-http.json`, `result.json` and `observations.json`.
 - Qualification: `qualification/agentscope-observation-qualification.json`.
-- Pinned digest: `sha256:596fe691671c26aa83f05e8fdc443954a5c17689e8f725c0e888611f0742c9e1`.
+- Pinned digest: `sha256:edd5c3d69f42a89ecaa28a54ec067a75354d7dc70e52326c220b0b2ffaca7d4b`.
 - Installation and assessment: `controlled-host/solution-lock.json` and
   `controlled-host/observation-assessment.json`. Reads do not regenerate the installation date.
 - Native multi-tool executions have unique child Harness request IDs and native tool IDs,
@@ -79,6 +79,12 @@ Earlier logs `agentscope-formal-test-run-1/2/3.log` under `/tmp` and archived ra
 were incorrect test API names, incompatible networknt ABI, and comparing independently sampled
 `observedAt` as if identical. The later declaration-refactor compile failure is retained in
 `formal-declared-packaged-run-1/maven.log`. None was renamed to PASS or erased.
+The earlier `formal-final-1` artifact is superseded: a default-output replay exposed
+noncanonical Map ordering in cross-JVM qualification identity hashing. The identity now
+uses sorted map keys, has an independent canonical-byte unit assertion, and passes two
+separate JVM CLI runs. The failed replay is retained at
+`target/agentscope-probe-20260920T124011Z`. The script also cleans only module targets,
+not the parent target containing the default private Maven cache and run output.
 
 Real managed model evaluation is NOT RUN by this workstream. Use the same isolated CLI and
 `isolatedHost/live-driver.mjs`; runtime completion is explicitly not an evaluation pass. The

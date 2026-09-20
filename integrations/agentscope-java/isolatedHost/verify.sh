@@ -8,7 +8,11 @@ run="$(realpath -m "$run")"
 test ! -e "$run"
 mkdir -p "$run/raw" "$run/lib" "$run/host-classes"
 cd "$root"
-mvn -B -Dmaven.repo.local="$repo" -pl integrations/agentscope-java -am clean install \
+# The parent target holds the default private cache/output and must survive clean.
+mvn -B -Dmaven.repo.local="$repo" \
+  -pl :finance-harness-core,:finance-harness-assembly,:finance-harness-cashflow,:finance-provider-non-ai-banking,:finance-harness-agentscope-java \
+  clean -l "$run/clean.log"
+mvn -B -Dmaven.repo.local="$repo" -pl integrations/agentscope-java -am install \
   -Dagentscope.evidenceDirectory="$run/raw" -l "$run/maven.log"
 mvn -B -Dmaven.repo.local="$repo" -pl integrations/agentscope-java dependency:copy-dependencies \
   -DincludeScope=test -DexcludeGroupIds=org.junit.jupiter,org.junit.platform,org.opentest4j,org.apiguardian \
@@ -24,5 +28,7 @@ java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.i
 digest="$(tr -d '\n' < "$run/qualification/qualification.sha256")"
 java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.IsolatedHost controlled "$root" \
   "$run/qualification/agentscope-observation-qualification.json" "$digest" "$run/controlled-host"
+java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.IsolatedHost controlled "$root" \
+  "$run/qualification/agentscope-observation-qualification.json" "$digest" "$run/controlled-host-second-jvm"
 printf '%s\n' "$classpath" > "$run/classpath.txt"
 printf 'Controlled qualification and isolated Host passed: %s\n' "$run"

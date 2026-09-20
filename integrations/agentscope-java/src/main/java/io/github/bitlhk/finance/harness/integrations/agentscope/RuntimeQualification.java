@@ -79,7 +79,8 @@ public final class RuntimeQualification {
     }
     public static String identity(List<RuntimeInventory.Artifact> artifacts, String collectorDigest) {
         try {
-            byte[] bytes = HarnessJson.mapper().writeValueAsBytes(Map.of("collectorDeclaration", collectorDigest, "artifacts", comparable(artifacts)));
+            byte[] bytes = HarnessJson.mapper().enable(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+                    .writeValueAsBytes(Map.of("collectorDeclaration", collectorDigest, "artifacts", comparable(artifacts)));
             return "sha256:" + HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (IOException | java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }

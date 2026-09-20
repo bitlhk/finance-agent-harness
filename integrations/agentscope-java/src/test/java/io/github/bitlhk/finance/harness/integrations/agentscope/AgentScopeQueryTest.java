@@ -261,6 +261,12 @@ class AgentScopeQueryTest {
         Path dir = Files.createTempDirectory(ROOT.resolve("integrations/agentscope-java/target"), "qualification-negative-");
         var artifacts = RuntimeInventory.inspect(List.of(h.provider));
         var collector = AgentScopeObservationCollector.declaration(true);
+        var canonical = new TreeMap<String, Object>();
+        var components = new TreeMap<String, String>();
+        for (var artifact : artifacts) components.put(artifact.role(), artifact.coordinate() + "|" + artifact.version() + "|" + artifact.digest());
+        canonical.put("artifacts", components); canonical.put("collectorDeclaration", collector.identityDigest());
+        var bytes = HarnessJson.mapper().writeValueAsBytes(canonical);
+        assertEquals("sha256:" + HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)), RuntimeQualification.identity(artifacts, collector.identityDigest()));
         var checks = new ArrayList<RuntimeQualification.Check>();
         // Synthetic parser fixtures are deliberately not the evidence emitted for final qualification.
         for (String id : RuntimeQualification.REQUIRED_CHECKS) {
