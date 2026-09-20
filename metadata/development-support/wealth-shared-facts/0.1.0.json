@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "domain-pack", "id": "wealth-shared-facts", "version": "0.1.1",
+    "source": "repo://domain-packs/wealth/shared-facts",
+    "digest": "sha256:64f15fece3987512b2ffcb1478002393fa5916f7db16d0055076031cb3f89f5e"
+  },
+  "scope": {"capabilityIds": ["wealth.facts.describe"]},
+  "methodCases": [{"name": "业务事实核验 1", "query": "请查询我的资产概览", "expectedTerms": []}],
+  "caseRefs": [],
+  "commands": [{
+    "name": "财富合同与方法接入检查（不代表模型质量通过）",
+    "command": "python3 engineering/verify_wealth_kit.py",
+    "sourceCommit": "2436d8e0d5e0a4e9de89b25a6079b1851b6a7e9e", "workingDirectory": "repo://"
+  }]
+}
