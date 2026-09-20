@@ -1,32 +1,15 @@
 package io.github.bitlhk.finance.harness.integrations.openjiuwen;
-
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
-
-/** Loads a capability pack without coupling the pack format to a specific application. */
+import io.github.bitlhk.finance.harness.core.HarnessJson;
+/** Compatibility facade; parsing and schema validation live in the neutral assembly module. */
 public final class FinanceCapabilityPackLoader {
-    private final ObjectMapper mapper;
-
-    public FinanceCapabilityPackLoader() {
-        mapper = new ObjectMapper(new YAMLFactory())
-                .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-    }
-
+    private final io.github.bitlhk.finance.harness.assembly.FinanceCapabilityPackLoader delegate = new io.github.bitlhk.finance.harness.assembly.FinanceCapabilityPackLoader();
     public FinanceCapabilityPackV1 load(Path path) throws IOException {
-        Objects.requireNonNull(path, "path");
-        try (InputStream stream = Files.newInputStream(path)) {
-            return load(stream);
-        }
+        return HarnessJson.mapper().convertValue(delegate.load(path), FinanceCapabilityPackV1.class);
     }
-
     public FinanceCapabilityPackV1 load(InputStream stream) throws IOException {
-        return mapper.readValue(Objects.requireNonNull(stream, "stream"), FinanceCapabilityPackV1.class);
+        return HarnessJson.mapper().convertValue(delegate.load(stream), FinanceCapabilityPackV1.class);
     }
 }

@@ -635,47 +635,9 @@ public final class OpenJiuwenSolutionAssembler {
         return new LockedAsset(kind, id, version, source, sha256(file));
     }
 
-    private static void rejectSymlinks(Path directory) throws IOException {
-        try (Stream<Path> paths = Files.walk(directory)) {
-            if (paths.anyMatch(Files::isSymbolicLink)) throw new IllegalArgumentException("Asset symlinks are not supported");
-        }
-    }
-
-    private static String sha256(Path file) throws IOException {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file));
-            return "sha256:" + HexFormat.of().formatHex(digest);
-        } catch (java.security.NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is unavailable", exception);
-        }
-    }
-
-    private static String sha256Tree(Path directory) throws IOException {
-        rejectSymlinks(directory);
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (Stream<Path> paths = Files.walk(directory)) {
-                for (Path path : paths.filter(Files::isRegularFile)
-                        .filter(path -> {
-                            for (Path part : directory.relativize(path)) {
-                                if (Set.of("target", "build", "logs", ".git").contains(part.toString())) return false;
-                            }
-                            return true;
-                        })
-                        .sorted(Comparator.comparing(path -> directory.relativize(path).toString()))
-                        .toList()) {
-                    digest.update(directory.relativize(path).toString().replace('\\', '/')
-                            .getBytes(StandardCharsets.UTF_8));
-                    digest.update((byte) 0);
-                    digest.update(Files.readAllBytes(path));
-                    digest.update((byte) 0);
-                }
-            }
-            return "sha256:" + HexFormat.of().formatHex(digest.digest());
-        } catch (java.security.NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is unavailable", exception);
-        }
-    }
+    private static void rejectSymlinks(Path directory) throws IOException { io.github.bitlhk.finance.harness.assembly.AssetDigests.rejectSymlinks(directory); }
+    private static String sha256(Path file) throws IOException { return io.github.bitlhk.finance.harness.assembly.AssetDigests.sha256(file); }
+    private static String sha256Tree(Path directory) throws IOException { return io.github.bitlhk.finance.harness.assembly.AssetDigests.sha256Tree(directory); }
 
     private static void closeCapabilityReverse(List<OpenJiuwenCapabilityInstaller.Installation> installations) {
         for (int index = installations.size() - 1; index >= 0; index--) {

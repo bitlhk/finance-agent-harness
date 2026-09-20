@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "finance-agent-solution-build.v1",
+  "solutionId": "agentscope-balance-cashflow-isolated",
+  "displayName": "AgentScope QUERY isolation candidate",
+  "runtime": {
+    "family": "agentscope",
+    "language": "java",
+    "templateRef": "maven://io.agentscope:agentscope-core:2.0.3",
+    "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-agentscope-java:0.1.0-SNAPSHOT"
+  },
+  "domainPackRefs": [
+    {
+      "id": "cashflow-customer-self-service",
+      "version": "0.1.3",
+      "source": "repo://domain-packs/cashflow/customer-self-service/pack.yaml",
+      "digest": "sha256:c09fc4c25f547a1ef8d0a29657954cfeba9c3916f363b72e12d451e41634eb88"
+    }
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "account-balance-readonly",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/account-balance-readonly/pack.yaml",
+      "digest": "sha256:160b344d99fb3c191bf530866d76acdf071c4e7f53a65fafdde8b003fd453890"
+    },
+    {
+      "id": "cashflow-readonly",
+      "version": "0.1.0",
+      "source": "repo://capability-packs/cashflow-readonly/pack.yaml",
+      "digest": "sha256:7f3c8abb78e039c774f5db3bbec9de5510fefb58f7f68176ec9628328f2ad603"
+    }
+  ],
+  "providerRefs": [
+    {
+      "id": "non-ai-banking-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "source": "repo://providers/non-ai-banking/assembly.v0.1.json",
+      "digest": "sha256:77f3324c33b41baf2e2fd3983ec362fff1ad4df36190ac8f9d0d1de4e3a1e9ca"
+    }
+  ],
+  "capabilityBindings": {},
+  "modelRef": "host-managed-model",
+  "profileRef": {
+    "id": "local-read-only",
+    "version": "0.1.0",
+    "source": "repo://profiles/local-read-only.md",
+    "digest": "sha256:d54c1a1e5c3d8495057cc1e49072c4a92adb1fbca0780489504a72e332f39a7a"
+  }
+}

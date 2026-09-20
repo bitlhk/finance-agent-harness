@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "agentscope-query-support.v0.1",
+  "family": "agentscope",
+  "language": "java",
+  "sdkVersion": "2.0.3",
+  "operation": "QUERY",
+  "modelAttempts": 1,
+  "toolAttempts": 1,
+  "stream": false,
+  "fallback": false,
+  "pendingToolRecovery": false,
+  "descriptions": [
+    {
+      "id": "account-balance-routing-zh-cn",
+      "version": "0.1.0",
+      "source": "repo://routing/capability-descriptions/account-balance-readonly.v0.1.json",
+      "digest": "sha256:64ec2cd9210a12d5f9680dacec38e0044305a4244761bab82589ea806df16b96"
+    },
+    {
+      "id": "cashflow-routing-zh-cn",
+      "version": "0.1.0",
+      "source": "repo://routing/capability-descriptions/cashflow-readonly.v0.1.json",
+      "digest": "sha256:166821b069b0289cc8af3d7ebe32d2b6aabcb8f53248594b39ca88ec939bc68b"
+    }
+  ],
+  "terminology": [
+    {
+      "id": "demo-bank-terminology-zh-cn",
+      "version": "0.1.0",
+      "source": "repo://routing/terminology/demo-bank-zh-cn.v0.1.json",
+      "digest": "sha256:7fee70687f5cf9b68026334b5c98ec6b01d37921cd7930ba8e258bd4dc9369b0"
+    }
+  ],
+  "observationRequirements": [
+    {
+      "id": "readonly-balance-observation",
+      "version": "0.1.0",
+      "source": "repo://observation-packs/readonly/balance.json",
+      "digest": "sha256:0aca3ae34c835e5a03ed4f35ac163872b84e89343ce9d7466a49e64f0cac3342"
+    },
+    {
+      "id": "readonly-cashflow-observation",
+      "version": "0.1.0",
+      "source": "repo://observation-packs/readonly/cashflow.json",
+      "digest": "sha256:e1f0e4f6f79b2a8a1aa07fccdae92805e5e619eb784ed56ab1c991fcdfc33c2b"
+    }
+  ],
+  "profiles": [
+    {
+      "profile": {
+        "id": "local-read-only",
+        "version": "0.1.0",
+        "source": "repo://profiles/local-read-only.md",
+        "digest": "sha256:d54c1a1e5c3d8495057cc1e49072c4a92adb1fbca0780489504a72e332f39a7a"
+      },
+      "allowedCapabilityIds": [
+        "account.balance.query",
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "domainProfiles": [
+        "customer-self-service"
+      ],
+      "principalTypes": [
+        "CUSTOMER"
+      ],
+      "purposes": [
+        "customer-self-service"
+      ]
+    },
+    {
+      "profile": {
+        "id": "cashflow-read-only",
+        "version": "0.1.0",
+        "source": "repo://profiles/cashflow-read-only.md",
+        "digest": "sha256:abc6409a4c47b37f74eb479a5bfdf86b3ad499a9cbce4e7971bf3157f0b2d516"
+      },
+      "allowedCapabilityIds": [
+        "finance.transaction-summary.query",
+        "finance.spending-analysis.query"
+      ],
+      "domainProfiles": [
+        "customer-self-service"
+      ],
+      "principalTypes": [
+        "CUSTOMER"
+      ],
+      "purposes": [
+        "customer-self-service"
+      ]
+    }
+  ],
+  "providers": [
+    {
+      "id": "non-ai-banking-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-non-ai-banking:0.1.0-SNAPSHOT",
+      "connectionKind": "synthetic-bank-http.v1"
+    }
+  ]
+}

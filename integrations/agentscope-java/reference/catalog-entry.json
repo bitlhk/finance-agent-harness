@@ -1,0 +1,13 @@
+{
+  "id": "agentscope-java",
+  "version": "0.1.0-SNAPSHOT",
+  "displayName": "AgentScope Java QUERY Integration",
+  "source": "repo://integrations/agentscope-java",
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-harness-agentscope-java:0.1.0-SNAPSHOT",
+  "governanceRef": "finance-harness-integration",
+  "compatibility": {
+    "runtimeFamilies": ["agentscope"],
+    "runtimeLanguages": ["java"],
+    "profiles": ["local-read-only", "cashflow-read-only"]
+  }
+}

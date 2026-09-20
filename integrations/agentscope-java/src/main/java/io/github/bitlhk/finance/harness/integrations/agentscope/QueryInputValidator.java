@@ -1,0 +1,23 @@
+package io.github.bitlhk.finance.harness.integrations.agentscope;
+
+import com.networknt.schema.*;
+import io.github.bitlhk.finance.harness.assembly.LocalSchemaPolicy;
+import io.github.bitlhk.finance.harness.core.HarnessJson;
+import java.util.Map;
+
+/** SDK-compatible networknt 2.x validator; shared policy forbids external schema loading. */
+final class QueryInputValidator {
+    private final Schema schema;
+    QueryInputValidator(Map<String, Object> definition) {
+        var node = HarnessJson.mapper().valueToTree(definition);
+        LocalSchemaPolicy.requireLocalReferences(node);
+        schema = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12, builder ->
+                builder.resourceLoaders(loaders -> loaders.values(values -> {
+                    values.clear(); values.add(iri -> { throw new IllegalArgumentException("SCHEMA_RESOURCE_LOADING_DISABLED"); });
+                }))).getSchema(node);
+    }
+    void validate(Map<String, Object> arguments) {
+        if (arguments == null || !schema.validate(HarnessJson.mapper().valueToTree(arguments)).isEmpty())
+            throw new IllegalArgumentException("CAPABILITY_ARGUMENTS_INVALID");
+    }
+}
