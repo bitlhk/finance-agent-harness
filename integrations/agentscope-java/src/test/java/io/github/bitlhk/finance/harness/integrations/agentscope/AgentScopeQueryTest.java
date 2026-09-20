@@ -92,7 +92,7 @@ class AgentScopeQueryTest {
         assertTrue(h.bank.requests.stream().noneMatch(row -> row.get("uri").toString().contains("spending-analysis")));
         assertEquals(0, second.droppedObservationEvents());
     }
-    @Test @Tag("multi-turn") void completedReplyAllowsImmediateReactiveContinuation() throws Exception {
+    @Test @Tag("native-continuation") void completedReplyAllowsImmediateReactiveContinuation() throws Exception {
         var h = harness(text("First response."), text("Second response."), text("Third response."));
         var reply = h.session.invoke(h.input("First turn."))
                 .flatMap(first -> h.session.invoke(h.input("Second turn.")))

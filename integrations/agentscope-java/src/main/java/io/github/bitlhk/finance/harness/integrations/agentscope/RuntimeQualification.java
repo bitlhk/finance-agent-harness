@@ -19,7 +19,7 @@ public final class RuntimeQualification {
     public static final Set<String> REQUIRED_CHECKS = Set.of("native-query", "revoke-before-return", "tool-denial",
             "provider-error", "isolation-parent", "schema-denial", "mode-denial", "required-observation", "lock-integrity",
             "model-single-attempt", "cancel-late", "sink-degradation", "profile-admission", "qualification-admission",
-            "compound", "multi-turn", "missing-data", "diagnostic-boundaries", "redirect-denial", "bank-auth-poison", "terminal-cancel-cleanup", "terminal-delivery-cleanup", "declaration-admission");
+            "compound", "multi-turn", "native-continuation", "missing-data", "diagnostic-boundaries", "redirect-denial", "bank-auth-poison", "terminal-cancel-cleanup", "terminal-delivery-cleanup", "declaration-admission");
     private final List<RuntimeInventory.Artifact> artifacts;
     private final String collectorDigest, digest, source;
 
