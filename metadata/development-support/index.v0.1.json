@@ -2,7 +2,7 @@
   "schemaVersion": "finance-development-support-index.v0.1",
   "declarations": [
     {"source": "repo://metadata/development-support/account-balance-readonly/0.1.1.json", "digest": "sha256:f17f3a812b9a4cbd3827b382e52b512239122bc791b9c85f8401fd36460aa608"},
-    {"source": "repo://metadata/development-support/wealth-shared-facts/0.1.0.json", "digest": "sha256:19fbc9d2a1eb3a776e4303d6d27889ec6d8309fe85947eaa3dcd8642569e3246"},
+    {"source": "repo://metadata/development-support/wealth-shared-facts/0.1.1.json", "digest": "sha256:59bc84becb46826454b52dacf963f6d86c7c5ef24443df40ac0148a2b419cf66"},
     {"source": "repo://metadata/development-support/cashflow-customer-self-service/0.1.1.json", "digest": "sha256:2881cb6002cdd8d9ecfe202ef9203c7d0827dec452598abcdab0e2846871b1b0"}
   ]
 }

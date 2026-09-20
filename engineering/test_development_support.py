@@ -3,6 +3,10 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import shlex
+import subprocess
+import sys
+import tempfile
 import unittest
 
 import jsonschema
@@ -67,6 +71,50 @@ class DevelopmentSupportTests(unittest.TestCase):
             self.assertEqual(set(declaration["scope"]), {"capabilityIds"})
             self.assertTrue(declaration["commands"])
             self.assertNotIn("status", declaration)
+
+    def test_wealth_support_versions_only_the_manual_workflow(self):
+        path = ROOT / "metadata/development-support/wealth-shared-facts"
+        previous = json.loads((path / "0.1.0.json").read_bytes())
+        current = json.loads((path / "0.1.1.json").read_bytes())
+        for field in ("schemaVersion", "subject", "scope", "methodCases", "caseRefs"):
+            self.assertEqual(current[field], previous[field])
+        self.assertEqual(current, self.declarations[1])
+        commands = current["commands"]
+        self.assertEqual(len(commands), 4)
+        for number, command in enumerate(commands, 1):
+            self.assertTrue(command["name"].startswith(f"{number}. "))
+            self.assertEqual(command["sourceCommit"], "14c985bb02b76c9832e7a558fb0c0b2beeb86327")
+            self.assertEqual(command["workingDirectory"], "repo://")
+        self.assertIn("engineering/requirements-conformance.txt", commands[0]["command"])
+        self.assertIn("mktemp -d", commands[1]["command"])
+        self.assertIn("export WEALTH_M2=", commands[1]["command"])
+        run = shlex.split(commands[2]["command"])
+        self.assertEqual(run[:2], ["env", "-i"])
+        self.assertIn("MAVEN_OPTS=-Dmaven.repo.local=${WEALTH_M2:?Run private cache preparation first}", run)
+        self.assertEqual(run[-2:], ["bash", "examples/solutions/wealth-facts-kit/run-controlled.sh"])
+        self.assertEqual(commands[3]["command"], ".venv/bin/python engineering/verify_wealth_kit.py")
+        for relative in ("engineering/requirements-conformance.txt", run[-1], "engineering/verify_wealth_kit.py"):
+            self.assertTrue((ROOT / relative).is_file())
+
+    def test_prerequisite_notes_do_not_relax_the_strict_schema(self):
+        for field in ("description", "notes"):
+            value = copy.deepcopy(self.declarations[1])
+            value[field] = "Unversioned extra prerequisite"
+            with self.assertRaises(jsonschema.ValidationError):
+                jsonschema.validate(value, self.schema)
+            value = copy.deepcopy(self.declarations[1])
+            value["commands"][0][field] = "Unversioned extra prerequisite"
+            with self.assertRaises(jsonschema.ValidationError):
+                jsonschema.validate(value, self.schema)
+
+    def test_wealth_verification_requires_generated_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checked = subprocess.run([sys.executable, str(ROOT / "engineering/verify_wealth_kit.py"),
+                                      "--runs", directory], capture_output=True, text=True, timeout=15)
+        self.assertNotEqual(checked.returncode, 0)
+        self.assertIn("FileNotFoundError", checked.stderr)
+        self.assertIn("BANK_HTTP-NORMAL", checked.stderr)
+        self.assertNotIn("PASS:", checked.stdout)
 
     def test_platform_pass_and_unknown_fields_are_not_declarations(self):
         for extra in ({"status": "PASS", "testsPassed": 1000}, {"runtimeVerified": True}):

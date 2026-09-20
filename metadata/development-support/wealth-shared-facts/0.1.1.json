@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "domain-pack", "id": "wealth-shared-facts", "version": "0.1.1",
+    "source": "repo://domain-packs/wealth/shared-facts",
+    "digest": "sha256:64f15fece3987512b2ffcb1478002393fa5916f7db16d0055076031cb3f89f5e"
+  },
+  "scope": {"capabilityIds": ["wealth.facts.describe"]},
+  "methodCases": [{"name": "业务事实核验 1", "query": "请查询我的资产概览", "expectedTerms": []}],
+  "caseRefs": [],
+  "commands": [
+    {
+      "name": "1. 准备：进入固定提交的独立工作副本；需JDK21、Maven3.8+、Python3.10+、Bash和依赖下载；同一终端按序手动执行",
+      "command": "python3 -m venv .venv && .venv/bin/python -m pip install -r engineering/requirements-conformance.txt",
+      "sourceCommit": "14c985bb02b76c9832e7a558fb0c0b2beeb86327", "workingDirectory": "repo://"
+    },
+    {
+      "name": "2. 隔离缓存：新建本次独占Maven目录并保留WEALTH_M2；不覆盖共享~/.m2；不可并发写同一缓存",
+      "command": "export WEALTH_M2=\"$(mktemp -d \"${TMPDIR:-/tmp}/finance-wealth-m2.XXXXXXXX\")\"",
+      "sourceCommit": "14c985bb02b76c9832e7a558fb0c0b2beeb86327", "workingDirectory": "repo://"
+    },
+    {
+      "name": "3. 运行：测试依赖并生成五场景target/runs报告；清空LIVE环境，仅本地HTTP和脚本模型；不证明真实授权或模型质量",
+      "command": "env -i HOME=\"$HOME\" PATH=\"$PATH\" LANG=C.UTF-8 MAVEN_OPTS=\"-Dmaven.repo.local=${WEALTH_M2:?Run private cache preparation first}\" bash examples/solutions/wealth-facts-kit/run-controlled.sh",
+      "sourceCommit": "14c985bb02b76c9832e7a558fb0c0b2beeb86327", "workingDirectory": "repo://"
+    },
+    {
+      "name": "4. 复核：只读取五份report/lock/trace，缺失即失败；stdout输出摘要、共享事实与拒绝检查，不自动生成报告",
+      "command": ".venv/bin/python engineering/verify_wealth_kit.py",
+      "sourceCommit": "14c985bb02b76c9832e7a558fb0c0b2beeb86327", "workingDirectory": "repo://"
+    }
+  ]
+}
