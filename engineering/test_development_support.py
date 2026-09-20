@@ -47,6 +47,17 @@ class DevelopmentSupportTests(unittest.TestCase):
             self.assertEqual(subject["digest"], tree_digest(root))
             manifest = yaml.safe_load((root / "pack.yaml").read_text())
             self.assertEqual((subject["id"], subject["version"]), (manifest["packId"], manifest["version"]))
+            for case_ref in declaration["caseRefs"]:
+                case = ROOT / case_ref["source"].removeprefix("repo://")
+                self.assertEqual(case_ref["digest"], digest(case.read_bytes()))
+
+    def test_targeted_provider_and_contract_commands_and_original_case_formats(self):
+        balance, _, cashflow = self.declarations
+        self.assertIn("sessionSubjectMismatchDoesNotReadAnyCustomerAccounts", balance["commands"][0]["command"])
+        self.assertEqual(balance["caseRefs"][0]["format"], "finance-capability-smoke.v1")
+        self.assertIn("-Dtest=CashflowProviderTest", cashflow["commands"][0]["command"])
+        self.assertIn("-Dtest=CashflowContractTest", cashflow["commands"][1]["command"])
+        self.assertEqual(len(cashflow["caseRefs"]), 5)
 
     def test_actual_three_businesses_have_generic_defaults(self):
         self.assertEqual({d["subject"]["id"] for d in self.declarations},
