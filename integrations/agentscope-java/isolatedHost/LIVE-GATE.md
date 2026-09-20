@@ -43,6 +43,32 @@ Run `node integrations/agentscope-java/isolatedHost/live-driver.mjs "$ROOT" "$OU
 for the case matrix; its results still need answer-quality review. Test fixture selection uses
 `FH_ISOLATED_FIXTURE=normal|analysis-unavailable|bank401|wrong-subject|revoke-before-return`.
 The driver sets these controls, never the model prompt.
+For a subset, the test operator may set `FH_ISOLATED_SOLUTION` and `FH_ISOLATED_SUPPORT`
+to fixed files inside ROOT (relative to ROOT or absolute). Both reject outside-root paths.
+The subset support must select matching description/observation references; the Assembler
+still validates profile scope, Provider coverage and all source digests. These controls do
+not rewrite a business package or enable model-selected files.
+
+For an already frozen bundle whose Host predates these controls, compile and verify the
+reference-only update in a separate output. This leaves its runtime JARs and qualification
+untouched:
+
+```bash
+SUBSET_OUT="$ROOT/target/agentscope-subset-reference-new"
+node "$ROOT/integrations/agentscope-java/isolatedHost/subset-smoke.mjs" "$ROOT" "$OUT" "$SUBSET_OUT"
+FH_ISOLATED_SOLUTION="$SUBSET_OUT/balance-only.solution.json" \
+FH_ISOLATED_SUPPORT="$SUBSET_OUT/balance-only.support.json" \
+  java -cp "$(cat "$SUBSET_OUT/classpath.txt")" \
+  io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.IsolatedHost \
+  model "$ROOT" "$OUT/qualification/agentscope-observation-qualification.json" \
+  "$(cat "$OUT/qualification/qualification.sha256")" "$ROOT/target/subset-live-new" \
+  'Query my authorized account balance.'
+```
+
+The smoke checks the actual emitted tool list and Lock, successful balance-only execution,
+uninstalled-tool rejection with zero bank reads/no model continuation, and four root-boundary
+negatives. The model endpoint/key/name environment from the main example is still required
+for the final LIVE command. Output directories must not already exist.
 
 This file specifies evaluation; it does not assert a completed live gate. Missing-data and
 revocation fixture automation is explicitly enabled by the evaluation driver, never by

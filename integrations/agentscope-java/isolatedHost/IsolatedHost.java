@@ -24,6 +24,9 @@ public final class IsolatedHost {
         }
         if (!Set.of("controlled", "model").contains(args[0]) || args.length < 5) throw new IllegalArgumentException("INVALID_HOST_COMMAND");
         boolean controlled = args[0].equals("controlled");
+        Path reference = root.resolve("integrations/agentscope-java/reference");
+        Path solution = configuredFile(root, "FH_ISOLATED_SOLUTION", reference.resolve("solution.json"));
+        Path support = configuredFile(root, "FH_ISOLATED_SUPPORT", reference.resolve("support.json"));
         Path out = Path.of(args[4]);
         if (Files.exists(out)) throw new IllegalArgumentException("OUTPUT_ALREADY_EXISTS");
         Files.createDirectories(out);
@@ -34,8 +37,7 @@ public final class IsolatedHost {
             bank.analysisUnavailable = fixture.equals("analysis-unavailable"); bank.accountStatus = fixture.equals("bank401") ? 401 : 200;
             var provider = provider(bank.uri(), principal, fixture.equals("wrong-subject") ? "different-subject" : subject, sessionId);
             var qualification = RuntimeQualification.load(Path.of(args[2]), args[3]);
-            Path reference = root.resolve("integrations/agentscope-java/reference");
-            var prepared = new AgentScopeQueryAssembler().prepare(root, reference.resolve("solution.json"), reference.resolve("support.json"), Map.of(provider.descriptor().providerId(), provider), qualification);
+            var prepared = new AgentScopeQueryAssembler().prepare(root, solution, support, Map.of(provider.descriptor().providerId(), provider), qualification);
             var identity = new AgentScopeQuerySession.Identity(principal, FinanceContextV1.PrincipalType.CUSTOMER, subject, sessionId,
                     "customer-self-service", "isolated-cli", FinanceContextV1.AuthenticationLevel.STRONG, 1);
             var grant = new BoundFinanceProvider.Grant(principal, FinanceContextV1.PrincipalType.CUSTOMER, Set.of(subject), Set.of("customer-self-service"),
@@ -82,6 +84,14 @@ public final class IsolatedHost {
                 if (controlled) write(out.resolve("model-http.json"), model.requests);
             }
         }
+    }
+    static Path configuredFile(Path root, String name, Path fallback) throws Exception {
+        String configured = System.getenv(name);
+        Path file = configured == null ? fallback : root.resolve(configured).normalize();
+        Path real = file.toRealPath();
+        if (!real.startsWith(root.toRealPath()) || Files.isSymbolicLink(file) || !Files.isRegularFile(real))
+            throw new IllegalArgumentException("ISOLATED_REFERENCE_OUTSIDE_ROOT:" + name);
+        return real;
     }
     static long modelInvocations(List<ObservationEventV01> events) { return events.stream().filter(e -> e.component().equals("model-http") && e.phase() == ObservationEventV01.Phase.START).count(); }
     static boolean isDenied(Throwable failure) {

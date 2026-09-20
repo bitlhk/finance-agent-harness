@@ -32,6 +32,23 @@ Provider dependencies and no Builder service classes.
 - Native multi-tool executions have unique child Harness request IDs and native tool IDs,
   linked to the unchanged root request/trace and existing EvidenceReceipt contract.
 
+Reference-only subset follow-up (the fixed artifact above is unchanged):
+
+```bash
+ROOT="$PWD"
+node integrations/agentscope-java/isolatedHost/subset-smoke.mjs "$ROOT" \
+  "$ROOT/target/agentscope-fixed-final-2" "$ROOT/target/agentscope-subset-reference-1"
+```
+
+All 6 checks passed. Balance-only: 2 model HTTP requests / 1 bank read. Cashflow-only with
+an uninstalled balance tool response: 1 model HTTP request / 0 bank reads, rejected without
+continuation. Both actual model tool declarations and Lock installations match the subset,
+and original capability references/digests are preserved. Four absolute/relative/symlink/support
+outside-root selections reject before output creation or fixture startup. The new
+`agentscope-subset-reference-1/classpath.txt` selects only the updated isolated Host ahead of
+the original frozen dependencies. It uses the same qualification digest, not a replacement
+runtime qualification. See `summary.json`, per-case raw HTTP and process logs there.
+
 ## Safety Regressions
 
 | Regression | Controlled result |
