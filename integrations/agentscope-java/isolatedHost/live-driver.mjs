@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { evaluateExecutions } from './live-evaluation.mjs';
 
 const [rootArg, artifactArg, outputArg, only] = process.argv.slice(2);
 if (!rootArg || !artifactArg || !outputArg) throw new Error('ROOT QUALIFIED_OUTPUT NEW_LIVE_OUTPUT [case-id] required');
@@ -36,7 +37,7 @@ for (const scenario of selected) for(let run=1;run<=(scenario.repeat??1);run++) 
   fs.mkdirSync(dir,{recursive:true});
   fs.writeFileSync(path.join(dir,'process.stdout.txt'),child.stdout??'');
   fs.writeFileSync(path.join(dir,'process.stderr.txt'),child.stderr??'');
-  let actual, violations=[];
+  let actual, violations=[], turnAssessments=[];
   try {
     actual = JSON.parse(fs.readFileSync(path.join(dir,'result.json'),'utf8'));
     if (scenario.rejected) {
@@ -48,13 +49,10 @@ for (const scenario of selected) for(let run=1;run<=(scenario.repeat??1);run++) 
       if(actual.replies.length!==scenario.calls.length) violations.push('TURN_COUNT');
       for(let i=0;i<scenario.calls.length;i++) {
         const executions = actual.replies[i]?.executions??[];
-        const ids = executions.map(e=>e.request.capabilityId).sort();
-        if(JSON.stringify(ids)!==JSON.stringify([...scenario.calls[i]].sort())) violations.push(`TURN_${i}_TOOL_SET`);
-        for(const e of executions) {
-          if(scenario.periods && e.request.parameters.period!==scenario.periods[i]) violations.push(`TURN_${i}_PERIOD`);
-          const expected = e.request.capabilityId===scenario.failedCapability?'FAILED':'COMPLETED';
-          if(e.result.status!==expected) violations.push(`TURN_${i}_BUSINESS_STATUS`);
-        }
+        const assessment = evaluateExecutions(scenario,i,executions);
+        turnAssessments.push(assessment);
+        violations.push(...assessment.violations);
+        if (!actual.replies[i]?.text?.trim()) violations.push(`TURN_${i}_EMPTY_ANSWER`);
       }
     }
     const events = JSON.parse(fs.readFileSync(path.join(dir,'observations.json'),'utf8'));
@@ -63,7 +61,7 @@ for (const scenario of selected) for(let run=1;run<=(scenario.repeat??1);run++) 
     for(const e of starts.values()) if(e.component==='host' && e.operation==='request' && !events.some(end=>end.spanId===e.spanId&&end.phase==='END')) violations.push('ROOT_NOT_TERMINAL');
   } catch(error) { violations.push(`EVIDENCE_UNAVAILABLE:${error.message}`); }
   results.push({case:scenario.id,run,fixture:scenario.fixture??'normal',processExit:child.status,
-    status:violations.length?'AUTOMATED_CHECKS_FAILED':'AUTOMATED_CHECKS_PASSED',violations,
+    status:violations.length?'AUTOMATED_CHECKS_FAILED':'AUTOMATED_CHECKS_PASSED',violations,turnAssessments,
     answerQuality:'REQUIRES_REVIEW',modelDispatchEvidence:'CLIENT_BOUNDARY_NOT_REMOTE_SERVER_COUNT',output:dir});
   fs.writeFileSync(path.join(output,'evaluation.json'),JSON.stringify({status:'EVALUATION_NOT_COMPLETE',model:process.env.FH_MODEL_NAME,results},null,2)+'\n');
 }

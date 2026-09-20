@@ -39,6 +39,15 @@ absolutely equivalent across frameworks. Current mode sets temperature 0, nonstr
 one total attempt; no fallback. Record model/version and managed connection identity outside
 the solution (never the API key). Natural-language wording need not match another runtime.
 
+"One attempt" bounds the native transport/execution of each tool call. A model can explicitly
+select a QUERY again after a Provider returns a retryable failure; that is another tool call,
+another current authorization check and another bank read, not an invisible SDK retry.
+The evaluator compares unique requested capability coverage and checks every invocation's
+parameters and business outcome. It separately reports repeated selections for evidence review;
+duplicates of a successful or nonretryable result still fail. The original exact-once matrix
+results remain archived and must not be overwritten or relabeled. SOP ordering is advisory,
+not a new enforced financial workflow; inspect native scheduling separately from completion order.
+
 Run `node integrations/agentscope-java/isolatedHost/live-driver.mjs "$ROOT" "$OUT" "$OUT/live-new"`
 for the case matrix; its results still need answer-quality review. Test fixture selection uses
 `FH_ISOLATED_FIXTURE=normal|analysis-unavailable|bank401|wrong-subject|revoke-before-return`.
