@@ -1,6 +1,8 @@
 # Finance Agent Harness 简化版总体架构 V1
 
-状态：`Implementation Ready`
+状态：`Historical Design / 2026-09-01`
+
+本文保留最初 Java V1 的决策与范围，不再作为当前能力清单。当前入口见 [当前架构](current-architecture.md) 和 [开发指导](public/developer-guide.md)；这里的“后续范围”不能覆盖后来已实现的 Builder、Packager 和 Python 桥接。
 
 更新时间：2026-09-01
 

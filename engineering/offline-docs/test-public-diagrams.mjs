@@ -1,15 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { diagramPaths, readDiagram, renderPublicDiagram } from './public-diagrams.mjs';
+import { diagramPaths, readDiagram, renderPublicDiagram, screenshotPaths, readScreenshot, renderPublicScreenshot } from './public-diagrams.mjs';
 
-test('both diagrams have accessible descriptions and frozen source hashes', () => {
+test('all three diagrams have accessible descriptions and frozen source hashes', () => {
+  assert.equal(diagramPaths.length, 3);
   for (const source of diagramPaths) {
     const diagram = readDiagram(source);
     assert.match(diagram.text, /<title id=/);
     assert.match(diagram.text, /<desc id=/);
     assert.match(diagram.sha256, /^[a-f0-9]{64}$/);
   }
+});
+
+test('only reviewed actual UI screenshots can be embedded', () => {
+  assert.equal(screenshotPaths.length, 2);
+  for (const source of screenshotPaths) assert.match(readScreenshot(source).sha256, /^[a-f0-9]{64}$/);
+  for (const href of ['../../.git/config', '/etc/passwd', 'https://example.invalid/image.png']) {
+    assert.equal(renderPublicScreenshot('docs/public/developer-guide.md', href, ''), null);
+    assert.throws(() => readScreenshot(href), /allowlist/);
+  }
+});
+
+test('development and runtime evidence are separate from component ownership', () => {
+  const development = readDiagram('docs/public/diagrams/development.svg').text;
+  for (const id of ['packager', 'builder', 'assembler', 'checks', 'evidence']) assert.ok(development.includes(`id="${id}"`));
+  const runtime = readDiagram('docs/public/diagrams/lifecycle.svg').text;
+  for (const term of ['java-runtime', 'python-runtime', 'runtime-evidence', '只读，不支持 TASK', '不采集隐藏思考']) assert.ok(runtime.includes(term));
+  assert.ok(readDiagram(diagramPaths[0]).text.includes('id="packaging-support"'));
 });
 test('unknown paths and external images are never loaded', () => {
   for (const reference of ['../../.git/config', '/etc/passwd', 'https://example.invalid/tracker.svg']) {

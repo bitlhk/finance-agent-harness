@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="930" viewBox="0 0 1200 930" role="img" aria-labelledby="development-title development-desc">
+  <title id="development-title">从开发交付到实际安装</title>
+  <desc id="development-desc">方法开发交Skill资料与案例，接口开发交声明合同和Provider实现并在外部编译准入。Builder调用Harness Packager生成固定组件版本，再选择运行环境构建Agent。Host初始化调用Assembler，安装Lock和运行证据分别验证实际安装与调用。不执行上传脚本，不将包声明作为授权。</desc>
+  <defs><marker id="dev-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#a52635"/></marker></defs>
+  <style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;font-size:19px;fill:#292d32;letter-spacing:0}.title{font-size:28px;font-weight:700}.heading{font-size:23px;font-weight:700;fill:#a52635}.small{font-size:17px;fill:#5d646c}.box{fill:#fff;stroke:#c9cdd2;stroke-width:1.5}.arrow{fill:none;stroke:#a52635;stroke-width:2;marker-end:url(#dev-arrow)}</style>
+  <rect width="1200" height="930" fill="#fff"/>
+  <text x="24" y="42" class="title">02 / 开发交付：组件打包 ≠ Agent 构建 ≠ 实际安装</text>
+  <text x="24" y="76" class="small">复用已有合同与流程；业务包不携带目标环境密钥，不在页面执行任意代码。</text>
+  <g id="method-development">
+    <rect x="24" y="108" width="550" height="142" rx="4" class="box"/>
+    <text x="46" y="146" class="heading">修改专业方法</text>
+    <text x="46" y="181">Skill + 参考资料 + 自己的正常／负向案例</text>
+    <text x="46" y="218" class="small">已有工具不变；页面草稿或源码修改，保存后重新验证</text>
+  </g>
+  <g id="provider-development">
+    <rect x="626" y="108" width="550" height="142" rx="4" class="box"/>
+    <text x="648" y="146" class="heading">接入新接口或新能力</text>
+    <text x="648" y="181">能力声明 + 合同 + Provider 实现 + 测试</text>
+    <text x="648" y="218" class="small">外部工程编译 → 受管安装与目录准入；不改 Core</text>
+  </g>
+  <path data-relation="handoff" data-from="method-development" data-to="checks" d="M299 250V300" class="arrow"/>
+  <path data-relation="handoff" data-from="provider-development" data-to="checks" d="M901 250V300" class="arrow"/>
+  <g id="checks">
+    <rect x="24" y="304" width="1152" height="108" rx="4" fill="#f2f4f6" stroke="#c9cdd2"/>
+    <text x="46" y="343" class="heading">依赖与合同检查 → 环境兼容 → 隔离试跑</text>
+    <text x="46" y="381">绑定已准入能力；不支持即阻断。结构、实际执行、专业质量分项记录。</text>
+  </g>
+  <path data-relation="handoff" data-from="checks" data-to="packager" d="M260 412V461" class="arrow"/>
+  <g id="packager">
+    <rect x="24" y="465" width="472" height="151" rx="4" fill="#fff5f6" stroke="#c7828b"/>
+    <text x="46" y="505" class="heading">Packager · 发布固定组件</text>
+    <text x="46" y="543">清单、内容、引用与摘要 → ZIP</text>
+    <text x="46" y="581" class="small">Builder 调用 Harness 唯一版本化实现</text>
+  </g>
+  <path data-relation="handoff" data-from="packager" data-to="builder" d="M496 540H676" class="arrow"/>
+  <text x="518" y="522" class="small">选发布版本</text>
+  <g id="builder">
+    <rect x="680" y="465" width="496" height="151" rx="4" class="box"/>
+    <text x="702" y="505" class="heading">Builder · 构建 Agent</text>
+    <text x="702" y="543">Runtime、组件、模型与连接 → 应用制品</text>
+    <text x="702" y="581" class="small">目录组件也可复用；无需强造一个 Skill ZIP</text>
+  </g>
+  <path data-relation="handoff" data-from="builder" data-to="assembler" d="M928 616V665" class="arrow"/>
+  <g id="assembler">
+    <rect x="24" y="669" width="1152" height="108" rx="4" class="box"/>
+    <text x="46" y="709" class="heading">Host 初始化 → Assembler 实际核验与安装 → 安装 Lock</text>
+    <text x="46" y="747">绑定版本、制品和注册工具；旧 Agent 不因目录或方法更新自动升级。</text>
+  </g>
+  <path data-relation="handoff" data-from="assembler" data-to="evidence" d="M600 777V821" class="arrow"/>
+  <g id="evidence">
+    <rect x="24" y="825" width="1152" height="80" rx="4" fill="#f2f4f6"/>
+    <text x="46" y="857">实际提问：核对工具事实、自己的方法输出与运行记录</text>
+    <text x="46" y="888" class="small">安装成功不等于任务成功；模型输出质量与非原作者真人接入仍分别验收。</text>
+  </g>
+</svg>

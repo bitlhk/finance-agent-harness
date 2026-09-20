@@ -15,7 +15,7 @@
     <rect x="24" y="92" width="1260" height="102" rx="4" class="box"/>
     <text x="46" y="125" class="heading">Agent 应用 / 可信宿主 / 通用 Runtime</text>
     <text x="46" y="154">手机银行 · 员工岗位 · 其他金融 Agent</text>
-    <text x="46" y="181" class="note">当前接入：OpenJiuwen Java 0.1.13；其他 Runtime、EA TypeScript Host 接线待适配。</text>
+    <text x="46" y="181" class="note">当前：OpenJiuwen Java 0.1.15；Python 0.1.18 + Java 金融桥（只读）。其他 Runtime / EA 宿主另行适配。</text>
   </g>
   <polyline data-relation="interface" data-from="finance-harness" data-to="agent-environment" points="500,246 500,194" class="interface" marker-end="url(#interface-arrow)"/>
   <text x="520" y="226" class="label">北向 · Runtime 接入</text>
@@ -98,25 +98,29 @@
       <text x="1012" y="361" class="heading">套件工程支撑</text>
       <text x="1012" y="389" class="small">覆盖左侧组件与内容</text>
 
+      <g id="packaging-support" data-phase="publication">
+        <rect x="1008" y="410" width="236" height="136" rx="4" class="box"/>
+        <text x="1028" y="441" class="label">组件打包 · Packager</text>
+        <text x="1028" y="470" class="small">核验清单、路径和摘要</text>
+        <text x="1028" y="499" class="small">生成／检查业务组件 ZIP</text>
+        <text x="1028" y="528" class="note">不编译 Provider、不安装工具</text>
+      </g>
       <g id="installation-support" data-phase="initialization">
-        <rect x="1008" y="430" width="236" height="192" rx="4" class="box"/>
-        <text x="1028" y="461" class="label">装配与安装</text>
-        <text x="1028" y="489" class="small">Assembler</text>
-        <text x="1028" y="522" class="small">核验依赖</text>
-        <text x="1028" y="547" class="small">安装方法与工具</text>
-        <text x="1028" y="572" class="small">记录安装 Lock</text>
-        <text x="1028" y="604" class="note">Host 安装／初始化时</text>
+        <rect x="1008" y="562" width="236" height="146" rx="4" class="box"/>
+        <text x="1028" y="593" class="label">装配与安装</text>
+        <text x="1028" y="621" class="small">Assembler · 核验依赖</text>
+        <text x="1028" y="651" class="small">安装方法与工具</text>
+        <text x="1028" y="681" class="small">记录安装 Lock</text>
       </g>
       <g id="verification-support" data-phase="verification">
-        <rect x="1008" y="646" width="236" height="148" rx="4" class="box"/>
-        <text x="1028" y="677" class="label">测试与评测</text>
-        <text x="1028" y="705" class="small">Conformance / Eval</text>
-        <text x="1028" y="734" class="small">合同 · 执行边界 · 专业质量</text>
-        <text x="1028" y="777" class="note">开发 · 测试 · 验收 · 回归</text>
+        <rect x="1008" y="724" width="236" height="112" rx="4" class="box"/>
+        <text x="1028" y="755" class="label">测试与评测</text>
+        <text x="1028" y="783" class="small">Conformance / Eval</text>
+        <text x="1028" y="813" class="small">合同 · 执行边界 · 专业质量</text>
       </g>
-      <text x="1012" y="840" class="note">生成 Host 初始化时</text>
-      <text x="1012" y="863" class="note">调用 Assembler 安装</text>
-      <text x="1012" y="911" class="note">工程支撑不属于业务调用链</text>
+      <text x="1012" y="864" class="note">生成 Host 初始化时</text>
+      <text x="1012" y="887" class="note">调用 Assembler 安装</text>
+      <text x="1012" y="923" class="note">工程支撑不属于业务调用链</text>
     </g>
   </g>
 

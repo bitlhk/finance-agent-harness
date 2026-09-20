@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build-public.mjs"
   },
   "dependencies": {
     "lucide": "0.453.0",

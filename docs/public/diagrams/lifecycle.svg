@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1120" viewBox="0 0 1200 1120" role="img" aria-labelledby="lifecycle-title lifecycle-desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1580" viewBox="0 0 1200 1580" role="img" aria-labelledby="lifecycle-title lifecycle-desc">
   <title id="lifecycle-title">一次金融只读工具调用与授权边界</title>
   <desc id="lifecycle-desc">当前受管接线中，Runtime 金融工具调用 Harness Integrator/Bridge。Bridge 通过 FinanceProvider SPI 调用注入的 BoundFinanceProvider，包装器检查可信宿主提供的当前授权并委托具体 Provider，Provider 核验源身份并调用银行。结果沿原链返回，Bridge 转换并关联回执。每次模型请求前，Host 再检查当前授权。公共包装器不是 Core 调度引擎，内容检测不能替代业务授权。</desc>
   <defs>
@@ -6,8 +6,22 @@
     <marker id="run-return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#737a82" stroke-width="1.5"/></marker>
   </defs>
   <style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#292d32;font-size:18px;letter-spacing:0}.heading{font-size:24px;font-weight:700}.label{font-size:18px;font-weight:700;fill:#a52635}.small{font-size:16px;fill:#5d646c}.box{fill:#fff;stroke:#c9cdd2;stroke-width:1.5}.call{fill:none;stroke:#a52635;stroke-width:2;marker-end:url(#run-call)}.return{fill:none;stroke:#737a82;stroke-width:1.8;stroke-dasharray:7 5;marker-end:url(#run-return)}.context{fill:none;stroke:#a52635;stroke-width:2;stroke-dasharray:2 5;marker-end:url(#run-call)}.lifeline{stroke:#d3d7dc;stroke-width:1.5;stroke-dasharray:4 6}</style>
-  <rect width="1200" height="1120" fill="#fff"/>
-  <text x="24" y="36" class="heading">02 / 一次金融工具调用：执行归属、检查位置与结果返回</text>
+  <rect width="1200" height="1580" fill="#fff"/>
+  <text x="24" y="36" class="heading">03 / 运行接线与证据：原生循环、公共金融边界、实际记录</text>
+  <g id="java-runtime">
+    <rect x="24" y="68" width="550" height="136" rx="4" class="box"/>
+    <text x="42" y="103" class="label">Java · OpenJiuwen 0.1.15</text>
+    <text x="42" y="139">Host + 原生 Agent / Tool + Java Integrator</text>
+    <text x="42" y="178" class="small">直接依赖 Harness JAR；查询与受控 TASK 分别验收</text>
+  </g>
+  <g id="python-runtime">
+    <rect x="626" y="68" width="550" height="136" rx="4" class="box"/>
+    <text x="644" y="103" class="label">Python · OpenJiuwen 0.1.18</text>
+    <text x="644" y="139">原生模型／工具循环 + Java 金融桥</text>
+    <text x="644" y="178" class="small">共用 Java Provider；需要 JDK，只读，不支持 TASK</text>
+  </g>
+  <text x="24" y="242" class="small">两种宿主接线归入下方共同金融工具链；安装与观测资格需按实际制品验证，不因图示自动具备。</text>
+  <g id="shared-tool-path" transform="translate(0,250)">
   <path d="M24 68H70" class="call"/><text x="84" y="74" class="small">调用 / 委托</text>
   <path d="M278 68H324" class="return"/><text x="338" y="74" class="small">结果返回</text>
   <path d="M520 68H566" class="context"/><text x="580" y="74" class="small">可信上下文供给</text>
@@ -42,4 +56,12 @@
   <text x="42" y="1027">撤权则终止并清理会话；源请求已发出也不允许迟到结果进入后续模型请求。内容检测通过 ≠ 业务授权。</text>
   <text x="24" y="1079" class="small">图示合并展示重复访问检查，不承诺每类核验只执行一次。身份核验请求与业务读取分别统计。</text>
   <text x="24" y="1105" class="small">包装器不是 Core 调度引擎；财富链路可组合领域映射与内层源包装。办理的确认、幂等与 UNKNOWN 恢复另验。</text>
+  </g>
+  <g id="runtime-evidence">
+    <rect x="24" y="1390" width="1152" height="165" rx="4" fill="#f2f4f6" stroke="#c9cdd2"/>
+    <text x="42" y="1425" class="label">安装与请求分别留证，按 owner 权限查看，不重执行业务</text>
+    <text x="42" y="1460">安装 Lock：实际方法、工具与制品版本；请求清单不可变引用本次安装。</text>
+    <text x="42" y="1495">运行事件：授权、模型尝试、工具、来源 HTTP 与结果；源操作含义由 Provider 声明。</text>
+    <text x="42" y="1530" class="small">快照可选：客户端准备输入／解析响应，不采集隐藏思考；未采集、失败和迟到事件必须标明缺口。</text>
+  </g>
 </svg>
