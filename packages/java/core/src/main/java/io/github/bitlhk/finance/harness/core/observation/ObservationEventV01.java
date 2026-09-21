@@ -13,7 +13,7 @@ public record ObservationEventV01(
     public static final String VERSION = "finance-observation.v0.1";
     private static final Set<String> LINKS = Set.of("sdkTraceId", "toolCallId", "harnessRequestId",
             "harnessTraceId", "capabilityId", "providerId", "route", "method", "httpStatus",
-            "businessStatus", "attempt", "runtimeLockDigest", "exceptionType");
+            "businessStatus", "responseStatus", "attempt", "runtimeLockDigest", "exceptionType");
     public enum Phase { START, END, SIGNAL }
     public enum Outcome { PENDING, RETURNED, COMPLETED, ERROR, DENIED, SKIPPED, INCOMPLETE, CANCEL_REQUESTED, CANCELLED }
     public enum Dispatch { NOT_OBSERVED, NOT_SENT, SENT }
