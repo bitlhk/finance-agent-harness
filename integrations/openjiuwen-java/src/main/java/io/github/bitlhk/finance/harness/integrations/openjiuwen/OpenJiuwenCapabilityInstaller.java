@@ -211,26 +211,7 @@ public final class OpenJiuwenCapabilityInstaller {
     }
 
     private static Map<String, Object> withTaskControls(Map<String, Object> source) {
-        Map<String, Object> schema = new LinkedHashMap<>(source);
-        Map<String, Object> properties = new LinkedHashMap<>();
-        Object configured = source.get("properties");
-        if (configured instanceof Map<?, ?> map) {
-            map.forEach((key, value) -> properties.put(String.valueOf(key), value));
-        }
-        properties.put(TASK_HANDLE_ARGUMENT, Map.of(
-                "type", "string",
-                "description", "工具要求确认后返回的续办句柄；首次调用不要提供。"));
-        properties.put(CONFIRMATION_ARGUMENT, Map.of(
-                "type", "string",
-                "description", "兼容旧调用的文本字段，不构成授权；办理确认须通过宿主确认界面。"));
-        schema.put("properties", Map.copyOf(properties));
-        Object configuredRequired = schema.remove("required");
-        if (configuredRequired instanceof List<?> required && !required.isEmpty()) {
-            schema.put("anyOf", List.of(
-                    Map.of("required", List.copyOf(required)),
-                    Map.of("required", List.of(TASK_HANDLE_ARGUMENT))));
-        }
-        return Map.copyOf(schema);
+        return io.github.bitlhk.finance.harness.execution.TaskToolSchema.withControls(source);
     }
 
     private static void ensureAvailable(BaseAgent agent, String toolName) {

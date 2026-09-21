@@ -70,6 +70,8 @@ public final class RuntimeInventory {
         result.add(artifact("RUNTIME_INTEGRATION", RuntimeInventory.class, integration.reference().substring(8)));
         result.add(artifact("ASSEMBLY", AssetDigests.class, "io.github.bitlhk.finance:finance-harness-assembly:" + INTEGRATION_VERSION));
         result.add(artifact("CORE", FinanceContextV1.class, "io.github.bitlhk.finance:finance-harness-core:" + INTEGRATION_VERSION));
+        result.add(artifact("EXECUTION", io.github.bitlhk.finance.harness.execution.TaskCoordination.class,
+                "io.github.bitlhk.finance:finance-harness-execution:" + INTEGRATION_VERSION));
         result.add(artifact("COLLECTOR", AgentScopeObservationCollector.class, AgentScopeObservationCollector.ID + ":" + AgentScopeObservationCollector.VERSION));
         result.add(artifact("PROVIDER_OBSERVER", ObservedFinanceProvider.class, "finance-harness-core:" + INTEGRATION_VERSION));
         result.add(artifact("AUTHORIZATION_BINDING", io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider.class, "finance-harness-core:" + INTEGRATION_VERSION));

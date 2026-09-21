@@ -67,6 +67,16 @@ class TaskCoordinationTest {
         assertEquals("COMPLETED", tasks.confirm(handle, approval()).get("status"));
         assertEquals(1, bank.writes); assertEquals(2, bank.calls);
     }
+    @Test void modelConfirmationTextNeverBecomesTrustedApproval() {
+        var store = new Journal(); var bank = new Bank(store); var tasks = coordinator(store, bank, "scope");
+        var first = tasks.invoke(CAP, Map.of("amount", 10, "confirmationText", "confirmed"));
+        var handle = (String) first.get(TaskCoordination.HANDLE_ARGUMENT);
+        assertEquals("NEED_USER", first.get("status"));
+        assertEquals("NEED_USER", tasks.invoke(CAP, Map.of(TaskCoordination.HANDLE_ARGUMENT, handle,
+                "confirmationText", "confirmed")).get("status"));
+        assertEquals(0, bank.writes);
+        assertEquals(Map.of("amount", 10), store.saved.get(handle).arguments());
+    }
     @Test void crashAfterSubmitRestartsByObservationNotApproval() {
         var store = new Journal(); var bank = new Bank(store); var tasks = coordinator(store, bank, "scope");
         var handle = start(tasks); bank.loseResponse = true;
