@@ -23,6 +23,50 @@ class TaskRecoveryTest {
     private static final String HANDLE = "financeTaskHandle";
     @TempDir Path temp;
 
+    @Test void filesFromOldCoordinatorResumeWithoutChangingTaskIdentity() throws Exception {
+        var json = io.github.bitlhk.finance.harness.core.HarnessJson.mapper();
+        var resource = getClass().getResourceAsStream("/task-checkpoints/legacy-89d0ad1.json");
+        assertNotNull(resource);
+        com.fasterxml.jackson.databind.JsonNode fixtures;
+        try (resource) { fixtures = json.readTree(resource); }
+        assertEquals("89d0ad1", fixtures.path("sourceCommit").asText());
+        String handle = fixtures.path("handle").asText();
+        for (String state : List.of("pending", "unknown", "terminal")) {
+            Path directory = temp.resolve(state);
+            var store = new FileTaskCheckpointStore(directory);
+            String bytes = fixtures.path(state).asText();
+            java.nio.file.Files.writeString(directory.resolve(handle + ".json"), bytes);
+            Bank bank = new Bank();
+            var restored = controller(store, bank, "legacy-session");
+            if (state.equals("pending")) {
+                assertEquals(json.readTree(bytes).path("checkpoint").path(OpenJiuwenFinanceBridge.CK_BINDING).asText(),
+                        restored.confirmationBinding(handle));
+                assertEquals("COMPLETED", restored.confirm(handle, approval(restored, handle)).get("status"));
+                assertEquals(1, bank.writes.get());
+            } else if (state.equals("unknown")) {
+                bank.writes.set(1);
+                assertThrows(IllegalStateException.class, () -> restored.confirmationBinding(handle));
+                assertEquals("COMPLETED", restored.invoke(CAP, Map.of(HANDLE, handle)).get("status"));
+                assertEquals(1, bank.writes.get());
+                assertNull(bank.requests.getFirst().confirmation());
+                assertEquals(true, bank.requests.getFirst().continuation().get("submitOutcomeUnknown"));
+            } else {
+                var returned = restored.invoke(CAP, Map.of(HANDLE, handle));
+                var oldTerminal = json.readTree(bytes).path("terminalResult");
+                for (String field : List.of("status", "content", "data", "evidence"))
+                    assertEquals(oldTerminal.path(field), json.valueToTree(returned.get(field)), field);
+                assertEquals(false, returned.get("requiresUserAction"));
+                assertTrue(bank.requests.isEmpty());
+                assertEquals(bytes, java.nio.file.Files.readString(directory.resolve(handle + ".json")));
+            }
+            if (!bank.requests.isEmpty()) {
+                assertEquals("bank-task-1", bank.requests.getFirst().taskRef());
+                assertEquals(json.readTree(bytes).path("checkpoint").path(OpenJiuwenFinanceBridge.CK_IDEMPOTENCY).asText(),
+                        bank.requests.getFirst().idempotencyKey());
+            }
+        }
+    }
+
     @Test
     void exactAmountSurvivesRecoveryApprovalAndTerminalCache() throws Exception {
         Bank bank = new Bank();

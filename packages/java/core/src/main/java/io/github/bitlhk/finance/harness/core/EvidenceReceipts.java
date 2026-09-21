@@ -14,13 +14,7 @@ public final class EvidenceReceipts {
             String providerId,
             Instant startedAt,
             Instant finishedAt) {
-        if (request == null || result == null) {
-            throw new IllegalArgumentException("request and result are required");
-        }
-        if (!request.context().requestId().equals(result.requestId())
-                || !request.context().traceId().equals(result.traceId())) {
-            throw new IllegalArgumentException("result identity must match request context");
-        }
+        requireMatchingIdentity(request, result);
         String taskRef = result.task() == null ? request.taskRef() : result.task().taskRef();
         return new EvidenceReceiptV1(
                 EvidenceReceiptV1.SCHEMA_VERSION,
@@ -35,5 +29,13 @@ public final class EvidenceReceipts {
                 taskRef,
                 startedAt,
                 finishedAt);
+    }
+
+    /** Verify before consuming result-dependent continuation or input-collection instructions. */
+    public static void requireMatchingIdentity(CapabilityRequestV1 request, CapabilityResultV1 result) {
+        if (request == null || result == null) throw new IllegalArgumentException("request and result are required");
+        if (!request.context().requestId().equals(result.requestId())
+                || !request.context().traceId().equals(result.traceId()))
+            throw new IllegalArgumentException("result identity must match request context");
     }
 }

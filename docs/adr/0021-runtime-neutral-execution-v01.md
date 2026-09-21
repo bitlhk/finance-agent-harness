@@ -61,6 +61,17 @@ Assembler -> 资产解析与兼容核验 -> Integrator 安装入口
 
 ### E2：共享 TASK 执行语义与第二个消费者
 
+当前已提取的候选实现：
+
+- `TaskCoordination`：在 Host Journal 锁内完成句柄归属、实时授权、终态缓存、补参、调用前立即持久化与结果写回。`Journal.put` 必须在返回前持久化；不能把整个 `locked` 变成退出时才提交的数据库事务。
+- `TaskProtocol`：控制参数剥离、幂等键、Core TASK 请求、银行结果检查点与查证保留规则。
+- `ProviderTaskExecution`：单次动态授权与 Provider TASK 调用，返回 Core 请求/结果和本地拒绝或查证决策，不返回 SDK 对象。必须结合协调器才能获得持久化及重复确认保护。
+- OpenJiuwen `InstalledTaskController`：保留旧构造与方法，将原 Host Store 适配为 Journal；终态仍以原 `OpenJiuwenExecutionV1` 磁盘形状保存。旧 Bridge 只转换原有输出及证据。
+
+协调器不解析 response 正文决定银行终态；Backend 返回独立 checkpoint 与 accessDenied 控制信息。共享机制不允许新 Runtime 自动接管旧 Runtime 的任务，安装 scope 和可信任务来源仍由 Host/Integrator 负责。
+
+该部分尚不代表 E2 完成：AgentScope TASK SDK 探针、实际宿主确认入口与受控集成未验收，QUERY-only 门禁继续保留。
+
 - 根据现有调用链提取冻结请求、可信确认验证、检查点结果和恢复决策；以框架无关输入输出表达，不复刻整个 OpenJiuwenExecutionV1 API。
 - Host 继续负责可信确认事件、持久化实例和会话归属；Integrator 负责将 Runtime 暂停/继续转换成调用；Provider 继续查证银行任务。
 - AgentScope 复用同一执行机制、业务包、Provider 和共享确认界面；不得重新写一套转账规范。

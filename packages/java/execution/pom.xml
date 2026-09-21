@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>finance-harness-execution</artifactId>
-    <name>Finance Harness Task Checkpoint Policy</name>
+    <name>Finance Harness Shared Task Execution</name>
 
     <dependencies>
         <dependency>
