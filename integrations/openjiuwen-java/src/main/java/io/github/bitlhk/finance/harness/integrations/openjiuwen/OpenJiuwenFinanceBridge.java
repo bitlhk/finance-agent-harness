@@ -139,14 +139,11 @@ public final class OpenJiuwenFinanceBridge {
             checkAccess(invocation, CapabilityRequestV1.Operation.TASK);
             if (!supports(invocation.capabilityId())) return rejected(invocation, "未安装此办理能力。");
             Map<String, Object> prior = invocation.checkpoint();
-            if (!prior.isEmpty() && (!invocation.capabilityId().equals(prior.get(CK_CAPABILITY))
-                    || !owner(invocation).equals(prior.get(CK_OWNER)))) {
+            if (!prior.isEmpty() && !TaskCheckpointPolicy.matchesOwner(prior, invocation.capabilityId(), owner(invocation))) {
                 return rejected(invocation, "续办身份与原任务不一致。");
             }
             Map<String, Object> supplied = businessParameters(invocation.arguments());
-            if (prior.containsKey(CK_PARAMETERS) && !supplied.isEmpty()
-                    && !fingerprint(supplied).equals(fingerprint(prior.get(CK_PARAMETERS)))
-                    && !canSupplement(prior, supplied)) {
+            if (!TaskCheckpointPolicy.acceptsParameters(prior, supplied)) {
                 return rejected(invocation, "原任务参数不可变更，请先处理原任务。");
             }
             if (approval != null && !approval.validFor(text(prior.get(CK_BINDING)), startedAt)) {

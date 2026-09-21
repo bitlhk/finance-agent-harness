@@ -12,6 +12,17 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CheckpointPolicyCompatibilityTest {
+    @Test void hostConfirmationRetainsItsPublicShapeAndTimeBoundaries() {
+        var start = java.time.Instant.parse("2026-09-21T00:00:00Z");
+        var binding = "a".repeat(64);
+        var approval = new HostTaskConfirmation("event", binding, start, start.plusSeconds(300));
+        assertEquals("event", approval.eventId());
+        assertTrue(approval.validFor(binding, start));
+        assertFalse(approval.validFor(binding, start.plusSeconds(300)));
+        assertFalse(approval.validFor("b".repeat(64), start));
+        assertThrows(IllegalArgumentException.class,
+                () -> new HostTaskConfirmation("event", binding, start, start.plusSeconds(301)));
+    }
     @Test void oldBridgeFingerprintHasFixedCanonicalBytes() {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("values", Arrays.asList(new BigDecimal("1.00"), null, "text"));

@@ -63,6 +63,18 @@ public final class TaskCheckpointPolicy {
         return true;
     }
 
+    /** Compares trusted host identity with the saved binding; does not grant access. */
+    public static boolean matchesOwner(Map<String, Object> checkpoint, String capabilityId, String owner) {
+        return checkpoint.isEmpty() || capabilityId.equals(checkpoint.get(CK_CAPABILITY))
+                && owner.equals(checkpoint.get(CK_OWNER));
+    }
+
+    public static boolean acceptsParameters(Map<String, Object> checkpoint, Map<String, Object> supplied) {
+        return !checkpoint.containsKey(CK_PARAMETERS) || supplied.isEmpty()
+                || fingerprint(supplied).equals(fingerprint(checkpoint.get(CK_PARAMETERS)))
+                || canSupplement(checkpoint, supplied);
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> parameters(Map<String, Object> checkpoint) {
         return (Map<String, Object>) checkpoint.get(CK_PARAMETERS);
