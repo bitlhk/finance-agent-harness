@@ -26,6 +26,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>finance-harness-execution</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>${project.groupId}</groupId><artifactId>finance-harness-assembly</artifactId><version>${project.version}</version>
         </dependency>
         <dependency>
