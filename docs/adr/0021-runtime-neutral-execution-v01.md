@@ -70,7 +70,29 @@ Assembler -> 资产解析与兼容核验 -> Integrator 安装入口
 
 协调器不解析 response 正文决定银行终态；Backend 返回独立 checkpoint 与 accessDenied 控制信息。共享机制不允许新 Runtime 自动接管旧 Runtime 的任务，安装 scope 和可信任务来源仍由 Host/Integrator 负责。
 
-该部分尚不代表 E2 完成：AgentScope TASK SDK 探针、实际宿主确认入口与受控集成未验收，QUERY-only 门禁继续保留。
+该部分的上线状态以资格证据与发布记录为准，不因公共模块存在就自动开放 TASK。
+
+#### AgentScope TASK 候选接入
+
+AgentScope Java 2.0.3 的 `AgentScopeTaskTool` 通过可信 RuntimeContext 接入
+`TaskCoordination`，再由 `AgentScopeTaskBackend` 调用公共
+`ProviderTaskExecution`。模型只能提出办理或续办请求，不能签发 Approval。
+宿主的确认、拒绝、查证入口调用同一协调器，不依赖模型再次选择工具。
+
+`FileTaskJournal` 是公共 Journal 的本地文件参考实现，使用单独的
+`finance-task-journal.v0.1` 格式、私有目录、文件锁及逐次落盘。
+新生成的 Java 宿主使用独立 `checkpoints-v01` 目录；OpenJiuwen 通过
+`TaskJournalAdapter` 转换旧接入接口。原 `FileTaskCheckpointStore` 和旧
+Agent 制品保持不变，不静默迁移或覆盖原任务文件。
+
+任务范围绑定 Runtime、宿主安装范围、身份、客户、会话、用途与资产版本。
+同一安装的进程重启可以恢复；不同 Runtime 或安装不能接管原任务。
+查询资格仍不能放行 TASK，TASK 准入需要额外的原生确认、重复确认、
+UNKNOWN 恢复、撤权、隔离、持久化、冻结参数、取消、存储故障及银行 HTTP
+探针证据。原生资格与生成宿主的观测资格分别验证，并绑定实际 JAR 摘要。
+
+当前候选已完成原生探针与宿主编译，完整页面办理及发布门禁仍需通过；
+不据此宣称已上线或支持所有办理包。Python TASK 仍不支持。
 
 - 根据现有调用链提取冻结请求、可信确认验证、检查点结果和恢复决策；以框架无关输入输出表达，不复刻整个 OpenJiuwenExecutionV1 API。
 - Host 继续负责可信确认事件、持久化实例和会话归属；Integrator 负责将 Runtime 暂停/继续转换成调用；Provider 继续查证银行任务。

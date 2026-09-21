@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.*;
 import static io.github.bitlhk.finance.harness.core.observation.ObservationRequirementsV01.*;
 
-/** Build-time QUERY admission only. AgentScope owns all reasoning and tool iteration. */
+/** Versioned build-time admission. AgentScope owns reasoning and tool iteration. */
 public final class AgentScopeQueryAssembler {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     public record AssetRef(String id, String version, String source, String digest) {}
@@ -35,8 +35,10 @@ public final class AgentScopeQueryAssembler {
                           List<ObservationRequirementsV01.Reference> observationRequirements,
                           List<ProfileCompatibility> profiles, List<ProviderCompatibility> providers) {
         public Support {
-            if (!"agentscope-query-support.v0.1".equals(schemaVersion) || !"agentscope".equals(family)
-                    || !"java".equals(language) || !"2.0.3".equals(sdkVersion) || !"QUERY".equals(operation)
+            boolean query = "agentscope-query-support.v0.1".equals(schemaVersion) && "QUERY".equals(operation);
+            boolean task = "agentscope-task-support.v0.1".equals(schemaVersion) && "QUERY_TASK".equals(operation);
+            if (!(query || task) || !"agentscope".equals(family)
+                    || !"java".equals(language) || !"2.0.3".equals(sdkVersion)
                     || modelAttempts != 1 || toolAttempts != 1 || stream || fallback || pendingToolRecovery)
                 throw new IllegalArgumentException("UNSUPPORTED_AGENTSCOPE_MODE");
             descriptions = List.copyOf(descriptions); terminology = List.copyOf(terminology);
@@ -86,6 +88,10 @@ public final class AgentScopeQueryAssembler {
                 throw new IllegalArgumentException("AGENTSCOPE_RESOLVED_REFERENCE_MISMATCH");
         }
         Support support = HarnessJson.mapper().readValue(bounded(candidateRoot, supportFile), Support.class);
+        boolean taskSupport = "QUERY_TASK".equals(support.operation());
+        Set<String> features = taskSupport
+                ? Set.of("query.v1", "task.v1", "trusted-grants.v1", "trusted-confirmation.v1", "persistent-task.v1", "observation.v0.1")
+                : Set.of("query.v1", "trusted-grants.v1", "observation.v0.1");
         List<LockedAsset> assets = new ArrayList<>();
         assets.add(new LockedAsset("SOLUTION", spec.solutionId(), "1", relative(candidateRoot, solution), AssetDigests.sha256(solution)));
         assets.add(new LockedAsset("SUPPORT_PROFILE", "agentscope-query-single", "0.1", relative(candidateRoot, supportFile), AssetDigests.sha256(supportFile)));
@@ -101,12 +107,12 @@ public final class AgentScopeQueryAssembler {
             var declaration = HarnessJson.mapper().readValue(bounded(root, sidecar), PackDeclaration.class);
             if (!"finance-component-assembly.v0.1".equals(declaration.schemaVersion()) || !"capability-pack".equals(declaration.kind())
                     || !ref.id().equals(declaration.owner().id()) || !ref.version().equals(declaration.owner().version())
-                    || declaration.requiredFeatures() == null || !Set.of("query.v1", "trusted-grants.v1", "observation.v0.1").containsAll(declaration.requiredFeatures()))
+                    || declaration.requiredFeatures() == null || !features.containsAll(declaration.requiredFeatures()))
                 throw new IllegalArgumentException("PACK_ASSEMBLY_NOT_SUPPORTED");
             assets.add(new LockedAsset("CAPABILITY_ASSEMBLY", pack.packId(), pack.version(), relative(root, sidecar), AssetDigests.sha256(sidecar)));
             if (!packIds.add(pack.packId())) throw new IllegalArgumentException("DUPLICATE_CAPABILITY_PACK");
             for (var capability : pack.capabilities()) {
-                if (capability.operation() != FinanceCapabilityPackV1.Operation.QUERY) throw new IllegalArgumentException("QUERY_ONLY");
+                if (capability.operation() != FinanceCapabilityPackV1.Operation.QUERY && !taskSupport) throw new IllegalArgumentException("QUERY_ONLY");
                 new QueryInputValidator(capability.inputSchema());
                 if (capabilities.putIfAbsent(capability.capabilityId(), capability) != null || !tools.add(capability.toolName()))
                     throw new IllegalArgumentException("DUPLICATE_CAPABILITY_OR_TOOL");
@@ -152,16 +158,17 @@ public final class AgentScopeQueryAssembler {
             String id = spec.capabilityBindings().get(capability.capabilityId());
             if (id == null && selected.size() == 1) id = selected.keySet().iterator().next();
             var provider = selected.get(id);
-            if (provider == null || !provider.descriptor().supports(capability.capabilityId(), CapabilityRequestV1.Operation.QUERY))
+            if (provider == null || !provider.descriptor().supports(capability.capabilityId(), CapabilityRequestV1.Operation.valueOf(capability.operation().name())))
                 throw new IllegalArgumentException("PROVIDER_COVERAGE_OR_AMBIGUITY");
             var pack = packs.stream().filter(p -> p.capabilities().contains(capability)).findFirst().orElseThrow();
-            if (declarations.get(id).supports().stream().noneMatch(s -> "QUERY".equals(s.operation()) && pack.packId().equals(s.pack().id())
+            if (declarations.get(id).supports().stream().noneMatch(s -> capability.operation().name().equals(s.operation()) && pack.packId().equals(s.pack().id())
                     && pack.version().equals(s.pack().version()) && s.capabilityIds().contains(capability.capabilityId())))
                 throw new IllegalArgumentException("PROVIDER_PACK_VERSION_NOT_SUPPORTED");
             bindings.put(capability.capabilityId(), new Binding(capability, provider)); used.add(id);
         }
         if (!used.equals(selected.keySet())) throw new IllegalArgumentException("UNUSED_PROVIDER_REFERENCE");
         var inventory = RuntimeInventory.inspect(selected.values());
+        if (capabilities.values().stream().anyMatch(c -> c.operation() == FinanceCapabilityPackV1.Operation.TASK)) qualification.requireTask();
         var collector = AgentScopeObservationCollector.declaration(true);
         qualification.requireCurrent(inventory, collector.identityDigest());
         assets.add(new LockedAsset("RUNTIME_QUALIFICATION", RuntimeQualification.VERSION, "0.1", qualification.source(), qualification.digest()));
@@ -324,9 +331,14 @@ public final class AgentScopeQueryAssembler {
         }
         public AgentScopeQuerySession openSession(AgentScopeQuerySession.Identity identity,
                 java.util.function.Supplier<BoundFinanceProvider.Grant> grants, ModelConnection connection) {
+            return openSession(identity, grants, connection, null);
+        }
+        public AgentScopeQuerySession openSession(AgentScopeQuerySession.Identity identity,
+                java.util.function.Supplier<BoundFinanceProvider.Grant> grants, ModelConnection connection,
+                AgentScopeQuerySession.TaskHost tasks) {
             if (!profile.principalTypes().contains(identity.principalType()) || !profile.purposes().contains(identity.purpose()))
                 throw new IllegalArgumentException("PROFILE_SESSION_MISMATCH");
-            return new AgentScopeQuerySession(this, identity, grants, connection);
+            return new AgentScopeQuerySession(this, identity, grants, connection, tasks);
         }
         public Map<String, Object> lock(Set<String> installedTools) {
             var expected = bindings.values().stream().map(b -> b.capability().toolName()).collect(java.util.stream.Collectors.toSet());
@@ -336,7 +348,7 @@ public final class AgentScopeQueryAssembler {
                 var groups = pack.capabilities().stream().collect(java.util.stream.Collectors.groupingBy(c -> bindings.get(c.capabilityId()).provider().descriptor().providerId()));
                 groups.forEach((provider, caps) -> installations.add(Map.of("packId", pack.packId(), "packVersion", pack.version(),
                         "providerId", provider, "integrationId", "agentscope-java", "integrationVersion", RuntimeInventory.INTEGRATION_VERSION,
-                        "capabilities", caps.stream().map(c -> Map.of("capabilityId", c.capabilityId(), "toolName", c.toolName(), "operation", "QUERY",
+                        "capabilities", caps.stream().map(c -> Map.of("capabilityId", c.capabilityId(), "toolName", c.toolName(), "operation", c.operation().name(),
                                 "providerId", provider, "providerVersion", bindings.get(c.capabilityId()).provider().descriptor().version())).toList())));
             }
             return Map.of("schemaVersion", "finance-solution-lock.v1", "solutionId", spec.solutionId(), "resolvedAt", Instant.now().toString(),

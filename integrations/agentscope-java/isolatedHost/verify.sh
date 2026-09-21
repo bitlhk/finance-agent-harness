@@ -3,6 +3,13 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../../.." && pwd)"
 repo="${FH_MAVEN_REPO:-$root/target/m2-agentscope}"
 run="${1:-${FH_PROBE_OUTPUT:-$root/target/agentscope-probe-$(date -u +%Y%m%dT%H%M%SZ)}}"
+qualification_args=()
+if [[ "${2:-}" == "--tasks" ]]; then
+  qualification_args+=(--tasks)
+elif [[ -n "${2:-}" ]]; then
+  printf 'Unsupported qualification mode: %s\n' "$2" >&2
+  exit 2
+fi
 repo="$(realpath -m "$repo")"
 run="$(realpath -m "$run")"
 test ! -e "$run"
@@ -24,7 +31,7 @@ cp integrations/agentscope-java/target/finance-harness-agentscope-java-0.1.0-SNA
 cp -a integrations/agentscope-java/target/test-classes "$run/test-classes"
 classpath="$run/lib/*:$run/test-classes:$run/host-classes"
 javac --release 21 -cp "$classpath" -d "$run/host-classes" integrations/agentscope-java/isolatedHost/*.java
-java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.QualificationWorker "$root" "$run/raw" "$run/qualification"
+java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.QualificationWorker "$root" "$run/raw" "$run/qualification" "${qualification_args[@]}"
 digest="$(tr -d '\n' < "$run/qualification/qualification.sha256")"
 java -cp "$classpath" io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.IsolatedHost controlled "$root" \
   "$run/qualification/agentscope-observation-qualification.json" "$digest" "$run/controlled-host"

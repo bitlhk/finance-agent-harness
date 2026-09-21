@@ -21,6 +21,16 @@ public final class QualificationWorker {
         var suite = xml.getDocumentElement();
         if (!"0".equals(suite.getAttribute("failures")) || !"0".equals(suite.getAttribute("errors")) || !"0".equals(suite.getAttribute("skipped"))) throw new IllegalStateException("JUNIT_NOT_PASS");
         int testCount = Integer.parseInt(suite.getAttribute("tests"));
+        boolean tasks = args.length > 3 && "--tasks".equals(args[3]);
+        Set<String> required = new HashSet<>(RuntimeQualification.REQUIRED_CHECKS);
+        if (tasks) {
+            var taskXml = factory.newDocumentBuilder().parse(root.resolve("integrations/agentscope-java/target/surefire-reports/TEST-io.github.bitlhk.finance.harness.integrations.agentscope.AgentScopeTaskSessionTest.xml").toFile());
+            var taskSuite = taskXml.getDocumentElement();
+            if (!"0".equals(taskSuite.getAttribute("failures")) || !"0".equals(taskSuite.getAttribute("errors")) || !"0".equals(taskSuite.getAttribute("skipped")))
+                throw new IllegalStateException("TASK_JUNIT_NOT_PASS");
+            testCount += Integer.parseInt(taskSuite.getAttribute("tests"));
+            required.addAll(RuntimeQualification.TASK_CHECKS);
+        }
         var provider = IsolatedHost.provider(URI.create("http://127.0.0.1:9"), "inventory", "inventory", "inventory");
         var actual = RuntimeInventory.inspect(List.of(provider));
         Map<String, List<RuntimeQualification.Evidence>> proofs = new TreeMap<>();
@@ -44,11 +54,11 @@ public final class QualificationWorker {
                 rows++;
             }
         }
-        if (rows != testCount || !proofs.keySet().containsAll(RuntimeQualification.REQUIRED_CHECKS)) throw new IllegalStateException("TEST_EVIDENCE_INCOMPLETE");
+        if (rows != testCount || !proofs.keySet().containsAll(required)) throw new IllegalStateException("TEST_EVIDENCE_INCOMPLETE");
         var declaration = AgentScopeObservationCollector.declaration(true);
         var checks = proofs.entrySet().stream().map(e -> new RuntimeQualification.Check(e.getKey(), true, e.getValue())).toList();
         Path proofFile = out.resolve("agentscope-query-evidence.json");
-        IsolatedHost.write(proofFile, new RuntimeQualification.Proof("agentscope-query-qualification-evidence.v0.1", "agentscope", "2.0.3", "PASS", declaration, actual, checks));
+        IsolatedHost.write(proofFile, new RuntimeQualification.Proof(tasks ? "agentscope-task-qualification-evidence.v0.1" : "agentscope-query-qualification-evidence.v0.1", "agentscope", "2.0.3", "PASS", declaration, actual, checks));
         var collector = new RuntimeQualification.Collector(declaration.collectorId(), RuntimeQualification.identity(actual, declaration.identityDigest()),
                 declaration.capabilities().stream().map(ObservationCapabilitiesV01.Capability::semanticId).collect(java.util.stream.Collectors.toSet()), true,
                 List.of(new RuntimeQualification.Evidence(proofFile.getFileName().toString(), AssetDigests.sha256(proofFile).substring(7))));
@@ -56,8 +66,9 @@ public final class QualificationWorker {
         IsolatedHost.write(qualification, new RuntimeQualification.Report(RuntimeQualification.VERSION, List.of(collector)));
         String digest = AssetDigests.sha256(qualification);
         RuntimeQualification.load(qualification, digest).requireCurrent(actual, declaration.identityDigest());
+        if (tasks) RuntimeQualification.load(qualification, digest).requireTask();
         Files.writeString(out.resolve("qualification.sha256"), digest + "\n");
-        IsolatedHost.write(out.resolve("summary.json"), Map.of("status", "PASS", "tests", rows, "requiredChecks", RuntimeQualification.REQUIRED_CHECKS,
+        IsolatedHost.write(out.resolve("summary.json"), Map.of("status", "PASS", "tests", rows, "requiredChecks", required,
                 "modelHttpRequests", modelHttp, "bankHttpRequestsIncludingDirectComparison", bankHttp,
                 "qualificationDigest", digest, "realModelGate", "NOT_RUN", "qualificationNature", "TRUSTED_OPERATOR_ASSERTION_NOT_CRYPTOGRAPHIC_TEST_ATTESTATION"));
         System.out.println("Qualified controlled HTTP: tests=" + rows + " modelHttp=" + modelHttp + " bankHttp=" + bankHttp + " sha256=" + digest);

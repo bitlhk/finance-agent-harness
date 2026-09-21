@@ -12,6 +12,7 @@ import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.observation.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
+import io.github.bitlhk.finance.harness.execution.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,25 +45,50 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         }
     }
     public record QueryExecution(String rootRequestId, String toolCallId, CapabilityRequestV1 request, CapabilityResultV1 result, EvidenceReceiptV1 receipt) {}
-    public record Reply(String text, String requestId, long generation, List<QueryExecution> executions, long droppedObservationEvents, long diagnosticFailures) {}
+    public record Reply(String text, String requestId, long generation, List<QueryExecution> executions, long droppedObservationEvents, long diagnosticFailures,
+                        List<Map<String, Object>> taskResults) {
+        public Reply(String text, String requestId, long generation, List<QueryExecution> executions, long droppedObservationEvents, long diagnosticFailures) {
+            this(text, requestId, generation, executions, droppedObservationEvents, diagnosticFailures, List.of());
+        }
+    }
+    /** Supplied by the authenticated Host, never from tool arguments or model output. */
+    public record TaskHost(String scope, TaskCoordination.Journal journal) {
+        public TaskHost {
+            if (scope == null || scope.isBlank()) throw new IllegalArgumentException("TRUSTED_TASK_SCOPE_REQUIRED");
+            Objects.requireNonNull(journal);
+        }
+    }
     private final AgentScopeQueryAssembler.Prepared prepared;
     private final Identity identity;
     private final Supplier<BoundFinanceProvider.Grant> grants;
     private final Map<String, BoundFinanceProvider> providers;
     private final ReActAgent agent;
     private final Map<String, Object> installationLock;
+    private final TaskHost taskHost;
+    private final String taskScope;
     private final AtomicBoolean valid = new AtomicBoolean(true), busy = new AtomicBoolean();
     private final Set<String> requestIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     AgentScopeQuerySession(AgentScopeQueryAssembler.Prepared prepared, Identity identity, Supplier<BoundFinanceProvider.Grant> grants, ModelConnection model) {
+        this(prepared, identity, grants, model, null);
+    }
+    AgentScopeQuerySession(AgentScopeQueryAssembler.Prepared prepared, Identity identity, Supplier<BoundFinanceProvider.Grant> grants, ModelConnection model, TaskHost taskHost) {
         this.prepared = prepared; this.identity = Objects.requireNonNull(identity); this.grants = Objects.requireNonNull(grants);
+        this.taskHost = taskHost;
+        boolean hasTasks = prepared.bindings.values().stream().anyMatch(b -> b.capability().operation().name().equals("TASK"));
+        if (hasTasks && taskHost == null) throw new IllegalArgumentException("TRUSTED_TASK_HOST_REQUIRED");
+        taskScope = taskHost == null ? "" : TaskCheckpointPolicy.fingerprint(List.of("agentscope-java", taskHost.scope(),
+                identity.principalId(), identity.principalType(), identity.subjectRef(), identity.sessionRef(), identity.purpose(), identity.channel(),
+                prepared.spec.solutionId(), prepared.assets));
         Map<String, Set<String>> requirements = new LinkedHashMap<>();
         prepared.bindings.forEach((id, binding) -> requirements.put(id, binding.capability().requiredScopes()));
         Map<String, BoundFinanceProvider> bound = new LinkedHashMap<>();
         prepared.bindings.forEach((id, binding) -> bound.put(id, new BoundFinanceProvider(binding.provider(), grants, requirements)));
         providers = Map.copyOf(bound);
         Toolkit toolkit = new Toolkit();
-        prepared.bindings.forEach((id, binding) -> toolkit.registerAgentTool(new QueryTool(id, binding)));
+        prepared.bindings.forEach((id, binding) -> toolkit.registerAgentTool(binding.capability().operation().name().equals("TASK")
+                ? new AgentScopeTaskTool(id, binding.capability().toolName(), prepared.catalog.description(id), binding.capability().inputSchema())
+                : new QueryTool(id, binding)));
         Model nativeFactory = new Model() {
             public String getModelName() { return model.model(); }
             public Flux<ChatResponse> stream(List<Msg> messages, List<ToolSchema> tools, GenerateOptions ignored) {
@@ -109,7 +135,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                 if (!requestIds.add(input.requestId())) throw new IllegalArgumentException("DUPLICATE_REQUEST_ID");
                 call = new Invocation(input); call.requireAuthorized("host-entry");
             } catch (RuntimeException failure) { invalidate(); busy.set(false); return Mono.error(failure); }
-            var context = RuntimeContext.builder().sessionId(identity.sessionRef()).userId(identity.principalId()).put(Invocation.class, call).build();
+            var context = RuntimeContext.builder().sessionId(identity.sessionRef()).userId(identity.principalId()).put(Invocation.class, call)
+                    .put(AgentScopeTaskTool.Access.class, (AgentScopeTaskTool.Access) call::invokeTask).build();
             try (var installed = call.run.start(call.parent, "host", "installation", Map.of())) {
                 installed.finish(Outcome.RETURNED, Map.of());
             }
@@ -117,7 +144,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             return agent.call(input.text(), context)
                     .map(message -> {
                         call.requireAuthorized("host-delivery");
-                        return new Reply(message.getTextContent(), input.requestId(), identity.generation(), List.copyOf(call.executions), call.run.droppedEvents(), call.diagnosticFailures.get());
+                        return new Reply(message.getTextContent(), input.requestId(), identity.generation(), List.copyOf(call.executions), call.run.droppedEvents(), call.diagnosticFailures.get(), List.copyOf(call.taskResults));
                     })
                     // Release before delivering a terminal signal: downstream may start the next turn inline.
                     .doOnSuccess(reply -> { if (terminated.compareAndSet(false, true)) busy.set(false); })
@@ -142,12 +169,42 @@ public final class AgentScopeQuerySession implements AutoCloseable {
     public void cancel() { invalidate(); agent.interrupt(identity.principalId(), identity.sessionRef()); }
     @Override public void close() { cancel(); agent.close(); }
 
+    /** Host-only operations do not invoke a model. The Host authenticates approval events and persists challenges. */
+    public Object taskAction(Input input, String action, String handle, TaskCoordination.Approval approval) {
+        if (taskHost == null) throw new IllegalArgumentException("TASK_NOT_INSTALLED");
+        if (!valid.get()) throw new SecurityException("SESSION_GENERATION_INVALID");
+        if (!busy.compareAndSet(false, true)) throw new IllegalStateException("SESSION_BUSY");
+        try (var observationScope = AgentScopeObservationCollector.bind(input.observation(), input.parentId())) {
+            // One authenticated Host request may inspect a binding and then confirm it.
+            var call = new Invocation(input); call.requireAuthorized("task-host-entry");
+            var tasks = call.coordinator("host-" + UUID.randomUUID());
+            Object result = switch (action) {
+                case "binding" -> tasks.confirmationBinding(handle);
+                case "confirm" -> tasks.confirm(handle, Objects.requireNonNull(approval));
+                case "decline" -> tasks.decline(handle);
+                case "resume" -> {
+                    var saved = taskHost.journal().locked(a -> a.get(handle));
+                    if (saved == null || !taskScope.equals(saved.scope())) throw new SecurityException("TASK_NOT_AVAILABLE");
+                    yield tasks.invoke(saved.capabilityId(), Map.of(TaskCoordination.HANDLE_ARGUMENT, handle));
+                }
+                default -> throw new IllegalArgumentException("UNKNOWN_TASK_ACTION");
+            };
+            call.requireAuthorized("task-host-delivery");
+            return result;
+        } catch (RuntimeException failure) {
+            if (!("binding".equals(action) && failure instanceof IllegalStateException)) invalidate();
+            throw failure;
+        }
+        finally { busy.set(false); clearIfInvalid(); }
+    }
+
     final class Invocation {
         final Input input;
         final FinanceContextV1 context;
         final ObservationRun run;
         final String parent;
         final List<QueryExecution> executions = new CopyOnWriteArrayList<>();
+        final List<Map<String, Object>> taskResults = new CopyOnWriteArrayList<>();
         final Set<String> toolCallIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
         final AtomicLong diagnosticFailures = new AtomicLong();
         void capture(String callId, String boundary, Map<String, Object> value) {
@@ -170,7 +227,45 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             }
         }
         CapabilityRequestV1 request(String id, Map<String, Object> arguments) {
-            return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, id, CapabilityRequestV1.Operation.QUERY, context, arguments, null, null, Map.of(), null);
+            return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, id, CapabilityRequestV1.Operation.valueOf(prepared.bindings.get(id).capability().operation().name()), context, arguments, null, null, Map.of(), null);
+        }
+        TaskCoordination coordinator(String nativeId) {
+            if (taskHost == null) throw new SecurityException("TRUSTED_TASK_HOST_REQUIRED");
+            var tasks = new TaskCoordination(taskScope, taskHost.journal());
+            prepared.bindings.forEach((id, binding) -> {
+                if (!binding.capability().operation().name().equals("TASK")) return;
+                var observed = new ObservedFinanceProvider(providers.get(id), binding.provider().descriptor().providerId(), () -> run);
+                tasks.register(id, new AgentScopeTaskBackend(id, binding.provider().descriptor().providerId(), observed,
+                        taskId -> TaskCheckpointPolicy.fingerprint(List.of(taskScope, id, taskId)),
+                        (taskId, arguments) -> {
+                            requireAuthorized("task-context");
+                            var child = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, "task-call-" + UUID.randomUUID(), context.traceId(),
+                                    context.principalId(), context.principalType(), context.channel(), context.purpose(), context.subjectRef(),
+                                    context.sessionRef(), context.authenticationLevel(), context.scopes());
+                            return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, id, CapabilityRequestV1.Operation.TASK,
+                                    child, arguments, null, null, Map.of(), null);
+                        }, (outcome, receipt) -> executions.add(new QueryExecution(input.requestId(), nativeId, outcome.request(), outcome.result(), receipt))));
+            });
+            return tasks;
+        }
+        Map<String, Object> invokeTask(String id, String nativeId, Map<String, Object> arguments) {
+            if (!prepared.bindings.containsKey(id) || !prepared.bindings.get(id).capability().operation().name().equals("TASK"))
+                throw new SecurityException("TASK_NOT_INSTALLED");
+            if (nativeId == null || !nativeId.matches("[A-Za-z0-9_.:/{}-]{1,200}") || !toolCallIds.add(nativeId))
+                throw new SecurityException("NATIVE_TOOL_CALL_ID_INVALID_OR_DUPLICATE");
+            requireAuthorized("task-provider-entry");
+            try (var span = run.start(parent, "runtime-tool", "task", Map.of("toolCallId", nativeId, "capabilityId", id));
+                 var scope = AgentScopeObservationCollector.bind(run, span.id())) {
+                try {
+                    var response = coordinator(nativeId).invoke(id, arguments);
+                    requireAuthorized("task-provider-return");
+                    taskResults.add(response);
+                    span.finish(Outcome.RETURNED, Map.of("responseStatus", String.valueOf(response.getOrDefault("status", "UNKNOWN"))));
+                    return response;
+                } catch (RuntimeException failure) {
+                    span.finish(failure instanceof SecurityException ? Outcome.DENIED : Outcome.ERROR, Map.of()); throw failure;
+                }
+            }
         }
         CapabilityRequestV1 toolRequest(String id, String toolCallId, Map<String, Object> arguments) {
             if (toolCallId == null || !toolCallId.matches("[A-Za-z0-9_.:/{}-]{1,200}") || !toolCallIds.add(toolCallId))

@@ -76,7 +76,7 @@ final class InstalledTaskController {
     Map<String, Object> decline(String handle) { return tasks.decline(handle); }
 
     @SuppressWarnings("unchecked")
-    private static OpenJiuwenExecutionV1 terminal(TaskCoordination.Saved saved) {
+    static OpenJiuwenExecutionV1 terminal(TaskCoordination.Saved saved) {
         var response = saved.terminalResponse();
         if (response == null) return null;
         return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.valueOf((String)response.get("status")), saved.taskId(),
