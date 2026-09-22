@@ -86,6 +86,33 @@ class AgentScopeQueryTest {
         assertEquals("/chat/completions", h.model.requests.getFirst().get("uri"));
         assertEquals(0, h.bank.customerReads());
     }
+    @Test void explicitGenerationParametersReachModelHttpEndpoint() throws Exception {
+        var h = harness(text("Explicit parameters."));
+        h.session.close();
+        h.session = h.prepared.openSession(new AgentScopeQuerySession.Identity(h.principal, FinanceContextV1.PrincipalType.CUSTOMER,
+                h.subject, h.sessionId, "customer-self-service", "isolated", FinanceContextV1.AuthenticationLevel.STRONG, 2), h.grant::get,
+                new ModelConnection(h.model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10),
+                        new ModelConnection.Generation(0.25, 0.8, 1234)));
+        assertEquals("Explicit parameters.", h.call("Hello.").text());
+        assertEquals(1, h.model.requests.size());
+        var sent = HarnessJson.mapper().readTree(h.model.requests.getFirst().get("rawBody").toString());
+        assertEquals("controlled", sent.path("model").asText());
+        assertEquals(0.25, sent.path("temperature").asDouble());
+        assertEquals(0.8, sent.path("top_p").asDouble());
+        assertEquals(1234, sent.path("max_tokens").asInt());
+        assertEquals(0, h.bank.customerReads());
+    }
+    @Test void invalidGenerationParametersFailBeforeModelOrBankCalls() throws Exception {
+        var h = harness();
+        for (double value : new double[]{Double.NaN, Double.POSITIVE_INFINITY, -0.1, 2.1})
+            assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(value, 0.8, 1234));
+        for (double value : new double[]{Double.NaN, Double.NEGATIVE_INFINITY, 0, 1.1})
+            assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, value, 1234));
+        assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 0));
+        assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 32769));
+        assertEquals(0, h.model.requests.size());
+        assertEquals(0, h.bank.customerReads());
+    }
     @RepeatedTest(3) @Tag("compound") void compoundOriginalProviderAndMethod() throws Exception {
         var h = harness(tool("finance_transaction_summary", Map.of("period", "2026-08")),
                 tool("finance_spending_analysis", Map.of("period", "2026-08")), text("Controlled compound complete."));

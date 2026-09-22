@@ -101,7 +101,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                     var transport = new CheckedTransport(JdkHttpTransport.builder().client(http).build(), call, model, callId);
                     return OpenAIChatModel.builder().apiKey(model.apiKey()).baseUrl(model.baseUri().toString()).modelName(model.model())
                             .stream(false).httpTransport(transport).build()
-                            .stream(messages, tools, options(model.timeout()))
+                            .stream(messages, tools, options(model))
                             .doOnNext(response -> {
                                 call.requireAuthorized("parsed-model-response");
                                 var text = new StringBuilder(); var calls = new ArrayList<Map<String, Object>>();
@@ -116,13 +116,18 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         };
         agent = ReActAgent.builder().name("finance-query").sysPrompt(prepared.prompt).toolkit(toolkit).model(nativeFactory)
                 .maxRetries(1).maxIters(6).enablePendingToolRecovery(false).fallbackModel((Model) null)
-                .generateOptions(options(model.timeout())).toolExecutionConfig(execution(Duration.ofSeconds(30)))
+                .generateOptions(options(model)).toolExecutionConfig(execution(Duration.ofSeconds(30)))
                 .middleware(new Middleware()).build();
         installationLock = prepared.lock(agent.getToolkit().getToolNames());
     }
     private static ExecutionConfig execution(Duration timeout) { return ExecutionConfig.builder().maxAttempts(1).timeout(timeout).build(); }
-    private static GenerateOptions options(Duration timeout) { return GenerateOptions.builder().endpointPath("/chat/completions")
-            .stream(false).temperature(0.0).executionConfig(execution(timeout)).build(); }
+    private static GenerateOptions options(ModelConnection model) {
+        var options = GenerateOptions.builder().endpointPath("/chat/completions")
+                .stream(false).temperature(0.0).executionConfig(execution(model.timeout()));
+        var generation = model.generation();
+        if (generation != null) options.temperature(generation.temperature()).topP(generation.topP()).maxTokens(generation.maxTokens());
+        return options.build();
+    }
     public Set<String> installedTools() { return Set.copyOf(agent.getToolkit().getToolNames()); }
     public Map<String, Object> lock() { return installationLock; }
     public boolean valid() { return valid.get(); }
