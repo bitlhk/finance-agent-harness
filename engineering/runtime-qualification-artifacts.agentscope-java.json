@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "runtime-qualification-artifacts.v0.1",
+  "status": "CANDIDATE_NOT_FOR_DEPLOYMENT",
+  "family": "agentscope",
+  "java": {
+    "2.0.3": {
+      "coordinate": "io.agentscope:agentscope-core:2.0.3",
+      "sha256": "7f1ec0f9c5afd1388554275efc78f58cb05692b634453695cf404eb79f7cfda4",
+      "releaseTagObject": "dddea5298de632d44e62cf8c8868e2ee8bc99e3e",
+      "releaseTagCommit": "1b8e3dcd2338550ae5198bdb2a7bae56df5bf2e0",
+      "releaseTree": "b1f21cdfcc24266060d3efe794e751b41ea9fd85",
+      "modelAdapter": {
+        "coordinate": "io.agentscope:agentscope-extensions-model-openai:2.0.3",
+        "sha256": "ecfb8f439eeb1f82dedada75817fd470212a195448e0186eedc6c6b98f5e5c4f"
+      },
+      "runtimeMode": "QUERY_SINGLE_ATTEMPT_NONSTREAM_NO_FALLBACK"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+<modelVersion>4.0.0</modelVersion>
+<parent><groupId>io.github.bitlhk.finance</groupId><artifactId>finance-agent-harness-parent</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent>
+<artifactId>finance-harness-agentscope-java</artifactId>
+<name>Finance Harness AgentScope QUERY Integration</name>
+<properties><jackson.version>2.21.1</jackson.version></properties>
+<dependencies>
+<dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-execution</artifactId><version>${project.version}</version></dependency>
+<dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-assembly</artifactId><version>${project.version}</version></dependency>
+<dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-non-ai-banking</artifactId><version>${project.version}</version><scope>test</scope></dependency>
+<dependency><groupId>io.agentscope</groupId><artifactId>agentscope-core</artifactId><version>2.0.3</version></dependency>
+<dependency><groupId>io.agentscope</groupId><artifactId>agentscope-extensions-model-openai</artifactId><version>2.0.3</version></dependency>
+<dependency><groupId>com.networknt</groupId><artifactId>json-schema-validator</artifactId><version>2.0.0</version></dependency>
+<dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+<dependency><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId><version>2.0.17</version><scope>test</scope></dependency>
+</dependencies>
+<build><resources><resource><directory>src/main/resources</directory><filtering>true</filtering></resource></resources>
+<plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.8.1</version></plugin></plugins>
+</build>
+</project>

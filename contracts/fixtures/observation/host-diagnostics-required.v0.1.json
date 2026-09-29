@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "host-diagnostics-required",
+  "version": "0.1.0",
+  "requirements": [
+    {
+      "semanticId": "execution.history",
+      "semanticVersion": "0.1",
+      "obligation": "REQUIRED",
+      "boundary": "HOST",
+      "content": "METADATA",
+      "fields": ["requestId", "outcome"],
+      "capabilityIds": []
+    },
+    {
+      "semanticId": "model.client.snapshot",
+      "semanticVersion": "0.1",
+      "obligation": "REQUIRED",
+      "boundary": "MODEL_CLIENT",
+      "content": "DIAGNOSTIC_BODY",
+      "fields": ["messages", "tools", "parameters", "response"],
+      "capabilityIds": []
+    }
+  ]
+}

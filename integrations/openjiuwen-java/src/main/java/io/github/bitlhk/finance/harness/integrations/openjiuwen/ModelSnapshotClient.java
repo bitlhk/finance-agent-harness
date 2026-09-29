@@ -10,7 +10,7 @@ import java.util.*;
 public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
     public static final String PROVIDER = "FinanceSnapshotOpenAI";
     private static final ThreadLocal<Receiver> CURRENT = new ThreadLocal<>();
-    public interface Receiver {
+    public interface Receiver extends io.github.bitlhk.finance.harness.assembly.ModelSnapshotReceiver {
         /** Must freeze/filter content synchronously; never enqueue mutable SDK objects. */
         void capture(String callId, String boundary, String state, Map<String, Object> value);
     }

@@ -23,7 +23,7 @@
     "durationNanos": {"type": ["integer", "null"], "minimum": 0},
     "links": {
       "type": "object",
-      "propertyNames": {"enum": ["sdkTraceId", "toolCallId", "harnessRequestId", "harnessTraceId", "capabilityId", "providerId", "route", "method", "httpStatus", "businessStatus", "attempt", "runtimeLockDigest", "exceptionType"]},
+      "propertyNames": {"enum": ["sdkTraceId", "toolCallId", "harnessRequestId", "harnessTraceId", "capabilityId", "providerId", "route", "method", "httpStatus", "businessStatus", "responseStatus", "attempt", "runtimeLockDigest", "exceptionType"]},
       "additionalProperties": {"type": "string", "pattern": "^[A-Za-z0-9_.:/{}-]{1,200}$"}
     }
   },

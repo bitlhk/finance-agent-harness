@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.dev/schemas/finance-development-support-index.v0.1.schema.json",
+  "title": "Independent fixed development-support references; discovery only",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "declarations"],
+  "properties": {
+    "schemaVersion": {"const": "finance-development-support-index.v0.1"},
+    "declarations": {
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source", "digest"],
+        "properties": {
+          "source": {"type": "string", "pattern": "^repo://metadata/development-support/[A-Za-z0-9_./-]+\\.json$"},
+          "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

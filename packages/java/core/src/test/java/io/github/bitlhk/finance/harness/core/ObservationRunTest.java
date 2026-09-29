@@ -32,6 +32,16 @@ class ObservationRunTest {
         assertTrue(events.isEmpty());
         assertEquals(2, safe.droppedEvents());
     }
+    @Test void taskResponseStatusIsBoundedObservationMetadata() {
+        var events = new ArrayList<ObservationEventV01>();
+        var run = new ObservationRun("request", "boot", "instance", events::add);
+        try (var span = run.start(null, "runtime-tool", "task", Map.of("capabilityId", "transfer.internal.create"))) {
+            span.finish(Outcome.RETURNED, Map.of("responseStatus", "NEED_CONFIRMATION"));
+        }
+        assertEquals(0, run.droppedEvents());
+        assertEquals("NEED_CONFIRMATION", events.getLast().links().get("responseStatus"));
+    }
+
     @Test void closingUnfinishedSpanDoesNotClaimSuccess() {
         var events = new ArrayList<ObservationEventV01>();
         var run = new ObservationRun("request", "boot", "instance", events::add);

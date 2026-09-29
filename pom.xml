@@ -14,6 +14,9 @@
 
     <modules>
         <module>packages/java/core</module>
+        <module>packages/java/execution</module>
+        <module>packages/java/assembly</module>
+        <module>integrations/agentscope-java</module>
         <module>packages/java/wealth</module>
         <module>packages/java/cashflow</module>
         <module>conformance/java-provider-kit</module>
