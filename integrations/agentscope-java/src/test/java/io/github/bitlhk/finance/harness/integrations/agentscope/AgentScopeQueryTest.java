@@ -42,6 +42,41 @@ class AgentScopeQueryTest {
     @AfterEach void cleanup() { harnesses.forEach(Harness::close); }
     Harness harness(Response... responses) throws Exception { var h = new Harness(responses); harnesses.add(h); return h; }
 
+    private io.github.bitlhk.finance.harness.execution.CaseFileWorkspaceV1 caseFiles(Harness h) throws Exception {
+        String digest = HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest("case.txt\0CASE_ONLY_9182\0".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        var files = new io.github.bitlhk.finance.harness.execution.CaseFileWorkspaceV1(
+                List.of(Map.of("path", "case.txt", "content", "CASE_ONLY_9182")), digest);
+        h.session.close();
+        h.session = h.prepared.openSession(new AgentScopeQuerySession.Identity(h.principal, FinanceContextV1.PrincipalType.CUSTOMER,
+                h.subject, h.sessionId, "customer-self-service", "isolated", FinanceContextV1.AuthenticationLevel.STRONG, 2), h.grant::get,
+                new ModelConnection(h.model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10)), null, files);
+        return files;
+    }
+    @Test void nativeCaseFileReadIsSeparateFromFinancialInstallationAndReachesModel() throws Exception {
+        var h = harness(tool("read_case_file", Map.of("path", "case.txt")), text("Read case."));
+        var files = caseFiles(h);
+        assertEquals(List.of(), files.evidence().get("reads"));
+        assertTrue(h.session.lock().containsKey("caseWorkspace"));
+        assertEquals("Read case.", h.call("Read the declared case.txt.").text());
+        assertEquals(2, h.model.requests.size());
+        assertFalse(h.model.requests.getFirst().get("rawBody").toString().contains("CASE_ONLY_9182"));
+        assertTrue(h.model.requests.getLast().get("rawBody").toString().contains("CASE_ONLY_9182"));
+        assertEquals(1, ((List<?>) files.evidence().get("reads")).size());
+        assertEquals(0, h.bank.customerReads());
+        h.session.close();
+        assertThrows(IllegalStateException.class, () -> files.read(Map.of("path", "case.txt")));
+    }
+    @Test void nativeCaseFileUnknownPathCannotExposeHostFiles() throws Exception {
+        var h = harness(tool("read_case_file", Map.of("path", "/etc/passwd")));
+        var files = caseFiles(h);
+        try { h.call("Read a file."); } catch (RuntimeException expected) { }
+        assertEquals(List.of(), files.evidence().get("reads"));
+        assertEquals(1, h.model.requests.size());
+        assertFalse(h.session.valid());
+        assertEquals(0, h.bank.customerReads());
+    }
+
     @Test @Tag("host-plan-api") void preparedMetadataDoesNotInvokeRuntimeOrLoseOriginalDefinitions() throws Exception {
         var sourceCalls = new java.util.concurrent.atomic.AtomicInteger();
         var provider = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(java.net.URI.create("http://127.0.0.1:1"),

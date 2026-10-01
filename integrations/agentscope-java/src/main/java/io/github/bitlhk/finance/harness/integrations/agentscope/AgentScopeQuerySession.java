@@ -66,6 +66,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
     private final Map<String, Object> installationLock;
     private final TaskHost taskHost;
     private final String taskScope;
+    private final CaseFileWorkspaceV1 caseFiles;
     private final AtomicBoolean valid = new AtomicBoolean(true), busy = new AtomicBoolean();
     private final Set<String> requestIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -73,7 +74,11 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         this(prepared, identity, grants, model, null);
     }
     AgentScopeQuerySession(AgentScopeQueryAssembler.Prepared prepared, Identity identity, Supplier<BoundFinanceProvider.Grant> grants, ModelConnection model, TaskHost taskHost) {
+        this(prepared, identity, grants, model, taskHost, null);
+    }
+    AgentScopeQuerySession(AgentScopeQueryAssembler.Prepared prepared, Identity identity, Supplier<BoundFinanceProvider.Grant> grants, ModelConnection model, TaskHost taskHost, CaseFileWorkspaceV1 caseFiles) {
         this.prepared = prepared; this.identity = Objects.requireNonNull(identity); this.grants = Objects.requireNonNull(grants);
+        this.caseFiles = caseFiles;
         this.taskHost = taskHost;
         boolean hasTasks = prepared.bindings.values().stream().anyMatch(b -> b.capability().operation().name().equals("TASK"));
         if (hasTasks && taskHost == null) throw new IllegalArgumentException("TRUSTED_TASK_HOST_REQUIRED");
@@ -89,6 +94,10 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         prepared.bindings.forEach((id, binding) -> toolkit.registerAgentTool(binding.capability().operation().name().equals("TASK")
                 ? new AgentScopeTaskTool(id, binding.capability().toolName(), prepared.catalog.description(id), binding.capability().inputSchema())
                 : new QueryTool(id, binding)));
+        if (caseFiles != null) {
+            if (toolkit.getToolNames().contains(CaseFileWorkspaceV1.TOOL)) throw new IllegalArgumentException("CASE_TOOL_NAME_CONFLICT");
+            toolkit.registerAgentTool(new CaseFileTool());
+        }
         Model nativeFactory = new Model() {
             public String getModelName() { return model.model(); }
             public Flux<ChatResponse> stream(List<Msg> messages, List<ToolSchema> tools, GenerateOptions ignored) {
@@ -118,7 +127,11 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                 .maxRetries(1).maxIters(6).enablePendingToolRecovery(false).fallbackModel((Model) null)
                 .generateOptions(options(model)).toolExecutionConfig(execution(Duration.ofSeconds(30)))
                 .middleware(new Middleware()).build();
-        installationLock = prepared.lock(agent.getToolkit().getToolNames());
+        var financialTools = new HashSet<>(agent.getToolkit().getToolNames());
+        if (caseFiles != null && !financialTools.remove(CaseFileWorkspaceV1.TOOL)) throw new IllegalStateException("CASE_TOOL_NOT_INSTALLED");
+        var lock = new LinkedHashMap<>(prepared.lock(financialTools));
+        if (caseFiles != null) lock.put("caseWorkspace", caseFiles.manifest());
+        installationLock = Collections.unmodifiableMap(lock);
     }
     private static ExecutionConfig execution(Duration timeout) { return ExecutionConfig.builder().maxAttempts(1).timeout(timeout).build(); }
     private static GenerateOptions options(ModelConnection model) {
@@ -172,7 +185,28 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         state.contextMutable().clear(); state.setSummary("");
     }
     public void cancel() { invalidate(); agent.interrupt(identity.principalId(), identity.sessionRef()); }
-    @Override public void close() { cancel(); agent.close(); }
+    @Override public void close() { cancel(); agent.close(); if (caseFiles != null) caseFiles.close(); }
+
+    private final class CaseFileTool implements AgentTool {
+        public String getName() { return CaseFileWorkspaceV1.TOOL; }
+        public String getDescription() { return CaseFileWorkspaceV1.DESCRIPTION; }
+        public Map<String, Object> getParameters() { return CaseFileWorkspaceV1.PARAMETERS; }
+        public boolean isReadOnly() { return true; }
+        public Mono<ToolResultBlock> callAsync(ToolCallParam parameter) {
+            Invocation call = parameter.getRuntimeContext().get(Invocation.class);
+            return Mono.fromCallable(() -> {
+                call.requireAuthorized("case-file-entry");
+                try (var span = call.run.start(call.parent, "runtime-tool", "case-file-read", Map.of("toolCallId", parameter.getToolUseBlock().getId()))) {
+                    try {
+                        var result = caseFiles.read(parameter.getInput());
+                        call.requireAuthorized("case-file-return");
+                        span.finish(Outcome.RETURNED, Map.of());
+                        return ToolResultBlock.of(TextBlock.builder().text(HarnessJson.mapper().writeValueAsString(result)).build());
+                    } catch (RuntimeException failure) { span.finish(Outcome.ERROR, Map.of()); throw failure; }
+                }
+            }).doOnError(error -> invalidate()).doFinally(signal -> clearIfInvalid());
+        }
+    }
 
     /** Host-only operations do not invoke a model. The Host authenticates approval events and persists challenges. */
     public Object taskAction(Input input, String action, String handle, TaskCoordination.Approval approval) {

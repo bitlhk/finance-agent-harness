@@ -336,9 +336,15 @@ public final class AgentScopeQueryAssembler {
         public AgentScopeQuerySession openSession(AgentScopeQuerySession.Identity identity,
                 java.util.function.Supplier<BoundFinanceProvider.Grant> grants, ModelConnection connection,
                 AgentScopeQuerySession.TaskHost tasks) {
+            return openSession(identity, grants, connection, tasks, null);
+        }
+        public AgentScopeQuerySession openSession(AgentScopeQuerySession.Identity identity,
+                java.util.function.Supplier<BoundFinanceProvider.Grant> grants, ModelConnection connection,
+                AgentScopeQuerySession.TaskHost tasks,
+                io.github.bitlhk.finance.harness.execution.CaseFileWorkspaceV1 caseFiles) {
             if (!profile.principalTypes().contains(identity.principalType()) || !profile.purposes().contains(identity.purpose()))
                 throw new IllegalArgumentException("PROFILE_SESSION_MISMATCH");
-            return new AgentScopeQuerySession(this, identity, grants, connection, tasks);
+            return new AgentScopeQuerySession(this, identity, grants, connection, tasks, caseFiles);
         }
         public Map<String, Object> lock(Set<String> installedTools) {
             var expected = bindings.values().stream().map(b -> b.capability().toolName()).collect(java.util.stream.Collectors.toSet());
