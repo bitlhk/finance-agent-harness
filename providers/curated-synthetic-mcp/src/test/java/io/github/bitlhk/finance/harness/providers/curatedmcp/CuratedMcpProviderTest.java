@@ -20,13 +20,17 @@ class CuratedMcpProviderTest {
     URI endpoint;
     List<JsonNode> calls = new CopyOnWriteArrayList<>();
     List<String> sessions = new CopyOnWriteArrayList<>();
+    List<String> deletedSessions = new CopyOnWriteArrayList<>();
     Set<String> active = ConcurrentHashMap.newKeySet();
     AtomicInteger requests = new AtomicInteger();
     AtomicInteger deletes = new AtomicInteger();
+    volatile CountDownLatch deleteStarted = new CountDownLatch(0);
+    volatile CountDownLatch releaseDelete = new CountDownLatch(0);
     AtomicReference<ManagedProviderFactoryV01.SourceSession> session = new AtomicReference<>(
             new ManagedProviderFactoryV01.SourceSession("bank-secret-never-forward", "host-customer", "actor", "host-session", Instant.now().plusSeconds(300)));
     volatile boolean isError, wrongIdentity, schemaMismatch, sse;
     volatile Runnable afterList = () -> {};
+    volatile Runnable afterCall = () -> {};
     @BeforeEach void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/mcp", exchange -> {
@@ -34,7 +38,15 @@ class CuratedMcpProviderTest {
             assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
             try {
                 if (exchange.getRequestMethod().equals("DELETE")) {
-                    deletes.incrementAndGet();active.remove(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"));
+                    deleteStarted.countDown();
+                    try {
+                        if (!releaseDelete.await(5, TimeUnit.SECONDS)) throw new java.io.IOException("DELETE test gate timed out");
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();throw new java.io.IOException(interrupted);
+                    }
+                    String id = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
+                    assertNotNull(id);assertTrue(active.remove(id), "DELETE must target an active SDK-owned session");
+                    deletedSessions.add(id);deletes.incrementAndGet();
                     exchange.sendResponseHeaders(200, -1);return;
                 }
                 JsonNode body = HarnessJson.mapper().readTree(exchange.getRequestBody());
@@ -56,6 +68,7 @@ class CuratedMcpProviderTest {
                         var args = body.path("params").path("arguments");
                         var data = fixture(tool, args, wrongIdentity);
                         result = Map.of("isError", isError, "content", List.of(Map.of("type", "text", "text", HarnessJson.mapper().writeValueAsString(data))));
+                        afterCall.run();
                     } else throw new IllegalArgumentException(method);
                 }
                 String json = HarnessJson.mapper().writeValueAsString(Map.of("jsonrpc", "2.0", "id", body.get("id"), "result", result));
@@ -159,7 +172,8 @@ class CuratedMcpProviderTest {
     @Test void schemaDriftDeniesCallAndResourceMismatchDiscardsResponse() {
         schemaMismatch = true;
         assertEquals(CapabilityResultV1.Status.FAILED, provider().query(request("get_customer_profile", Map.of("customer_id", "host-customer"))).status());
-        assertEquals(0, calls.size());schemaMismatch = false;wrongIdentity = true;
+        assertEquals(0, calls.size());assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+        schemaMismatch = false;wrongIdentity = true;
         var result = provider().query(request("get_customer_profile", Map.of("customer_id", "host-customer")));
         assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
     }
@@ -167,11 +181,63 @@ class CuratedMcpProviderTest {
         afterList = () -> session.set(new ManagedProviderFactoryV01.SourceSession("rotated", "host-customer", "actor", "host-session", Instant.now().plusSeconds(30)));
         assertEquals(CapabilityResultV1.Status.FAILED, provider().query(request("get_wealth_policy_basis", Map.of())).status());
         assertEquals(0, calls.size());
+        assertEquals(1, deletes.get());assertTrue(active.isEmpty());
     }
-    @Test void sdkSupportsSseAndDoesNotReuseSession() {
+    @Test void expiredAuthorityAfterListStillReclaimsItsSessionWithoutCallingTool() {
+        afterList = () -> session.set(new ManagedProviderFactoryV01.SourceSession("expired", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)));
+        assertEquals(CapabilityResultV1.Status.FAILED, provider().query(request("get_wealth_policy_basis", Map.of())).status());
+        assertEquals(0, calls.size());assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+    }
+    @Test void revocationAfterToolResponseDiscardsResultButReclaimsSession() {
+        afterCall = () -> session.set(null);
+        var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+    }
+    @Test void expiryAfterToolResponseDiscardsResultButReclaimsSession() {
+        afterCall = () -> session.set(new ManagedProviderFactoryV01.SourceSession("expired", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)));
+        var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+    }
+    @RepeatedTest(25) void sdkSupportsSseAndDoesNotReuseSession() {
         sse = true;var provider = provider();
         for (int i = 0; i < 2; i++) assertEquals(CapabilityResultV1.Status.COMPLETED, provider.query(request("get_wealth_policy_basis", Map.of())).status());
         assertEquals(2, new HashSet<>(sessions).size());assertEquals(2, deletes.get());
+        assertEquals(new HashSet<>(sessions), new HashSet<>(deletedSessions));
+        assertTrue(active.isEmpty(), "Both remote sessions must be reclaimed before returning");
+    }
+    @Test void queryWaitsForDeleteResponseBeforeReturning() throws Exception {
+        deleteStarted = new CountDownLatch(1);releaseDelete = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var result = executor.submit(() -> provider().query(request("get_wealth_policy_basis", Map.of())));
+            assertTrue(deleteStarted.await(5, TimeUnit.SECONDS), "SDK must issue DELETE");
+            assertThrows(TimeoutException.class, () -> result.get(200, TimeUnit.MILLISECONDS),
+                    "Query must not return while its remote session is still active");
+            assertEquals(1, active.size());assertEquals(0, deletes.get());
+            releaseDelete.countDown();
+            assertEquals(CapabilityResultV1.Status.COMPLETED, result.get(5, TimeUnit.SECONDS).status());
+            assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+        } finally {
+            releaseDelete.countDown();executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+    }
+    @Test void deleteTimeoutCannotBeReportedAsCompletedRead() throws Exception {
+        deleteStarted = new CountDownLatch(1);releaseDelete = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var result = executor.submit(() -> provider().query(request("get_wealth_policy_basis", Map.of())));
+            assertTrue(deleteStarted.await(5, TimeUnit.SECONDS));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.get(5, TimeUnit.SECONDS).status());
+            assertEquals(0, deletes.get());assertEquals(1, active.size());
+        } finally {
+            releaseDelete.countDown();executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
     }
     @Test void twoSubjectsNeverShareMcpSessionOrCustomerMapping() {
         var first = config();var subjects = new LinkedHashMap<>(first.subjects());

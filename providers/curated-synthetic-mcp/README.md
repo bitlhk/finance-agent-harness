@@ -16,8 +16,16 @@ is not admission. No Builder/Eval changes or TASK implementation are included.
 - Each call creates, initializes and closes its own official MCP SDK 0.17.2
   Streamable HTTP client. No global MCP session, no retry/fallback to local fixture
   data, and no bank HTTP response is presented as an MCP tool response.
-- The current source session is checked before transport, at each SDK HTTP request
-  customization boundary and after the call. Session rotation fails closed.
+  Return waits for `McpSyncClient.closeGracefully()` (SDK bound: 10 seconds,
+  also subject to the configured HTTP request timeout). Incomplete graceful close
+  fails the read instead of returning COMPLETED. Plain SDK `close()` is asynchronous
+  and is used only as local fallback after a failed graceful close. A primary
+  invocation exception is preserved, with cleanup failure suppressed.
+- The current source session is checked before transport, at each non-DELETE SDK
+  HTTP request customization boundary and after the call. Session rotation fails
+  closed. Only the SDK's own session DELETE bypasses business-authority refresh,
+  so revocation/expiry cannot block cleanup; the exact endpoint pin remains checked
+  for DELETE too. Revocation before result delivery discards the result.
   Host grants are checked by BoundFinanceProvider per invocation; the unchanged
   SPI does not supply the Provider with an independent grant-refresh callback.
 - `CuratedTools` explicitly binds 16 source tool names to NEW `eval.synthetic.*`
