@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-customer",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.get-customer-profile.query",
+      "toolName": "curated_get_customer_profile",
+      "name": "Synthetic get_customer_profile",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: get_customer_profile. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "Host-authorized subjectRef, NOT source C005/C006/I001; Provider maps it explicitly."
+          }
+        },
+        "required": [
+          "customer_id"
+        ]
+      },
+      "requiredScopes": [
+        "eval:synthetic:get_customer_profile:read"
+      ]
+    }
+  ]
+}

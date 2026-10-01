@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-insurance",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.list-products.query",
+      "toolName": "curated_list_products",
+      "name": "Synthetic list_products",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: list_products. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "insurance"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:list_products:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.get-product-detail.query",
+      "toolName": "curated_get_product_detail",
+      "name": "Synthetic get_product_detail",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: get_product_detail. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "INS01"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:get_product_detail:read"
+      ]
+    }
+  ]
+}

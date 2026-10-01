@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "curated-synthetic-post-loan",
+    "version": "1.0.0"
+  },
+  "requiredFeatures": [
+    "query.v1",
+    "trusted-grants.v1",
+    "observation.v0.1"
+  ],
+  "defaultDomainPacks": []
+}

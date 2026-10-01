@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-research",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.wind-stock-data.query",
+      "toolName": "curated_wind_stock_data",
+      "name": "Synthetic wind_stock_data",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: wind_stock_data. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "DEMO001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:wind_stock_data:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.wind-financial-docs.query",
+      "toolName": "curated_wind_financial_docs",
+      "name": "Synthetic wind_financial_docs",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: wind_financial_docs. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "DEMO001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:wind_financial_docs:read"
+      ]
+    }
+  ]
+}
