@@ -36,4 +36,7 @@ class CaseFileWorkspaceV1Test {
         assertThrows(IllegalStateException.class, () -> workspace.read(Map.of("path", "a")));
         assertThrows(IllegalStateException.class, workspace::manifest);
     }
+    @Test void rejectsNulContentThatAliasesMultipleFileDigest() {
+        assertThrows(IllegalArgumentException.class, () -> workspace("a", "b\0c\0d"));
+    }
 }

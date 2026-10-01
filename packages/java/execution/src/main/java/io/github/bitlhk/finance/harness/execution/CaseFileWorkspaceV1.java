@@ -29,7 +29,7 @@ public final class CaseFileWorkspaceV1 implements AutoCloseable {
             if (path == null || path.isBlank() || path.length() > 240 || !path.equals(path.strip())
                     || path.contains("\\") || path.contains(":") || path.chars().anyMatch(c -> c < 32)
                     || Arrays.stream(path.split("/", -1)).anyMatch(p -> p.isEmpty() || p.equals(".") || p.equals(".."))
-                    || content == null || content.length() > 262144 || files.containsKey(path)) throw invalid();
+                    || content == null || content.indexOf('\0') >= 0 || content.length() > 262144 || files.containsKey(path)) throw invalid();
             utf8(path);
             total += utf8(content).length;
             if (total > 1048576) throw invalid();

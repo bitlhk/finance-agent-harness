@@ -46,3 +46,10 @@ mvn -o -B -pl integrations/openjiuwen-java,integrations/agentscope-java -am test
 These are controlled SDK/HTTP tests, not real-model or browser acceptance. Builder
 adds Host admission, actual Launcher/file evidence, lifecycle and cross-repository
 contract checks. End-to-end and live-model results must be reported separately.
+# Text framing restriction
+
+Case file content must not contain NUL. The V1 workspace digest separates paths
+and text with NUL, so accepting it inside content would allow distinct manifests
+to share the same framing. Normal UTF-8 text keeps the existing digest. This is
+enforced by the Java workspace, Builder intake and Eval contract. Binary data is
+not a supported case-file format.
