@@ -49,17 +49,20 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
             var result = transport.call(source, authority.timeout(), tool, args, guard);
             guard.run();
             if (Boolean.TRUE.equals(result.isError())) return failure(request, "UPSTREAM_FAILURE", "MCP_IS_ERROR", Map.of("mcpIsError", true));
-            var mapper = HarnessJson.mapper();
-            JsonNode data;
-            if (result.structuredContent() != null) data = mapper.valueToTree(result.structuredContent());
-            else {
-                if (result.content() == null || result.content().size() != 1 || !(result.content().getFirst() instanceof McpSchema.TextContent text))
+            var mapper = CuratedTools.responseMapper();
+            JsonNode data = result.structuredContent() == null ? null : mapper.valueToTree(result.structuredContent());
+            if (result.content() == null) throw new IllegalArgumentException("CURATED_RESULT_CONTENT_INVALID");
+            if (!result.content().isEmpty()) {
+                if (result.content().size() != 1 || !(result.content().getFirst() instanceof McpSchema.TextContent text) || text.text() == null)
                     throw new IllegalArgumentException("CURATED_RESULT_CONTENT_INVALID");
-                if (text.text().length() > 262144) throw new IllegalArgumentException("CURATED_RESULT_TOO_LARGE");
-                data = mapper.readTree(text.text());
+                if (text.text().length() > BoundedHttpClient.MAX_BODY_BYTES) throw new IllegalArgumentException("CURATED_RESULT_TOO_LARGE");
+                JsonNode textual = mapper.readTree(text.text());
+                if (data != null && !data.equals(textual)) throw new IllegalArgumentException("CURATED_RESULT_CONTENT_CONFLICT");
+                data = textual;
             }
+            if (data == null) throw new IllegalArgumentException("CURATED_RESULT_CONTENT_INVALID");
             byte[] bytes = mapper.writeValueAsBytes(data);
-            if (bytes.length > 262144) throw new IllegalArgumentException("CURATED_RESULT_TOO_LARGE");
+            if (bytes.length > BoundedHttpClient.MAX_BODY_BYTES) throw new IllegalArgumentException("CURATED_RESULT_TOO_LARGE");
             CuratedTools.validateResult(tool, args, data);
             var payload = new LinkedHashMap<String, Object>();
             payload.put("sourceResult", mapper.convertValue(data, Map.class));
@@ -71,6 +74,8 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
             var states = new LinkedHashMap<String, Object>();
             for (String key : List.of("decision", "status", "readiness")) if (data.has(key)) states.put(key, mapper.convertValue(data.get(key), Object.class));
             payload.put("sourceState", states);
+            guard.run();
+            if (Thread.currentThread().isInterrupted()) throw new java.util.concurrent.CancellationException("CURATED_CALL_INTERRUPTED");
             return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(), request.context().traceId(),
                     CapabilityResultV1.Status.COMPLETED, "Synthetic MCP read completed; preserve sourceState, which is not a success verdict. Not live financial data.", payload,
                     List.of(), List.of(), "curated-synthetic-mcp", Instant.now(), null, null);

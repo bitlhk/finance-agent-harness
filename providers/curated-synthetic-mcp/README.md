@@ -21,6 +21,25 @@ is not admission. No Builder/Eval changes or TASK implementation are included.
   fails the read instead of returning COMPLETED. Plain SDK `close()` is asynchronous
   and is used only as local fallback after a failed graceful close. A primary
   invocation exception is preserved, with cleanup failure suppressed.
+- The official SDK `clientBuilder(HttpClient.Builder)` and `jsonMapper(...)`
+  extension points are used without reflection, SDK copies or replacement MCP
+  protocol/session logic. `BoundedHttpClient` wraps the JDK body subscriber before
+  the SDK receives bytes. Every HTTP response body is limited to **256 KiB total**,
+  including initialize, tools/list, tools/call, notifications, background GET and
+  session DELETE, successful or not. The crossing byte-buffer batch is rejected
+  before forwarding; this is not a parsed-object or character-count limit.
+  SSE comments, unbroken lines and multiple events share that response's budget.
+  Content-Length over the limit is rejected at headers; absent/chunked lengths
+  are counted while reading. Non-identity Content-Encoding is rejected.
+  This bounds SDK body buffering, not JDK/OS buffers or HTTP header memory.
+- Each HTTP exchange has a wall-clock deadline equal to the configured timeout,
+  covering stalled bodies after headers as well as connection setup. Timeout,
+  interruption and invocation cleanup cancel the underlying HTTP future and body
+  subscription; no background read is intentionally retained. GET ingress errors
+  poison the invocation, rather than allowing a successful tool response to mask
+  them. DELETE retains its own byte/deadline bound and must return 2xx. These are
+  per-exchange/per-SDK-operation bounds, not one end-to-end invocation deadline.
+  An interrupted caller's interrupt flag is restored after bounded cleanup.
 - The current source session is checked before transport, at each non-DELETE SDK
   HTTP request customization boundary and after the call. Session rotation fails
   closed. Only the SDK's own session DELETE bypasses business-authority refresh,
@@ -103,6 +122,18 @@ UNAVAILABLE and DEGRADED. Those are not transport failures and do not create a
 TASK reference. MCP `isError=true` and transport/contract failures remain FAILED;
 raw upstream errors are not exposed as user-facing diagnostic text.
 
+Required output structure is checked for all 16 tools, including nested records
+and array elements, all three customer profile variants, READY/DEGRADED shapes,
+and the three risk-reference states. Metadata is type checked (e.g. the string
+`"true"` is not the boolean `true`); secondary product/account/enterprise identities
+must also match the authorized selector. Key non-execution and non-approval flags
+are fixed by the reference contract. Missing/incorrectly typed required fields
+fail without `mcpExecution`. Text and structured content, when both supplied,
+must describe the same JSON; duplicate keys, trailing JSON and nesting beyond 64
+are rejected using the SDK's supported JSON mapper extension. Additional source
+fields are retained, not certified; this is not a complete closed JSON Schema or
+business-semantic qualification.
+
 `mcpExecution` records tool, contract/schema/source-config digest and input/output
 digests only after the actual SDK call. The source-config digest is a canonical
 object digest, distinct from the exact file-byte hash used by the factory.
@@ -131,11 +162,72 @@ calls all 16 original tools through this Provider/SDK, checks UNKNOWN/UNAVAILABL
 and DEGRADED preservation, and terminates its child process. This is not a bank
 call, deployment, AgentScope or OpenJiuwen qualification.
 
+Candidate security regressions also exercise exact byte boundaries before the
+SDK consumer, UTF-8 byte counting, fixed/chunked 16 MiB hostile bodies at each
+request phase, unterminated SSE lines/events and comment floods, background GET
+overflow, DELETE status/timeout failure, encoded bodies, repeated slow-stream
+timeout/interruption with observed server-side disconnect, 16 concurrent calls
+with separate sessions, and recursive missing/null/wrong-type output mutations.
+The existing authority rotation/revocation/expiry and no-token-forwarding tests
+remain mandatory. These local tests do not qualify a Host deployment.
+
 ## Remaining Release Gates
 
-- SDK responses are fully buffered before this draft's 256 KiB application check.
-  This is NOT an HTTP ingress/SSE byte limit. A bounded transport/ingress policy
-  and adversarial oversized-stream tests are required before any Host opening.
+- The HTTP/SSE body ingress limit and focused cancellation regressions above are
+  implemented as a candidate, not Host admission. Header limits, aggregate Host
+  concurrency/resource budgets and production cancellation/load qualification
+  remain Host release gates.
+- **BLOCK_INIT_CLEANUP_OWNERSHIP: remote cleanup cannot be guaranteed for a
+  rejected initialize response under the current source contract.**
+  SDK 0.17.2 accepts the session id in `sendMessage` only when consuming a response
+  event, while `createTransportSession` skips DELETE when it has no accepted id.
+  An oversized Content-Length can therefore be rejected before the SDK learns the
+  id, even if the server already allocated a session. The test
+  `rejectedInitializeCannotDeleteASessionTheSdkNeverAccepted` proves FAILED, zero
+  tool calls, zero DELETEs and one remaining server-side session.
+  The JDK `responseInfo` callback in the existing bounded wrapper **can** observe
+  the exact header before rejecting the body; a one-shot, pinned, deadline-bound
+  HTTP DELETE is technically possible without reflection. Missing SDK session
+  adoption is therefore not the decisive blocker. The missing fact is whether
+  that ID denotes a newly created session belonging only to this invocation.
+  `validInitializeHeaderCanNameAnExistingSharedSessionSoHeaderOnlyCleanupStaysBlocked`
+  supplies an existing shared UUID from the same pinned initialize endpoint,
+  without an outgoing session header, then sends an oversized fixed/chunked body.
+  It proves FAILED, zero tool calls, zero DELETEs, and the shared session survives.
+  A length limit, visible-ASCII check, UUID format or per-invocation storage would
+  all accept this ID; none proves ownership. A client-local registry cannot detect
+  sessions belonging to other processes. No header-only fallback DELETE is added.
+  A missing session header also gives no target and is not proof the server did
+  not allocate a session. Ordinary SDK cleanup is not retried: a rejected DELETE
+  remains FAILED, and normal close deletes exactly its SDK session once without
+  touching a separate shared session. The existing accepted-session path still
+  relies on source correctness; these tests do not qualify hostile session-ID
+  aliasing after successful SDK initialization.
+  Before enabling an orphan-session DELETE, a Host-reviewed ownership mechanism
+  must bind the exact initialize invocation, session and endpoint (for example a
+  verified, exclusive server allocation contract or a request-bound cleanup
+  capability), including duplicate/late-header and concurrent-close handling.
+  See the [official 0.17.2 transport source](https://github.com/modelcontextprotocol/java-sdk/blob/v0.17.2/mcp-core/src/main/java/io/modelcontextprotocol/client/transport/HttpClientStreamableHttpTransport.java)
+  (`createTransportSession`, `createDelete`, `sendMessage`, `Builder.clientBuilder`).
+- **BLOCK_SERVER_TTL_QUALIFICATION: the observed idle TTL is not yet an accepted
+  compensation.** The opt-in `ReferenceCleanupCompensationTest` uses public Python
+  SDK APIs against the installed source dependency, in-process ASGI, with no
+  server/SDK edits, private-field access, fake clock or DELETE requests. It writes
+  observed versions/source hashes to `target/cleanup-ttl-probe.json`. Observed:
+  `mcp 1.30.0`, `fastmcp 2.14.7`, default idle timeout **1800 seconds**. The local
+  FastMCP HTTP factory does not override that manager default. With an explicitly
+  shortened **0.25-second test TTL**, an oversized initialization's session returns
+  404 after idling, while a separately kept-alive session remains usable (202).
+  However, an initialize response held in flight remains usable (202) after
+  three times the idle TTL; only after release and subsequent idle does it return
+  404. This is idle expiry, not an absolute post-header reclamation deadline.
+  The 1800-second wall-clock path and the real reference application's failed-read
+  cleanup are **not** demonstrated by that accelerated dependency probe. The
+  reference source manifest also does not pin these Python dependency bytes or
+  the running Host's TTL settings. Acceptance needs reviewed dependency/config
+  pins, a finite bound on in-flight requests/disconnect handling as well as idle
+  expiry, and end-to-end orphan-reclamation/isolation evidence against the actual
+  source. Merely having a TTL constructor option does not clear this gate.
 - Future artifact/Host Lock and both runtime qualifications MUST bind source
   configuration (exact file and canonical digest), schema pins, subject/resource
   mappings, Provider jar/dependencies, Pack bytes and reference source manifest.
@@ -143,9 +235,10 @@ call, deployment, AgentScope or OpenJiuwen qualification.
 - Real source credentials beyond loopback are unsupported. Source authenticity,
   resource ownership and dynamic scope policies need Host-reviewed provisioning;
   a tool name, source label or readOnlyHint does not confer authority.
-- Full output JSON Schema/semantic qualification, cancellation stress, hostile
-  server negotiation, bounded cleanup and concurrency load remain follow-up gates.
-  This draft checks source/version/date/selected identity and required fields,
-  not every business field's full schema.
+- Full output JSON Schema/semantic qualification, broader cancellation stress,
+  hostile server negotiation and sustained concurrency load remain follow-up
+  gates. Required output structures and focused cleanup tests are implemented;
+  this draft still does not certify every additional business field, financial
+  relationship, source authenticity or remote cleanup outcome.
 - Builder generic packaging/admission and explicit Skill migration bindings are
   intentionally outside this change. Neither Runtime is marked ready.

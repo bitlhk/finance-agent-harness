@@ -81,11 +81,12 @@ public final class CuratedTools {
     static void validateResult(Tool tool, Map<String, Object> args, JsonNode data) {
         String snapshot = tool.snapshot();
         if (tool.name().equals("get_customer_profile") && "I001".equals(args.get("customer_id"))) snapshot = "roles-demo-v1";
-        if (!data.isObject() || !data.path("synthetic").asBoolean(false) || !data.path("source").asText().equals(tool.source())
+        if (data == null || !data.isObject() || !data.path("synthetic").isBoolean() || !data.path("synthetic").booleanValue() || !data.path("source").asText().equals(tool.source())
                 || !data.path("snapshotVersion").asText().equals(snapshot) || !data.path("asOf").asText().equals("2026-09-05")
                 || !data.hasNonNull(tool.requiredField())) throw new IllegalArgumentException("CURATED_RESULT_CONTRACT_MISMATCH");
         if (!tool.identityPointer().isEmpty() && !data.at(tool.identityPointer()).asText().equals(args.get(tool.selector())))
             throw new SecurityException("CURATED_RESULT_RESOURCE_MISMATCH");
+        CuratedOutputContract.validate(tool, args, data);
     }
     static String schemaPin(Object schema) {
         try {
@@ -93,5 +94,13 @@ public final class CuratedTools {
             Object ordered = mapper.convertValue(schema, Object.class);
             return CuratedSourceConfig.sha(mapper.writeValueAsBytes(ordered));
         } catch (Exception e) { throw new IllegalArgumentException("CURATED_SCHEMA_INVALID"); }
+    }
+    static com.fasterxml.jackson.databind.ObjectMapper responseMapper() {
+        var mapper = HarnessJson.mapper()
+                .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        mapper.getFactory().setStreamReadConstraints(com.fasterxml.jackson.core.StreamReadConstraints.builder()
+                .maxNestingDepth(64).maxStringLength(BoundedHttpClient.MAX_BODY_BYTES).build());
+        return mapper;
     }
 }

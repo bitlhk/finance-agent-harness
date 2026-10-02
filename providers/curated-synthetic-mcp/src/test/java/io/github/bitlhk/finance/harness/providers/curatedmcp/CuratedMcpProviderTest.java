@@ -17,10 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CuratedMcpProviderTest {
     HttpServer server;
+    ExecutorService serverExecutor;
     URI endpoint;
     List<JsonNode> calls = new CopyOnWriteArrayList<>();
     List<String> sessions = new CopyOnWriteArrayList<>();
     List<String> deletedSessions = new CopyOnWriteArrayList<>();
+    List<String> attemptedDeletes = new CopyOnWriteArrayList<>();
     Set<String> active = ConcurrentHashMap.newKeySet();
     AtomicInteger requests = new AtomicInteger();
     AtomicInteger deletes = new AtomicInteger();
@@ -28,32 +30,46 @@ class CuratedMcpProviderTest {
     volatile CountDownLatch releaseDelete = new CountDownLatch(0);
     AtomicReference<ManagedProviderFactoryV01.SourceSession> session = new AtomicReference<>(
             new ManagedProviderFactoryV01.SourceSession("bank-secret-never-forward", "host-customer", "actor", "host-session", Instant.now().plusSeconds(300)));
-    volatile boolean isError, wrongIdentity, schemaMismatch, sse;
+    volatile boolean isError, wrongIdentity, schemaMismatch, sse, structuredContent;
     volatile Runnable afterList = () -> {};
     volatile Runnable afterCall = () -> {};
+    @FunctionalInterface interface Attack { boolean respond(String method, com.sun.net.httpserver.HttpExchange exchange) throws java.io.IOException; }
+    volatile Attack attack = (method, exchange) -> false;
+    volatile Attack beforeDelete = (method, exchange) -> false;
+    volatile java.util.function.Supplier<String> initializeSessionId = () -> UUID.randomUUID().toString();
+    volatile java.util.function.Consumer<Map<String, Object>> mutateResult = ignored -> {};
     @BeforeEach void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        serverExecutor = Executors.newVirtualThreadPerTaskExecutor();server.setExecutor(serverExecutor);
         server.createContext("/mcp", exchange -> {
             requests.incrementAndGet();
             assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
             try {
+                if (exchange.getRequestMethod().equals("GET")) {
+                    if (!attack.respond("GET", exchange)) exchange.sendResponseHeaders(405, -1);
+                    return;
+                }
                 if (exchange.getRequestMethod().equals("DELETE")) {
+                    String id = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
+                    assertNotNull(id);attemptedDeletes.add(id);
                     deleteStarted.countDown();
                     try {
                         if (!releaseDelete.await(5, TimeUnit.SECONDS)) throw new java.io.IOException("DELETE test gate timed out");
                     } catch (InterruptedException interrupted) {
                         Thread.currentThread().interrupt();throw new java.io.IOException(interrupted);
                     }
-                    String id = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
-                    assertNotNull(id);assertTrue(active.remove(id), "DELETE must target an active SDK-owned session");
+                    if (beforeDelete.respond("DELETE", exchange)) return;
+                    assertTrue(active.remove(id), "DELETE must target an active SDK-owned session");
                     deletedSessions.add(id);deletes.incrementAndGet();
+                    if (attack.respond("DELETE", exchange)) return;
                     exchange.sendResponseHeaders(200, -1);return;
                 }
                 JsonNode body = HarnessJson.mapper().readTree(exchange.getRequestBody());
                 Object result;
                 String method = body.path("method").asText();
                 if (method.equals("initialize")) {
-                    String id = UUID.randomUUID().toString();active.add(id);sessions.add(id);
+                    assertNull(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"), "Initialize must not resume a session");
+                    String id = initializeSessionId.get();active.add(id);sessions.add(id);
                     exchange.getResponseHeaders().set("Mcp-Session-Id", id);
                     result = Map.of("protocolVersion", "2025-06-18", "capabilities", Map.of("tools", Map.of()), "serverInfo", Map.of("name", "synthetic-test", "version", "1"));
                 } else {
@@ -67,10 +83,16 @@ class CuratedMcpProviderTest {
                         var tool = CuratedTools.named(body.path("params").path("name").asText());
                         var args = body.path("params").path("arguments");
                         var data = fixture(tool, args, wrongIdentity);
-                        result = Map.of("isError", isError, "content", List.of(Map.of("type", "text", "text", HarnessJson.mapper().writeValueAsString(data))));
+                        mutateResult.accept(data);
+                        var response = new LinkedHashMap<String, Object>();
+                        response.put("isError", isError);
+                        response.put("content", List.of(Map.of("type", "text", "text", HarnessJson.mapper().writeValueAsString(data))));
+                        if (structuredContent) response.put("structuredContent", data);
+                        result = response;
                         afterCall.run();
                     } else throw new IllegalArgumentException(method);
                 }
+                if (attack.respond(method, exchange)) return;
                 String json = HarnessJson.mapper().writeValueAsString(Map.of("jsonrpc", "2.0", "id", body.get("id"), "result", result));
                 byte[] bytes = (sse ? "event: message\ndata: " + json + "\n\n" : json).getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", sse ? "text/event-stream" : "application/json");
@@ -79,7 +101,10 @@ class CuratedMcpProviderTest {
         });
         server.start();endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/mcp");
     }
-    @AfterEach void stop() { if (server != null) server.stop(0); }
+    @AfterEach void stop() throws Exception {
+        if (server != null) server.stop(0);
+        if (serverExecutor != null) { serverExecutor.shutdownNow();assertTrue(serverExecutor.awaitTermination(5, TimeUnit.SECONDS)); }
+    }
     static McpSchema.JsonSchema schema(CuratedTools.Tool tool, boolean changed) {
         var props = new LinkedHashMap<String, Object>();
         if (!tool.selector().isEmpty()) props.put(tool.selector(), Map.of("type", changed ? "integer" : "string"));
@@ -87,20 +112,26 @@ class CuratedMcpProviderTest {
         return new McpSchema.JsonSchema("object", props, tool.selector().isEmpty() || tool.defaultRef() != null ? List.of() : List.of(tool.selector()), false, null, null);
     }
     static Map<String, Object> fixture(CuratedTools.Tool tool, JsonNode args, boolean wrong) {
-        var value = new LinkedHashMap<String, Object>();
+        var value = new LinkedHashMap<String, Object>(OutputSamples.value(tool.name(), args.path(tool.selector()).asText()));
         value.put("synthetic", true);value.put("source", tool.source());value.put("snapshotVersion", tool.snapshot());value.put("asOf", "2026-09-05");
-        value.put(tool.requiredField(), List.of());
+        if (tool.name().equals("get_customer_profile") && args.path("customer_id").asText().equals("I001")) value.put("snapshotVersion", "roles-demo-v1");
         String ref = args.path(tool.selector()).asText();
         if (wrong) ref = "unauthorized";
         switch (tool.identityPointer()) {
             case "/reference" -> value.put("reference", ref);
-            case "/profile/customerId" -> value.put("profile", Map.of("customerId", ref));
+            case "/profile/customerId" -> {
+                var profile = new LinkedHashMap<>((Map<String, Object>) value.get("profile"));
+                profile.put("customerId", ref);value.put("profile", profile);
+            }
             case "/customerId" -> value.put("customerId", ref);
-            case "/product/productId" -> value.put("product", Map.of("productId", ref));
+            case "/product/productId" -> {
+                var product = new LinkedHashMap<>((Map<String, Object>) value.get("product"));
+                product.put("productId", ref);value.put("product", product);
+            }
         }
         if (tool.name().equals("prepare_wealth_allocation_context")) value.put("readiness", "READY");
         if (tool.name().equals("fraud_transfer_risk_assess")) {
-            value.put("decision", ref.equals("bene-unknown") ? "UNKNOWN" : "NO_KNOWN_HIT");
+            value.put("decision", ref.equals("bene-unknown") ? "UNKNOWN" : ref.equals("bene-risk") ? "RISK_HIT" : "NO_KNOWN_HIT");
             value.put("status", ref.equals("bene-unknown") ? "UNAVAILABLE" : "READY");
         }
         return value;
@@ -115,8 +146,11 @@ class CuratedMcpProviderTest {
                 Map.of("host-customer", new CuratedSourceConfig.Subject("C005", resources)));
     }
     CuratedMcpProvider provider() {
+        return provider(Duration.ofSeconds(3));
+    }
+    CuratedMcpProvider provider(Duration timeout) {
         return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
-                Duration.ofSeconds(3), session::get, () -> null, ignored -> {}), config());
+                timeout, session::get, () -> null, ignored -> {}), config());
     }
     CapabilityRequestV1 request(String name, Map<String, Object> args) {
         var tool = CuratedTools.named(name);
@@ -259,6 +293,215 @@ class CuratedMcpProviderTest {
     @Test void taskNeverTouchesMcp() {
         assertEquals("TASK_NOT_SUPPORTED", provider().executeTask(request("get_wealth_policy_basis", Map.of())).error().sourceCode());
         assertEquals(0, requests.get());
+    }
+    @Test void oversizedBodiesFailEverySdkEntryPointWithoutExecutionEvidence() {
+        for (String stage : List.of("initialize", "tools/list", "tools/call", "DELETE")) {
+            for (String mode : List.of("json-fixed", "json-chunked", "sse-line", "sse-event", "sse-comments", "error-body")) {
+                int before = calls.size();
+                attack = (method, exchange) -> {
+                    if (!method.equals(stage)) return false;
+                    String chunk = switch (mode) {
+                        case "sse-line" -> "data: " + "x".repeat(4096);
+                        case "sse-event" -> "data: " + "x".repeat(4096) + "\n";
+                        case "sse-comments" -> ": " + "x".repeat(4096) + "\n";
+                        default -> "x".repeat(4096);
+                    };
+                    exchange.getResponseHeaders().set("Content-Type", mode.startsWith("sse") ? "text/event-stream" : "application/json");
+                    exchange.sendResponseHeaders(mode.equals("error-body") ? 500 : 200,
+                            mode.equals("json-fixed") ? 16 * 1024 * 1024 : 0);
+                    try {
+                        byte[] bytes = chunk.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        for (int i = 0; i < 4096; i++) { exchange.getResponseBody().write(bytes);exchange.getResponseBody().flush(); }
+                    } catch (java.io.IOException cancelled) { /* The client must stop reading before EOF. */ }
+                    return true;
+                };
+                var result = assertTimeoutPreemptively(Duration.ofSeconds(4), () ->
+                        provider(Duration.ofMillis(800)).query(request("get_wealth_policy_basis", Map.of())), stage + ":" + mode);
+                assertEquals(CapabilityResultV1.Status.FAILED, result.status(), stage + ":" + mode);
+                assertTrue(result.data().isEmpty());assertNull(result.task());
+                if (stage.equals("initialize") || stage.equals("tools/list")) assertEquals(before, calls.size());
+            }
+        }
+    }
+    @Test void backgroundGetOverflowPoisonsTheInvocation() throws Exception {
+        var rejected = new CountDownLatch(1);
+        attack = (method, exchange) -> {
+            if (!method.equals("GET")) return false;
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");exchange.sendResponseHeaders(200, 0);
+            try {
+                byte[] chunk = (":" + "x".repeat(4096) + "\n").getBytes();
+                for (int i = 0; i < 4096; i++) { exchange.getResponseBody().write(chunk);exchange.getResponseBody().flush(); }
+            } catch (java.io.IOException cancelled) { rejected.countDown(); }
+            return true;
+        };
+        afterList = () -> {
+            try { assertTrue(rejected.await(2, TimeUnit.SECONDS)); }
+            catch (InterruptedException error) { Thread.currentThread().interrupt();throw new AssertionError(error); }
+        };
+        var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        assertTrue(rejected.await(2, TimeUnit.SECONDS));assertTrue(active.isEmpty());
+    }
+    @RepeatedTest(5) void slowBodyDeadlineCancelsSocketAndReclaimsSession() throws Exception {
+        var started = new CountDownLatch(1);var disconnected = new CountDownLatch(1);
+        installSlowBody(started, disconnected);
+        var result = assertTimeoutPreemptively(Duration.ofSeconds(3), () ->
+                provider(Duration.ofMillis(500)).query(request("get_wealth_policy_basis", Map.of())));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        assertTrue(disconnected.await(2, TimeUnit.SECONDS));assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+    }
+    @RepeatedTest(5) void callerInterruptionCancelsSocketAndPreservesInterruptAfterCleanup() throws Exception {
+        var started = new CountDownLatch(1);var disconnected = new CountDownLatch(1);
+        installSlowBody(started, disconnected);
+        var result = new AtomicReference<CapabilityResultV1>();var interrupted = new AtomicBoolean();
+        Thread caller = new Thread(() -> {
+            result.set(provider().query(request("get_wealth_policy_basis", Map.of())));
+            interrupted.set(Thread.currentThread().isInterrupted());
+        });
+        try {
+            caller.start();assertTrue(started.await(3, TimeUnit.SECONDS));caller.interrupt();caller.join(3000);
+            assertFalse(caller.isAlive());assertTrue(interrupted.get());
+            assertEquals(CapabilityResultV1.Status.FAILED, result.get().status());assertTrue(result.get().data().isEmpty());
+            assertTrue(disconnected.await(2, TimeUnit.SECONDS));assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+        } finally { caller.interrupt();caller.join(4000); }
+    }
+    private void installSlowBody(CountDownLatch started, CountDownLatch disconnected) {
+        attack = (method, exchange) -> {
+            if (!method.equals("tools/call")) return false;
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");exchange.sendResponseHeaders(200, 0);
+            started.countDown();
+            try {
+                for (int i = 0; i < 300; i++) {
+                    exchange.getResponseBody().write(": keepalive\n".getBytes());exchange.getResponseBody().flush();
+                    try { Thread.sleep(20); } catch (InterruptedException error) { Thread.currentThread().interrupt();break; }
+                }
+            } catch (java.io.IOException cancelled) { disconnected.countDown(); }
+            return true;
+        };
+    }
+    @Test void malformedOutputNeverGetsExecutionEvidence() {
+        for (boolean structured : List.of(false, true)) {
+        structuredContent = structured;
+        for (var mutation : List.<java.util.function.Consumer<Map<String, Object>>>of(
+                data -> data.remove("policyVersion"), data -> data.put("rules", "not-an-array"),
+                data -> data.put("rules", List.of(1)), data -> data.put("synthetic", "true"),
+                data -> data.put("decision", "APPROVED"))) {
+            mutateResult = mutation;
+            var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        }
+        }
+        assertTrue(active.isEmpty());
+    }
+    @Test void rejectedInitializeCannotDeleteASessionTheSdkNeverAccepted() {
+        attack = (method, exchange) -> {
+            if (!method.equals("initialize")) return false;
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, BoundedHttpClient.MAX_BODY_BYTES + 1L);
+            return true;
+        };
+        var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        assertEquals(1, sessions.size());assertEquals(0, deletes.get());assertEquals(1, active.size());
+        assertEquals(0, calls.size());
+    }
+    @Test void oversizedInitializeWithoutSessionIdCannotInventACleanupTarget() {
+        for (boolean chunked : List.of(false, true)) {
+            attack = (method, exchange) -> {
+                if (!method.equals("initialize")) return false;
+                exchange.getResponseHeaders().remove("Mcp-Session-Id");
+                oversizedInitialize(exchange, chunked);return true;
+            };
+            var result = assertTimeoutPreemptively(Duration.ofSeconds(3), () ->
+                    provider(Duration.ofMillis(500)).query(request("get_wealth_policy_basis", Map.of())));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        }
+        assertEquals(2, sessions.size(), "No reinitialize/tool retries");assertEquals(2, active.size());
+        assertTrue(calls.isEmpty());assertTrue(attemptedDeletes.isEmpty());
+    }
+    @Test void validInitializeHeaderCanNameAnExistingSharedSessionSoHeaderOnlyCleanupStaysBlocked() {
+        String shared = UUID.randomUUID().toString();active.add(shared);
+        assertTrue(shared.length() <= 256 && shared.chars().allMatch(c -> c >= 0x21 && c <= 0x7e));
+        initializeSessionId = () -> shared;
+        for (boolean chunked : List.of(false, true)) {
+            attack = (method, exchange) -> {
+                if (!method.equals("initialize")) return false;
+                oversizedInitialize(exchange, chunked);return true;
+            };
+            var result = assertTimeoutPreemptively(Duration.ofSeconds(3), () ->
+                    provider(Duration.ofMillis(500)).query(request("get_wealth_policy_basis", Map.of())));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+            assertEquals(Set.of(shared), active, "An unaccepted response header is not proof of new-session ownership");
+        }
+        assertEquals(List.of(shared, shared), sessions);assertTrue(attemptedDeletes.isEmpty());assertTrue(calls.isEmpty());
+    }
+    @Test void sdkDeleteFailureIsBoundedNotRetriedAndDoesNotDeleteOtherSessions() {
+        String shared = UUID.randomUUID().toString();active.add(shared);
+        beforeDelete = (method, exchange) -> { exchange.sendResponseHeaders(503, -1);return true; };
+        var result = assertTimeoutPreemptively(Duration.ofSeconds(3), () ->
+                provider(Duration.ofMillis(500)).query(request("get_wealth_policy_basis", Map.of())));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        assertEquals(1, sessions.size());assertEquals(1, calls.size());
+        assertEquals(List.of(sessions.getFirst()), attemptedDeletes, "No SDK/fallback double DELETE or retry");
+        assertEquals(0, deletes.get());assertEquals(Set.of(shared, sessions.getFirst()), active);
+    }
+    @Test void normalCloseDeletesExactlyThisInvocationSessionOnce() {
+        String shared = UUID.randomUUID().toString();active.add(shared);
+        for (boolean useSse : List.of(false, true)) {
+            sse = useSse;
+            var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+            assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+            assertEquals(Set.of(shared), active);
+        }
+        assertEquals(2, new HashSet<>(sessions).size());assertEquals(sessions, attemptedDeletes);
+        assertEquals(sessions, deletedSessions);assertFalse(attemptedDeletes.contains(shared));
+    }
+    private static void oversizedInitialize(com.sun.net.httpserver.HttpExchange exchange, boolean chunked) throws java.io.IOException {
+        exchange.getResponseHeaders().set("Content-Type", chunked ? "text/event-stream" : "application/json");
+        exchange.sendResponseHeaders(200, chunked ? 0 : BoundedHttpClient.MAX_BODY_BYTES + 1L);
+        if (chunked) {
+            byte[] bytes = ("data: " + "x".repeat(4096) + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            try {
+                for (int i = 0; i < 1024; i++) { exchange.getResponseBody().write(bytes);exchange.getResponseBody().flush(); }
+            } catch (java.io.IOException cancelled) { /* Expected ingress cancellation before a complete SSE event. */ }
+        }
+    }
+    @Test void rejectedDeleteStatusAndEncodedBodiesFailClosed() {
+        for (String mode : List.of("delete-status", "encoded", "redirect")) {
+            attack = (method, exchange) -> {
+                if (!method.equals(mode.equals("delete-status") ? "DELETE" : "tools/call")) return false;
+                if (mode.equals("encoded")) exchange.getResponseHeaders().set("Content-Encoding", "gzip");
+                if (mode.equals("redirect")) exchange.getResponseHeaders().set("Location", "http://127.0.0.1:1/forbidden");
+                exchange.sendResponseHeaders(mode.equals("delete-status") ? 500 : mode.equals("redirect") ? 302 : 200, -1);
+                return true;
+            };
+            var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());assertTrue(result.data().isEmpty());
+        }
+        assertTrue(active.isEmpty());
+    }
+    @Test void contradictoryTextAndStructuredContentAreRejected() {
+        attack = (method, exchange) -> {
+            if (!method.equals("tools/call")) return false;
+            var call = calls.getLast();
+            var good = fixture(CuratedTools.named("get_wealth_policy_basis"), call.path("params").path("arguments"), false);
+            byte[] body = HarnessJson.mapper().writeValueAsBytes(Map.of("jsonrpc", "2.0", "id", call.get("id"), "result",
+                    Map.of("isError", false, "structuredContent", good, "content", List.of(Map.of("type", "text", "text", "{\"approved\":true}")))));
+            exchange.getResponseHeaders().set("Content-Type", "application/json");exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);return true;
+        };
+        var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+        assertEquals("MCP_CONTRACT_REJECTED", result.error().sourceCode());assertTrue(result.data().isEmpty());assertTrue(active.isEmpty());
+    }
+    @Test void concurrentCallsKeepIngressBudgetsAndSessionsIsolated() throws Exception {
+        sse = true;
+        try (var workers = Executors.newFixedThreadPool(8)) {
+            var provider = provider();var results = new ArrayList<Future<CapabilityResultV1>>();
+            for (int i = 0; i < 16; i++) results.add(workers.submit(() -> provider.query(request("get_wealth_policy_basis", Map.of()))));
+            for (var result : results) assertEquals(CapabilityResultV1.Status.COMPLETED, result.get(5, TimeUnit.SECONDS).status());
+        }
+        assertEquals(16, calls.size());assertEquals(16, new HashSet<>(sessions).size());
+        assertEquals(16, deletes.get());assertTrue(active.isEmpty());
     }
     @Test void configRequiresExactPinAndSafeEndpoint(@TempDir Path directory) throws Exception {
         Path file = directory.resolve("source.json");byte[] bytes = HarnessJson.mapper().writeValueAsBytes(config());Files.write(file, bytes);

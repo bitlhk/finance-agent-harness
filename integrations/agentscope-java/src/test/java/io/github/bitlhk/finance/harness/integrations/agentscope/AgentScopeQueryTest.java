@@ -77,6 +77,27 @@ class AgentScopeQueryTest {
         assertEquals(0, h.bank.customerReads());
     }
 
+    @Test void sameTurnFileAndBalanceCallsPreserveBothResults() throws Exception {
+        var file = tool("read_case_file", Map.of("path", "case.txt"));
+        var balance = tool("account_balance_query", Map.of());
+        var response = HarnessJson.mapper().valueToTree(file.body());
+        var calls = (com.fasterxml.jackson.databind.node.ArrayNode) response.at("/choices/0/message/tool_calls");
+        calls.add(HarnessJson.mapper().valueToTree(balance.body()).at("/choices/0/message/tool_calls/0"));
+        var h = harness(new Response(200, response, () -> {}), text("Both results available."));
+        var files = caseFiles(h);
+        var reply = h.call("Read case.txt and query all authorized account balances.");
+        assertEquals("Both results available.", reply.text());
+        assertEquals(1, reply.executions().size());
+        assertEquals(1, h.bank.customerReads());
+        assertEquals(1, ((List<?>) files.evidence().get("reads")).size());
+        assertEquals(2, h.model.requests.size());
+        String sent = h.model.requests.getLast().get("rawBody").toString();
+        assertTrue(sent.contains("CASE_ONLY_9182"));
+        assertTrue(sent.contains("12345.67"));
+        assertTrue(h.session.valid());
+        assertParents(h);
+    }
+
     @Test @Tag("host-plan-api") void preparedMetadataDoesNotInvokeRuntimeOrLoseOriginalDefinitions() throws Exception {
         var sourceCalls = new java.util.concurrent.atomic.AtomicInteger();
         var provider = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(java.net.URI.create("http://127.0.0.1:1"),
