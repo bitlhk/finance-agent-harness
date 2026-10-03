@@ -16,7 +16,6 @@ public final class ManagedProviderFactoriesV01 {
                     || values.putIfAbsent(factory.providerId(), factory) != null)
                 throw new IllegalArgumentException("PROVIDER_FACTORY_INVALID_OR_DUPLICATE");
         }
-        if (values.isEmpty()) throw new IllegalArgumentException("PROVIDER_FACTORIES_MISSING");
         factories = Collections.unmodifiableMap(values);
     }
 
@@ -90,7 +89,6 @@ public final class ManagedProviderFactoriesV01 {
     }
 
     private LinkedHashMap<String, ManagedProviderFactoryV01> closure(Set<String> selectedProviders) {
-        if (selectedProviders.isEmpty()) throw new IllegalArgumentException("PROVIDER_FACTORY_SELECTION_EMPTY");
         var pending = new LinkedHashMap<String, ManagedProviderFactoryV01>();
         var remaining = new ArrayDeque<>(selectedProviders);
         while (!remaining.isEmpty()) {

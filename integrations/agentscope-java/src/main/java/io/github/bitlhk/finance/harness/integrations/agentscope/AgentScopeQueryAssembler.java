@@ -37,14 +37,16 @@ public final class AgentScopeQueryAssembler {
         public Support {
             boolean query = "agentscope-query-support.v0.1".equals(schemaVersion) && "QUERY".equals(operation);
             boolean task = "agentscope-task-support.v0.1".equals(schemaVersion) && "QUERY_TASK".equals(operation);
-            if (!(query || task) || !"agentscope".equals(family)
+            boolean method = "agentscope-method-support.v0.1".equals(schemaVersion) && "METHOD_ONLY".equals(operation);
+            if (!(query || task || method) || !"agentscope".equals(family)
                     || !"java".equals(language) || !"2.0.3".equals(sdkVersion)
                     || modelAttempts != 1 || toolAttempts != 1 || stream || fallback || pendingToolRecovery)
                 throw new IllegalArgumentException("UNSUPPORTED_AGENTSCOPE_MODE");
             descriptions = List.copyOf(descriptions); terminology = List.copyOf(terminology);
             observationRequirements = List.copyOf(observationRequirements);
             profiles = List.copyOf(profiles); providers = List.copyOf(providers);
-            if (profiles.isEmpty() || providers.isEmpty()) throw new IllegalArgumentException("HOST_COMPATIBILITY_DECLARATIONS_REQUIRED");
+            if (profiles.isEmpty() || (!method && providers.isEmpty())) throw new IllegalArgumentException("HOST_COMPATIBILITY_DECLARATIONS_REQUIRED");
+            if (method && (!providers.isEmpty() || !descriptions.isEmpty())) throw new IllegalArgumentException("METHOD_ONLY_SUPPORT_HAS_TOOL_DEPENDENCIES");
             if (observationRequirements.isEmpty()) throw new IllegalArgumentException("OBSERVATION_REQUIREMENTS_REQUIRED");
         }
     }
@@ -53,7 +55,7 @@ public final class AgentScopeQueryAssembler {
         public ProfileCompatibility {
             Objects.requireNonNull(profile); allowedCapabilityIds = Set.copyOf(allowedCapabilityIds); domainProfiles = Set.copyOf(domainProfiles);
             principalTypes = Set.copyOf(principalTypes); purposes = Set.copyOf(purposes);
-            if (allowedCapabilityIds.isEmpty() || principalTypes.isEmpty() || purposes.isEmpty()) throw new IllegalArgumentException("PROFILE_COMPATIBILITY_EMPTY");
+            if (principalTypes.isEmpty() || purposes.isEmpty()) throw new IllegalArgumentException("PROFILE_COMPATIBILITY_EMPTY");
         }
     }
     public record ProviderCompatibility(String id, String version, String artifactRef, String connectionKind) {}
@@ -105,6 +107,11 @@ public final class AgentScopeQueryAssembler {
         }
         Support support = HarnessJson.mapper().readValue(bounded(candidateRoot, supportFile), Support.class);
         boolean taskSupport = "QUERY_TASK".equals(support.operation());
+        boolean methodOnly = "METHOD_ONLY".equals(support.operation());
+        qualification.requireMode(methodOnly);
+        if (methodOnly && (!spec.capabilityPackRefs().isEmpty() || !spec.providerRefs().isEmpty()
+                || !spec.capabilityBindings().isEmpty() || spec.domainPackRefs().isEmpty()))
+            throw new IllegalArgumentException("METHOD_ONLY_REQUIRES_METHOD_WITHOUT_BUSINESS_TOOLS");
         Set<String> features = taskSupport
                 ? Set.of("query.v1", "task.v1", "trusted-grants.v1", "trusted-confirmation.v1", "persistent-task.v1", "observation.v0.1")
                 : Set.of("query.v1", "trusted-grants.v1", "observation.v0.1");
@@ -135,7 +142,7 @@ public final class AgentScopeQueryAssembler {
             }
             packs.add(pack);
         }
-        if (capabilities.isEmpty()) throw new IllegalArgumentException("QUERY_CAPABILITIES_REQUIRED");
+        if (capabilities.isEmpty() && !methodOnly) throw new IllegalArgumentException("QUERY_CAPABILITIES_REQUIRED");
         List<FinanceDomainPackLoader.LoadedDomainPack> domains = new ArrayList<>();
         Set<String> domainIds = new HashSet<>();
         for (AssetRef ref : spec.domainPackRefs()) {
@@ -148,6 +155,8 @@ public final class AgentScopeQueryAssembler {
                     throw new IllegalArgumentException("DOMAIN_PACK_DEPENDENCY_MISMATCH");
             domains.add(loaded);
         }
+        if (methodOnly && domains.stream().anyMatch(d -> d.skills().isEmpty()))
+            throw new IllegalArgumentException("METHOD_ONLY_REQUIRES_INSTALLED_SKILL");
         Map<String, DescribedFinanceProvider> selected = new LinkedHashMap<>();
         Map<String, ProviderDeclaration> declarations = new LinkedHashMap<>();
         for (AssetRef ref : spec.providerRefs()) {
@@ -166,7 +175,7 @@ public final class AgentScopeQueryAssembler {
                     || !declaration.connectionKind().equals(compatible.getFirst().connectionKind())) throw new IllegalArgumentException("HOST_PROVIDER_COMPATIBILITY_MISMATCH");
             RuntimeInventory.requireProviderArtifact(provider, compatible.getFirst().artifactRef());
         }
-        if (selected.isEmpty() || !capabilities.keySet().containsAll(spec.capabilityBindings().keySet()))
+        if ((!methodOnly && selected.isEmpty()) || !capabilities.keySet().containsAll(spec.capabilityBindings().keySet()))
             throw new IllegalArgumentException("PROVIDER_BINDINGS_INVALID");
         Map<String, Binding> bindings = new LinkedHashMap<>();
         Set<String> used = new HashSet<>();
@@ -185,7 +194,7 @@ public final class AgentScopeQueryAssembler {
         if (!used.equals(selected.keySet())) throw new IllegalArgumentException("UNUSED_PROVIDER_REFERENCE");
         var inventory = RuntimeInventory.inspect(selected.values());
         if (capabilities.values().stream().anyMatch(c -> c.operation() == FinanceCapabilityPackV1.Operation.TASK)) qualification.requireTask();
-        var collector = AgentScopeObservationCollector.declaration(true);
+        var collector = methodOnly ? AgentScopeObservationCollector.methodDeclaration(true) : AgentScopeObservationCollector.declaration(true);
         qualification.requireCurrent(inventory, collector.identityDigest());
         assets.add(new LockedAsset("RUNTIME_QUALIFICATION", RuntimeQualification.VERSION, "0.1", qualification.source(), qualification.digest()));
         assets.add(new LockedAsset("OBSERVATION_COLLECTOR_DECLARATION", collector.collectorId(), collector.version(), "host-declaration://" + collector.collectorId(), collector.identityDigest()));
@@ -200,7 +209,7 @@ public final class AgentScopeQueryAssembler {
         for (var ref : support.terminology()) terms.add(description(root, ref, "TERMINOLOGY_PACK", assets));
         var catalog = CapabilityDescriptionCatalogV01.load(packs, descriptions, terms);
         catalog.requireExactInstallation(capabilities.keySet());
-        List<Requirement> requirements = new ArrayList<>(AgentScopeObservationCollector.baseline());
+        List<Requirement> requirements = new ArrayList<>(AgentScopeObservationCollector.baseline(methodOnly));
         for (var ref : support.observationRequirements()) {
             Path file = resolve(root, new AssetRef(ref.id(), ref.version(), ref.source(), ref.digest()), false, "OBSERVATION_REQUIREMENTS", assets);
             var declared = HarnessJson.mapper().readValue(Files.readAllBytes(file), ObservationRequirementsV01.class);

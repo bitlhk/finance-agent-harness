@@ -265,6 +265,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             try (var span = run.start(parent, "host", "authorization/" + point, Map.of("harnessRequestId", context.requestId()))) {
                 try {
                     if (!valid.get()) throw new SecurityException("SESSION_GENERATION_INVALID");
+                    if (providers.isEmpty()) BoundFinanceProvider.checkContext(grants.get(), context);
                     for (var entry : providers.entrySet()) entry.getValue().checkAccess(request(entry.getKey(), Map.of()));
                     span.finish(Outcome.RETURNED, Map.of());
                 } catch (RuntimeException failure) { valid.set(false); span.notSent(); span.finish(Outcome.DENIED, Map.of()); throw failure; }

@@ -106,8 +106,19 @@ class ManagedProviderFactoriesTest {
         var source = factory("source", "controlled-http", Set.of(), "source:read");
         assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01(List.of(source, source)));
     }
-    @Test void noFactoriesCannotPass() {
-        assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01(List.of()));
+    @Test void explicitEmptySelectionNeedsNoProviderConnectionOrGrant() {
+        var registry = new ManagedProviderFactoriesV01(List.of());
+        assertEquals(Map.of(), registry.configurationDigests(Set.of()));
+        assertEquals(Set.of(), registry.sourceScopes(Map.of()));
+        assertEquals(Map.of(), registry.create(null, () -> { throw new AssertionError("No grant requested"); }, Set.of()));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("missing")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of(),
+                Map.of("unused", Map.of("source", "a".repeat(64)))));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
+    @Test void emptySelectionDoesNotInstantiateAvailableFactory() {
+        var registry = new ManagedProviderFactoriesV01(List.of(factory("one", "unused", Set.of(), "facts:read")));
+        assertEquals(Map.of(), registry.create(null, () -> null, Set.of()));
     }
     @Test void missingDependencyRejected() {
         var registry = new ManagedProviderFactoriesV01(List.of(factory("one", "controlled-http", Set.of("missing"), "one:read")));

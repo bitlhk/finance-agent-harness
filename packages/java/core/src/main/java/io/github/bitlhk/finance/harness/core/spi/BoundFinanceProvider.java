@@ -34,12 +34,9 @@ public final class BoundFinanceProvider implements DescribedFinanceProvider, Inv
         Grant grant = grants.get();
         FinanceContextV1 context = request.context();
         Set<String> required = requirements.get(request.capabilityId());
-        if (grant == null || !grant.expiresAt().isAfter(Instant.now())
-                || required == null || !delegate.descriptor().supports(request.capabilityId(), request.operation())
-                || !grant.scopes().containsAll(required) || !context.scopes().containsAll(required)
-                || !grant.principalId().equals(context.principalId()) || grant.principalType() != context.principalType()
-                || !grant.subjects().contains(context.subjectRef()) || !grant.purposes().contains(context.purpose())
-                || !grant.scopes().containsAll(context.scopes()) || !grant.sessionRef().equals(context.sessionRef())) {
+        checkContext(grant, context);
+        if (required == null || !delegate.descriptor().supports(request.capabilityId(), request.operation())
+                || !grant.scopes().containsAll(required) || !context.scopes().containsAll(required)) {
             throw new SecurityException("HOST_GRANT_REJECTED");
         }
         for (String selector : Set.of("customerRef", "subjectRef", "customer_id")) {
@@ -49,6 +46,16 @@ public final class BoundFinanceProvider implements DescribedFinanceProvider, Inv
             }
         }
         if (delegate instanceof InvocationAccess access) access.checkAccess(request);
+    }
+
+    /** Host identity binding also applies when a method installs no business capability. */
+    public static void checkContext(Grant grant, FinanceContextV1 context) {
+        if (grant == null || !grant.expiresAt().isAfter(Instant.now())
+                || !grant.principalId().equals(context.principalId()) || grant.principalType() != context.principalType()
+                || !grant.subjects().contains(context.subjectRef()) || !grant.purposes().contains(context.purpose())
+                || !grant.scopes().containsAll(context.scopes()) || !grant.sessionRef().equals(context.sessionRef())) {
+            throw new SecurityException("HOST_GRANT_REJECTED");
+        }
     }
 
     public CapabilityResultV1 query(CapabilityRequestV1 request) { checkAccess(request); return delegate.query(request); }
