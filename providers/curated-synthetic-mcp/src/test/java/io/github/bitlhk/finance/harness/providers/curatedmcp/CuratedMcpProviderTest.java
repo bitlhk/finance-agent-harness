@@ -273,6 +273,22 @@ class CuratedMcpProviderTest {
         assertEquals(0, calls.size());
         assertEquals(1, deletes.get());assertTrue(active.isEmpty());
     }
+    @Test void sourceAccessDenialIsNotAnOrdinaryUpstreamFailure() {
+        for (int status : List.of(401, 403)) for (String phase : List.of("tools/list", "tools/call")) {
+            calls.clear();
+            attack = (method, exchange) -> {
+                if (!phase.equals(method)) return false;
+                exchange.sendResponseHeaders(status, -1);
+                return true;
+            };
+            var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+            assertEquals("NOT_AUTHORIZED", result.error().failureClass(), status + ":" + phase);
+            assertTrue(result.data().isEmpty());
+            assertEquals(phase.equals("tools/call") ? 1 : 0, calls.size());
+            assertTrue(active.isEmpty(), "Source refusal must not skip owned session cleanup");
+        }
+    }
     @Test void expiredAuthorityAfterListStillReclaimsItsSessionWithoutCallingTool() {
         afterList = () -> session.set(new ManagedProviderFactoryV01.SourceSession("expired", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)));
         assertEquals(CapabilityResultV1.Status.FAILED, provider().query(request("get_wealth_policy_basis", Map.of())).status());

@@ -36,7 +36,9 @@ final class BoundedHttpClient extends HttpClient {
     }
 
     void checkHealthy() {
-        if (failure.get() != null) throw new IllegalStateException("CURATED_HTTP_INGRESS_FAILED", failure.get());
+        var cause = failure.get();
+        if (cause instanceof SecurityException denied) throw denied;
+        if (cause != null) throw new IllegalStateException("CURATED_HTTP_INGRESS_FAILED", cause);
     }
 
     void stopReads() {
@@ -59,6 +61,12 @@ final class BoundedHttpClient extends HttpClient {
                 if (exchange.observation != null) exchange.observation.headers(info.statusCode());
                 if (sourceIdentity != null && !info.headers().allValues("X-Finance-Source-Sha256").equals(List.of(sourceIdentity)))
                     throw new IllegalArgumentException("CURATED_SOURCE_IDENTITY_MISMATCH");
+                if (info.statusCode() == 401 || info.statusCode() == 403) {
+                    // Preserve the trusted source's denial across the SDK's async exception wrappers.
+                    var denied = new SecurityException("CURATED_SOURCE_ACCESS_DENIED");
+                    failure.compareAndSet(null, denied);
+                    throw denied;
+                }
                 if (requireStateless && info.headers().firstValue("Mcp-Session-Id").isPresent())
                     throw new IllegalArgumentException("CURATED_STATEFUL_SOURCE_REJECTED");
                 if (info.headers().firstValueAsLong("Content-Length").orElse(0) > MAX_BODY_BYTES)

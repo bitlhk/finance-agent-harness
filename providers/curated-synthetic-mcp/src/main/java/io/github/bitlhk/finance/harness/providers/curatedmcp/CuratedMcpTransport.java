@@ -64,6 +64,9 @@ final class CuratedMcpTransport {
                 var result = client.callTool(new McpSchema.CallToolRequest(tool.name(), arguments));
                 http.client().checkHealthy();
                 return result;
+            } catch (RuntimeException failure) {
+                http.client().checkHealthy();
+                throw failure;
             }
         }
     }

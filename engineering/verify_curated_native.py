@@ -1,8 +1,9 @@
-"""Owned bounded MCP + two native Java Runtime tests; never emits admission proof."""
+"""Owned MCP + native Runtime tests; optional packaged AgentScope QUERY qualification, not Builder admission."""
 import argparse
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import socket
 import subprocess
 import time
@@ -29,12 +30,64 @@ def rpc(url, payload):
         return json.loads(body)
 
 
+def qualify_agentscope(root, args, config, facts, rows):
+    output = args.output
+    lib, classes = output / 'lib', output / 'host-classes'
+    lib.mkdir(); classes.mkdir()
+    command = ['mvn', '-o', '-B', f'-Dmaven.repo.local={args.maven_repo}', '-pl', 'integrations/agentscope-java',
+               'dependency:copy-dependencies', '-DincludeScope=test',
+               '-DexcludeGroupIds=org.junit.jupiter,org.junit.platform,org.opentest4j,org.apiguardian',
+               '-DexcludeArtifactIds=slf4j-simple', f'-DoutputDirectory={lib}']
+    with (output / 'qualification-build.log').open('w') as log:
+        subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+        shutil.copy2(root / 'integrations/agentscope-java/target/finance-harness-agentscope-java-0.1.0-SNAPSHOT.jar', lib)
+        shutil.copytree(root / 'integrations/agentscope-java/target/test-classes', output / 'test-classes')
+        classpath = f'{lib}/*:{output / "test-classes"}:{classes}'
+        sources = sorted((root / 'integrations/agentscope-java/isolatedHost').glob('*.java'))
+        subprocess.run(['javac', '--release', '21', '-cp', classpath, '-d', str(classes), *map(str, sources)],
+                       cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=90)
+        qualification = output / 'qualification'
+        prefix = ['java', '-cp', classpath]
+        package = 'io.github.bitlhk.finance.harness.integrations.agentscope.isolatedhost.'
+        subprocess.run(prefix + [package + 'QualificationWorker', str(root), str(output / 'raw/agentscope'),
+                                str(qualification), '--curated', str(config), sha(config)],
+                       cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=120)
+        mismatched = output / 'mismatched-source-evidence'
+        shutil.copytree(output / 'raw/agentscope', mismatched)
+        changed = next(mismatched.glob('*.json'))
+        row = json.loads(changed.read_text())
+        row['sourceConfigDigest'] = '0' * 64
+        write(changed, row)
+        refused = subprocess.run(prefix + [package + 'QualificationWorker', str(root), str(mismatched),
+                                 str(output / 'rejected-qualification'), '--curated', str(config), sha(config)],
+                                 cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120)
+        (output / 'qualification-negative.log').write_text(refused.stdout)
+        if refused.returncode == 0 or 'CURATED_EVIDENCE_SOURCE_MISMATCH' not in refused.stdout:
+            raise RuntimeError('QUALIFICATION_SOURCE_MISMATCH_NOT_REJECTED')
+        if (output / 'rejected-qualification/agentscope-observation-qualification.json').exists():
+            raise RuntimeError('REJECTED_QUALIFICATION_PUBLISHED')
+        digest = (qualification / 'qualification.sha256').read_text().strip()
+        tested = [r for r in rows if r.get('testMethod') == 'selectedPackUsesActualMcpAndOnlyInstallsItsTools']
+        if len(tested) != 6:
+            raise RuntimeError('QUALIFIED_PACK_CONTROLS_MISSING')
+        for index, row in enumerate(tested):
+            controls = row['sessions'][0]['controls']
+            subprocess.run(prefix + [package + 'CuratedQualifiedHost', str(root), controls['solution'], controls['support'],
+                                    str(config), sha(config), str(qualification / 'agentscope-observation-qualification.json'),
+                                    digest, str(facts), str(output / f'qualified-host-{index}')],
+                           cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=120)
+        return {'status': 'PASS', 'qualificationSha256': digest, 'separateJvmPackChecks': len(tested),
+                'mismatchedSourceEvidence': 'REJECTED_WITHOUT_QUALIFICATION',
+                'scope': 'PACKAGED_QUERY_QUALIFICATION_NOT_BUILDER_HOST_ADMISSION'}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--eval-repo', type=Path, required=True)
     parser.add_argument('--source-python', type=Path, required=True)
     parser.add_argument('--maven-repo', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--qualify-agentscope', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     if not args.output.is_absolute() or args.output.exists():
@@ -107,7 +160,8 @@ def main():
             command = ['mvn', '-o', '-B', f'-Dmaven.repo.local={args.maven_repo}', '-pl', 'integrations/agentscope-java,integrations/openjiuwen-java',
                 '-am', '-Dtest=CuratedNativeQueryTest', '-Dsurefire.failIfNoSpecifiedTests=false',
                 f'-Dcurated.sourceConfig={config}', f'-Dcurated.sourceConfigSha256={sha(config)}',
-                f'-Dcurated.expectedFacts={facts}', f'-Dcurated.evidenceDirectory={args.output / "raw"}', 'test']
+                f'-Dcurated.expectedFacts={facts}', f'-Dcurated.evidenceDirectory={args.output / "raw"}',
+                'install' if args.qualify_agentscope else 'test']
             write(args.output / 'command.json', command)
             with (args.output / 'maven.log').open('w') as output:
                 result = subprocess.run(command, cwd=root, stdout=output, stderr=subprocess.STDOUT, timeout=900)
@@ -121,14 +175,20 @@ def main():
                     raise RuntimeError('TESTS_NOT_ALL_EXECUTED:' + runtime)
                 counts[runtime] = int(tree.attrib['tests'])
                 (args.output / f'{runtime}-tests.xml').write_bytes(report.read_bytes())
-            rows = [json.loads(p.read_text()) for p in sorted((args.output / 'raw').glob('*.json'))]
+            rows = []
+            for runtime, count in counts.items():
+                runtime_rows = [json.loads(p.read_text()) for p in sorted((args.output / 'raw' / runtime).glob('*.json'))]
+                if len(runtime_rows) != count:
+                    raise RuntimeError('RUNTIME_RAW_EVIDENCE_INCOMPLETE:' + runtime)
+                rows.extend(runtime_rows)
             if not rows or len(rows) != sum(counts.values()) or any(r['status'] != 'PASS' for r in rows):
                 raise RuntimeError('RAW_EVIDENCE_INCOMPLETE')
+            qualification = qualify_agentscope(root, args, config, facts, rows) if args.qualify_agentscope else {'status': 'NOT_RUN'}
             write(args.output / 'report.json', {'status': 'PASS', 'tests': len(rows), 'runtimeTests': counts, 'packs': packs,
                 'sourceTools': sorted(names), 'sourceIdentitySha256': sha(identity), 'sourceFixtureSha256': sha(roles_file),
                 'sourceConfigSha256': sha(config), 'sourceFactsCompared': 'ALL_FIELDS_EACH_SELECTED_TOOL',
                 'scope': 'NATIVE_CURATED_COVERAGE_NOT_QUALIFICATION', 'realModel': 'NOT_RUN',
-                'skillAcceptance': 'NOT_RUN', 'productionChanged': False})
+                'skillAcceptance': 'NOT_RUN', 'productionChanged': False, 'packagedAgentScopeQualification': qualification})
         finally:
             source.terminate()
             try:

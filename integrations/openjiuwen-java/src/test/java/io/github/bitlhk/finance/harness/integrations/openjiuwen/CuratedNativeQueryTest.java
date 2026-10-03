@@ -33,7 +33,7 @@ class CuratedNativeQueryTest {
 
     private void run(String suffix, boolean revoke) throws Exception {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath().resolve("../..").normalize();
-        Path output = Path.of(System.getProperty("curated.evidenceDirectory")); Files.createDirectories(output);
+        Path output = Path.of(System.getProperty("curated.evidenceDirectory")).resolve("openjiuwen"); Files.createDirectories(output);
         var pack = new FinanceCapabilityPackLoader().load(root.resolve("capability-packs/curated-synthetic-" + suffix + "/pack.yaml"));
         var tools = pack.capabilities().stream().map(c -> CuratedTools.named(c.toolName().substring("curated_".length()))).toList();
         var config = CuratedSourceConfig.load(Path.of(System.getProperty("curated.sourceConfig")), System.getProperty("curated.sourceConfigSha256"));

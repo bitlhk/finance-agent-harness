@@ -1,7 +1,8 @@
 # Curated native coverage, candidate V0.1
 
-This is an isolated engineering gate, not Runtime/Host qualification or Skill
-quality acceptance. It does not change the managed catalog or deployment.
+This is an isolated engineering gate, not Skill quality acceptance. By default
+it emits native coverage only. The optional packaged AgentScope QUERY qualification
+does not qualify the generated Builder Host or change the catalog/deployment.
 
 ## Reproduce
 
@@ -15,6 +16,15 @@ python3 engineering/verify_curated_native.py \
   --maven-repo /absolute/path/to/isolated-maven-repository \
   --output /absolute/path/to/new-evidence-directory
 ```
+
+Add `--qualify-agentscope` to run the existing trusted-operator qualification
+worker after tests and packaging. It requires all 24 QUERY checks (including
+three distinct repetitions each for compound, multi-turn and missing-data),
+checks the exact tested class bytes against the JAR, and runs six separate JVMs
+that load the resulting report using the public admission API. The raw Runtime
+reports live in separate `raw/agentscope` and `raw/openjiuwen` directories.
+Changing the source configuration or packaged classes requires new evidence;
+this does not authorize a different Provider, a TASK mode or a Builder Host.
 
 The runner checks the three synthetic source files against the Provider's pinned
 reference contract, starts its own bounded loopback source, derives test schema
@@ -42,8 +52,17 @@ wealth draft pack remains excluded. No TASK tools are installed.
   model failure and preservation of an UNKNOWN risk decision.
 - Raw evidence includes actual controlled model HTTP bodies, tool results,
   installation information and observation events. Only synthetic data is used.
-- Test-only AgentScope bootstrap follows the existing qualification test pattern;
-  it does not emit, publish or bypass an operator qualification report.
+- Test-only AgentScope bootstrap follows the existing qualification test pattern.
+  Only the explicit operator worker produces a qualification report, after the
+  complete suite passes. The separate packaged Host probes do not use bootstrap
+  authority. They verify installation Locks and actual source facts for all 12
+  tools, with closed observation spans and no orphan parent links.
+- AgentScope checks source HTTP 401/403, cancellation with late completion,
+  terminal memory cleanup, independent diagnostic permissions/storage failure,
+  concurrent-session isolation, model redirects, profile/Provider compatibility,
+  missing qualification and REQUIRED observation rejection. Source 401/403 is
+  an authorization rejection, not ordinary recoverable upstream failure: no
+  following model request is allowed and the session cannot be reused.
 
 ## MCP observation semantics
 
@@ -69,8 +88,10 @@ size/schema checks, source pins and cleanup rules are unchanged.
 
 ## Remaining formal-entry gates
 
-1. Exact Runtime and generated Host qualification against the new Provider and
-   configuration identities, with all existing negative checks retained.
+1. Generated Builder Host qualification against the new Provider/configuration
+   identities, with existing negative checks retained. Packaged AgentScope QUERY
+   qualification can now be reproduced separately with the option above; it is
+   not interchangeable with generated Host archive/snapshot qualification.
 2. Reviewed catalog admission and build-delivery evidence for the selected packs.
 3. Explicit original-Skill migration, including resources, tool bindings and
    source/migrated/installed digests. No claims based only on tool probes.
