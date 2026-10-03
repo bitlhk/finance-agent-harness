@@ -69,7 +69,7 @@ public final class CuratedTools {
             ref = (String) value;
             if ((ref == null || ref.isEmpty()) && tool.defaultRef() != null) ref = tool.defaultRef();
             if (ref == null || ref.isBlank()) throw new IllegalArgumentException("CURATED_SELECTOR_REQUIRED");
-            if (tool.selector().equals("customer_id")) {
+            if (tool.selector().equals("customer_id") && "BOUND_SUBJECT".equals(policy.customerSelection())) {
                 if (!subject.equals(ref)) throw new SecurityException("CURATED_SUBJECT_MISMATCH");
                 ref = policy.customerId();
             }

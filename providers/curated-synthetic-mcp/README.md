@@ -76,11 +76,35 @@ Published tool names are `curated_<original_name>`, not the original Skill names
 Original Skill references MUST be migrated with an explicit tool/contract binding;
 uploading an unchanged Skill is not automatically compatible.
 
-For customer tools, Harness input `customer_id` is the **Host-authorized
+By default (`BOUND_SUBJECT`), Harness input `customer_id` is the **Host-authorized
 subjectRef**, e.g. `host-customer`, NOT source `C005`. It must equal the context
 subject. Only the reviewed source configuration maps that subject to `C005`,
 `C006` or `I001`. Source results retain the original source customer ID; they do
 not pretend that the source ID is the Host identity.
+
+Candidate source version `curated-synthetic-source.v3` additionally permits an
+explicit per-subject `customerSelection: SYNTHETIC_ALLOWLIST`. This mode is only
+for this pinned loopback synthetic source. It preserves the test case's explicit
+`customer_id` (for example C005 or C006) and requires that value in the trusted
+subject's **per-tool** resource allowlist. It never takes the first entry or
+derives a grant from Skill text. `customerId` must be absent in this mode; mixing
+implicit mapping with explicit selection is rejected. v1/v2 cannot enable it.
+
+The Host subject remains the authenticated evaluation identity, not the selected
+synthetic customer. Current session, principal, session reference and scope checks,
+BoundFinanceProvider grants, transport refresh and returned-identity validation
+are unchanged. Even a response for a different allowlisted customer is discarded.
+This is not delegated access to real bank customers and must not be copied into a
+real-bank Provider as an authorization shortcut. The customer mode and resource
+sets are in the canonical digest; exact config bytes remain separately pinned.
+Existing v1/v2 canonical digests do not change when BOUND_SUBJECT is defaulted.
+
+This candidate mode has Provider-level tests, not generated-Host qualification or
+wealth Skill admission. The existing managed customer/wealth capability text
+still describes BOUND_SUBJECT; before using the new mode in a generated Agent,
+version the applicable input descriptions, validate their binding, and rerun the
+exact native/Host, projection and original-case gates. Do not reuse old proofs or
+publish the wealth cohort just because this configuration now parses.
 
 `reference` and `product_id` values must belong to that subject's per-tool resource
 allowlist. Defaults are expanded before authorization, so omitting `reference`
@@ -107,7 +131,7 @@ FH_CURATED_MCP_CONFIG=/absolute/reviewed/source.json
 FH_CURATED_MCP_CONFIG_SHA256=<sha256 of exact source.json bytes>
 ```
 
-Managed Factory construction now requires `curated-synthetic-source.v2` and
+Managed Factory construction requires `curated-synthetic-source.v2` or v3 and
 `runtimePolicy` with mode `STATELESS_BOUNDED` and a 64-hex `sourceIdentitySha256`.
 The mode and digest are part of the canonical source config identity. The HTTP
 client rejects source session headers before passing a body to the SDK, without
@@ -184,7 +208,7 @@ object digest, distinct from the exact file-byte hash used by the factory.
 This is local execution metadata, NOT an independent source authenticity receipt
 or a Host qualification. Source asOf remains in sourceResult; outer asOf is read
 time. Bank access credentials and raw endpoint are not placed in result evidence.
-For v2, `sourceIdentity` separately records `RESPONSE_HEADER_MATCHED_PIN` and
+For v2/v3, `sourceIdentity` separately records `RESPONSE_HEADER_MATCHED_PIN` and
 `authentication: NOT_PROVIDED_BY_MARKER`. Failed reads do not receive this success
 marker. File-byte, canonical configuration and source-manifest hashes are distinct.
 
@@ -209,6 +233,11 @@ calls all 16 original tools through this Provider/SDK, checks UNKNOWN/UNAVAILABL
 and DEGRADED preservation, and terminates its child process. It runs once with
 the legacy stateful source and once with the bounded stateless entry, requiring
 the exact source/dependency identity and source.v2 configuration for the latter.
+The bounded run also uses source.v3 to read the original C005 and C006 customer
+profile, portfolio and allocation context, verifies returned identities and the
+canonical config pin, and refuses unconfigured I001 without another HTTP attempt.
+Focused tests cover missing/expired/mismatched Host sessions, missing grants,
+revocation before dispatch and delivery, and wrong-customer source responses.
 This checks SDK/Provider compatibility without changing deployment defaults.
 The separate Eval TCP tests check rejection, disconnect and request bounds;
 neither suite alone qualifies the complete Host deployment described below.

@@ -87,6 +87,28 @@ class ReferenceMcpTest {
             assertEquals(CapabilityResultV1.Status.COMPLETED, degraded.status());
             assertEquals(Map.of("readiness", "DEGRADED"), degraded.data().get("sourceState"));
             assertFalse(((Map<?, ?>) degraded.data().get("sourceResult")).get("missing").toString().isEmpty());
+            if (stateless) {
+                var selectedResources = new LinkedHashMap<>(resources);
+                for (String name : List.of("get_customer_profile", "get_customer_portfolio", "prepare_wealth_allocation_context"))
+                    selectedResources.put(name, Set.of("C005", "C006"));
+                var selected = new CuratedSourceConfig("curated-synthetic-source.v3", endpoint, "1.0.0", pins,
+                        Map.of("host-customer", new CuratedSourceConfig.Subject(null, selectedResources, "SYNTHETIC_ALLOWLIST")), config.runtimePolicy());
+                var observed = new ArrayList<ManagedProviderFactoryV01.HttpAttempt>();
+                var selectedProvider = new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1",
+                        URI.create("http://127.0.0.1:1"), Duration.ofSeconds(5), () -> session, () -> null, observed::add), selected);
+                for (String id : List.of("C005", "C006")) {
+                    for (String name : List.of("get_customer_profile", "get_customer_portfolio", "prepare_wealth_allocation_context")) {
+                        var tool = CuratedTools.named(name);
+                        var result = selectedProvider.query(request(tool, Map.of("customer_id", id)));
+                        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), name + ":" + id + ":" + result);
+                        assertEquals(id, HarnessJson.mapper().valueToTree(result.data().get("sourceResult")).at(tool.identityPointer()).asText());
+                        assertEquals(selected.canonicalDigest(), ((Map<?, ?>) result.data().get("mcpExecution")).get("sourceConfigSha256"));
+                    }
+                }
+                assertFalse(observed.isEmpty());int before = observed.size();
+                var rejected = selectedProvider.query(request(CuratedTools.named("get_customer_profile"), Map.of("customer_id", "I001")));
+                assertEquals("NOT_AUTHORIZED", rejected.error().failureClass());assertEquals(before, observed.size());
+            }
         } finally {
             process.destroy();if (!process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) { process.destroyForcibly();process.waitFor(); }
         }

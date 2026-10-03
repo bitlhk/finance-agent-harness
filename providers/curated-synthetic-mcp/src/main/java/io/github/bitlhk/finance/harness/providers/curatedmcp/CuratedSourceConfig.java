@@ -21,8 +21,15 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
             Map<String, String> toolSchemaPins, Map<String, Subject> subjects) {
         this(schemaVersion, endpoint, contractVersion, toolSchemaPins, subjects, null);
     }
-    public record Subject(String customerId, Map<String, Set<String>> resources) {
+    public record Subject(String customerId, Map<String, Set<String>> resources, String customerSelection) {
+        public Subject(String customerId, Map<String, Set<String>> resources) {
+            this(customerId, resources, "BOUND_SUBJECT");
+        }
         public Subject {
+            customerSelection = customerSelection == null ? "BOUND_SUBJECT" : customerSelection;
+            if (!Set.of("BOUND_SUBJECT", "SYNTHETIC_ALLOWLIST").contains(customerSelection)
+                    || "SYNTHETIC_ALLOWLIST".equals(customerSelection) && customerId != null)
+                throw new IllegalArgumentException("CURATED_CUSTOMER_SELECTION_INVALID");
             var copy = new LinkedHashMap<String, Set<String>>();
             resources.forEach((k, v) -> copy.put(k, Set.copyOf(v)));
             resources = Map.copyOf(copy);
@@ -30,7 +37,7 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
     }
     public CuratedSourceConfig {
         if (!("curated-synthetic-source.v1".equals(schemaVersion) && runtimePolicy == null
-                || "curated-synthetic-source.v2".equals(schemaVersion) && runtimePolicy != null)
+                || Set.of("curated-synthetic-source.v2", "curated-synthetic-source.v3").contains(schemaVersion) && runtimePolicy != null)
                 || !"1.0.0".equals(contractVersion)
                 || endpoint == null || !"http".equals(endpoint.getScheme())
                 || !Set.of("127.0.0.1", "[::1]").contains(endpoint.getHost())
@@ -47,11 +54,13 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
         var pins = toolSchemaPins;
         subjects.forEach((id, subject) -> {
             if (id.isBlank() || subject.resources().isEmpty()) throw new IllegalArgumentException("CURATED_SUBJECT_INVALID");
+            if ("SYNTHETIC_ALLOWLIST".equals(subject.customerSelection()) && !"curated-synthetic-source.v3".equals(schemaVersion))
+                throw new IllegalArgumentException("CURATED_CUSTOMER_SELECTION_VERSION_REQUIRED");
             subject.resources().forEach((name, refs) -> {
                 var tool = CuratedTools.named(name);
                 if (!pins.containsKey(name) || refs.isEmpty() || !tool.resources().containsAll(refs))
                     throw new IllegalArgumentException("CURATED_RESOURCE_INVALID");
-                if (tool.selector().equals("customer_id") && (subject.customerId() == null
+                if (tool.selector().equals("customer_id") && "BOUND_SUBJECT".equals(subject.customerSelection()) && (subject.customerId() == null
                         || !refs.equals(Set.of(subject.customerId()))))
                     throw new IllegalArgumentException("CURATED_CUSTOMER_MAPPING_INVALID");
             });
@@ -80,6 +89,7 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
             policy.resources().forEach((tool, refs) -> resources.put(tool, refs.stream().sorted().toList()));
             var fields = new TreeMap<String, Object>();
             if (policy.customerId() != null) fields.put("customerId", policy.customerId());
+            if (!"BOUND_SUBJECT".equals(policy.customerSelection())) fields.put("customerSelection", policy.customerSelection());
             fields.put("resources", resources);policies.put(subject, fields);
         });
         var config = new TreeMap<String, Object>(Map.of("schemaVersion", schemaVersion, "endpoint", endpoint.toString(),

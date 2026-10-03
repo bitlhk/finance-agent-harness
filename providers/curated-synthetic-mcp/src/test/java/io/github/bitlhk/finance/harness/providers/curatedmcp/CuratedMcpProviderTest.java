@@ -31,7 +31,7 @@ class CuratedMcpProviderTest {
     volatile CountDownLatch releaseDelete = new CountDownLatch(0);
     AtomicReference<ManagedProviderFactoryV01.SourceSession> session = new AtomicReference<>(
             new ManagedProviderFactoryV01.SourceSession("bank-secret-never-forward", "host-customer", "actor", "host-session", Instant.now().plusSeconds(300)));
-    volatile boolean isError, wrongIdentity, schemaMismatch, sse, structuredContent;
+    volatile boolean isError, wrongIdentity, schemaMismatch, sse, structuredContent, stateless;
     volatile Runnable afterList = () -> {};
     volatile Runnable afterCall = () -> {};
     @FunctionalInterface interface Attack { boolean respond(String method, com.sun.net.httpserver.HttpExchange exchange) throws java.io.IOException; }
@@ -44,6 +44,7 @@ class CuratedMcpProviderTest {
         serverExecutor = Executors.newVirtualThreadPerTaskExecutor();server.setExecutor(serverExecutor);
         server.createContext("/mcp", exchange -> {
             requests.incrementAndGet();
+            if (stateless) exchange.getResponseHeaders().set("X-Finance-Source-Sha256", "a".repeat(64));
             assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
             try {
                 if (exchange.getRequestMethod().equals("GET")) {
@@ -70,11 +71,14 @@ class CuratedMcpProviderTest {
                 String method = body.path("method").asText();
                 if (method.equals("initialize")) {
                     assertNull(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"), "Initialize must not resume a session");
-                    String id = initializeSessionId.get();active.add(id);sessions.add(id);
-                    exchange.getResponseHeaders().set("Mcp-Session-Id", id);
+                    if (!stateless) {
+                        String id = initializeSessionId.get();active.add(id);sessions.add(id);
+                        exchange.getResponseHeaders().set("Mcp-Session-Id", id);
+                    }
                     result = Map.of("protocolVersion", "2025-06-18", "capabilities", Map.of("tools", Map.of()), "serverInfo", Map.of("name", "synthetic-test", "version", "1"));
                 } else {
-                    assertTrue(active.contains(exchange.getRequestHeaders().getFirst("Mcp-Session-Id")));
+                    if (stateless) assertNull(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"));
+                    else assertTrue(active.contains(exchange.getRequestHeaders().getFirst("Mcp-Session-Id")));
                     if (method.equals("notifications/initialized")) { exchange.sendResponseHeaders(202, -1);return; }
                     if (method.equals("tools/list")) {
                         result = Map.of("tools", CuratedTools.ALL.stream().map(t -> Map.of("name", t.name(), "inputSchema", schema(t, schemaMismatch))).toList());
@@ -152,6 +156,69 @@ class CuratedMcpProviderTest {
     CuratedMcpProvider provider(Duration timeout) {
         return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
                 timeout, session::get, () -> null, ignored -> {}), config());
+    }
+    CuratedMcpProvider selectedCustomers() {
+        stateless = true;
+        var source = new CuratedSourceConfig("curated-synthetic-source.v3", endpoint, "1.0.0", config().toolSchemaPins(),
+                Map.of("host-customer", new CuratedSourceConfig.Subject(null,
+                        Map.of("get_customer_profile", Set.of("C005", "C006")), "SYNTHETIC_ALLOWLIST")),
+                new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", "a".repeat(64)));
+        return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
+                Duration.ofSeconds(3), session::get, () -> null, ignored -> {}), source);
+    }
+    @Test void selectedCustomersPreserveSourceIdentityAndRejectUnconfiguredResourcesBeforeHttp() {
+        var provider = selectedCustomers();
+        for (String id : List.of("C005", "C006")) {
+            var result = provider.query(request("get_customer_profile", Map.of("customer_id", id)));
+            assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+            assertEquals(id, HarnessJson.mapper().valueToTree(result.data()).at("/sourceResult/profile/customerId").asText());
+        }
+        assertEquals(List.of("C005", "C006"), calls.stream().map(c -> c.at("/params/arguments/customer_id").asText()).toList());
+        int before = requests.get();
+        for (String id : List.of("C007", "I001", "host-customer"))
+            assertEquals("NOT_AUTHORIZED", provider.query(request("get_customer_profile", Map.of("customer_id", id))).error().failureClass());
+        assertEquals("INVALID_INPUT", provider.query(request("get_customer_profile", Map.of())).error().failureClass());
+        assertEquals(before, requests.get());assertTrue(sessions.isEmpty());assertTrue(active.isEmpty());
+    }
+    @Test void selectedCustomersStillRequireCurrentSessionAndGrant() {
+        var provider = selectedCustomers();
+        var request = request("get_customer_profile", Map.of("customer_id", "C005"));
+        var initial = session.get();
+        var invalid = Arrays.asList(null,
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "other", "actor", "host-session", Instant.now().plusSeconds(30)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "other", "host-session", Instant.now().plusSeconds(30)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "actor", "other", Instant.now().plusSeconds(30)));
+        for (var value : invalid) {
+            session.set(value);
+            assertEquals("NOT_AUTHORIZED", provider.query(request).error().failureClass());
+        }
+        session.set(initial);
+        var grants = new AtomicReference<>(new BoundFinanceProvider.Grant("actor", FinanceContextV1.PrincipalType.CUSTOMER,
+                Set.of("host-customer"), Set.of("synthetic-evaluation"), Set.of(), "host-session", "test", Instant.now().plusSeconds(30)));
+        var bound = new BoundFinanceProvider(provider, grants::get, new CuratedMcpFactoryV01().requirements());
+        assertThrows(SecurityException.class, () -> bound.query(request));
+        assertEquals(0, requests.get());assertTrue(calls.isEmpty());
+    }
+    @Test void selectedCustomerRevocationBeforeDispatchAndBeforeDeliveryDoesNotLeakResult() {
+        var provider = selectedCustomers();var initial = session.get();
+        afterList = () -> session.set(null);
+        assertEquals("NOT_AUTHORIZED", provider.query(request("get_customer_profile", Map.of("customer_id", "C005"))).error().failureClass());
+        assertTrue(calls.isEmpty());
+        session.set(initial);afterList = () -> {};afterCall = () -> session.set(null);
+        var result = provider.query(request("get_customer_profile", Map.of("customer_id", "C006")));
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());assertTrue(active.isEmpty());
+    }
+    @Test void selectedCustomerCannotAcceptEvenAnotherAllowlistedCustomersResponse() {
+        var provider = selectedCustomers();
+        mutateResult = data -> {
+            var profile = new LinkedHashMap<>((Map<String, Object>) data.get("profile"));
+            profile.put("customerId", "C006");data.put("profile", profile);
+        };
+        var result = provider.query(request("get_customer_profile", Map.of("customer_id", "C005")));
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());
     }
     CuratedMcpProvider observed(java.util.function.Supplier<ObservationRun> run,
             java.util.function.Consumer<ManagedProviderFactoryV01.HttpAttempt> attempts) {
