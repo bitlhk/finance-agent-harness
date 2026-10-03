@@ -132,9 +132,12 @@ compilation, original digest functions, local-only schema policy and the synchro
 snapshot receiver interface. It has no SDK imports or Agent loop. Old public records and
 entry points remain facades; TASK/checkpoint/recovery stay in OpenJiuwen.
 
-networknt 1.5.6 and 2.0.0 have incompatible ABIs. The common module therefore does not
-depend on either: each adapter makes a small version-specific validator call while sharing
-the same local-reference policy. No old SDK pin is upgraded to make the new adapter work.
+The common module does not depend on networknt: each adapter makes a small validator
+call while sharing the same local-reference policy. Both Java adapters now use networknt
+2.0.0, also required by the managed MCP SDK 0.17.2. The former OpenJiuwen adapter's
+1.5.6 dependency selected an incompatible ABI in the packaged Host; this is an adapter
+dependency correction, not an OpenJiuwen or AgentScope Runtime SDK upgrade. Exact Host
+classpath probes and fresh qualification are required before deploying this change.
 
 ## Fixed SDK Evidence
 
