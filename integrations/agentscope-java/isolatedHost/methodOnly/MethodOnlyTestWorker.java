@@ -6,7 +6,7 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
-/** Runs the existing native tests against operator-selected packaged JARs, never production code. */
+/** Test-only launcher kept separate from dependency-free operator Host workers. */
 public final class MethodOnlyTestWorker {
     public static void main(String[] args) {
         String test = "io.github.bitlhk.finance.harness.integrations.agentscope.MethodOnlyNativeTest";

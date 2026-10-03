@@ -65,7 +65,7 @@ required common boundaries without claiming a Provider result. Builder may
 project this explicit method-only declaration; it must not weaken a QUERY
 declaration by silently dropping unmet requirements.
 
-`isolatedHost/MethodOnlyTestWorker.java` can run the same native JUnit tests with
+`isolatedHost/methodOnly/MethodOnlyTestWorker.java` can run the same native JUnit tests with
 the generated Host's dependency JARs on the classpath, rather than Maven's
 class directories. Compile the worker with JUnit Platform 1.14.1 / Jupiter
 5.14.1 test dependencies and the existing test classes; no test fixture is
