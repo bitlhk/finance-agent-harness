@@ -237,7 +237,8 @@ class AgentScopeQueryTest {
     @Test void queryInputRejectionHasBoundedEvidenceAndNoProviderCall() throws Exception {
         for (var arguments : List.of(Map.<String, Object>of("accountId", ""), Map.<String, Object>of("subjectRef", "PRIVATE_OTHER_CUSTOMER"))) {
             var h = harness(tool("account_balance_query", arguments), text("MUST_NOT_SEND"));
-            assertThrows(RuntimeException.class, () -> h.call("Read authorized accounts."));
+            var error = assertThrows(SecurityException.class, () -> h.call("Read authorized accounts."));
+            assertEquals("NATIVE_TOOL_ERROR_STOP", error.getMessage());
             assertEquals(1, h.model.requests.size());
             assertEquals(0, h.bank.customerReads());
             assertFalse(h.session.valid());

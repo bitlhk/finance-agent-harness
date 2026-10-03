@@ -393,7 +393,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                                 span.finish(Outcome.COMPLETED, Map.of());
                             } catch (IllegalArgumentException rejected) {
                                 span.finish(Outcome.DENIED, Map.of("responseStatus", "CAPABILITY_ARGUMENTS_INVALID"));
-                                return Flux.error(rejected);
+                                return Flux.error(new SecurityException("NATIVE_TOOL_ERROR_STOP"));
                             }
                         }
                     }
