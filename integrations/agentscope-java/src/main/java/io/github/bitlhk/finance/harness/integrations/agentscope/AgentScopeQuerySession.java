@@ -62,6 +62,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
     private final Identity identity;
     private final Supplier<BoundFinanceProvider.Grant> grants;
     private final Map<String, BoundFinanceProvider> providers;
+    private final Map<String, QueryInputValidator> queryValidators = new HashMap<>();
     private final ReActAgent agent;
     private final Map<String, Object> installationLock;
     private final TaskHost taskHost;
@@ -91,6 +92,10 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         prepared.bindings.forEach((id, binding) -> bound.put(id, new BoundFinanceProvider(binding.provider(), grants, requirements)));
         providers = Map.copyOf(bound);
         Toolkit toolkit = new Toolkit();
+        prepared.bindings.forEach((id, binding) -> {
+            if (binding.capability().operation().name().equals("QUERY"))
+                queryValidators.put(id, new QueryInputValidator(binding.capability().inputSchema()));
+        });
         prepared.bindings.forEach((id, binding) -> toolkit.registerAgentTool(binding.capability().operation().name().equals("TASK")
                 ? new AgentScopeTaskTool(id, binding.capability().toolName(), prepared.catalog.description(id), binding.capability().inputSchema())
                 : new QueryTool(id, binding)));
@@ -319,7 +324,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         private final String id;
         private final AgentScopeQueryAssembler.Binding binding;
         private final QueryInputValidator validator;
-        QueryTool(String id, AgentScopeQueryAssembler.Binding binding) { this.id = id; this.binding = binding; validator = new QueryInputValidator(binding.capability().inputSchema()); }
+        QueryTool(String id, AgentScopeQueryAssembler.Binding binding) { this.id = id; this.binding = binding; validator = queryValidators.get(id); }
         public String getName() { return binding.capability().toolName(); }
         public String getDescription() { return prepared.catalog.description(id); }
         public Map<String, Object> getParameters() { return binding.capability().inputSchema(); }
@@ -375,6 +380,24 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                 context.get(Invocation.class).requireAuthorized("before-tool");
                 for (var tool : input.toolCalls()) if (!installedTools().contains(tool.getName()))
                     return Flux.error(new SecurityException("TOOL_NOT_INSTALLED"));
+                // SDK validation may reject before AgentTool.callAsync. Record that
+                // boundary without retaining arguments or relaxing native checks.
+                var call = context.get(Invocation.class);
+                for (var tool : input.toolCalls()) {
+                    for (var entry : prepared.bindings.entrySet()) {
+                        var validator = queryValidators.get(entry.getKey());
+                        if (validator == null || !entry.getValue().capability().toolName().equals(tool.getName())) continue;
+                        try (var span = call.run.start(call.parent, "runtime-tool", "query-input-validation", Map.of("capabilityId", entry.getKey()))) {
+                            try {
+                                validator.validate(tool.getInput());
+                                span.finish(Outcome.COMPLETED, Map.of());
+                            } catch (IllegalArgumentException rejected) {
+                                span.finish(Outcome.DENIED, Map.of("responseStatus", "CAPABILITY_ARGUMENTS_INVALID"));
+                                return Flux.error(new SecurityException("NATIVE_TOOL_ERROR_STOP"));
+                            }
+                        }
+                    }
+                }
                 return next.apply(input).doOnNext(event -> {
                     if (event instanceof ToolResultEndEvent end && end.getState() == ToolResultState.ERROR) {
                         invalidate(); throw new SecurityException("NATIVE_TOOL_ERROR_STOP");
