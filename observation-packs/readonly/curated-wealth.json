@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "curated-wealth-observation",
+  "version": "0.1.0",
+  "requirements": [{
+    "semanticId": "capability.result",
+    "semanticVersion": "0.1",
+    "obligation": "REQUIRED",
+    "boundary": "PROVIDER",
+    "content": "METADATA",
+    "fields": ["capabilityId", "providerId", "harnessRequestId", "businessStatus", "at"],
+    "capabilityIds": [
+      "eval.synthetic.get-customer-portfolio.query",
+      "eval.synthetic.get-wealth-policy-basis.query",
+      "eval.synthetic.prepare-wealth-allocation-context.query",
+      "eval.synthetic.wealth-assistant-product-info.query"
+    ]
+  }]
+}

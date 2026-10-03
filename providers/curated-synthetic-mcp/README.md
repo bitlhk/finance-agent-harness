@@ -3,14 +3,16 @@
 Latest candidate: source.v3 separates trusted Host identity from an explicitly
 allowlisted synthetic customer resource. The isolated seven-Pack native suite
 now covers 16 tools and C005/C006 cases on both Java Runtimes, including an
-independent packaged AgentScope JVM. This is not wealth Skill/Builder admission.
+independent packaged AgentScope JVM. This is not wealth Skill/Builder acceptance.
 The earlier six-Pack generated-Host results below are historical evidence; they
 must be refreshed for the changed Provider artifact, Pack versions and source
-configuration before release. The managed catalog still exposes only six Packs.
+configuration before release. Catalog 0.2.9 adds the seventh Pack as a candidate
+for generated-Host verification, with REQUIRED result observation. It is not a
+production admission or a claim that the original wealth Skill has passed.
 
-GENERATED-HOST CONTROLLED QUALIFICATION PASSED / NOT DEPLOYED. The managed catalog now
-declares six read-only cohort Packs (12 tools), restricted to local-read-only
-Java hosts. Wealth remains outside this admission cohort. Native QUERY evidence
+HISTORICAL SIX-PACK HOST QUALIFICATION / NOT DEPLOYED. The earlier catalog
+declared six read-only cohort Packs (12 tools), restricted to local-read-only
+Java hosts. Wealth was outside that admission cohort. Native QUERY evidence
 does not replace exact generated-Host qualification. ServiceLoader discovery and
 catalog membership are not installation, grants or deployment readiness.
 
@@ -26,7 +28,12 @@ with a different endpoint/configuration. The Builder engineering entry is
 The six cohort Packs have separate REQUIRED `capability.result` observation
 declarations under `observation-packs/readonly/curated-*.json`. Each declaration
 covers one whole Pack; selecting one Pack must not require the other five.
-`eval-projection.v1.json` declares approved scalar fact paths for the same cohort.
+`eval-projection.v1.json` version 0.2.0 declares scalar fact paths for all sixteen
+candidate tools; this evidence vocabulary is not runtime admission. Customer and allocation variants use optional
+fields with explicit NOT_PROVIDED markers, distinct from null and empty arrays.
+The source output contract still validates each supported variant before return.
+The parameterless policy query pins `/policyVersion` to the reference policy;
+the Provider still separately requires the configured `policy` resource grant.
 It does not enable capture, grant resource access or mark answers correct. The
 Eval Launcher must bind its server-owned resource scope and exact canonical source
 configuration, verify the Host receipt, and apply size/field limits. The source
@@ -129,13 +136,12 @@ semantics, never silently replaced by the reference defaults.
 
 Seven `curated-synthetic-*` Packs cover customer, wealth, insurance,
 research, audit, transfer-risk and post-loan. Packs remain atomic. There is no
-placeholder tool for a zero-tool method. Six Packs have candidate catalog
-declarations; the wealth Pack is not registered in the managed catalog or its
-Provider assembly declaration. A separate isolated-test declaration under
+placeholder tool for a zero-tool method. All seven Packs now have candidate catalog
+and Provider assembly declarations. A separate isolated-test declaration under
 `integrations/agentscope-java/reference/curated-wealth-candidate-provider.json`
-supports native validation, not Builder catalog admission. The factory's
-16-tool SPI contract and isolated Provider tests remain
-broader than the 12-tool managed admission cohort. Customer/wealth are now 1.1.0;
+supports native validation, not generated-Host acceptance. The factory's
+16-tool SPI contract must pass the same generated-Host gates before release.
+Customer/wealth are now 1.1.0;
 the other five Packs remain 1.0.0.
 
 ## Host Configuration Injection

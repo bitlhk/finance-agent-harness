@@ -1,6 +1,6 @@
 {
   "schemaVersion": "curated-eval-projection.v1",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "contractVersion": "1.0.0",
   "providerId": "curated-synthetic-mcp",
   "sourceSystem": "curated-synthetic-mcp",
@@ -11,7 +11,9 @@
     "get_customer_profile": {
       "resourcePath": "/profile/customerId",
       "fields": {
-        "customerId": "/profile/customerId",
+        "customerId": "/profile/customerId"
+      },
+      "optionalFields": {
         "energy": "/profile/vehicle/energy",
         "registeredUse": "/profile/vehicle/registeredUse",
         "actualUse": "/profile/vehicle/actualUse",
@@ -22,7 +24,63 @@
         "claimScope": "/profile/claims/scope",
         "claims": "/profile/claims/records/*",
         "concerns": "/profile/concerns/*",
-        "missing": "/profile/missing/*"
+        "missing": "/profile/missing/*",
+        "riskLevel": "/profile/riskLevel",
+        "riskScaleLabel": "/profile/riskScaleLabel",
+        "assessmentStatus": "/profile/assessmentStatus",
+        "validUntil": "/profile/validUntil",
+        "objective": "/profile/objective",
+        "knownCashNeeds": "/profile/knownCashNeeds/*",
+        "holdings": "/profile/holdings/*",
+        "holdingsScope": "/profile/holdingsScope",
+        "liabilities": "/profile/liabilities",
+        "investmentExperience": "/profile/investmentExperience",
+        "lossTolerance": "/profile/lossTolerance",
+        "maturityAmount": "/profile/maturityAmount",
+        "maturityDate": "/profile/maturityDate",
+        "notes": "/profile/notes"
+      }
+    },
+    "get_customer_portfolio": {
+      "resourcePath": "/customerId",
+      "fields": {"customerId": "/customerId", "holdings": "/holdings/*", "scope": "/scope"}
+    },
+    "get_wealth_policy_basis": {
+      "resourcePath": "/policyVersion",
+      "resourceValues": ["demo-wealth-policy-v1"],
+      "fields": {"policyVersion": "/policyVersion", "rules": "/rules/*"}
+    },
+    "wealth_assistant_product_info": {
+      "resourcePath": "/product/productId",
+      "fields": {
+        "productId": "/product/productId", "name": "/product/name", "risk": "/product/risk",
+        "availability": "/product/availability", "redemption": "/product/redemption",
+        "lockDays": "/product/lockDays", "fee": "/product/fee", "guaranteed": "/product/guaranteed"
+      },
+      "optionalFields": {"riskDisclosure": "/product/riskDisclosure"}
+    },
+    "prepare_wealth_allocation_context": {
+      "resourcePath": "/profile/customerId",
+      "fields": {
+        "readiness": "/readiness", "customerId": "/profile/customerId",
+        "riskLevel": "/profile/riskLevel", "assessmentStatus": "/profile/assessmentStatus",
+        "holdingsScope": "/profile/holdingsScope", "missing": "/missing/*",
+        "productId": "/eligibleProducts/*/productId", "productName": "/eligibleProducts/*/name",
+        "productRisk": "/eligibleProducts/*/risk", "availability": "/eligibleProducts/*/availability",
+        "redemption": "/eligibleProducts/*/redemption", "lockDays": "/eligibleProducts/*/lockDays",
+        "fee": "/eligibleProducts/*/fee", "guaranteed": "/eligibleProducts/*/guaranteed"
+      },
+      "optionalFields": {
+        "currentPortfolio": "/currentPortfolio/*", "investableAmount": "/investableAmount",
+        "liquidityFloor": "/liquidityFloor", "minimumHorizonYears": "/minimumHorizonYears",
+        "calculationBasis": "/calculationBasis", "excludedProductId": "/excludedProducts/*/productId",
+        "excludedReason": "/excludedProducts/*/reason", "policyVersion": "/policy/policyVersion",
+        "policyFallbackVersion": "/policy/version", "policyRules": "/policy/rules/*",
+        "validUntil": "/profile/validUntil", "objective": "/profile/objective",
+        "knownCashNeeds": "/profile/knownCashNeeds/*", "liabilities": "/profile/liabilities",
+        "investmentExperience": "/profile/investmentExperience", "lossTolerance": "/profile/lossTolerance",
+        "maturityAmount": "/profile/maturityAmount", "maturityDate": "/profile/maturityDate",
+        "notes": "/profile/notes"
       }
     },
     "list_products": {

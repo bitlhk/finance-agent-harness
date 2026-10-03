@@ -35,10 +35,10 @@ class CuratedPackTest {
         assertEquals(1, ServiceLoader.load(ManagedProviderFactoryV01.class).stream().filter(p -> p.type().equals(CuratedMcpFactoryV01.class)).count());
     }
 
-    @Test void managedCatalogContainsOnlyTheNativeValidatedReadonlyCohortNotWealthOrTask() throws Exception {
+    @Test void candidateCatalogContainsNativeValidatedReadonlyCohortNotTask() throws Exception {
         Path root = Path.of("../..");
         var catalog = HarnessJson.mapper().readTree(root.resolve("catalog/finance-assets.v1.json").toFile());
-        var expectedPacks = Set.of("customer", "insurance", "research", "audit", "transfer-risk", "post-loan");
+        var expectedPacks = Set.of("customer", "wealth", "insurance", "research", "audit", "transfer-risk", "post-loan");
         var actualPacks = new HashSet<String>();
         var capabilities = new HashSet<String>();
         for (var asset : catalog.path("capabilityPacks")) {
@@ -72,7 +72,7 @@ class CuratedPackTest {
             capabilities.addAll(listed);
         }
         assertEquals(expectedPacks, actualPacks);
-        assertEquals(12, capabilities.size());
+        assertEquals(16, capabilities.size());
         var assembly = HarnessJson.mapper().readTree(Path.of("assembly.v0.1.json").toFile());
         var supported = new HashSet<String>();
         var supportedPacks = new HashSet<String>();
@@ -92,6 +92,9 @@ class CuratedPackTest {
         var providerCaps = new HashSet<String>();
         providers.getFirst().path("capabilities").forEach(c -> providerCaps.add(c.asText()));
         assertEquals(capabilities, providerCaps);
+    }
+
+    @Test void projectionCoversCandidateContractsWithoutGrantingCatalogAdmission() throws Exception {
         var projection = HarnessJson.mapper().readTree(Path.of("eval-projection.v1.json").toFile());
         assertEquals("SYNTHETIC_EVALUATION_ONLY", projection.path("scope").asText());
         assertEquals(CuratedMcpProvider.ID, projection.path("providerId").asText());
@@ -101,11 +104,25 @@ class CuratedPackTest {
             var entry = entries.next();
             projectedCapabilities.add(CuratedTools.named(entry.getKey()).capabilityId());
             String pointer = entry.getValue().path("resourcePath").asText();
-            assertEquals(CuratedTools.named(entry.getKey()).identityPointer(), pointer);
+            if (entry.getKey().equals("get_wealth_policy_basis")) {
+                assertEquals("", CuratedTools.named(entry.getKey()).identityPointer());
+                assertEquals("/policyVersion", pointer);
+                assertEquals(List.of("demo-wealth-policy-v1"), HarnessJson.mapper().convertValue(
+                        entry.getValue().path("resourceValues"), List.class));
+            } else {
+                assertEquals(CuratedTools.named(entry.getKey()).identityPointer(), pointer);
+                assertFalse(entry.getValue().has("resourceValues"));
+            }
             var fields = entry.getValue().path("fields");
             assertTrue(fields.isObject() && fields.size() > 0 && fields.size() <= 64);
             fields.forEach(p -> assertTrue(p.isTextual() && p.asText().matches("(/[A-Za-z][A-Za-z0-9_]*|/\\*){1,8}")));
+            var optional = entry.getValue().path("optionalFields");
+            if (!optional.isMissingNode()) {
+                assertTrue(optional.isObject() && optional.size() > 0 && fields.size() + optional.size() <= 60);
+                optional.fieldNames().forEachRemaining(name -> assertFalse(fields.has(name)));
+                optional.forEach(p -> assertTrue(p.isTextual() && p.asText().matches("(/[A-Za-z][A-Za-z0-9_]*|/\\*){1,8}")));
+            }
         }
-        assertEquals(capabilities, projectedCapabilities);
+        assertEquals(new CuratedMcpFactoryV01().requirements().keySet(), projectedCapabilities);
     }
 }

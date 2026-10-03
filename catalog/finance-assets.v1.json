@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.8",
+  "catalogVersion": "0.2.9",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -259,6 +259,24 @@
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "curated-synthetic-wealth",
+      "version": "1.1.0",
+      "displayName": "合成评测：财富资料（候选）",
+      "source": "repo://capability-packs/curated-synthetic-wealth",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "eval.synthetic.get-customer-portfolio.query",
+        "eval.synthetic.get-wealth-policy-basis.query",
+        "eval.synthetic.prepare-wealth-allocation-context.query",
+        "eval.synthetic.wealth-assistant-product-info.query"
+      ],
+      "compatibility": {
+        "profiles": ["local-read-only"],
+        "runtimeFamilies": ["openjiuwen", "agentscope"],
+        "runtimeLanguages": ["java"]
+      }
+    },
     {
       "id": "curated-synthetic-customer",
       "version": "1.1.0",
@@ -564,6 +582,10 @@
       "source": "repo://providers/curated-synthetic-mcp",
       "governanceRef": "finance-harness-core",
       "capabilities": [
+        "eval.synthetic.get-customer-portfolio.query",
+        "eval.synthetic.get-wealth-policy-basis.query",
+        "eval.synthetic.prepare-wealth-allocation-context.query",
+        "eval.synthetic.wealth-assistant-product-info.query",
         "eval.synthetic.get-customer-profile.query",
         "eval.synthetic.list-products.query",
         "eval.synthetic.get-product-detail.query",
@@ -729,7 +751,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-10-03.curated-customer-selector-candidate-2",
+  "catalogRevision": "2026-10-03.curated-wealth-host-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
