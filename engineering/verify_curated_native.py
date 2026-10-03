@@ -81,17 +81,11 @@ def qualify_agentscope(root, args, config, facts, rows):
                 'scope': 'PACKAGED_QUERY_QUALIFICATION_NOT_BUILDER_HOST_ADMISSION'}
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--eval-repo', type=Path, required=True)
-    parser.add_argument('--source-python', type=Path, required=True)
-    parser.add_argument('--maven-repo', type=Path, required=True)
-    parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--qualify-agentscope', action='store_true')
-    args = parser.parse_args()
+def verify(args, *, source_transport=None, after_native=None):
+    """Trusted engineering composition hooks, never selected by uploaded assets."""
     root = Path(__file__).resolve().parents[1]
     if not args.output.is_absolute() or args.output.exists():
-        parser.error('use a new absolute output directory')
+        raise ValueError('use a new absolute output directory')
     args.output.mkdir(mode=0o700, parents=True)
     write(args.output / 'source-versions.json', {
         'harnessCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
@@ -146,14 +140,15 @@ def main():
                     time.sleep(.1)
             else:
                 raise RuntimeError('SOURCE_START_TIMEOUT')
-            listed = rpc(base + '/mcp', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {}})
+            endpoint = source_transport(base) if source_transport else base + '/mcp'
+            listed = rpc(endpoint, {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {}})
             pins = {t['name']: hashlib.sha256(json.dumps(t['inputSchema'], ensure_ascii=False,
                     sort_keys=True, separators=(',', ':')).encode()).hexdigest()
                     for t in listed['result']['tools'] if t['name'] in names}
             if set(pins) != names:
                 raise RuntimeError('SOURCE_TOOLS_MISSING')
             config = args.output / 'source-config.json'
-            write(config, {'schemaVersion': 'curated-synthetic-source.v2', 'endpoint': base + '/mcp',
+            write(config, {'schemaVersion': 'curated-synthetic-source.v2', 'endpoint': endpoint,
                 'contractVersion': '1.0.0', 'toolSchemaPins': pins, 'subjects': {'curated-subject': {
                     'customerId': 'I001', 'resources': resources}},
                 'runtimePolicy': {'mode': 'STATELESS_BOUNDED', 'sourceIdentitySha256': sha(identity)}})
@@ -189,6 +184,8 @@ def main():
                 'sourceConfigSha256': sha(config), 'sourceFactsCompared': 'ALL_FIELDS_EACH_SELECTED_TOOL',
                 'scope': 'NATIVE_CURATED_COVERAGE_NOT_QUALIFICATION', 'realModel': 'NOT_RUN',
                 'skillAcceptance': 'NOT_RUN', 'productionChanged': False, 'packagedAgentScopeQualification': qualification})
+            if after_native:
+                after_native(args.output)
         finally:
             source.terminate()
             try:
@@ -197,6 +194,16 @@ def main():
                 source.kill()
                 source.wait(timeout=5)
             write(args.output / 'cleanup.json', {'sourcePid': source.pid, 'reaped': source.poll() is not None})
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--eval-repo', type=Path, required=True)
+    parser.add_argument('--source-python', type=Path, required=True)
+    parser.add_argument('--maven-repo', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--qualify-agentscope', action='store_true')
+    verify(parser.parse_args())
 
 
 if __name__ == '__main__':

@@ -1,8 +1,28 @@
 # Curated Synthetic MCP Provider (Draft)
 
-NOT QUALIFIED / NOT HOST-INTEGRATED / NOT DEPLOYED. This module is not in the
-finance asset catalog or either Java Host support profile. ServiceLoader discovery
-is not admission. No Builder/Eval changes or TASK implementation are included.
+GENERATED-HOST CONTROLLED QUALIFICATION PASSED / NOT DEPLOYED. The managed catalog now
+declares six read-only cohort Packs (12 tools), restricted to local-read-only
+Java hosts. Wealth remains outside this admission cohort. Native QUERY evidence
+does not replace exact generated-Host qualification. ServiceLoader discovery and
+catalog membership are not installation, grants or deployment readiness.
+
+The `hosts-r10` isolated run on 2026-10-03 built actual OpenJiuwen and AgentScope
+Java Hosts, exercised all twelve cohort tools, compared scalar facts with the
+independent synthetic source and verified REQUIRED collector proof admission and
+missing-proof rejection. It used a controlled model, not the original Skill
+cohort or a real-model/browser acceptance run. Qualification is bound to those
+exact generated artifacts and source configuration, not reusable on deployment
+with a different endpoint/configuration. The Builder engineering entry is
+`engineering/verify_curated_generated_hosts.py`; keep its raw reports and Locks.
+
+The six cohort Packs have separate REQUIRED `capability.result` observation
+declarations under `observation-packs/readonly/curated-*.json`. Each declaration
+covers one whole Pack; selecting one Pack must not require the other five.
+`eval-projection.v1.json` declares approved scalar fact paths for the same cohort.
+It does not enable capture, grant resource access or mark answers correct. The
+Eval Launcher must bind its server-owned resource scope and exact canonical source
+configuration, verify the Host receipt, and apply size/field limits. The source
+business date remains separate from the Host result timestamp.
 
 ## Boundaries
 
@@ -72,7 +92,8 @@ semantics, never silently replaced by the reference defaults.
 
 Seven `curated-synthetic-*` Packs version `1.0.0` cover customer, wealth, insurance,
 research, audit, transfer-risk and post-loan. Packs remain atomic. There is no
-placeholder tool for a zero-tool method and no formal catalog registration.
+placeholder tool for a zero-tool method. Six Packs have candidate catalog
+declarations; the wealth Pack is not registered. See the release gates below.
 
 ## Host Configuration Injection
 
@@ -202,6 +223,13 @@ The existing authority rotation/revocation/expiry and no-token-forwarding tests
 remain mandatory. These local tests do not qualify a Host deployment.
 
 ## Remaining Release Gates
+
+The two `BLOCK_*` items below concern the legacy **stateful** source path, which
+remains outside managed Factory admission. The current candidate uses the pinned
+`STATELESS_BOUNDED` v2 source instead; it does not claim to solve remote ownership
+or reclaim an unowned stateful session. Current release gates are exact generated
+Host qualification, the original Skill cohort (including its no-tool method),
+real-model evidence and the authenticated Eval browser workflow.
 
 - The HTTP/SSE body ingress limit and focused cancellation regressions above are
   implemented as a candidate, not Host admission. Header limits, aggregate Host

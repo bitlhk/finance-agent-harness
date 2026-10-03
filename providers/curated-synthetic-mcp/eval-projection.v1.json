@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "curated-eval-projection.v1",
+  "version": "0.1.0",
+  "contractVersion": "1.0.0",
+  "providerId": "curated-synthetic-mcp",
+  "sourceSystem": "curated-synthetic-mcp",
+  "scope": "SYNTHETIC_EVALUATION_ONLY",
+  "pathBase": "/data/result/sourceResult",
+  "commonFields": {"source": "/source", "snapshotVersion": "/snapshotVersion", "sourceAsOf": "/asOf", "synthetic": "/synthetic"},
+  "tools": {
+    "get_customer_profile": {
+      "resourcePath": "/profile/customerId",
+      "fields": {
+        "customerId": "/profile/customerId",
+        "energy": "/profile/vehicle/energy",
+        "registeredUse": "/profile/vehicle/registeredUse",
+        "actualUse": "/profile/vehicle/actualUse",
+        "annualMileage": "/profile/vehicle/annualMileage",
+        "expiryDate": "/profile/policy/expiryDate",
+        "driverSeatCoverage": "/profile/policy/driverSeatCoverage",
+        "passengerCoverage": "/profile/policy/passengerCoverage",
+        "claimScope": "/profile/claims/scope",
+        "claims": "/profile/claims/records/*",
+        "concerns": "/profile/concerns/*",
+        "missing": "/profile/missing/*"
+      }
+    },
+    "list_products": {
+      "resourcePath": "/reference",
+      "fields": {
+        "productId": "/products/*/productId",
+        "name": "/products/*/name",
+        "category": "/products/*/category",
+        "formalTermsAvailable": "/products/*/formalTermsAvailable"
+      }
+    },
+    "get_product_detail": {
+      "resourcePath": "/reference",
+      "fields": {
+        "productId": "/productId", "name": "/name", "summary": "/summary",
+        "dataMode": "/dataMode", "missing": "/missing/*"
+      }
+    },
+    "wind_stock_data": {
+      "resourcePath": "/reference",
+      "fields": {
+        "reference": "/reference", "company": "/company", "period": "/period",
+        "currency": "/currency", "unit": "/unit", "business": "/business",
+        "revenue": "/financials/revenue/*", "netProfit": "/financials/netProfit/*",
+        "operatingCashFlow": "/financials/operatingCashFlow/*", "receivables": "/financials/receivables/*",
+        "inventory": "/financials/inventory/*", "contractLiabilities": "/financials/contractLiabilities/*",
+        "capex": "/financials/capex/*", "peTTM": "/valuation/peTTM",
+        "priceAsOf": "/valuation/priceAsOf", "consensus": "/valuation/consensus",
+        "comparablePeers": "/valuation/comparablePeers", "missing": "/missing/*"
+      }
+    },
+    "wind_financial_docs": {
+      "resourcePath": "/reference",
+      "fields": {
+        "reference": "/reference", "documentId": "/documents/*/id", "title": "/documents/*/title",
+        "date": "/documents/*/date", "section": "/documents/*/section", "text": "/documents/*/text",
+        "consensusAvailable": "/consensusAvailable"
+      }
+    },
+    "audit_case_context": {
+      "resourcePath": "/reference",
+      "fields": {
+        "reference": "/reference", "entity": "/entity", "currency": "/currency", "unit": "/unit",
+        "materialId": "/materials/*/id", "field": "/materials/*/field", "period": "/materials/*/period",
+        "amount": "/materials/*/amount", "policyVersion": "/policy/version",
+        "requiredMaterials": "/policy/requiredMaterials/*", "differenceThreshold": "/policy/differenceThreshold",
+        "scope": "/scope"
+      }
+    },
+    "evaluate_audit_human_review": {
+      "resourcePath": "/reference",
+      "fields": {
+        "reviewRequired": "/reviewRequired", "reason": "/reason",
+        "policyVersion": "/policyVersion", "finalDecision": "/finalDecision"
+      }
+    },
+    "account_balance_query": {
+      "resourcePath": "/reference",
+      "fields": {
+        "accountRef": "/accountRef", "availableBalance": "/availableBalance",
+        "currency": "/currency", "status": "/status"
+      }
+    },
+    "fraud_transfer_risk_assess": {
+      "resourcePath": "/reference",
+      "fields": {
+        "reference": "/reference", "status": "/status", "decision": "/decision", "executed": "/executed",
+        "reasonCode": "/signals/*/reasonCode", "signalSource": "/signals/*/source",
+        "matchedField": "/signals/*/matchedField", "updatedAt": "/signals/*/updatedAt"
+      }
+    },
+    "search_risk_enterprises": {
+      "resourcePath": "/reference",
+      "fields": {"enterpriseId": "/enterprises/*/enterpriseId", "name": "/enterprises/*/name"}
+    },
+    "get_post_loan_risk_snapshot": {
+      "resourcePath": "/reference",
+      "fields": {
+        "status": "/status", "snapshotFingerprint": "/snapshotFingerprint",
+        "enterpriseId": "/data/enterpriseId", "criticalComplete": "/data/completeness/criticalComplete",
+        "balance": "/data/loans/*/balance", "overdueDays": "/data/loans/*/overdueDays",
+        "classification": "/data/loans/*/classification", "ratingDowngradeNotches": "/data/ratingDowngradeNotches",
+        "period": "/data/financials/period", "operatingCashFlow": "/data/financials/operatingCashFlow",
+        "netProfit": "/data/financials/netProfit", "receivablesGrowth": "/data/financials/receivablesGrowth",
+        "collateralValue": "/data/collateral/value", "valuedAt": "/data/collateral/valuedAt",
+        "coverageRatio": "/data/collateral/coverageRatio", "eventType": "/data/externalEvents/*/type",
+        "eventVerified": "/data/externalEvents/*/verified", "eventSource": "/data/externalEvents/*/source",
+        "policyVersion": "/data/policy/version", "warningLevel": "/data/policy/warningLevel",
+        "policyBasis": "/data/policy/basis"
+      }
+    },
+    "evaluate_post_loan_risk_escalation": {
+      "resourcePath": "/reference",
+      "fields": {
+        "status": "/status", "warningLevel": "/warningLevel", "policyVersion": "/policyVersion",
+        "triggers": "/triggers/*", "regulatoryClassificationChanged": "/regulatoryClassificationChanged",
+        "requiresHumanReview": "/requiresHumanReview"
+      }
+    }
+  }
+}

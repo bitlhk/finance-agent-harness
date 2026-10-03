@@ -597,7 +597,7 @@ class CuratedMcpProviderTest {
         assertThrows(IllegalArgumentException.class, () -> CuratedSourceConfig.load(file, "0".repeat(64)));
         var config = config();
         assertThrows(IllegalArgumentException.class, () -> new CuratedSourceConfig(config.schemaVersion(), URI.create("http://example.com/mcp"), config.contractVersion(), config.toolSchemaPins(), config.subjects()));
-        assertThrows(IllegalArgumentException.class, () -> new CuratedMcpFactoryV01().create(
+        assertThrows(IllegalArgumentException.class, () -> new CuratedMcpFactoryV01(Map.of()).create(
                 new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", endpoint, Duration.ofSeconds(1), session::get, () -> null, ignored -> {}), Map.of()));
     }
 }
