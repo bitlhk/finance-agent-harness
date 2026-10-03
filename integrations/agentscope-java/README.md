@@ -27,6 +27,15 @@ Raw requests, each repeated test, JUnit reports/logs, dependency tree, qualifica
 actual installation Lock and assessment are retained. The bank request totals include
 separate direct-Provider comparisons; they are not all Agent invocations.
 
+QUERY input validation also emits a bounded `query-input-validation` observation
+before invoking the native SDK tool executor. A rejected input records
+`DENIED / CAPABILITY_ARGUMENTS_INVALID` and the capability ID, not parameter
+values. This closes a diagnostic gap where native SDK validation rejected a call
+before `AgentTool.callAsync` and no Provider span existed. SDK validation, tool
+entry authorization and terminal session invalidation remain in place; this is
+not automatic parameter correction or a retry mechanism. Previously missing
+parameter evidence is not reconstructed from this new event.
+
 `FixtureBank` and `ControlledModel` are test sources. `isolatedHost/` is compiled separately
 by the script. Neither is in the integration JAR or registered as an Agent tool.
 The example bank Provider is a test-scoped dependency; a production Host supplies its own

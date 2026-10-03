@@ -234,6 +234,22 @@ class AgentScopeQueryTest {
             assertEquals(1, h.model.requests.size()); assertEquals(0, h.bank.requests.size()); assertFalse(h.session.valid());
         }
     }
+    @Test void queryInputRejectionHasBoundedEvidenceAndNoProviderCall() throws Exception {
+        for (var arguments : List.of(Map.<String, Object>of("accountId", ""), Map.<String, Object>of("subjectRef", "PRIVATE_OTHER_CUSTOMER"))) {
+            var h = harness(tool("account_balance_query", arguments), text("MUST_NOT_SEND"));
+            assertThrows(RuntimeException.class, () -> h.call("Read authorized accounts."));
+            assertEquals(1, h.model.requests.size());
+            assertEquals(0, h.bank.customerReads());
+            assertFalse(h.session.valid());
+            var rejected = h.events.stream().filter(e -> e.operation().equals("query-input-validation")
+                    && e.phase() == ObservationEventV01.Phase.END).toList();
+            assertEquals(1, rejected.size());
+            assertEquals(ObservationEventV01.Outcome.DENIED, rejected.getFirst().outcome());
+            assertEquals("CAPABILITY_ARGUMENTS_INVALID", rejected.getFirst().links().get("responseStatus"));
+            assertEquals("account.balance.query", rejected.getFirst().links().get("capabilityId"));
+            assertFalse(h.events.toString().contains("PRIVATE_OTHER_CUSTOMER"));
+        }
+    }
     @Test void wrongHostAndSourceSubjectsAreDenied() throws Exception {
         var host = harness(text("MUST_NOT_SEND")); host.grant.set(new BoundFinanceProvider.Grant("other", FinanceContextV1.PrincipalType.CUSTOMER,
                 Set.of(host.subject), Set.of("customer-self-service"), Set.of("account:read", "cashflow:read"), host.sessionId, "fixture-authority", Instant.now().plusSeconds(300)));
