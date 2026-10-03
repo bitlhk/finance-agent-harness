@@ -1,5 +1,13 @@
 # Curated Synthetic MCP Provider (Draft)
 
+Latest candidate: source.v3 separates trusted Host identity from an explicitly
+allowlisted synthetic customer resource. The isolated seven-Pack native suite
+now covers 16 tools and C005/C006 cases on both Java Runtimes, including an
+independent packaged AgentScope JVM. This is not wealth Skill/Builder admission.
+The earlier six-Pack generated-Host results below are historical evidence; they
+must be refreshed for the changed Provider artifact, Pack versions and source
+configuration before release. The managed catalog still exposes only six Packs.
+
 GENERATED-HOST CONTROLLED QUALIFICATION PASSED / NOT DEPLOYED. The managed catalog now
 declares six read-only cohort Packs (12 tools), restricted to local-read-only
 Java hosts. Wealth remains outside this admission cohort. Native QUERY evidence
@@ -84,9 +92,12 @@ not pretend that the source ID is the Host identity.
 
 Candidate source version `curated-synthetic-source.v3` additionally permits an
 explicit per-subject `customerSelection: SYNTHETIC_ALLOWLIST`. This mode is only
-for this pinned loopback synthetic source. It preserves the test case's explicit
-`customer_id` (for example C005 or C006) and requires that value in the trusted
-subject's **per-tool** resource allowlist. It never takes the first entry or
+for this pinned loopback synthetic source. Harness `customer_id` STILL equals the
+trusted Host subjectRef, preserving the unchanged BoundFinanceProvider selector
+check. A separate `synthetic_customer_id` preserves the case's explicit resource
+(for example C005 or C006); that value must be in the trusted subject's **per-tool**
+resource allowlist. The Provider translates it to the source's `customer_id` only
+after both checks; the extra selector is never forwarded to MCP. It never takes the first entry or
 derives a grant from Skill text. `customerId` must be absent in this mode; mixing
 implicit mapping with explicit selection is rejected. v1/v2 cannot enable it.
 
@@ -98,13 +109,15 @@ This is not delegated access to real bank customers and must not be copied into 
 real-bank Provider as an authorization shortcut. The customer mode and resource
 sets are in the canonical digest; exact config bytes remain separately pinned.
 Existing v1/v2 canonical digests do not change when BOUND_SUBJECT is defaulted.
+BOUND_SUBJECT rejects `synthetic_customer_id` rather than silently ignoring it.
 
 This candidate mode has Provider-level tests, not generated-Host qualification or
-wealth Skill admission. The existing managed customer/wealth capability text
-still describes BOUND_SUBJECT; before using the new mode in a generated Agent,
-version the applicable input descriptions, validate their binding, and rerun the
-exact native/Host, projection and original-case gates. Do not reuse old proofs or
-publish the wealth cohort just because this configuration now parses.
+wealth Skill admission. Customer and wealth Pack 1.1.0 distinguish these two
+parameters and declare the mode-dependent requirement. 1.0.0 Locks must not be
+silently rebound. Before using the new mode in a generated Agent, validate the
+method's explicit binding and rerun the exact native/Host, projection and
+original-case gates. Do not reuse old proofs or publish the wealth cohort just
+because this configuration now parses.
 
 `reference` and `product_id` values must belong to that subject's per-tool resource
 allowlist. Defaults are expanded before authorization, so omitting `reference`
@@ -114,12 +127,16 @@ Extra parameters, wrong types and invalid numeric ranges are rejected locally.
 Valid but different wealth constraints are passed through for source DEGRADED
 semantics, never silently replaced by the reference defaults.
 
-Seven `curated-synthetic-*` Packs version `1.0.0` cover customer, wealth, insurance,
+Seven `curated-synthetic-*` Packs cover customer, wealth, insurance,
 research, audit, transfer-risk and post-loan. Packs remain atomic. There is no
 placeholder tool for a zero-tool method. Six Packs have candidate catalog
-declarations; the wealth Pack is not registered or exposed by the managed Provider
-assembly declaration. The factory's 16-tool SPI contract and isolated Provider
-tests remain broader than the 12-tool managed admission cohort.
+declarations; the wealth Pack is not registered in the managed catalog or its
+Provider assembly declaration. A separate isolated-test declaration under
+`integrations/agentscope-java/reference/curated-wealth-candidate-provider.json`
+supports native validation, not Builder catalog admission. The factory's
+16-tool SPI contract and isolated Provider tests remain
+broader than the 12-tool managed admission cohort. Customer/wealth are now 1.1.0;
+the other five Packs remain 1.0.0.
 
 ## Host Configuration Injection
 

@@ -1,8 +1,8 @@
 {
   "schemaVersion": "finance-capability-pack.v1",
   "packId": "curated-synthetic-wealth",
-  "version": "1.0.0",
-  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "version": "1.1.0",
+  "systemPrompt": "Synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id always equals the trusted Host subjectRef. BOUND_SUBJECT maps that identity to one configured source customer. Only server-enabled SYNTHETIC_ALLOWLIST additionally requires synthetic_customer_id with the user's explicit test customer; this resource selector never replaces Host identity or grants. Never infer the mode or select a default customer. COMPLETED means the read completed, not business approval. Preserve sourceState, gaps and source identity; never claim live data.",
   "capabilities": [
     {
       "capabilityId": "eval.synthetic.get-customer-portfolio.query",
@@ -16,7 +16,11 @@
         "properties": {
           "customer_id": {
             "type": "string",
-            "description": "Host-authorized subjectRef, NOT source C005/C006/I001; Provider maps it explicitly."
+            "description": "Required trusted Host subjectRef in every mode, never a source customer ID or model-inferred identity."
+          },
+          "synthetic_customer_id": {
+            "type": "string",
+            "description": "Only with server-enabled SYNTHETIC_ALLOWLIST: the user's explicit synthetic test customer. Do not choose a first/default customer. Required in that mode, forbidden in BOUND_SUBJECT. The Provider checks the Host subject's per-tool resource allowlist."
           }
         },
         "required": [
@@ -54,7 +58,11 @@
         "properties": {
           "customer_id": {
             "type": "string",
-            "description": "Host-authorized subjectRef, NOT source C005/C006/I001; Provider maps it explicitly."
+            "description": "Required trusted Host subjectRef in every mode, never a source customer ID or model-inferred identity."
+          },
+          "synthetic_customer_id": {
+            "type": "string",
+            "description": "Only with server-enabled SYNTHETIC_ALLOWLIST: the user's explicit synthetic test customer. Do not choose a first/default customer. Required in that mode, forbidden in BOUND_SUBJECT. The Provider checks the Host subject's per-tool resource allowlist."
           },
           "investable_amount": {
             "type": "number",

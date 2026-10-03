@@ -99,14 +99,14 @@ class ReferenceMcpTest {
                 for (String id : List.of("C005", "C006")) {
                     for (String name : List.of("get_customer_profile", "get_customer_portfolio", "prepare_wealth_allocation_context")) {
                         var tool = CuratedTools.named(name);
-                        var result = selectedProvider.query(request(tool, Map.of("customer_id", id)));
+                        var result = selectedProvider.query(request(tool, Map.of("customer_id", "host-customer", "synthetic_customer_id", id)));
                         assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), name + ":" + id + ":" + result);
                         assertEquals(id, HarnessJson.mapper().valueToTree(result.data().get("sourceResult")).at(tool.identityPointer()).asText());
                         assertEquals(selected.canonicalDigest(), ((Map<?, ?>) result.data().get("mcpExecution")).get("sourceConfigSha256"));
                     }
                 }
                 assertFalse(observed.isEmpty());int before = observed.size();
-                var rejected = selectedProvider.query(request(CuratedTools.named("get_customer_profile"), Map.of("customer_id", "I001")));
+                var rejected = selectedProvider.query(request(CuratedTools.named("get_customer_profile"), Map.of("customer_id", "host-customer", "synthetic_customer_id", "I001")));
                 assertEquals("NOT_AUTHORIZED", rejected.error().failureClass());assertEquals(before, observed.size());
             }
         } finally {

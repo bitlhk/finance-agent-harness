@@ -13,14 +13,20 @@ class CuratedPackTest {
         try (var paths = Files.list(root.resolve("capability-packs"))) {
             for (Path path : paths.filter(p -> p.getFileName().toString().startsWith("curated-synthetic-")).toList()) {
                 var pack = HarnessJson.mapper().readTree(path.resolve("pack.yaml").toFile());
-                assertEquals("1.0.0", pack.path("version").asText());
+                assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth").contains(pack.path("packId").asText())
+                        ? "1.1.0" : "1.0.0", pack.path("version").asText());
                 for (var cap : pack.path("capabilities")) {
                     var contract = CuratedTools.capability(cap.path("capabilityId").asText());
                     assertTrue(capabilities.add(contract.capabilityId()));assertTrue(tools.add(cap.path("toolName").asText()));
                     assertEquals(contract.toolName(), cap.path("toolName").asText());assertEquals("QUERY", cap.path("operation").asText());
                     assertEquals(contract.scope(), cap.path("requiredScopes").get(0).asText());
                     assertFalse(cap.path("inputSchema").path("additionalProperties").asBoolean());
-                    if (contract.selector().equals("customer_id")) assertTrue(cap.path("inputSchema").path("properties").path("customer_id").path("description").asText().contains("subjectRef"));
+                    if (contract.selector().equals("customer_id")) {
+                        String description = cap.path("inputSchema").path("properties").path("customer_id").path("description").asText();
+                        assertTrue(description.contains("subjectRef"));
+                        String resource = cap.path("inputSchema").path("properties").path("synthetic_customer_id").path("description").asText();
+                        assertTrue(resource.contains("SYNTHETIC_ALLOWLIST") && resource.contains("Do not choose"));
+                    }
                 }
             }
         }
@@ -72,7 +78,7 @@ class CuratedPackTest {
         var supportedPacks = new HashSet<String>();
         assembly.path("supports").forEach(p -> {
             assertTrue(supportedPacks.add(p.path("pack").path("id").asText().substring("curated-synthetic-".length())));
-            assertEquals("1.0.0", p.path("pack").path("version").asText());
+            assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth").contains(p.path("pack").path("id").asText()) ? "1.1.0" : "1.0.0", p.path("pack").path("version").asText());
             assertEquals("QUERY", p.path("operation").asText());
             p.path("capabilityIds").forEach(c -> assertTrue(supported.add(c.asText())));
         });

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.7",
+  "catalogVersion": "0.2.8",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -261,7 +261,7 @@
   "capabilityPacks": [
     {
       "id": "curated-synthetic-customer",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "displayName": "合成评测：客户资料",
       "source": "repo://capability-packs/curated-synthetic-customer",
       "governanceRef": "finance-harness-core",
@@ -729,7 +729,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-10-03.curated-readonly-candidate-1",
+  "catalogRevision": "2026-10-03.curated-customer-selector-candidate-2",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

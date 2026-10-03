@@ -21,17 +21,25 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Uses the native Runner and registered tools, not a local simulation of the Agent loop. */
 @EnabledIfSystemProperty(named = "curated.sourceConfig", matches = ".+")
 class CuratedNativeQueryTest {
-    @ParameterizedTest @ValueSource(strings = {"customer", "insurance", "research", "audit", "transfer-risk", "post-loan"})
+    @ParameterizedTest @ValueSource(strings = {"customer", "wealth", "insurance", "research", "audit", "transfer-risk", "post-loan"})
     @Timeout(60) void allPackToolsUseActualSource(String suffix) throws Exception { run(suffix, false); }
     @RepeatedTest(3) @Timeout(60) void researchContinuationCarriesBothFacts() throws Exception { run("research", false); }
     @Test @Timeout(30) void revokedSourceResultCannotEnterNextModelHttp() throws Exception { run("research", true); }
+    @ParameterizedTest @CsvSource({"customer,C005", "customer,C006", "wealth,C005", "wealth,C006"})
+    @Timeout(60) void explicitWealthCustomerHasMatchingFactsAndIsolatedContext(String suffix, String customer) throws Exception {
+        run(suffix, false, customer);
+    }
 
     private void run(String suffix, boolean revoke) throws Exception {
+        run(suffix, revoke, null);
+    }
+    private void run(String suffix, boolean revoke, String customer) throws Exception {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath().resolve("../..").normalize();
         Path output = Path.of(System.getProperty("curated.evidenceDirectory")).resolve("openjiuwen"); Files.createDirectories(output);
         var pack = new FinanceCapabilityPackLoader().load(root.resolve("capability-packs/curated-synthetic-" + suffix + "/pack.yaml"));
@@ -67,7 +75,12 @@ class CuratedNativeQueryTest {
             Map<String, Object> message;
             if (index < tools.size()) {
                 var tool = tools.get(index);
-                var params = Map.of(tool.selector(), tool.selector().equals("customer_id") ? subject : tool.defaultRef());
+                String target = expected.path(tool.name()).at(tool.identityPointer()).asText();
+                if (customer != null && tool.selector().equals("customer_id")) target = customer;
+                Map<String, Object> params;
+                if (tool.selector().equals("customer_id")) params = "BOUND_SUBJECT".equals(config.subjects().get(subject).customerSelection())
+                        ? Map.of("customer_id", subject) : Map.of("customer_id", subject, "synthetic_customer_id", target);
+                else params = tool.selector().isEmpty() ? Map.of() : Map.of(tool.selector(), target);
                 message = Map.of("role", "assistant", "tool_calls", List.of(Map.of("id", "curated-call-" + index, "type", "function",
                         "function", Map.of("name", tool.toolName(), "arguments", HarnessJson.mapper().writeValueAsString(params)))));
             } else message = Map.of("role", "assistant", "content", "Read completed; preserve source gaps and decisions.");
@@ -112,12 +125,15 @@ class CuratedNativeQueryTest {
             for (int i = 0; i < results.size(); i++) {
                 var result = results.get(i); var tool = tools.get(i);
                 assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), result.toString());
-                assertEquals(expected.path(tool.name()), HarnessJson.mapper().valueToTree(result.data().get("sourceResult")));
+                var expectedResult = customer != null && tool.selector().equals("customer_id")
+                        ? expected.path("_customerVariants").path(customer).path(tool.name()) : expected.path(tool.name());
+                assertEquals(expectedResult, HarnessJson.mapper().valueToTree(result.data().get("sourceResult")));
                 assertEquals(config.toolSchemaPins().get(tool.name()), ((Map<?, ?>) result.data().get("mcpExecution")).get("schemaSha256"));
                 assertEquals(config.runtimePolicy().sourceIdentitySha256(), ((Map<?, ?>) result.data().get("sourceIdentity")).get("sha256"));
             }
             if (!revoke) {
                 assertTrue(requests.getLast().contains("sourceResult"));
+                if (customer != null) assertFalse(requests.getLast().contains(customer.equals("C005") ? "C006" : "C005"), "Other case customer must not enter context");
                 if (suffix.equals("research")) {
                     assertTrue(requests.getLast().contains("DOC001"));
                     assertTrue(requests.getLast().contains("consensus"));
@@ -134,6 +150,7 @@ class CuratedNativeQueryTest {
             adapter.detach();
             var row = new LinkedHashMap<String, Object>();
             row.put("status", status); row.put("failure", failure); row.put("test", suffix + ":revoked=" + revoke);
+            row.put("syntheticCustomer", customer);
             row.put("modelHttp", requests); row.put("sourceResults", results); row.put("observations", events); row.put("answer", answer);
             row.put("sourceConfigDigest", System.getProperty("curated.sourceConfigSha256"));
             row.put("installation", installation == null ? null : installation.receipt());

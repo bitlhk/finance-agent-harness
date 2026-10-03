@@ -52,11 +52,28 @@ class CuratedNativeQueryTest {
         }
     };
     @AfterEach void close() { fixtures.forEach(Fixture::close); }
+    @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({"customer,C005", "customer,C006", "wealth,C005", "wealth,C006"})
+    @Tag("native-query")
+    void explicitWealthCustomerHasMatchingFactsAndIsolatedContext(String pack, String customer) throws Exception {
+        var f = fixture(pack);
+        for (var tool : f.tools) {
+            var args = new LinkedHashMap<>(f.args(tool));
+            if (tool.selector().equals("customer_id")) args.put("synthetic_customer_id", customer);
+            f.model.enqueue(tool(tool.toolName(), args));f.model.enqueue(text("Synthetic read; preserve gaps."));
+            var reply = f.call("Read the explicitly selected synthetic customer " + customer);
+            var result = reply.executions().getFirst().result();
+            assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+            var expected = tool.selector().equals("customer_id") ? f.expected.path("_customerVariants").path(customer).path(tool.name()) : f.expected.path(tool.name());
+            assertEquals(expected, HarnessJson.mapper().valueToTree(result.data().get("sourceResult")));
+            assertFalse(f.model.requests.getLast().get("rawBody").toString().contains(customer.equals("C005") ? "C006" : "C005"));
+        }
+        assertEquals(f.tools.size() * 2, f.model.requests.size());
+    }
     Fixture fixture(String pack, Response... responses) throws Exception {
         var f = new Fixture(pack, responses); fixtures.add(f); return f;
     }
 
-    @ParameterizedTest @ValueSource(strings = {"customer", "insurance", "research", "audit", "transfer-risk", "post-loan"})
+    @ParameterizedTest @ValueSource(strings = {"customer", "wealth", "insurance", "research", "audit", "transfer-risk", "post-loan"})
     @Tag("native-query")
     void selectedPackUsesActualMcpAndOnlyInstallsItsTools(String pack) throws Exception {
         var f = fixture(pack);
@@ -423,8 +440,11 @@ class CuratedNativeQueryTest {
             Path dir = Files.createTempDirectory(ROOT.resolve("integrations/agentscope-java/target"), "curated-controls-");
             var spec = (ObjectNode) HarnessJson.mapper().readTree(Files.readAllBytes(ROOT.resolve("integrations/agentscope-java/reference/solution.json")));
             spec.put("solutionId", "isolated-curated-" + suffix); spec.set("domainPackRefs", HarnessJson.mapper().valueToTree(List.of()));
-            spec.set("capabilityPackRefs", HarnessJson.mapper().valueToTree(List.of(ref(pack.path("packId").asText(), "1.0.0", packPath))));
-            var providerFile = ROOT.resolve("providers/curated-synthetic-mcp/assembly.v0.1.json");
+            spec.set("capabilityPackRefs", HarnessJson.mapper().valueToTree(List.of(ref(pack.path("packId").asText(), pack.path("version").asText(), packPath))));
+            // Isolated wealth validation does not admit the Pack to the managed catalog.
+            var providerFile = ROOT.resolve(suffix.equals("wealth")
+                    ? "integrations/agentscope-java/reference/curated-wealth-candidate-provider.json"
+                    : "providers/curated-synthetic-mcp/assembly.v0.1.json");
             spec.set("providerRefs", HarnessJson.mapper().valueToTree(List.of(ref(CuratedMcpProvider.ID, CuratedMcpProvider.VERSION, providerFile))));
             solution = dir.resolve("solution.json"); Files.write(solution, HarnessJson.mapper().writeValueAsBytes(spec));
             var sup = (ObjectNode) HarnessJson.mapper().readTree(Files.readAllBytes(ROOT.resolve("integrations/agentscope-java/reference/support.json")));
@@ -455,7 +475,11 @@ class CuratedNativeQueryTest {
                     new ModelConnection(model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10)));
         }
         Map<String, Object> args(CuratedTools.Tool tool) {
-            return Map.of(tool.selector(), tool.selector().equals("customer_id") ? subject : tool.defaultRef());
+            if (tool.selector().isEmpty()) return Map.of();
+            String target = expected.path(tool.name()).at(tool.identityPointer()).asText();
+            if (tool.selector().equals("customer_id")) return "BOUND_SUBJECT".equals(config.subjects().get(subject).customerSelection())
+                    ? Map.of("customer_id", subject) : Map.of("customer_id", subject, "synthetic_customer_id", target);
+            return Map.of(tool.selector(), target);
         }
         void replace(java.util.function.Function<CapabilityRequestV1, CapabilityResultV1> query) throws Exception {
             session.close();

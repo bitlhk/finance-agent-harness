@@ -166,23 +166,31 @@ class CuratedMcpProviderTest {
         return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
                 Duration.ofSeconds(3), session::get, () -> null, ignored -> {}), source);
     }
+    CapabilityRequestV1 selectedRequest(String id) {
+        return request("get_customer_profile", Map.of("customer_id", "host-customer", "synthetic_customer_id", id));
+    }
     @Test void selectedCustomersPreserveSourceIdentityAndRejectUnconfiguredResourcesBeforeHttp() {
         var provider = selectedCustomers();
+        var grant = new BoundFinanceProvider.Grant("actor", FinanceContextV1.PrincipalType.CUSTOMER,
+                Set.of("host-customer"), Set.of("synthetic-evaluation"), Set.of(CuratedTools.named("get_customer_profile").scope()),
+                "host-session", "test", Instant.now().plusSeconds(30));
+        var bound = new BoundFinanceProvider(provider, () -> grant, new CuratedMcpFactoryV01().requirements());
         for (String id : List.of("C005", "C006")) {
-            var result = provider.query(request("get_customer_profile", Map.of("customer_id", id)));
+            var result = bound.query(selectedRequest(id));
             assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
             assertEquals(id, HarnessJson.mapper().valueToTree(result.data()).at("/sourceResult/profile/customerId").asText());
         }
         assertEquals(List.of("C005", "C006"), calls.stream().map(c -> c.at("/params/arguments/customer_id").asText()).toList());
         int before = requests.get();
         for (String id : List.of("C007", "I001", "host-customer"))
-            assertEquals("NOT_AUTHORIZED", provider.query(request("get_customer_profile", Map.of("customer_id", id))).error().failureClass());
+            assertEquals("NOT_AUTHORIZED", bound.query(selectedRequest(id)).error().failureClass());
+        assertThrows(SecurityException.class, () -> bound.query(request("get_customer_profile", Map.of("customer_id", "C005", "synthetic_customer_id", "C005"))));
         assertEquals("INVALID_INPUT", provider.query(request("get_customer_profile", Map.of())).error().failureClass());
         assertEquals(before, requests.get());assertTrue(sessions.isEmpty());assertTrue(active.isEmpty());
     }
     @Test void selectedCustomersStillRequireCurrentSessionAndGrant() {
         var provider = selectedCustomers();
-        var request = request("get_customer_profile", Map.of("customer_id", "C005"));
+        var request = selectedRequest("C005");
         var initial = session.get();
         var invalid = Arrays.asList(null,
                 new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)),
@@ -203,10 +211,10 @@ class CuratedMcpProviderTest {
     @Test void selectedCustomerRevocationBeforeDispatchAndBeforeDeliveryDoesNotLeakResult() {
         var provider = selectedCustomers();var initial = session.get();
         afterList = () -> session.set(null);
-        assertEquals("NOT_AUTHORIZED", provider.query(request("get_customer_profile", Map.of("customer_id", "C005"))).error().failureClass());
+        assertEquals("NOT_AUTHORIZED", provider.query(selectedRequest("C005")).error().failureClass());
         assertTrue(calls.isEmpty());
         session.set(initial);afterList = () -> {};afterCall = () -> session.set(null);
-        var result = provider.query(request("get_customer_profile", Map.of("customer_id", "C006")));
+        var result = provider.query(selectedRequest("C006"));
         assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
         assertEquals(1, calls.size());assertTrue(active.isEmpty());
     }
@@ -216,7 +224,7 @@ class CuratedMcpProviderTest {
             var profile = new LinkedHashMap<>((Map<String, Object>) data.get("profile"));
             profile.put("customerId", "C006");data.put("profile", profile);
         };
-        var result = provider.query(request("get_customer_profile", Map.of("customer_id", "C005")));
+        var result = provider.query(selectedRequest("C005"));
         assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
         assertEquals(1, calls.size());
     }

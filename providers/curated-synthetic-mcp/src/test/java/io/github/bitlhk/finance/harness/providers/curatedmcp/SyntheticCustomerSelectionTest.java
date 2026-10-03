@@ -27,10 +27,14 @@ class SyntheticCustomerSelectionTest {
         var tool = CuratedTools.named("get_customer_profile");
         for (String id : Set.of("C005", "C006"))
             assertEquals(Map.of("customer_id", id), CuratedTools.arguments(tool,
-                    Map.of("customer_id", id), "operator-subject", policy));
+                    Map.of("customer_id", "operator-subject", "synthetic_customer_id", id), "operator-subject", policy));
         for (String id : Set.of("I001", "operator-subject", "C007"))
             assertThrows(SecurityException.class, () -> CuratedTools.arguments(tool,
-                    Map.of("customer_id", id), "operator-subject", policy));
+                    Map.of("customer_id", "operator-subject", "synthetic_customer_id", id), "operator-subject", policy));
+        assertThrows(SecurityException.class, () -> CuratedTools.arguments(tool,
+                Map.of("customer_id", "C005", "synthetic_customer_id", "C005"), "operator-subject", policy));
+        assertThrows(IllegalArgumentException.class, () -> CuratedTools.arguments(tool,
+                Map.of("customer_id", "operator-subject"), "operator-subject", policy));
         assertThrows(IllegalArgumentException.class, () -> CuratedTools.arguments(tool, Map.of(), "operator-subject", policy));
         assertThrows(IllegalArgumentException.class, () -> CuratedTools.arguments(tool,
                 Map.of("customer_id", "C005", "customerSelection", "SYNTHETIC_ALLOWLIST"), "operator-subject", policy));
@@ -42,6 +46,8 @@ class SyntheticCustomerSelectionTest {
                 Map.of("customer_id", "host-subject"), "host-subject", policy));
         assertThrows(SecurityException.class, () -> CuratedTools.arguments(CuratedTools.named("get_customer_profile"),
                 Map.of("customer_id", "C005"), "host-subject", policy));
+        assertThrows(IllegalArgumentException.class, () -> CuratedTools.arguments(CuratedTools.named("get_customer_profile"),
+                Map.of("customer_id", "host-subject", "synthetic_customer_id", "C005"), "host-subject", policy));
     }
 
     @Test void selectionRequiresNewVersionAndCannotCoexistWithImplicitMapping() {

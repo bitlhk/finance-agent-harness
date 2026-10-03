@@ -45,7 +45,11 @@ public final class CuratedQualifiedHost {
                 new ModelConnection(model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10)))) {
             IsolatedHost.write(out.resolve("installation-lock.json"), session.lock());
             for (var tool : tools) {
-                Map<String, Object> parameters = Map.of(tool.selector(), tool.selector().equals("customer_id") ? subject : tool.defaultRef());
+                String target = expected.path(tool.name()).at(tool.identityPointer()).asText();
+                Map<String, Object> parameters;
+                if (tool.selector().equals("customer_id")) parameters = "BOUND_SUBJECT".equals(config.subjects().get(subject).customerSelection())
+                        ? Map.of("customer_id", subject) : Map.of("customer_id", subject, "synthetic_customer_id", target);
+                else parameters = tool.selector().isEmpty() ? Map.of() : Map.of(tool.selector(), target);
                 model.enqueue(ControlledModel.tool(tool.toolName(), parameters)); model.enqueue(ControlledModel.text("Source read; not business approval."));
                 String id = UUID.randomUUID().toString();
                 var run = new ObservationRun(id, "isolated-boot", sessionId, event -> { events.add(event); return true; });

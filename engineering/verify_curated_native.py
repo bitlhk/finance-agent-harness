@@ -68,7 +68,7 @@ def qualify_agentscope(root, args, config, facts, rows):
             raise RuntimeError('REJECTED_QUALIFICATION_PUBLISHED')
         digest = (qualification / 'qualification.sha256').read_text().strip()
         tested = [r for r in rows if r.get('testMethod') == 'selectedPackUsesActualMcpAndOnlyInstallsItsTools']
-        if len(tested) != 6:
+        if len(tested) != 7:
             raise RuntimeError('QUALIFIED_PACK_CONTROLS_MISSING')
         for index, row in enumerate(tested):
             controls = row['sessions'][0]['controls']
@@ -100,19 +100,38 @@ def verify(args, *, source_transport=None, after_native=None):
     for name, expected in contract['files'].items():
         if sha(args.eval_repo / 'integrations/openjiuwen' / name) != expected:
             raise RuntimeError('SOURCE_CONTRACT_MISMATCH:' + name)
-    packs = ['customer', 'insurance', 'research', 'audit', 'transfer-risk', 'post-loan']
+    packs = ['customer', 'wealth', 'insurance', 'research', 'audit', 'transfer-risk', 'post-loan']
     names = set()
     for pack in packs:
         data = json.loads((root / f'capability-packs/curated-synthetic-{pack}/pack.yaml').read_text())
         names.update(c['toolName'].removeprefix('curated_') for c in data['capabilities'])
     roles_file = args.eval_repo / 'integrations/openjiuwen/role-fixtures.json'
     roles = json.loads(roles_file.read_text())
-    expected, resources = {}, {}
+    # Independent in-process reads of the pinned synthetic source, not Provider/HTTP responses.
+    capture = '''import json
+from integrations.openjiuwen import reference_mcp as source
+def call(name, **args):
+    tool = getattr(source, name)
+    return (tool.fn if hasattr(tool, 'fn') else tool)(**args)
+print(json.dumps({
+    "defaults": {"get_customer_portfolio": call("get_customer_portfolio", customer_id="C005"),
+        "get_wealth_policy_basis": call("get_wealth_policy_basis"),
+        "prepare_wealth_allocation_context": call("prepare_wealth_allocation_context", customer_id="C005"),
+        "wealth_assistant_product_info": call("wealth_assistant_product_info", product_id="P009")},
+    "customers": {id: {name: call(name, customer_id=id) for name in
+        ("get_customer_profile", "get_customer_portfolio", "prepare_wealth_allocation_context")}
+        for id in ("C005", "C006")}}, ensure_ascii=False))'''
+    wealth = json.loads(subprocess.check_output([str(args.source_python), '-c', capture], cwd=args.eval_repo, timeout=30))
+    expected, resources = {'_customerVariants': wealth['customers']}, {}
     for name in sorted(names):
         if name == 'get_customer_profile':
-            resources[name] = ['I001']
+            resources[name] = ['C005', 'C006', 'I001']
             expected[name] = {'source': 'finance-eval-synthetic-fixture', 'snapshotVersion': 'roles-demo-v1',
                               'asOf': '2026-09-05', 'synthetic': True, 'profile': roles['insuranceCustomer']}
+        elif name in wealth['defaults']:
+            expected[name] = wealth['defaults'][name]
+            resources[name] = (['policy'] if name == 'get_wealth_policy_basis' else
+                               ['P009', 'P001', 'F000343'] if name == 'wealth_assistant_product_info' else ['C005', 'C006'])
         else:
             spec = roles['tools'][name]
             resources[name] = list(spec['records'])
@@ -148,9 +167,9 @@ def verify(args, *, source_transport=None, after_native=None):
             if set(pins) != names:
                 raise RuntimeError('SOURCE_TOOLS_MISSING')
             config = args.output / 'source-config.json'
-            write(config, {'schemaVersion': 'curated-synthetic-source.v2', 'endpoint': endpoint,
+            write(config, {'schemaVersion': 'curated-synthetic-source.v3', 'endpoint': endpoint,
                 'contractVersion': '1.0.0', 'toolSchemaPins': pins, 'subjects': {'curated-subject': {
-                    'customerId': 'I001', 'resources': resources}},
+                    'customerSelection': 'SYNTHETIC_ALLOWLIST', 'resources': resources}},
                 'runtimePolicy': {'mode': 'STATELESS_BOUNDED', 'sourceIdentitySha256': sha(identity)}})
             command = ['mvn', '-o', '-B', f'-Dmaven.repo.local={args.maven_repo}', '-pl', 'integrations/agentscope-java,integrations/openjiuwen-java',
                 '-am', '-Dtest=CuratedNativeQueryTest', '-Dsurefire.failIfNoSpecifiedTests=false',
