@@ -24,19 +24,6 @@
     },
     {
       "pack": {
-        "id": "curated-synthetic-wealth",
-        "version": "1.0.0"
-      },
-      "capabilityIds": [
-        "eval.synthetic.get-customer-portfolio.query",
-        "eval.synthetic.get-wealth-policy-basis.query",
-        "eval.synthetic.prepare-wealth-allocation-context.query",
-        "eval.synthetic.wealth-assistant-product-info.query"
-      ],
-      "operation": "QUERY"
-    },
-    {
-      "pack": {
         "id": "curated-synthetic-insurance",
         "version": "1.0.0"
       },

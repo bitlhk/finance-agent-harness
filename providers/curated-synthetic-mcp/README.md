@@ -93,7 +93,9 @@ semantics, never silently replaced by the reference defaults.
 Seven `curated-synthetic-*` Packs version `1.0.0` cover customer, wealth, insurance,
 research, audit, transfer-risk and post-loan. Packs remain atomic. There is no
 placeholder tool for a zero-tool method. Six Packs have candidate catalog
-declarations; the wealth Pack is not registered. See the release gates below.
+declarations; the wealth Pack is not registered or exposed by the managed Provider
+assembly declaration. The factory's 16-tool SPI contract and isolated Provider
+tests remain broader than the 12-tool managed admission cohort.
 
 ## Host Configuration Injection
 
@@ -286,10 +288,11 @@ real-model evidence and the authenticated Eval browser workflow.
   pins, a finite bound on in-flight requests/disconnect handling as well as idle
   expiry, and end-to-end orphan-reclamation/isolation evidence against the actual
   source. Merely having a TTL constructor option does not clear this gate.
-- Future artifact/Host Lock and both runtime qualifications MUST bind source
+- Artifact/Host Lock and both runtime qualifications MUST bind source
   configuration (exact file and canonical digest), schema pins, subject/resource
   mappings, Provider jar/dependencies, Pack bytes and reference source manifest.
-  Current factory pinning alone is not that Lock or a qualification.
+  The controlled generated-Host run verifies these bindings; factory pinning
+  alone is still not that Lock or a qualification for another deployment.
 - Real source credentials beyond loopback are unsupported. Source authenticity,
   resource ownership and dynamic scope policies need Host-reviewed provisioning;
   a tool name, source label or readOnlyHint does not confer authority.
@@ -298,5 +301,6 @@ real-model evidence and the authenticated Eval browser workflow.
   gates. Required output structures and focused cleanup tests are implemented;
   this draft still does not certify every additional business field, financial
   relationship, source authenticity or remote cleanup outcome.
-- Builder generic packaging/admission and explicit Skill migration bindings are
-  intentionally outside this change. Neither Runtime is marked ready.
+- Builder generated-Host qualification is now exercised by the companion
+  verifier. Original Skill migration bindings and end-user release acceptance
+  remain pending; neither complete Skill cohort is marked ready for promotion.

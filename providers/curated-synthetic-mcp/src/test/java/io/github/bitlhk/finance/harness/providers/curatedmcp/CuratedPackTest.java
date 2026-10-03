@@ -25,9 +25,6 @@ class CuratedPackTest {
             }
         }
         assertEquals(16, capabilities.size());
-        var assembly = HarnessJson.mapper().readTree(Path.of("assembly.v0.1.json").toFile());var supported = new HashSet<String>();
-        assembly.path("supports").forEach(p -> p.path("capabilityIds").forEach(c -> assertTrue(supported.add(c.asText()))));
-        assertEquals(capabilities, supported);
         assertEquals(capabilities, new CuratedMcpFactoryV01().requirements().keySet());
         assertEquals(1, ServiceLoader.load(ManagedProviderFactoryV01.class).stream().filter(p -> p.type().equals(CuratedMcpFactoryV01.class)).count());
     }
@@ -70,6 +67,17 @@ class CuratedPackTest {
         }
         assertEquals(expectedPacks, actualPacks);
         assertEquals(12, capabilities.size());
+        var assembly = HarnessJson.mapper().readTree(Path.of("assembly.v0.1.json").toFile());
+        var supported = new HashSet<String>();
+        var supportedPacks = new HashSet<String>();
+        assembly.path("supports").forEach(p -> {
+            assertTrue(supportedPacks.add(p.path("pack").path("id").asText().substring("curated-synthetic-".length())));
+            assertEquals("1.0.0", p.path("pack").path("version").asText());
+            assertEquals("QUERY", p.path("operation").asText());
+            p.path("capabilityIds").forEach(c -> assertTrue(supported.add(c.asText())));
+        });
+        assertEquals(expectedPacks, supportedPacks);
+        assertEquals(capabilities, supported);
         var providers = new ArrayList<com.fasterxml.jackson.databind.JsonNode>();
         catalog.path("providers").forEach(p -> {
             if (p.path("id").asText().equals(CuratedMcpProvider.ID)) providers.add(p);
