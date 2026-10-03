@@ -8,7 +8,19 @@ import java.util.*;
 
 /** Host-owned source configuration, never tool arguments or bank credentials. */
 public record CuratedSourceConfig(String schemaVersion, URI endpoint, String contractVersion,
-        Map<String, String> toolSchemaPins, Map<String, Subject> subjects) {
+        Map<String, String> toolSchemaPins, Map<String, Subject> subjects, RuntimePolicy runtimePolicy) {
+    public record RuntimePolicy(String mode, String sourceIdentitySha256) {
+        public RuntimePolicy {
+            if (!"STATELESS_BOUNDED".equals(mode) || sourceIdentitySha256 == null
+                    || !sourceIdentitySha256.matches("[a-f0-9]{64}"))
+                throw new IllegalArgumentException("CURATED_SOURCE_RUNTIME_INVALID");
+        }
+    }
+    /** Legacy source only for isolated Provider regression, not managed Factory admission. */
+    public CuratedSourceConfig(String schemaVersion, URI endpoint, String contractVersion,
+            Map<String, String> toolSchemaPins, Map<String, Subject> subjects) {
+        this(schemaVersion, endpoint, contractVersion, toolSchemaPins, subjects, null);
+    }
     public record Subject(String customerId, Map<String, Set<String>> resources) {
         public Subject {
             var copy = new LinkedHashMap<String, Set<String>>();
@@ -17,7 +29,9 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
         }
     }
     public CuratedSourceConfig {
-        if (!"curated-synthetic-source.v1".equals(schemaVersion) || !"1.0.0".equals(contractVersion)
+        if (!("curated-synthetic-source.v1".equals(schemaVersion) && runtimePolicy == null
+                || "curated-synthetic-source.v2".equals(schemaVersion) && runtimePolicy != null)
+                || !"1.0.0".equals(contractVersion)
                 || endpoint == null || !"http".equals(endpoint.getScheme())
                 || !Set.of("127.0.0.1", "[::1]").contains(endpoint.getHost())
                 || endpoint.getPort() < 1 || endpoint.getUserInfo() != null || endpoint.getQuery() != null
@@ -68,8 +82,11 @@ public record CuratedSourceConfig(String schemaVersion, URI endpoint, String con
             if (policy.customerId() != null) fields.put("customerId", policy.customerId());
             fields.put("resources", resources);policies.put(subject, fields);
         });
-        return CuratedTools.schemaPin(Map.of("schemaVersion", schemaVersion, "endpoint", endpoint.toString(),
+        var config = new TreeMap<String, Object>(Map.of("schemaVersion", schemaVersion, "endpoint", endpoint.toString(),
                 "contractVersion", contractVersion, "toolSchemaPins", toolSchemaPins, "subjects", policies));
+        if (runtimePolicy != null) config.put("runtimePolicy", Map.of("mode", runtimePolicy.mode(),
+                "sourceIdentitySha256", runtimePolicy.sourceIdentitySha256()));
+        return CuratedTools.schemaPin(config);
     }
     @Override public String toString() { return "CuratedSourceConfig[redacted]"; }
 }

@@ -9,6 +9,27 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BoundedHttpClientTest {
+    @Test void statelessPolicyRejectsSessionHeadersBeforeSdkAndDoesNotGuessCleanupOwnership() throws Exception {
+        var calls = new AtomicInteger();
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/mcp", exchange -> {
+            calls.incrementAndGet();
+            exchange.getResponseHeaders().add("Mcp-Session-Id", "a-shared-session");
+            exchange.sendResponseHeaders(200, 2);
+            try (var body = exchange.getResponseBody()) { body.write("{}".getBytes()); }
+        });
+        server.start();
+        try (var builder = new BoundedHttpClient.Builder(java.time.Duration.ofSeconds(2), true)) {
+            var client = builder.build();var consumed = new AtomicBoolean();
+            var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
+                    "http://127.0.0.1:"+server.getAddress().getPort()+"/mcp")).POST(java.net.http.HttpRequest.BodyPublishers.ofString("{}")).build();
+            assertThrows(java.io.IOException.class, () -> client.send(request, info -> {
+                consumed.set(true);return HttpResponse.BodySubscribers.ofString(java.nio.charset.StandardCharsets.UTF_8);
+            }));
+            assertFalse(consumed.get());assertEquals(1, calls.get());
+            assertThrows(IllegalStateException.class, () -> builder.client().checkHealthy());
+        } finally { server.stop(0); }
+    }
     private static final class Probe implements HttpResponse.BodySubscriber<Integer> {
         int bytes, errors, completions;
         final CompletableFuture<Integer> result = new CompletableFuture<>();

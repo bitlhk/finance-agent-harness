@@ -503,6 +503,22 @@ class CuratedMcpProviderTest {
         assertEquals(16, calls.size());assertEquals(16, new HashSet<>(sessions).size());
         assertEquals(16, deletes.get());assertTrue(active.isEmpty());
     }
+    @Test void managedSourceModeAndIdentityAreMandatoryAndChangeTheDigest(@TempDir Path directory) throws Exception {
+        var legacy = config();
+        assertThrows(IllegalArgumentException.class, () -> new CuratedSourceConfig("curated-synthetic-source.v2",
+                endpoint, "1.0.0", legacy.toolSchemaPins(), legacy.subjects()));
+        assertThrows(IllegalArgumentException.class, () -> new CuratedSourceConfig.RuntimePolicy("STATEFUL", "0".repeat(64)));
+        assertThrows(IllegalArgumentException.class, () -> new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", "unknown"));
+        var source = new CuratedSourceConfig("curated-synthetic-source.v2", endpoint, "1.0.0",
+                legacy.toolSchemaPins(), legacy.subjects(), new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", "1".repeat(64)));
+        var changed = new CuratedSourceConfig(source.schemaVersion(), endpoint, "1.0.0",
+                legacy.toolSchemaPins(), legacy.subjects(), new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", "2".repeat(64)));
+        assertNotEquals(legacy.canonicalDigest(), source.canonicalDigest());
+        assertNotEquals(source.canonicalDigest(), changed.canonicalDigest());
+        Path file = directory.resolve("source-v2.json");
+        byte[] bytes = HarnessJson.mapper().writeValueAsBytes(source);Files.write(file, bytes);
+        assertEquals(source, CuratedSourceConfig.load(file, CuratedSourceConfig.sha(bytes)));
+    }
     @Test void configRequiresExactPinAndSafeEndpoint(@TempDir Path directory) throws Exception {
         Path file = directory.resolve("source.json");byte[] bytes = HarnessJson.mapper().writeValueAsBytes(config());Files.write(file, bytes);
         assertEquals(config(), CuratedSourceConfig.load(file, CuratedSourceConfig.sha(bytes)));

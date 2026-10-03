@@ -31,7 +31,19 @@ class ReferenceMcpTest {
         }
         int port;
         try (var socket = new java.net.ServerSocket(0, 0, InetAddress.getByName("127.0.0.1"))) { port = socket.getLocalPort(); }
-        var process = new ProcessBuilder(python, "-c", "import sys;sys.path.insert(0,sys.argv[1]);from reference_mcp import mcp;mcp.run(transport='streamable-http',host='127.0.0.1',port=int(sys.argv[2]),stateless_http=sys.argv[3]=='true')", root.toString(), String.valueOf(port), String.valueOf(stateless))
+        Path sourceIdentity = temp.resolve("source-identity.json");
+        if (stateless) {
+            var capture = new ProcessBuilder(python, "-m", "integrations.openjiuwen.test_bounded_reference_mcp",
+                    "--identity", sourceIdentity.toString()).directory(root.getParent().getParent().toFile())
+                    .redirectErrorStream(true).redirectOutput(temp.resolve("identity.log").toFile()).start();
+            try { assertTrue(capture.waitFor(15, java.util.concurrent.TimeUnit.SECONDS));assertEquals(0, capture.exitValue()); }
+            finally { if (capture.isAlive()) { capture.destroyForcibly();capture.waitFor(); } }
+        }
+        var command = stateless ? new ProcessBuilder(python, "-m", "integrations.openjiuwen.bounded_reference_mcp",
+                "--port", String.valueOf(port), "--identity", sourceIdentity.toString(),
+                "--identity-sha256", CuratedSourceConfig.sha(Files.readAllBytes(sourceIdentity))).directory(root.getParent().getParent().toFile())
+                : new ProcessBuilder(python, "-c", "import sys;sys.path.insert(0,sys.argv[1]);from reference_mcp import mcp;mcp.run(transport='streamable-http',host='127.0.0.1',port=int(sys.argv[2]))", root.toString(), String.valueOf(port));
+        var process = command
                 .redirectErrorStream(true).redirectOutput(temp.resolve("reference.log").toFile()).start();
         try {
             boolean listening = false;
@@ -51,8 +63,9 @@ class ReferenceMcpTest {
             }
             var resources = new LinkedHashMap<String, Set<String>>();
             CuratedTools.ALL.forEach(t -> resources.put(t.name(), t.selector().equals("customer_id") ? Set.of("C005") : t.resources()));
-            var config = new CuratedSourceConfig("curated-synthetic-source.v1", endpoint, "1.0.0", pins,
-                    Map.of("host-customer", new CuratedSourceConfig.Subject("C005", resources)));
+            var config = new CuratedSourceConfig(stateless ? "curated-synthetic-source.v2" : "curated-synthetic-source.v1", endpoint, "1.0.0", pins,
+                    Map.of("host-customer", new CuratedSourceConfig.Subject("C005", resources)),
+                    stateless ? new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", CuratedSourceConfig.sha(Files.readAllBytes(sourceIdentity))) : null);
             var session = new ManagedProviderFactoryV01.SourceSession("never-forward-bank-token", "host-customer", "actor", "session", Instant.now().plusSeconds(300));
             var provider = new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"), Duration.ofSeconds(5), () -> session, () -> null, ignored -> {}), config);
             for (var tool : CuratedTools.ALL) {

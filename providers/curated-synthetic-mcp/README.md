@@ -83,6 +83,13 @@ FH_CURATED_MCP_CONFIG=/absolute/reviewed/source.json
 FH_CURATED_MCP_CONFIG_SHA256=<sha256 of exact source.json bytes>
 ```
 
+Managed Factory construction now requires `curated-synthetic-source.v2` and
+`runtimePolicy` with mode `STATELESS_BOUNDED` and a 64-hex `sourceIdentitySha256`.
+The mode and digest are part of the canonical source config identity. The HTTP
+client rejects source session headers before passing a body to the SDK, without
+guessing ownership or sending a fallback DELETE. Legacy v1 direct Provider
+construction remains for isolated regression only, not Factory admission.
+
 The file must be a regular non-symlink file under non-symlink parents, at most
 256 KiB; duplicate/unknown JSON fields and a hash mismatch are rejected.
 The Host must protect BOTH the file and expected hash. Hash pinning does not
@@ -92,7 +99,8 @@ Illustrative shape only (placeholder pins deliberately do not work):
 
 ```json
 {
-  "schemaVersion": "curated-synthetic-source.v1",
+  "schemaVersion": "curated-synthetic-source.v2",
+  "runtimePolicy": {"mode": "STATELESS_BOUNDED", "sourceIdentitySha256": "<reviewed identity SHA-256>"},
   "endpoint": "http://127.0.0.1:56363/mcp",
   "contractVersion": "1.0.0",
   "toolSchemaPins": {"get_customer_profile": "<reviewed schema SHA-256>"},
@@ -159,11 +167,12 @@ mvn -o -pl providers/curated-synthetic-mcp -am test \
 
 The opt-in test verifies pinned source bytes, binds a temporary loopback port,
 calls all 16 original tools through this Provider/SDK, checks UNKNOWN/UNAVAILABLE
-and DEGRADED preservation, and terminates its child process. It runs twice using
-the source's public `stateless_http` option, once false and once true. This checks
-SDK/Provider compatibility with both source modes without changing deployment
-defaults. Stateless compatibility does not qualify rejection/disconnect cleanup,
-request budgets or source configuration pinning; those gates remain below.
+and DEGRADED preservation, and terminates its child process. It runs once with
+the legacy stateful source and once with the bounded stateless entry, requiring
+the exact source/dependency identity and source.v2 configuration for the latter.
+This checks SDK/Provider compatibility without changing deployment defaults.
+The separate Eval TCP tests check rejection, disconnect and request bounds;
+neither suite alone qualifies the complete Host deployment described below.
 This is not a bank
 call, deployment, AgentScope or OpenJiuwen qualification.
 

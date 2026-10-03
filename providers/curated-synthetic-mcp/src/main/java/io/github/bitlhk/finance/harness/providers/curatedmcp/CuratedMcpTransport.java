@@ -29,7 +29,7 @@ final class CuratedMcpTransport {
             Map<String, Object> arguments, Runnable authority) {
         authority.run();
         var endpoint = config.endpoint();
-        try (var http = new BoundedHttpClient.Builder(timeout)) {
+        try (var http = new BoundedHttpClient.Builder(timeout, config.runtimePolicy() != null)) {
             var transport = HttpClientStreamableHttpTransport.builder("http://" + endpoint.getRawAuthority())
                     .endpoint(endpoint.getRawPath()).connectTimeout(timeout)
                     .clientBuilder(http)

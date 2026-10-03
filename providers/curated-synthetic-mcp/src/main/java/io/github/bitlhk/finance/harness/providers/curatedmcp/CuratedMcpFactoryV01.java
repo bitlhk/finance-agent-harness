@@ -17,6 +17,8 @@ public final class CuratedMcpFactoryV01 implements ManagedProviderFactoryV01 {
         if (!dependencies.isEmpty()) throw new IllegalArgumentException("CURATED_DEPENDENCIES_UNSUPPORTED");
         String path = System.getenv("FH_CURATED_MCP_CONFIG"), pin = System.getenv("FH_CURATED_MCP_CONFIG_SHA256");
         if (path == null || pin == null) throw new IllegalArgumentException("CURATED_CONFIG_REQUIRED");
-        return new CuratedMcpProvider(authority, CuratedSourceConfig.load(Path.of(path), pin));
+        var source = CuratedSourceConfig.load(Path.of(path), pin);
+        if (source.runtimePolicy() == null) throw new IllegalArgumentException("CURATED_BOUNDED_SOURCE_REQUIRED");
+        return new CuratedMcpProvider(authority, source);
     }
 }

@@ -15,6 +15,7 @@ final class BoundedHttpClient extends HttpClient {
     static final int MAX_BODY_BYTES = 256 * 1024;
     private final HttpClient delegate;
     private final Duration timeout;
+    private final boolean requireStateless;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         var thread = new Thread(r, "curated-mcp-http-deadline");
         thread.setDaemon(true);
@@ -24,9 +25,10 @@ final class BoundedHttpClient extends HttpClient {
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private volatile boolean stopping;
 
-    private BoundedHttpClient(HttpClient delegate, Duration timeout) {
+    private BoundedHttpClient(HttpClient delegate, Duration timeout, boolean requireStateless) {
         this.delegate = delegate;
         this.timeout = timeout;
+        this.requireStateless = requireStateless;
     }
 
     void checkHealthy() {
@@ -49,6 +51,8 @@ final class BoundedHttpClient extends HttpClient {
             exchange.deadline = timer.schedule(() -> exchange.abort(new HttpTimeoutException("CURATED_HTTP_DEADLINE"), true),
                     timeout.toNanos(), TimeUnit.NANOSECONDS);
             var future = delegate.sendAsync(request, info -> {
+                if (requireStateless && info.headers().firstValue("Mcp-Session-Id").isPresent())
+                    throw new IllegalArgumentException("CURATED_STATEFUL_SOURCE_REJECTED");
                 if (info.headers().firstValueAsLong("Content-Length").orElse(0) > MAX_BODY_BYTES)
                     throw new IllegalArgumentException("CURATED_HTTP_BODY_TOO_LARGE");
                 if (!info.headers().firstValue("Content-Encoding").orElse("identity").equalsIgnoreCase("identity"))
@@ -183,12 +187,16 @@ final class BoundedHttpClient extends HttpClient {
     static final class Builder implements HttpClient.Builder, AutoCloseable {
         private final HttpClient.Builder delegate = HttpClient.newBuilder().followRedirects(Redirect.NEVER).version(Version.HTTP_1_1);
         private final Duration timeout;
+        private final boolean requireStateless;
         private BoundedHttpClient client;
-        Builder(Duration timeout) { this.timeout = timeout; }
+        Builder(Duration timeout) { this(timeout, false); }
+        Builder(Duration timeout, boolean requireStateless) {
+            this.timeout = timeout; this.requireStateless = requireStateless;
+        }
         BoundedHttpClient client() { return Objects.requireNonNull(client); }
         @Override public HttpClient build() {
             if (client != null) throw new IllegalStateException("CURATED_HTTP_CLIENT_ALREADY_BUILT");
-            client = new BoundedHttpClient(delegate.build(), timeout);
+            client = new BoundedHttpClient(delegate.build(), timeout, requireStateless);
             return client;
         }
         @Override public void close() { if (client != null) client.close(); }
