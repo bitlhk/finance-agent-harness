@@ -60,6 +60,21 @@ test evidence as proof for a differently packaged production JAR.
 
 ## Remaining release gates
 
+The shared `observation-packs/readonly/method-only.json` declares the three
+required common boundaries without claiming a Provider result. Builder may
+project this explicit method-only declaration; it must not weaken a QUERY
+declaration by silently dropping unmet requirements.
+
+`isolatedHost/MethodOnlyTestWorker.java` can run the same native JUnit tests with
+the generated Host's dependency JARs on the classpath, rather than Maven's
+class directories. Compile the worker with JUnit Platform 1.14.1 / Jupiter
+5.14.1 test dependencies and the existing test classes; no test fixture is
+included in a product JAR. Run the worker without arguments, package its fresh
+evidence with `engineering/qualify_agentscope_method.py`, then run it in a new
+JVM with `fresh-admission` and the two pinned qualification properties above.
+This is still native qualification, not the independent generated Host archive
+and snapshot qualification.
+
 Builder/Launcher method-only selection, generated-host observation admission,
 curated Skill cohort, actual model comparison, authenticated browser flows and
 resource cleanup must pass before switching the formal Eval entry. This candidate

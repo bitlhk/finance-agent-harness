@@ -11,6 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class MethodOnlyContractTest(unittest.TestCase):
+    def test_method_observation_declares_only_real_common_boundaries(self):
+        value = json.loads((ROOT / "observation-packs/readonly/method-only.json").read_text())
+        self.assertTrue(self.valid("observation/observation-requirements.v0.1.schema.json", value))
+        self.assertEqual({item["semanticId"] for item in value["requirements"]},
+                         {"host.installation", "host.authorization", "model.call"})
+        self.assertTrue(all(item["obligation"] == "REQUIRED" and item["capabilityIds"] == []
+                            for item in value["requirements"]))
+
     def valid(self, name, value):
         schema = json.loads((ROOT / "contracts/json-schema" / name).read_text())
         return jsonschema.Draft202012Validator(schema).is_valid(value)
