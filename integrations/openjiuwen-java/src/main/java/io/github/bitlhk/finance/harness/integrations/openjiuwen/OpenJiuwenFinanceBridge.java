@@ -280,7 +280,8 @@ public final class OpenJiuwenFinanceBridge {
                 "providerId", receipt.providerId(),
                 "contractVersion", CapabilityRequestV1.SCHEMA_VERSION,
                 "receiptId", receipt.receiptId()));
-        return Map.copyOf(data);
+        // Bank results can contain explicit nulls (for example no next page).
+        return Collections.unmodifiableMap(data);
     }
 
     private Map<String, Object> evidence(

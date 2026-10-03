@@ -38,7 +38,10 @@ class OpenJiuwenFinanceBridgeTest {
         valuation.put("consensus", null);
         valuation.put("zero", 0);
         var periods = new java.util.ArrayList<>(java.util.Arrays.asList(10, null, 30));
-        var source = Map.<String, Object>of("valuation", valuation, "periods", periods);
+        var source = new java.util.LinkedHashMap<String, Object>();
+        source.put("valuation", valuation);
+        source.put("periods", periods);
+        source.put("nextPageToken", null);
         var bridge = bridge(new FinanceProvider() {
             public CapabilityResultV1 query(CapabilityRequestV1 request) {
                 return result(request, CapabilityResultV1.Status.COMPLETED, "read", source, null, null);
@@ -48,8 +51,13 @@ class OpenJiuwenFinanceBridgeTest {
             }
         });
         var output = bridge.query(invocation(QUERY, Set.of("wealth:read"), Map.of(), Map.of()));
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, output.status());
         var mapper = io.github.bitlhk.finance.harness.core.HarnessJson.mapper();
         var facts = mapper.valueToTree(output).path("data").path("result");
+        assertTrue(facts.has("nextPageToken"));
+        assertTrue(facts.path("nextPageToken").isNull());
+        assertTrue(output.data().containsKey("nextPageToken"), "legacy flattened view must also preserve null");
+        assertEquals(null, output.data().get("nextPageToken"));
         assertTrue(facts.path("valuation").has("consensus"), "explicit missing value must not disappear");
         assertTrue(facts.path("valuation").path("consensus").isNull());
         assertEquals(0, facts.path("valuation").path("zero").asInt());

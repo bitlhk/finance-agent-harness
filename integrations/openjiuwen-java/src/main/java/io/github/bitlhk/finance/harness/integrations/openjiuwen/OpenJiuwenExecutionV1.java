@@ -1,6 +1,7 @@
 package io.github.bitlhk.finance.harness.integrations.openjiuwen;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +45,8 @@ public record OpenJiuwenExecutionV1(
         if (source == null || source.isEmpty()) return Map.of();
         Map<String, Object> copy = new LinkedHashMap<>();
         source.forEach((key, value) -> {
-            if (key != null && value != null) copy.put(key, value);
+            if (key != null) copy.put(key, value);
         });
-        return Map.copyOf(copy);
+        return Collections.unmodifiableMap(copy);
     }
 }
