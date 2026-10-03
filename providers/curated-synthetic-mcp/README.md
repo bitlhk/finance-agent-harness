@@ -159,7 +159,12 @@ mvn -o -pl providers/curated-synthetic-mcp -am test \
 
 The opt-in test verifies pinned source bytes, binds a temporary loopback port,
 calls all 16 original tools through this Provider/SDK, checks UNKNOWN/UNAVAILABLE
-and DEGRADED preservation, and terminates its child process. This is not a bank
+and DEGRADED preservation, and terminates its child process. It runs twice using
+the source's public `stateless_http` option, once false and once true. This checks
+SDK/Provider compatibility with both source modes without changing deployment
+defaults. Stateless compatibility does not qualify rejection/disconnect cleanup,
+request budgets or source configuration pinning; those gates remain below.
+This is not a bank
 call, deployment, AgentScope or OpenJiuwen qualification.
 
 Candidate security regressions also exercise exact byte boundaries before the

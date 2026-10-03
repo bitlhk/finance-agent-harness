@@ -4,7 +4,8 @@ import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
 import java.net.*;
@@ -16,7 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Explicit opt-in: runs the actual read-only reference_mcp.py, not a protocol stub. */
 @EnabledIfSystemProperty(named = "curated.reference.directory", matches = ".+")
 class ReferenceMcpTest {
-    @Test void actualReferenceStreamableHttpSixteenToolsAndSourceStates(@TempDir Path temp) throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void actualReferenceStreamableHttpSixteenToolsAndSourceStates(boolean stateless, @TempDir Path temp) throws Exception {
         String python = System.getProperty("curated.reference.python");
         Path root = Path.of(System.getProperty("curated.reference.directory")).toRealPath();
         assertTrue(Files.isRegularFile(root.resolve("reference_mcp.py")));
@@ -28,7 +31,7 @@ class ReferenceMcpTest {
         }
         int port;
         try (var socket = new java.net.ServerSocket(0, 0, InetAddress.getByName("127.0.0.1"))) { port = socket.getLocalPort(); }
-        var process = new ProcessBuilder(python, "-c", "import sys;sys.path.insert(0,sys.argv[1]);from reference_mcp import mcp;mcp.run(transport='streamable-http',host='127.0.0.1',port=int(sys.argv[2]))", root.toString(), String.valueOf(port))
+        var process = new ProcessBuilder(python, "-c", "import sys;sys.path.insert(0,sys.argv[1]);from reference_mcp import mcp;mcp.run(transport='streamable-http',host='127.0.0.1',port=int(sys.argv[2]),stateless_http=sys.argv[3]=='true')", root.toString(), String.valueOf(port), String.valueOf(stateless))
                 .redirectErrorStream(true).redirectOutput(temp.resolve("reference.log").toFile()).start();
         try {
             boolean listening = false;
