@@ -27,10 +27,14 @@ final class CuratedMcpTransport {
     }
     McpSchema.CallToolResult call(CuratedSourceConfig config, Duration timeout, CuratedTools.Tool tool,
             Map<String, Object> arguments, Runnable authority) {
+        return call(config, timeout, tool, arguments, authority, null);
+    }
+    McpSchema.CallToolResult call(CuratedSourceConfig config, Duration timeout, CuratedTools.Tool tool,
+            Map<String, Object> arguments, Runnable authority, McpHttpObservation observation) {
         authority.run();
         var endpoint = config.endpoint();
         try (var http = new BoundedHttpClient.Builder(timeout, config.runtimePolicy() != null,
-                config.runtimePolicy() == null ? null : config.runtimePolicy().sourceIdentitySha256())) {
+                config.runtimePolicy() == null ? null : config.runtimePolicy().sourceIdentitySha256()).observations(observation)) {
             var transport = HttpClientStreamableHttpTransport.builder("http://" + endpoint.getRawAuthority())
                     .endpoint(endpoint.getRawPath()).connectTimeout(timeout)
                     .clientBuilder(http)

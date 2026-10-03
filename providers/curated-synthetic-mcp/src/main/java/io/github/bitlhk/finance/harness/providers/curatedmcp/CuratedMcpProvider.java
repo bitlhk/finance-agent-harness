@@ -46,7 +46,16 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
                 if (!current.equals(initial)) throw new SecurityException("CURATED_AUTHORITY_CHANGED");
             };
             sourcePhase = true;
-            var result = transport.call(source, authority.timeout(), tool, args, guard);
+            McpSchema.CallToolResult result;
+            try (var observation = new McpHttpObservation(authority, request)) {
+                try {
+                    result = transport.call(source, authority.timeout(), tool, args, guard, observation);
+                    observation.finish(true);
+                } catch (RuntimeException failure) {
+                    observation.finish(false);
+                    throw failure;
+                }
+            }
             guard.run();
             if (Boolean.TRUE.equals(result.isError())) return failure(request, "UPSTREAM_FAILURE", "MCP_IS_ERROR", Map.of("mcpIsError", true));
             var mapper = CuratedTools.responseMapper();

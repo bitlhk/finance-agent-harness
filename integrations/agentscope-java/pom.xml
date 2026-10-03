@@ -8,6 +8,7 @@
 <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-execution</artifactId><version>${project.version}</version></dependency>
 <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-assembly</artifactId><version>${project.version}</version></dependency>
 <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-non-ai-banking</artifactId><version>${project.version}</version><scope>test</scope></dependency>
+<dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-curated-synthetic-mcp</artifactId><version>${project.version}</version><scope>test</scope></dependency>
 <dependency><groupId>io.agentscope</groupId><artifactId>agentscope-core</artifactId><version>2.0.3</version></dependency>
 <dependency><groupId>io.agentscope</groupId><artifactId>agentscope-extensions-model-openai</artifactId><version>2.0.3</version></dependency>
 <dependency><groupId>com.networknt</groupId><artifactId>json-schema-validator</artifactId><version>2.0.0</version></dependency>

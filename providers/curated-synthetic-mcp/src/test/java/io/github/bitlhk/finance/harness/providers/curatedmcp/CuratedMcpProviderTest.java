@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
+import io.github.bitlhk.finance.harness.core.observation.*;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -151,6 +152,61 @@ class CuratedMcpProviderTest {
     CuratedMcpProvider provider(Duration timeout) {
         return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
                 timeout, session::get, () -> null, ignored -> {}), config());
+    }
+    CuratedMcpProvider observed(java.util.function.Supplier<ObservationRun> run,
+            java.util.function.Consumer<ManagedProviderFactoryV01.HttpAttempt> attempts) {
+        return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
+                Duration.ofSeconds(2), session::get, run, attempts), config());
+    }
+    @Test void httpEvidenceHasExplicitParentsAndNoCustomerContent() throws Exception {
+        var events = new CopyOnWriteArrayList<ObservationEventV01>();
+        var attempts = new CopyOnWriteArrayList<ManagedProviderFactoryV01.HttpAttempt>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        try (var parent = run.bindParent("capability-parent")) {
+            assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> run, attempts::add)
+                    .query(request("get_wealth_policy_basis", Map.of())).status());
+        }
+        var exchanges = events.stream().filter(e -> e.component().equals("provider-mcp")).toList();
+        assertEquals(2, exchanges.size());
+        assertTrue(exchanges.stream().allMatch(e -> "capability-parent".equals(e.parentSpanId())));
+        var ends = events.stream().filter(e -> e.component().equals("provider-http") && e.phase() == ObservationEventV01.Phase.END).toList();
+        assertFalse(ends.isEmpty());
+        assertTrue(ends.stream().allMatch(e -> e.parentSpanId().equals(exchanges.getFirst().spanId())));
+        assertTrue(ends.stream().anyMatch(e -> "200".equals(e.links().get("httpStatus"))
+                && e.dispatch() == ObservationEventV01.Dispatch.SENT));
+        assertTrue(attempts.stream().anyMatch(a -> a.method().equals("DELETE") && a.status() == 200));
+        assertTrue(attempts.stream().allMatch(a -> a.route().equals("/mcp")));
+        String serialized = HarnessJson.mapper().writeValueAsString(events);
+        for (String forbidden : List.of("bank-secret", "host-customer", "C005", "rules", "Mcp-Session-Id"))
+            assertFalse(serialized.contains(forbidden));
+        int count = events.size(); Thread.sleep(50); assertEquals(count, events.size(), "Events must close before Provider returns");
+    }
+    @Test void observationFailuresDoNotRewriteCompletedReadsOrRetry() {
+        var run = new ObservationRun("request", "boot", "instance", e -> { throw new IllegalStateException("SINK_FAILED"); });
+        assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> run, e -> { throw new IllegalStateException("ATTEMPT_FAILED"); })
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(run.droppedEvents() > 0); assertEquals(1, calls.size());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> { throw new IllegalStateException("SUPPLIER_FAILED"); }, e -> {})
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertEquals(2, calls.size());
+    }
+    @Test void rejectedAuthorityHasNoHttpAttemptOrSyntheticObservation() {
+        session.set(null);
+        var events = new ArrayList<ObservationEventV01>(); var attempts = new ArrayList<ManagedProviderFactoryV01.HttpAttempt>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        assertEquals(CapabilityResultV1.Status.FAILED, observed(() -> run, attempts::add)
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(events.isEmpty()); assertTrue(attempts.isEmpty()); assertEquals(0, requests.get());
+    }
+    @Test void connectionFailureDoesNotClaimRequestWasSent() {
+        server.stop(0);
+        var events = new CopyOnWriteArrayList<ObservationEventV01>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        assertEquals(CapabilityResultV1.Status.FAILED, observed(() -> run, e -> fail("No response received"))
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(events.stream().anyMatch(e -> e.component().equals("provider-http") && e.phase() == ObservationEventV01.Phase.END));
+        assertTrue(events.stream().noneMatch(e -> e.dispatch() == ObservationEventV01.Dispatch.SENT));
+        assertTrue(events.stream().noneMatch(e -> e.links().containsKey("httpStatus")));
     }
     CapabilityRequestV1 request(String name, Map<String, Object> args) {
         var tool = CuratedTools.named(name);

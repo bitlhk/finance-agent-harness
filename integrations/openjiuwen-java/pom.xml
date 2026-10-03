@@ -27,6 +27,12 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>finance-provider-curated-synthetic-mcp</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>finance-harness-execution</artifactId>
             <version>${project.version}</version>
         </dependency>
