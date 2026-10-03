@@ -14,6 +14,7 @@ import io.github.bitlhk.finance.harness.core.spi.InvocationAccess;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -340,9 +341,9 @@ public final class OpenJiuwenFinanceBridge {
         Map<String, Object> sanitized = new LinkedHashMap<>();
         source.forEach((key, value) -> {
             Object clean = sanitize(value);
-            if (key != null && clean != null) sanitized.put(key, clean);
+            if (key != null) sanitized.put(key, clean);
         });
-        return Map.copyOf(sanitized);
+        return Collections.unmodifiableMap(sanitized);
     }
 
     private static Object sanitize(Object value) {
@@ -350,17 +351,17 @@ public final class OpenJiuwenFinanceBridge {
             Map<String, Object> sanitized = new LinkedHashMap<>();
             map.forEach((key, nested) -> {
                 Object clean = sanitize(nested);
-                if (key != null && clean != null) sanitized.put(String.valueOf(key), clean);
+                if (key != null) sanitized.put(String.valueOf(key), clean);
             });
-            return Map.copyOf(sanitized);
+            return Collections.unmodifiableMap(sanitized);
         }
         if (value instanceof List<?> list) {
             List<Object> sanitized = new ArrayList<>();
             for (Object item : list) {
                 Object clean = sanitize(item);
-                if (clean != null) sanitized.add(clean);
+                sanitized.add(clean);
             }
-            return List.copyOf(sanitized);
+            return Collections.unmodifiableList(sanitized);
         }
         return value;
     }
