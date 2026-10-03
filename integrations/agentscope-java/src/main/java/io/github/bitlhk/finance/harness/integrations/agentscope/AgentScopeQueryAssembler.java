@@ -60,7 +60,23 @@ public final class AgentScopeQueryAssembler {
     public record LockedAsset(String kind, String id, String version, String source, String digest) {}
     private record Owner(String id, String version) {}
     private record ProviderSupport(Owner pack, List<String> capabilityIds, String operation) {}
-    private record ProviderDeclaration(String schemaVersion, String kind, Owner owner, String artifactRef, String connectionKind, List<ProviderSupport> supports) {}
+    record ConfigurationFile(String id, String pathEnvironment, String digestEnvironment, int maxBytes) {
+        ConfigurationFile {
+            if (id == null || !id.matches("[a-z][a-z0-9-]{0,63}")
+                    || pathEnvironment == null || !pathEnvironment.matches("FH_[A-Z0-9_]{1,100}")
+                    || digestEnvironment == null || !digestEnvironment.matches("FH_[A-Z0-9_]{1,100}")
+                    || pathEnvironment.equals(digestEnvironment) || maxBytes < 1 || maxBytes > 262144)
+                throw new IllegalArgumentException("PROVIDER_CONFIGURATION_DECLARATION_INVALID");
+        }
+    }
+    record ProviderDeclaration(String schemaVersion, String kind, Owner owner, String artifactRef, String connectionKind,
+                               List<ProviderSupport> supports, List<ConfigurationFile> configurationFiles) {
+        ProviderDeclaration {
+            configurationFiles = configurationFiles == null ? List.of() : List.copyOf(configurationFiles);
+            if (configurationFiles.size() > 8 || configurationFiles.stream().map(ConfigurationFile::id).distinct().count() != configurationFiles.size())
+                throw new IllegalArgumentException("PROVIDER_CONFIGURATION_DECLARATION_INVALID");
+        }
+    }
     private record PackDeclaration(String schemaVersion, String kind, Owner owner, Set<String> requiredFeatures, List<Owner> defaultDomainPacks) {}
     record Binding(FinanceCapabilityPackV1.Capability capability, DescribedFinanceProvider provider) {}
 

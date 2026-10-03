@@ -13,6 +13,8 @@ public interface ManagedProviderFactoryV01 {
     Map<String, Set<String>> requirements();
     default Set<String> dependencies() { return Set.of(); }
     default Set<String> sourceScopes(Set<String> selectedCapabilities) { return Set.of(); }
+    /** Local, validated configuration bytes only; no paths, secrets, grants or remote calls. */
+    default Map<String, String> configurationDigests() { return Map.of(); }
     DescribedFinanceProvider create(Connection connection, Map<String, BoundFinanceProvider> dependencies);
 
     /** Credentials come from the host's current authority, never from model or component metadata. */

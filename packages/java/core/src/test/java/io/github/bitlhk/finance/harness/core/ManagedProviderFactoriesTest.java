@@ -17,7 +17,11 @@ class ManagedProviderFactoriesTest {
             }, () -> null, ignored -> {});
 
     ManagedProviderFactoryV01 factory(String id, String kind, Set<String> dependencies, String sourceScope) {
+        return factory(id, kind, dependencies, sourceScope, Map.of());
+    }
+    ManagedProviderFactoryV01 factory(String id, String kind, Set<String> dependencies, String sourceScope, Map<String, String> configuration) {
         return new ManagedProviderFactoryV01() {
+            public Map<String, String> configurationDigests() { return configuration; }
             public String providerId() { return id; }
             public String connectionKind() { return kind; }
             public Set<String> dependencies() { return dependencies; }
@@ -61,6 +65,20 @@ class ManagedProviderFactoriesTest {
                 factory("unselected", "another-connection", Set.of(), "unselected:read")));
         var providers = registry.create(connection, () -> { throw new AssertionError("No grant during construction"); }, Set.of("projection"));
         assertEquals(Set.of("source", "projection"), providers.keySet());
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
+    @Test void configurationIdentityCoversSelectedDependencyClosureOnly() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("projection", "controlled-http", Set.of("source"), "source:read"),
+                factory("source", "controlled-http", Set.of(), "source:read", Map.of("source", "a".repeat(64))),
+                factory("unused", "controlled-http", Set.of(), "unused:read", Map.of("bad", "not-a-digest"))));
+        var expected = Map.of("source", Map.of("source", "a".repeat(64)));
+        assertEquals(expected, registry.configurationDigests(Set.of("projection")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("projection")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("projection"),
+                Map.of("source", Map.of("source", "b".repeat(64)))));
+        assertEquals(Set.of("projection", "source"), registry.create(connection, () -> null, Set.of("projection"), expected).keySet());
+        assertThrows(IllegalArgumentException.class, () -> registry.configurationDigests(Set.of("unused")));
         assertEquals(0, identities.get()); assertEquals(0, reads.get());
     }
     @Test void currentGrantIsCheckedOnEveryCallNotDerivedFromRequirements() {

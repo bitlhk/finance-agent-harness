@@ -74,6 +74,11 @@ class ReferenceMcpTest {
                 var result = provider.query(request(tool, args));
                 assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), tool.name() + ": " + result);
                 assertTrue(((Map<?, ?>) result.data().get("sourceResult")).get("synthetic").equals(true));
+                if (stateless) {
+                    assertEquals(Map.of("sha256", config.runtimePolicy().sourceIdentitySha256(),
+                            "verification", "RESPONSE_HEADER_MATCHED_PIN", "authentication", "NOT_PROVIDED_BY_MARKER"),
+                            result.data().get("sourceIdentity"));
+                } else assertFalse(result.data().containsKey("sourceIdentity"));
             }
             var unknown = provider.query(request(CuratedTools.named("fraud_transfer_risk_assess"), Map.of("reference", "bene-unknown")));
             assertEquals(CapabilityResultV1.Status.COMPLETED, unknown.status());assertNull(unknown.task());

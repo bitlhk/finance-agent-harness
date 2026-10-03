@@ -76,7 +76,8 @@ placeholder tool for a zero-tool method and no formal catalog registration.
 
 ## Host Configuration Injection
 
-No new SPI. Factory requires both Host environment variables:
+Factory uses the existing managed Provider SPI, with optional local configuration
+digest reporting. It requires both Host environment variables:
 
 ```
 FH_CURATED_MCP_CONFIG=/absolute/reviewed/source.json
@@ -90,10 +91,22 @@ client rejects source session headers before passing a body to the SDK, without
 guessing ownership or sending a fallback DELETE. Legacy v1 direct Provider
 construction remains for isolated regression only, not Factory admission.
 
+Every v2 response must contain exactly one `X-Finance-Source-Sha256` header equal
+to the fixed source identity. Missing, duplicate or different markers fail before
+the SDK body consumer. The bounded source entry adds this from its startup-verified
+manifest, overriding downstream values. This detects deployment mismatches on the
+managed loopback path; it is NOT cryptographic remote attestation, authentication,
+or permission. A hostile process able to spoof the marker is not excluded by it.
+
 The file must be a regular non-symlink file under non-symlink parents, at most
 256 KiB; duplicate/unknown JSON fields and a hash mismatch are rejected.
 The Host must protect BOTH the file and expected hash. Hash pinning does not
-protect against an actor allowed to replace both values.
+protect against an actor allowed to replace both values. The candidate Builder/Host
+additionally freeze the file-byte hash in service Lock, require it at factory
+construction and instance start, carry it into Runtime Lock and collector identity,
+and compare it in Eval delivery/execution evidence. Replacing file plus environment
+pin without replacing the reviewed installation is rejected. Configuration changes
+require new qualification; no old Agent is automatically upgraded.
 
 Illustrative shape only (placeholder pins deliberately do not work):
 
@@ -148,6 +161,9 @@ object digest, distinct from the exact file-byte hash used by the factory.
 This is local execution metadata, NOT an independent source authenticity receipt
 or a Host qualification. Source asOf remains in sourceResult; outer asOf is read
 time. Bank access credentials and raw endpoint are not placed in result evidence.
+For v2, `sourceIdentity` separately records `RESPONSE_HEADER_MATCHED_PIN` and
+`authentication: NOT_PROVIDED_BY_MARKER`. Failed reads do not receive this success
+marker. File-byte, canonical configuration and source-manifest hashes are distinct.
 
 ## Tests
 

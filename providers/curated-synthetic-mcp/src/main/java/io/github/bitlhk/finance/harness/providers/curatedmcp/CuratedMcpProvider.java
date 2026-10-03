@@ -70,6 +70,9 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
                     "contractVersion", source.contractVersion(), "inputSha256", CuratedTools.schemaPin(args),
                     "outputSha256", CuratedSourceConfig.sha(bytes), "sourceConfigSha256", source.canonicalDigest(),
                     "schemaSha256", source.toolSchemaPins().get(tool.name()), "synthetic", true));
+            if (source.runtimePolicy() != null) payload.put("sourceIdentity", Map.of(
+                    "sha256", source.runtimePolicy().sourceIdentitySha256(),
+                    "verification", "RESPONSE_HEADER_MATCHED_PIN", "authentication", "NOT_PROVIDED_BY_MARKER"));
             // COMPLETED describes this read, not a positive business decision or source readiness.
             var states = new LinkedHashMap<String, Object>();
             for (String key : List.of("decision", "status", "readiness")) if (data.has(key)) states.put(key, mapper.convertValue(data.get(key), Object.class));
