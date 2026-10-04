@@ -29,6 +29,39 @@ Managed endpoints must be verified separately; a provider rejection must remain
 an execution error rather than falling back or silently dropping a parameter.
 Equal configuration does not imply deterministic or equivalent answers.
 
+## JSON Extension Probe (Not A Production Option)
+
+`NativeGenerationExtensionTest` exercises the SDK's public
+`additionalBodyParam("response_format", Map.of("type", "json_object"))` hook
+with and without the option. A local controlled endpoint records both the
+initial request and the request following an actual native tool call.
+The OpenJiuwen module has equivalent `NativeGenerationExtensionTest` and
+`OpenJiuwenCaseFileToolTest` checks using its public `setExtraField` hook.
+
+These tests establish request serialization, not upstream JSON enforcement,
+Host qualification, or permission to execute a Provider. `response_format` is
+not part of the managed `Generation` contract. A bounded 2026-10-04 replay of
+two already-approved synthetic final-turn requests against the configured
+model endpoint returned a Markdown fence for one of the two JSON-mode requests
+(HTTP 200, finish reason `stop`). Thus that endpoint has not demonstrated a
+reliable JSON guarantee. The cause within the gateway or model is unconfirmed.
+Do not add the option to production contracts based solely on these SDK tests,
+strip fences to manufacture a passing strict-JSON result, or silently retry.
+
+Reproduce the controlled SDK checks from the repository root:
+
+```sh
+mvn -pl integrations/openjiuwen-java,integrations/agentscope-java -am \
+  -Dtest=NativeGenerationExtensionTest,OpenJiuwenCaseFileToolTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+Seven tests cover native tool/file continuation and request serialization.
+`AgentScopeQueryTest.queryInputRejectionHasBoundedEvidenceAndNoProviderCall`
+separately covers an empty account ID: rejection occurs before a bank read,
+the session is invalidated, and no subsequent model request is sent. This
+safety result does not mean the model completed the user's task successfully.
+
 Changing these classes changes runtime qualification identity. Rebuild and qualify
 the actual artifact before REQUIRED observation admission. Existing Agents are
 not modified or upgraded by this source change.

@@ -13,11 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeGenerationExtensionTest {
-    @Test void frozenModeReachesActualHttpThroughNativeRunnerAndSnapshotClient() throws Exception {
+    @ParameterizedTest @ValueSource(strings = {"thinking", "response_format"})
+    void frozenModeReachesActualHttpThroughNativeRunnerAndSnapshotClient(String field) throws Exception {
+        String type = field.equals("thinking") ? "disabled" : "json_object";
         var sent = new ArrayList<com.fasterxml.jackson.databind.JsonNode>();
         var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/chat/completions", exchange -> {
@@ -42,7 +45,7 @@ class NativeGenerationExtensionTest {
             config.setModelClientConfig(ModelClientConfig.builder().clientProvider(ModelSnapshotClient.PROVIDER)
                     .apiKey("fixture-only").apiBase("http://127.0.0.1:" + server.getAddress().getPort())
                     .timeout(10).maxRetries(0).verifySsl(true).build());
-            config.getModelConfigObj().setExtraField("thinking", Map.of("type", "disabled"));
+            config.getModelConfigObj().setExtraField(field, Map.of("type", type));
             var agent = new ReActAgent(AgentCard.builder().id(session).name("Controlled probe").build());
             agent.configure(config);
             var captures = new ArrayList<Map<String, Object>>();
@@ -52,8 +55,8 @@ class NativeGenerationExtensionTest {
                 Runner.runAgent(agent, Map.of("query", "Return the controlled public answer."), session, null);
             }
             assertEquals(1, sent.size());
-            assertEquals("disabled", sent.getFirst().path("thinking").path("type").asText());
-            assertEquals(Map.of("type", "disabled"), captures.getFirst().get("thinking"));
+            assertEquals(type, sent.getFirst().path(field).path("type").asText());
+            assertEquals(Map.of("type", type), captures.getFirst().get(field));
         } finally { Runner.release(session); server.stop(0); }
     }
 }
