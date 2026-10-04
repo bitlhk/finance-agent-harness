@@ -144,6 +144,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                 .stream(false).temperature(0.0).executionConfig(execution(model.timeout()));
         var generation = model.generation();
         if (generation != null) options.temperature(generation.temperature()).topP(generation.topP()).maxTokens(generation.maxTokens());
+        if (generation != null && generation.thinkingType() != null)
+            options.additionalBodyParam("thinking", Map.of("type", generation.thinkingType()));
         return options.build();
     }
     public Set<String> installedTools() { return Set.copyOf(agent.getToolkit().getToolNames()); }

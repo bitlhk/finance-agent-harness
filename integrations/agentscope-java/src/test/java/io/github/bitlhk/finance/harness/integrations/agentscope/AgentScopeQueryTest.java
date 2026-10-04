@@ -148,14 +148,23 @@ class AgentScopeQueryTest {
         h.session = h.prepared.openSession(new AgentScopeQuerySession.Identity(h.principal, FinanceContextV1.PrincipalType.CUSTOMER,
                 h.subject, h.sessionId, "customer-self-service", "isolated", FinanceContextV1.AuthenticationLevel.STRONG, 2), h.grant::get,
                 new ModelConnection(h.model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10),
-                        new ModelConnection.Generation(0.25, 0.8, 1234)));
-        assertEquals("Explicit parameters.", h.call("Hello.").text());
+                        new ModelConnection.Generation(0.25, 0.8, 1234, "disabled")));
+        var ordinary = h.input("Hello.");
+        var captures = new CopyOnWriteArrayList<Map<String, Object>>();
+        var input = new AgentScopeQuerySession.Input(ordinary.text(), ordinary.requestId(), ordinary.traceId(),
+                ordinary.businessTime(), ordinary.observation(), ordinary.parentId(),
+                new ModelDiagnostics(true, () -> true, (id, boundary, state, value) -> {
+                    if (boundary.equals("CLIENT_REQUEST_PREPARED")) captures.add(value);
+                }));
+        assertEquals("Explicit parameters.", h.session.invoke(input).block(Duration.ofSeconds(20)).text());
+        assertEquals(Map.of("type", "disabled"), captures.getFirst().get("thinking"));
         assertEquals(1, h.model.requests.size());
         var sent = HarnessJson.mapper().readTree(h.model.requests.getFirst().get("rawBody").toString());
         assertEquals("controlled", sent.path("model").asText());
         assertEquals(0.25, sent.path("temperature").asDouble());
         assertEquals(0.8, sent.path("top_p").asDouble());
         assertEquals(1234, sent.path("max_tokens").asInt());
+        assertEquals("disabled", sent.path("thinking").path("type").asText());
         assertEquals(0, h.bank.customerReads());
     }
     @Test void invalidGenerationParametersFailBeforeModelOrBankCalls() throws Exception {
@@ -166,6 +175,7 @@ class AgentScopeQueryTest {
             assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, value, 1234));
         assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 0));
         assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 32769));
+        assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 100, "enabled"));
         assertEquals(0, h.model.requests.size());
         assertEquals(0, h.bank.customerReads());
     }

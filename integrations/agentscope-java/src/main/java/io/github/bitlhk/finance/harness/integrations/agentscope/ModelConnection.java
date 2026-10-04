@@ -9,10 +9,15 @@ public final class ModelConnection {
     private final URI baseUri;
     private final String model, secret;
     private final Duration timeout;
-    public record Generation(double temperature, double topP, int maxTokens) {
+    public record Generation(double temperature, double topP, int maxTokens, String thinkingType) {
+        public Generation(double temperature, double topP, int maxTokens) {
+            this(temperature, topP, maxTokens, null);
+        }
         public Generation {
             if (!Double.isFinite(temperature) || temperature < 0 || temperature > 2
                     || !Double.isFinite(topP) || topP <= 0 || topP > 1 || maxTokens < 1 || maxTokens > 32768)
+                throw new IllegalArgumentException("INVALID_MODEL_GENERATION_PARAMETERS");
+            if (thinkingType != null && !"disabled".equals(thinkingType))
                 throw new IllegalArgumentException("INVALID_MODEL_GENERATION_PARAMETERS");
         }
     }

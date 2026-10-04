@@ -28,7 +28,7 @@ public final class CheckedTransport implements HttpTransport {
         try {
             Map<String, Object> body = HarnessJson.mapper().readValue(request.getBody(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
             var projection = new java.util.LinkedHashMap<String, Object>();
-            for (String key : java.util.List.of("model", "messages", "tools", "temperature", "top_p", "max_tokens", "stream")) if (body.containsKey(key)) projection.put(key, body.get(key));
+            for (String key : java.util.List.of("model", "messages", "tools", "temperature", "top_p", "max_tokens", "stream", "thinking")) if (body.containsKey(key)) projection.put(key, body.get(key));
             call.capture(callId, "CLIENT_REQUEST_PREPARED", projection);
         } catch (java.io.IOException malformed) { throw new IllegalArgumentException("MODEL_REQUEST_INVALID", malformed); }
         before(request, false);
