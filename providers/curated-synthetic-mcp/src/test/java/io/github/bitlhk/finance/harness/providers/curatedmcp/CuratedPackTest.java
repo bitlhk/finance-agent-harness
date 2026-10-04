@@ -8,12 +8,24 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CuratedPackTest {
+    @Test void syntheticTransferQueriesRequireExplicitDistinctObjectRoles() throws Exception {
+        var pack = HarnessJson.mapper().readTree(Path.of("../../capability-packs/curated-synthetic-transfer-risk/pack.yaml").toFile());
+        for (var capability : pack.path("capabilities")) {
+            var input = capability.path("inputSchema");
+            assertEquals(List.of("reference"), HarnessJson.mapper().convertValue(input.path("required"), List.class));
+            var reference = input.path("properties").path("reference");
+            assertFalse(reference.has("default"));
+            String role = capability.path("toolName").asText().equals("curated_account_balance_query") ? "payer" : "beneficiary";
+            assertTrue(reference.path("description").asText().contains(role));
+            assertTrue(reference.path("description").asText().contains("clarify"));
+        }
+    }
     @Test void draftPacksExactlyCoverContractsWithNoExistingCapabilityAliases() throws Exception {
         Path root = Path.of("../..");var capabilities = new HashSet<String>();var tools = new HashSet<String>();
         try (var paths = Files.list(root.resolve("capability-packs"))) {
             for (Path path : paths.filter(p -> p.getFileName().toString().startsWith("curated-synthetic-")).toList()) {
                 var pack = HarnessJson.mapper().readTree(path.resolve("pack.yaml").toFile());
-                assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth").contains(pack.path("packId").asText())
+                assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth", "curated-synthetic-transfer-risk").contains(pack.path("packId").asText())
                         ? "1.1.0" : "1.0.0", pack.path("version").asText());
                 for (var cap : pack.path("capabilities")) {
                     var contract = CuratedTools.capability(cap.path("capabilityId").asText());
@@ -78,7 +90,7 @@ class CuratedPackTest {
         var supportedPacks = new HashSet<String>();
         assembly.path("supports").forEach(p -> {
             assertTrue(supportedPacks.add(p.path("pack").path("id").asText().substring("curated-synthetic-".length())));
-            assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth").contains(p.path("pack").path("id").asText()) ? "1.1.0" : "1.0.0", p.path("pack").path("version").asText());
+            assertEquals(Set.of("curated-synthetic-customer", "curated-synthetic-wealth", "curated-synthetic-transfer-risk").contains(p.path("pack").path("id").asText()) ? "1.1.0" : "1.0.0", p.path("pack").path("version").asText());
             assertEquals("QUERY", p.path("operation").asText());
             p.path("capabilityIds").forEach(c -> assertTrue(supported.add(c.asText())));
         });

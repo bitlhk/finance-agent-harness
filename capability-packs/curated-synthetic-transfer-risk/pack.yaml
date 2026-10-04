@@ -1,23 +1,23 @@
 {
   "schemaVersion": "finance-capability-pack.v1",
   "packId": "curated-synthetic-transfer-risk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
   "capabilities": [
     {
       "capabilityId": "eval.synthetic.account-balance-query.query",
       "toolName": "curated_account_balance_query",
       "name": "Synthetic account_balance_query",
-      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: account_balance_query. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "description": "Read the explicitly identified payer account balance and status from the synthetic source. reference is the payer account, not the beneficiary. This is not a risk decision or a transfer. Preserve missing and unavailable facts; clarify a missing payer rather than choosing a default.",
       "operation": "QUERY",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
+        "required": ["reference"],
         "properties": {
           "reference": {
             "type": "string",
-            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
-            "default": "acct-demo-001"
+            "description": "Explicit payer account reference from the current request; must be in the subject allowlist. If absent or ambiguous, clarify. Never substitute the beneficiary or use a sample/default account."
           }
         }
       },
@@ -29,16 +29,16 @@
       "capabilityId": "eval.synthetic.fraud-transfer-risk-assess.query",
       "toolName": "curated_fraud_transfer_risk_assess",
       "name": "Synthetic fraud_transfer_risk_assess",
-      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: fraud_transfer_risk_assess. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "description": "Read a synthetic risk result for the explicitly identified beneficiary. reference is the beneficiary, not the payer passed to account_balance_query. Preserve RISK_HIT, NO_KNOWN_HIT and UNKNOWN separately. No execution or approval. Clarify a missing beneficiary; a known-hit sample is not a default target.",
       "operation": "QUERY",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
+        "required": ["reference"],
         "properties": {
           "reference": {
             "type": "string",
-            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
-            "default": "bene-risk"
+            "description": "Explicit beneficiary reference from the current request; must be in the subject allowlist. If absent or ambiguous, clarify. Do not reuse the payer account, infer an object from a desired risk result, or choose a default/sample beneficiary."
           }
         }
       },

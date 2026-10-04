@@ -68,7 +68,7 @@
     {
       "pack": {
         "id": "curated-synthetic-transfer-risk",
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "capabilityIds": [
         "eval.synthetic.account-balance-query.query",

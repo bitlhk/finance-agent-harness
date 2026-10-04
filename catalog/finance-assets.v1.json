@@ -370,7 +370,7 @@
     },
     {
       "id": "curated-synthetic-transfer-risk",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "displayName": "合成评测：转账风险只读",
       "source": "repo://capability-packs/curated-synthetic-transfer-risk",
       "governanceRef": "finance-harness-core",
