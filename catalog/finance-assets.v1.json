@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.9",
+  "catalogVersion": "0.2.10",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -751,7 +751,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-10-03.curated-wealth-host-candidate-1",
+  "catalogRevision": "2026-10-04.curated-risk-inputs-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
