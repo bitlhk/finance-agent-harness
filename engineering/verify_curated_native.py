@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -83,6 +84,9 @@ def qualify_agentscope(root, args, config, facts, rows):
 
 def verify(args, *, source_transport=None, after_native=None):
     """Trusted engineering composition hooks, never selected by uploaded assets."""
+    subject = getattr(args, 'trusted_subject', 'curated-subject')
+    if not isinstance(subject, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,119}', subject):
+        raise ValueError('SYNTHETIC_TRUSTED_SUBJECT_INVALID')
     root = Path(__file__).resolve().parents[1]
     if not args.output.is_absolute() or args.output.exists():
         raise ValueError('use a new absolute output directory')
@@ -168,7 +172,7 @@ print(json.dumps({
                 raise RuntimeError('SOURCE_TOOLS_MISSING')
             config = args.output / 'source-config.json'
             write(config, {'schemaVersion': 'curated-synthetic-source.v3', 'endpoint': endpoint,
-                'contractVersion': '1.0.0', 'toolSchemaPins': pins, 'subjects': {'curated-subject': {
+                'contractVersion': '1.0.0', 'toolSchemaPins': pins, 'subjects': {subject: {
                     'customerSelection': 'SYNTHETIC_ALLOWLIST', 'resources': resources}},
                 'runtimePolicy': {'mode': 'STATELESS_BOUNDED', 'sourceIdentitySha256': sha(identity)}})
             command = ['mvn', '-o', '-B', f'-Dmaven.repo.local={args.maven_repo}', '-pl', 'integrations/agentscope-java,integrations/openjiuwen-java',
@@ -199,7 +203,8 @@ print(json.dumps({
                 raise RuntimeError('RAW_EVIDENCE_INCOMPLETE')
             qualification = qualify_agentscope(root, args, config, facts, rows) if args.qualify_agentscope else {'status': 'NOT_RUN'}
             write(args.output / 'report.json', {'status': 'PASS', 'tests': len(rows), 'runtimeTests': counts, 'packs': packs,
-                'sourceTools': sorted(names), 'sourceIdentitySha256': sha(identity), 'sourceFixtureSha256': sha(roles_file),
+                'sourceTools': sorted(names), 'trustedSubject': subject,
+                'sourceIdentitySha256': sha(identity), 'sourceFixtureSha256': sha(roles_file),
                 'sourceConfigSha256': sha(config), 'sourceFactsCompared': 'ALL_FIELDS_EACH_SELECTED_TOOL',
                 'scope': 'NATIVE_CURATED_COVERAGE_NOT_QUALIFICATION', 'realModel': 'NOT_RUN',
                 'skillAcceptance': 'NOT_RUN', 'productionChanged': False, 'packagedAgentScopeQualification': qualification})
@@ -222,6 +227,8 @@ def main():
     parser.add_argument('--maven-repo', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--qualify-agentscope', action='store_true')
+    parser.add_argument('--trusted-subject', default='curated-subject',
+                        help='Operator-selected synthetic IAM subject; changes require fresh qualification')
     verify(parser.parse_args())
 
 

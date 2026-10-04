@@ -407,7 +407,8 @@ class CuratedNativeQueryTest {
     }
 
     static final class Fixture implements AutoCloseable {
-        final String principal = "curated-actor-" + UUID.randomUUID(), subject = "curated-subject", sessionId = UUID.randomUUID().toString();
+        final String principal = "curated-actor-" + UUID.randomUUID(), sessionId = UUID.randomUUID().toString();
+        final String subject;
         final ControlledModel model;
         final CuratedSourceConfig config;
         final CuratedMcpProvider provider;
@@ -425,6 +426,8 @@ class CuratedNativeQueryTest {
         boolean failSink;
         Fixture(String suffix, Response... responses) throws Exception {
             config = CuratedSourceConfig.load(Path.of(System.getProperty("curated.sourceConfig")), System.getProperty("curated.sourceConfigSha256"));
+            assertEquals(1, config.subjects().size(), "Qualification requires one explicit synthetic IAM subject");
+            subject = config.subjects().keySet().iterator().next();
             expected = HarnessJson.mapper().readTree(Files.readAllBytes(Path.of(System.getProperty("curated.expectedFacts"))));
             var packPath = ROOT.resolve("capability-packs/curated-synthetic-" + suffix + "/pack.yaml");
             var pack = HarnessJson.mapper().readTree(Files.readAllBytes(packPath));

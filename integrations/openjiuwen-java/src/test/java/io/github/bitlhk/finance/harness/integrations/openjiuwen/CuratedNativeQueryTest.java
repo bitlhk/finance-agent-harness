@@ -46,7 +46,8 @@ class CuratedNativeQueryTest {
         var tools = pack.capabilities().stream().map(c -> CuratedTools.named(c.toolName().substring("curated_".length()))).toList();
         var config = CuratedSourceConfig.load(Path.of(System.getProperty("curated.sourceConfig")), System.getProperty("curated.sourceConfigSha256"));
         var expected = HarnessJson.mapper().readTree(Files.readAllBytes(Path.of(System.getProperty("curated.expectedFacts"))));
-        String principal = "curated-actor", subject = "curated-subject", session = "curated-" + UUID.randomUUID();
+        assertEquals(1, config.subjects().size(), "Qualification requires one explicit synthetic IAM subject");
+        String principal = "curated-actor", subject = config.subjects().keySet().iterator().next(), session = "curated-" + UUID.randomUUID();
         var requests = new CopyOnWriteArrayList<String>();
         var events = new CopyOnWriteArrayList<ObservationEventV01>();
         var results = new CopyOnWriteArrayList<CapabilityResultV1>();

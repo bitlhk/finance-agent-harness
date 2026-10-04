@@ -29,7 +29,8 @@ public final class CuratedQualifiedHost {
         var pack = HarnessJson.mapper().readTree(root.resolve(packSource.substring(7)).toFile());
         var tools = new ArrayList<CuratedTools.Tool>();
         pack.path("capabilities").forEach(c -> tools.add(CuratedTools.named(c.path("toolName").asText().substring(8))));
-        String principal = "qualified-actor", subject = "curated-subject", sessionId = UUID.randomUUID().toString();
+        if (config.subjects().size() != 1) throw new IllegalArgumentException("EXPLICIT_QUALIFICATION_SUBJECT_REQUIRED");
+        String principal = "qualified-actor", subject = config.subjects().keySet().iterator().next(), sessionId = UUID.randomUUID().toString();
         var sourceSession = new ManagedProviderFactoryV01.SourceSession("synthetic-not-forwarded", subject, principal, sessionId, Instant.now().plusSeconds(300));
         var events = new CopyOnWriteArrayList<ObservationEventV01>();
         var http = new CopyOnWriteArrayList<ManagedProviderFactoryV01.HttpAttempt>();
