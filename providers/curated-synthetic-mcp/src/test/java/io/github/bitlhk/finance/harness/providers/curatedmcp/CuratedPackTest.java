@@ -137,4 +137,14 @@ class CuratedPackTest {
         }
         assertEquals(new CuratedMcpFactoryV01().requirements().keySet(), projectedCapabilities);
     }
+
+    @Test void riskProjectionRetainsCoverageAndUnavailableReasonWithoutRawResults() throws Exception {
+        var projection = HarnessJson.mapper().readTree(Path.of("eval-projection.v1.json").toFile());
+        var risk = projection.path("tools").path("fraud_transfer_risk_assess");
+        assertEquals("/scope", risk.path("optionalFields").path("coverageScope").asText());
+        assertEquals("/reason", risk.path("optionalFields").path("unavailableReason").asText());
+        assertEquals(2, risk.path("optionalFields").size());
+        assertFalse(risk.path("fields").has("coverageScope"));
+        assertFalse(risk.path("fields").has("unavailableReason"));
+    }
 }

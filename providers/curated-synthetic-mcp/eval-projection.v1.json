@@ -1,6 +1,6 @@
 {
   "schemaVersion": "curated-eval-projection.v1",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "contractVersion": "1.0.0",
   "providerId": "curated-synthetic-mcp",
   "sourceSystem": "curated-synthetic-mcp",
@@ -150,6 +150,9 @@
         "reference": "/reference", "status": "/status", "decision": "/decision", "executed": "/executed",
         "reasonCode": "/signals/*/reasonCode", "signalSource": "/signals/*/source",
         "matchedField": "/signals/*/matchedField", "updatedAt": "/signals/*/updatedAt"
+      },
+      "optionalFields": {
+        "coverageScope": "/scope", "unavailableReason": "/reason"
       }
     },
     "search_risk_enterprises": {
