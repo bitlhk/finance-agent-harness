@@ -28,9 +28,14 @@ with a different endpoint/configuration. The Builder engineering entry is
 The six cohort Packs have separate REQUIRED `capability.result` observation
 declarations under `observation-packs/readonly/curated-*.json`. Each declaration
 covers one whole Pack; selecting one Pack must not require the other five.
-`eval-projection.v1.json` version 0.2.0 declares scalar fact paths for all sixteen
+`eval-projection.v1.json` version 0.2.2 declares scalar fact paths for all sixteen
 candidate tools; this evidence vocabulary is not runtime admission. Customer and allocation variants use optional
 fields with explicit NOT_PROVIDED markers, distinct from null and empty arrays.
+The audit material exclusion description is an optional indexed leaf. The Eval
+consumer must preserve source row indices when only some materials provide it;
+missing does not mean excluded, zero or empty. Consumers that reject sparse
+optional leaves need the corresponding compatible Launcher update before using
+this projection. This metadata update is not a new executable Provider release.
 The source output contract still validates each supported variant before return.
 The parameterless policy query pins `/policyVersion` to the reference policy;
 the Provider still separately requires the configured `policy` resource grant.

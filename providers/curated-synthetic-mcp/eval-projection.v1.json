@@ -1,6 +1,6 @@
 {
   "schemaVersion": "curated-eval-projection.v1",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "contractVersion": "1.0.0",
   "providerId": "curated-synthetic-mcp",
   "sourceSystem": "curated-synthetic-mcp",
@@ -128,6 +128,9 @@
         "amount": "/materials/*/amount", "policyVersion": "/policy/version",
         "requiredMaterials": "/policy/requiredMaterials/*", "differenceThreshold": "/policy/differenceThreshold",
         "scope": "/scope"
+      },
+      "optionalFields": {
+        "materialExcluded": "/materials/*/excluded"
       }
     },
     "evaluate_audit_human_review": {
