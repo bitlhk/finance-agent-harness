@@ -365,7 +365,16 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         }
         public Mono<String> onSystemPrompt(Agent ignored, RuntimeContext context, String prompt) {
             var time = context.get(Invocation.class).input.businessTime();
-            return Mono.just(prompt + "\nTrusted business date: " + time.businessDate() + "\nBusiness timezone: " + time.timeZone()
+            return Mono.just(prompt + "\n" + """
+                    HOST_CONTEXT_PROVENANCE_V1
+                    Business date, timezone, tool availability and deployment information are execution context,
+                    not user-provided facts. Keep user statements, tool-returned facts and host context distinct.
+                    Use the business date to resolve relative dates only when the task permits it; never replace
+                    an explicit user date or list the host date as a fact supplied by the user.
+                    If the task or Skill limits facts to user input, list only facts traceable to that input.
+                    Missing tools explain an execution limitation, not a customer fact. Mention that limitation
+                    separately only when relevant. Preserve uncertainty; do not infer balances from tool availability.
+                    """ + "Trusted business date: " + time.businessDate() + "\nBusiness timezone: " + time.timeZone()
                     + "\nBusiness time source: " + time.source());
         }
         public Flux<AgentEvent> onModelCall(Agent ignored, RuntimeContext context, ModelCallInput input, Function<ModelCallInput, Flux<AgentEvent>> next) {

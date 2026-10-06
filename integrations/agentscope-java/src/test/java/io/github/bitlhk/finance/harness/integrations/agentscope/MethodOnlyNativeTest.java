@@ -95,6 +95,9 @@ class MethodOnlyNativeTest {
         assertEquals(1, h.model.requests.size());
         var sent = HarnessJson.mapper().readTree(h.model.requests.getFirst().get("rawBody").toString());
         assertTrue(sent.path("messages").toString().contains("METHOD_CONTENT_8821"));
+        assertTrue(sent.path("messages").toString().contains("HOST_CONTEXT_PROVENANCE_V1"));
+        assertTrue(sent.path("messages").toString().contains("not user-provided facts"));
+        assertTrue(sent.path("messages").toString().contains("Trusted business date:"));
         assertEquals(0, sent.path("tools").size());
         assertEquals("controlled", sent.path("model").asText());
         assertEquals(0.25, sent.path("temperature").asDouble()); assertEquals(0.8, sent.path("top_p").asDouble());
