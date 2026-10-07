@@ -31,7 +31,8 @@ class AgentScopeQueryTest {
                         ROOT.resolve("integrations/agentscope-java/target/controlled-evidence/" + RUN).toString()));
                 Files.createDirectories(directory);
                 var rows = harnesses.stream().map(h -> Map.of("modelHttp", h.model.requests, "bankHttp", h.bank.requests,
-                        "observations", h.events, "callbackThreads", h.threads, "replies", h.replies, "terminalMemoryChecks", h.memoryChecks)).toList();
+                        "observations", h.events, "callbackThreads", h.threads, "replies", h.replies, "terminalMemoryChecks", h.memoryChecks,
+                        "toolAttemptEvidence", h.session.toolAttemptEvidence())).toList();
                 Files.write(directory.resolve(c.getRequiredTestMethod().getName() + "-" + UUID.randomUUID() + ".json"),
                         HarnessJson.mapper().writerWithDefaultPrettyPrinter().writeValueAsBytes(Map.of("test", c.getDisplayName(),
                                 "testMethod", c.getRequiredTestMethod().getName(), "checkIds", c.getTags(), "status", status, "failure", failure, "sessions", rows,
@@ -41,6 +42,24 @@ class AgentScopeQueryTest {
     };
     @AfterEach void cleanup() { harnesses.forEach(Harness::close); }
     Harness harness(Response... responses) throws Exception { var h = new Harness(responses); harnesses.add(h); return h; }
+
+    @Test void toolAttemptWindowProvesZeroAndMissingIsNotComplete() throws Exception {
+        var h = harness(text("No tool needed."));
+        assertEquals("UNKNOWN", h.session.toolAttemptEvidence().get("status"));
+        h.call("Reply without tools.");
+        var evidence = h.session.toolAttemptEvidence();
+        assertEquals("COMPLETE", evidence.get("status"));
+        assertEquals(List.of(), evidence.get("attempts"));
+        assertNotNull(evidence.get("startedAt")); assertNotNull(evidence.get("endedAt"));
+    }
+
+    @Test void unknownToolSelectionIsStillAnAttemptNotZero() throws Exception {
+        var h = harness(tool("not_installed", Map.of()));
+        assertThrows(RuntimeException.class, () -> h.call("Try an unavailable tool."));
+        var evidence = h.session.toolAttemptEvidence();
+        assertEquals("PARTIAL", evidence.get("status"));
+        assertFalse(((List<?>)evidence.get("attempts")).isEmpty());
+    }
 
     private io.github.bitlhk.finance.harness.execution.CaseFileWorkspaceV1 caseFiles(Harness h) throws Exception {
         String digest = HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
@@ -59,6 +78,8 @@ class AgentScopeQueryTest {
         assertEquals(List.of(), files.evidence().get("reads"));
         assertTrue(h.session.lock().containsKey("caseWorkspace"));
         assertEquals("Read case.", h.call("Read the declared case.txt.").text());
+        assertEquals("COMPLETE", h.session.toolAttemptEvidence().get("status"));
+        assertEquals(2, ((List<?>)h.session.toolAttemptEvidence().get("attempts")).size());
         assertEquals(2, h.model.requests.size());
         assertFalse(h.model.requests.getFirst().get("rawBody").toString().contains("CASE_ONLY_9182"));
         assertTrue(h.model.requests.getLast().get("rawBody").toString().contains("CASE_ONLY_9182"));
