@@ -102,6 +102,13 @@ final class AccountHistoryQueries {
     private static String decimal(Object value) {
         if (!(value instanceof Number) && !(value instanceof String)) throw new IllegalArgumentException("Invalid amount");
         String raw = value.toString();
+        if (value instanceof Number) {
+            BigDecimal number = value instanceof BigDecimal decimal ? decimal : new BigDecimal(raw);
+            // Jackson may normalize numeric 50000.00 to 5E+4. Bound before expanding.
+            if (number.precision() > 32 || number.scale() < -24 || number.scale() > 8)
+                throw new IllegalArgumentException("Invalid amount");
+            raw = number.toPlainString();
+        }
         if (!raw.matches("-?[0-9]{1,24}(\\.[0-9]{1,8})?")) throw new IllegalArgumentException("Invalid amount");
         return new BigDecimal(raw).toPlainString();
     }

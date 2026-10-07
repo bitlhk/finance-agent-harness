@@ -5,6 +5,17 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AccountHistoryQueriesTest {
+    @Test void normalizedNumericAmountsRemainExactAndBounded() {
+        var selection = AccountHistoryQueries.select(true, statement());
+        var source = new HashMap<String, Object>(statement()); source.put("currency", "CNY");
+        source.put("totalIn", new java.math.BigDecimal("5E+4"));
+        source.put("totalOut", new java.math.BigDecimal("90071992547409.91"));
+        var facts = AccountHistoryQueries.map(selection, source);
+        assertEquals("50000", facts.get("totalIn"));
+        assertEquals("90071992547409.91", facts.get("totalOut"));
+        source.put("totalIn", new java.math.BigDecimal("1E+100000"));
+        assertThrows(IllegalArgumentException.class, () -> AccountHistoryQueries.map(selection, source));
+    }
     private static Map<String, Object> statement() { return Map.of("accountId", "synthetic-1", "period", "2026-08"); }
     private static Map<String, Object> page() { return Map.of("accountId", "synthetic-1", "dateFrom", "2026-08-01", "dateTo", "2026-08-31"); }
     private static Map<String, Object> row() { return Map.of("accountId", "synthetic-1", "transactionId", "txn-1", "amount", "12.30", "currency", "CNY", "bookedAt", "2026-08-02T00:00:00Z"); }

@@ -37,7 +37,7 @@ class NonAiBankingProviderTest {
             hits.incrementAndGet(); parameters.set(exchange.getRequestURI().getRawQuery());
             writeJson(exchange, 200, """
                     {"status":"SUCCESS","data":{"accountId":"synthetic-1","period":"2026-08",
-                    "currency":"CNY","totalIn":"12.30"},"sourceSystem":"account-core-simulator","asOf":"2026-09-01T00:00:00Z"}
+                    "currency":"CNY","totalIn":50000.00},"sourceSystem":"account-core-simulator","asOf":"2026-09-01T00:00:00Z"}
                     """);
         });
         server.createContext("/api/v1/accounts/synthetic-1/transaction-page", exchange -> {
@@ -54,6 +54,7 @@ class NonAiBankingProviderTest {
         var statement = bound.query(historyRequest(NonAiBankingProvider.ACCOUNT_STATEMENT_QUERY,
                 Map.of("accountId", "synthetic-1", "period", "2026-08")));
         assertEquals(CapabilityResultV1.Status.COMPLETED, statement.status());
+        assertEquals("50000", ((Map<?, ?>) statement.data().get("facts")).get("totalIn"));
         assertEquals("period=2026-08", parameters.get());
         var page = bound.query(historyRequest(NonAiBankingProvider.ACCOUNT_TRANSACTION_QUERY,
                 Map.of("accountId", "synthetic-1", "dateFrom", "2026-08-01", "dateTo", "2026-08-31")));
