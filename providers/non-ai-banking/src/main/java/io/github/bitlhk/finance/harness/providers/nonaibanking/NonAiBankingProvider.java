@@ -39,6 +39,8 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
     public static final String PROVIDER_ID = "non-ai-banking-reference";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String ACCOUNT_BALANCE_QUERY = "account.balance.query";
+    public static final String ACCOUNT_STATEMENT_QUERY = "account.statement.query";
+    public static final String ACCOUNT_TRANSACTION_QUERY = "account.transaction.query";
     public static final String WEALTH_CUSTOMER_CONTEXT_QUERY = "wealth.customer-context.query";
     public static final String TRANSACTION_SUMMARY_QUERY = "finance.transaction-summary.query";
     public static final String SPENDING_ANALYSIS_QUERY = "finance.spending-analysis.query";
@@ -86,6 +88,10 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
                         new ProviderDescriptorV1.CapabilitySupport(
                                 ACCOUNT_BALANCE_QUERY, CapabilityRequestV1.Operation.QUERY),
                         new ProviderDescriptorV1.CapabilitySupport(
+                                ACCOUNT_STATEMENT_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                ACCOUNT_TRANSACTION_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
                                 WEALTH_CUSTOMER_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY),
                         new ProviderDescriptorV1.CapabilitySupport(
                                 TRANSACTION_SUMMARY_QUERY, CapabilityRequestV1.Operation.QUERY),
@@ -107,6 +113,7 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
         try {
             return switch (request.capabilityId()) {
                 case ACCOUNT_BALANCE_QUERY -> accountBalance(request);
+                case ACCOUNT_STATEMENT_QUERY, ACCOUNT_TRANSACTION_QUERY -> accountHistory(request);
                 case WEALTH_CUSTOMER_CONTEXT_QUERY -> wealthCustomerContext(request);
                 case TRANSACTION_SUMMARY_QUERY -> cashflow(request, CashflowFactsV1.Section.SUMMARY);
                 case SPENDING_ANALYSIS_QUERY -> cashflow(request, CashflowFactsV1.Section.ANALYSIS);
@@ -116,6 +123,26 @@ public final class NonAiBankingProvider implements DescribedFinanceProvider, Inp
             };
         } catch (ProviderFailure failure) {
             return upstreamFailure(request, failure);
+        }
+    }
+
+    private CapabilityResultV1 accountHistory(CapabilityRequestV1 request) {
+        AccountHistoryQueries.Selection selection;
+        try {
+            selection = AccountHistoryQueries.select(ACCOUNT_STATEMENT_QUERY.equals(request.capabilityId()), request.parameters());
+        } catch (RuntimeException invalid) {
+            return localFailure(request, "INVALID_INPUT", "ACCOUNT_HISTORY_PARAMETERS_INVALID", false,
+                    "An explicit account and valid absolute period or date range are required", List.of("CHECK_QUERY_PARAMETERS"));
+        }
+        Response response = client.get(selection.route(), selection.query(), request.context());
+        try {
+            Map<String, Object> facts = AccountHistoryQueries.map(selection, response.data());
+            return completed(request, selection.statement() ? "Monthly summary; not an official statement."
+                            : "Current transaction page only; additional pages are not fetched automatically.",
+                    Map.of("facts", facts), response.sourceSystem(), response.asOf());
+        } catch (RuntimeException invalid) {
+            return localFailure(request, "UPSTREAM_FAILURE", "ACCOUNT_HISTORY_SOURCE_INVALID", false,
+                    "Source facts do not satisfy the requested scope", List.of("VERIFY_SOURCE_CONTRACT"));
         }
     }
 

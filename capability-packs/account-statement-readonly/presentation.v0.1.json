@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-pack-presentation.v0.1",
+  "views": [
+    {
+      "capabilityId": "account.statement.query",
+      "factsVersion": "account-history-facts.v1",
+      "title": "账户月结汇总",
+      "scope": "来源账户的月度汇总，不是正式对账单；缺失金额不按零计算。",
+      "rows": "SELF",
+      "fields": {
+        "period": "月份",
+        "currency": "币种",
+        "openingBalance": "期初余额",
+        "totalIn": "收入合计",
+        "totalOut": "支出合计",
+        "closingBalance": "期末余额"
+      }
+    }
+  ]
+}

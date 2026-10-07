@@ -10,6 +10,8 @@ public final class NonAiBankingFactoryV01 implements ManagedProviderFactoryV01 {
     public String connectionKind() { return "synthetic-bank-http.v1"; }
     public Map<String, Set<String>> requirements() {
         return Map.of(ACCOUNT_BALANCE_QUERY, Set.of("account:read"),
+                ACCOUNT_STATEMENT_QUERY, Set.of("account:read"),
+                ACCOUNT_TRANSACTION_QUERY, Set.of("account:read"),
                 WEALTH_CUSTOMER_CONTEXT_QUERY, Set.of("wealth:customer:read"),
                 TRANSACTION_SUMMARY_QUERY, Set.of("cashflow:read"),
                 SPENDING_ANALYSIS_QUERY, Set.of("cashflow:read"),

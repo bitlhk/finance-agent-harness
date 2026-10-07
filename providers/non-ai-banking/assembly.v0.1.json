@@ -9,6 +9,16 @@
   "connectionKind": "synthetic-bank-http.v1",
   "supports": [
     {
+      "pack": {"id": "account-statement-readonly", "version": "0.1.0"},
+      "capabilityIds": ["account.statement.query"],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {"id": "account-transactions-readonly", "version": "0.1.0"},
+      "capabilityIds": ["account.transaction.query"],
+      "operation": "QUERY"
+    },
+    {
       "pack": {"id": "internal-transfer", "version": "0.1.0"},
       "capabilityIds": ["transfer.internal.create"],
       "operation": "TASK"
