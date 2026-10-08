@@ -97,10 +97,9 @@
       "profile": "employee-assisted",
       "source": "repo://domain-packs/wealth/service-preparation",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["wealth.previsit-context.query", "wealth.allocation-context.query"],
+      "requiresCapabilities": ["wealth.previsit-context.query"],
       "dependencies": [
-        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"},
-        {"kind": "capability-pack", "id": "wealth-allocation-context", "version": "0.1.0"}
+        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"}
       ],
       "compatibility": {"profiles": ["employee-assisted"]}
     },
