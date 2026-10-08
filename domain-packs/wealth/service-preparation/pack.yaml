@@ -1,0 +1,27 @@
+schemaVersion: finance-domain-pack.v1
+packId: wealth-service-preparation
+version: 0.1.0
+profile: employee-assisted
+capabilities:
+  - wealth.previsit-context.query
+  - wealth.allocation-context.query
+capabilityPackRefs:
+  - id: wealth-manager-previsit
+    version: 0.1.0
+  - id: wealth-allocation-context
+    version: 0.1.0
+skills:
+  - directory: customer-manager-service-preparation
+    entry: skills/customer-manager-service-preparation/SKILL.md
+scope:
+  - 授权合成客户的访前事实与缺项说明
+  - 有制度依据的产品候选讨论材料
+  - 待经理复核的沟通要点与访前报告草稿
+outOfScope:
+  - 实际经理复核记录的生成与持久化
+  - CRM 写入及自动发送
+  - 产品购买和转账
+  - 真实客户生产服务
+sourceReferences:
+  - employee-agent@0503bab254d52ac496bcf5fd51e23532aee975fe/examples/wealth-manager-reference-role-pack
+  - employee-agent@0503bab254d52ac496bcf5fd51e23532aee975fe/server/_core/wealth-model-content.ts

@@ -91,6 +91,20 @@
   ],
   "domainPacks": [
     {
+      "id": "wealth-service-preparation",
+      "version": "0.1.0",
+      "displayName": "客户经理访前服务准备（待宿主验收）",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/wealth/service-preparation",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["wealth.previsit-context.query", "wealth.allocation-context.query"],
+      "dependencies": [
+        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"},
+        {"kind": "capability-pack", "id": "wealth-allocation-context", "version": "0.1.0"}
+      ],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "wealth-shared-facts",
       "version": "0.1.1",
       "displayName": "财富事实描述（候选）",
@@ -259,6 +273,15 @@
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "wealth-allocation-context",
+      "version": "0.1.0",
+      "displayName": "财富产品候选依据（待运行接线验收）",
+      "source": "repo://capability-packs/wealth-allocation-context",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["wealth.allocation-context.query"],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
     {
       "id": "wealth-customer-context",
       "version": "0.1.0",
@@ -480,7 +503,8 @@
       "displayName": "岗位智能体财富参考 Provider",
       "source": "repo://providers/employee-agent",
       "capabilities": [
-        "wealth.previsit-context.query"
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {

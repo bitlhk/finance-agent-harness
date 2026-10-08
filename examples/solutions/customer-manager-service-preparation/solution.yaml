@@ -1,0 +1,32 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: customer-manager-service-preparation-candidate
+displayName: 客户经理访前准备（候选，未部署）
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.15
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: employee-assisted
+  version: 0.1.0
+  source: repo://profiles
+domainPackRefs:
+  - id: wealth-service-preparation
+    version: 0.1.0
+    source: repo://domain-packs/wealth/service-preparation
+capabilityPackRefs:
+  - id: wealth-manager-previsit
+    version: 0.1.0
+    source: repo://capability-packs/wealth-manager-previsit
+  - id: wealth-allocation-context
+    version: 0.1.0
+    source: repo://capability-packs/wealth-allocation-context
+providerRefs:
+  - id: employee-agent-reference
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/employee-agent
+modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: wealth-management
+  version: 0.2.3
+  source: git+https://github.com/bitlhk/finance-skill-eval.git@e960d2e#packs/finance/wealth-management
