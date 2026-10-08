@@ -93,3 +93,10 @@ MCP 查询 `COMPLETED` 仅表示取得上下文，不代表整个访前业务流
 
 当前只验证本地合成 MCP 和 OpenJiuwen 工具装配；员工目录接线、真实授权联调、
 经理复核持久化与 CRM 确认写入仍待完成，不得据此启用线上场景。
+
+`EmployeeAgentWealthFactoryV01` 复用已有 `ManagedProviderFactoriesV01` 注册与
+`BoundFinanceProvider` 授权包装。它由员工 Host 显式传入可信 Runtime 身份、
+逐次 Token 供应器及可撤销的 adoption-owner 绑定，不提供无参构造或自动
+ServiceLoader 注册，避免现有模拟银行 Host 意外获得员工工具。
+连接类型为 `employee-agent-platform-mcp.v1`，拒绝复用 `synthetic-bank-http.v1`。
+工厂创建本身不读取客户、不解析员工绑定、不申请 Token，也不授予权限。

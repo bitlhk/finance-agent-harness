@@ -5,6 +5,12 @@
   "employeeAgentSourceCommit": "0503bab254d52ac496bcf5fd51e23532aee975fe",
   "checks": [
     {
+      "command": "mvn -pl providers/employee-agent -am test -q",
+      "exitCode": 0,
+      "newFactoryTests": 3,
+      "scope": "Factory registration is side-effect-free; simulator identity and ungranted allocation access rejected. Host wiring is still pending."
+    },
+    {
       "command": "mvn test -q",
       "exitCode": 0,
       "tests": 395,
@@ -33,7 +39,7 @@
   },
   "releaseGatesPending": [
     "Dedicated synthetic employee identity and customer assignment verified",
-    "Managed employee-assisted host and provider factory wiring",
+    "Managed employee-assisted host wiring to the explicitly registered Provider factory",
     "Catalog scenario and review interaction",
     "Persistent manager review with actor, report version and reason",
     "Confirmed synthetic CRM followup and cancellation",
