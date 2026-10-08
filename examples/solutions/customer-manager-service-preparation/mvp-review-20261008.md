@@ -109,6 +109,10 @@ java -cp "target/classes:$(cat target/demo-classpath.txt)" \
 ```
 
 打开 `http://127.0.0.1:18741/`；不得直接反代为生产入口。
+本机预览默认接受 `127.0.0.1` 和 `localhost` 的监听端口。浏览器端口转发时，
+启动前用 `SERVICE_PREPARATION_PREVIEW_ORIGINS=http://localhost:49291` 显式登记实际
+转发地址（多个用逗号分隔）。只允许 HTTP 回环地址，Host/Origin 白名单和 CSRF
+仍生效；不能使用通配符或将任意请求 Host 自动加入白名单。
 可选 `--native-model` 只从现有 `FINANCE_AGENT_MODEL*` 服务端配置读取模型连接；
 缺配置失败退出，不提供默认密钥。该参数不会把受控客户数据源换成线上 CRM。
 

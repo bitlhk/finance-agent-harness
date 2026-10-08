@@ -16,6 +16,17 @@ import java.util.concurrent.atomic.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ServicePreparationTest {
+    @Test void previewAllowsOnlyExplicitLoopbackOriginsAndUnambiguousSessionCookie() {
+        var origins=ServicePreparationDemo.previewOrigins(18741,"http://localhost:49291");
+        assertTrue(origins.contains("http://localhost:49291"));
+        assertTrue(origins.contains("http://127.0.0.1:18741"));
+        assertFalse(origins.contains("http://localhost:49292"));
+        for(String origin:List.of("http://evil.test:49291","http://localhost.evil.test:49291","http://localhost:49291/x","http://u@localhost:49291"))
+            assertThrows(IllegalArgumentException.class,()->ServicePreparationDemo.previewOrigins(18741,origin));
+        assertTrue(ServicePreparationDemo.hasSessionCookie("lang=zh; prep=test; other=1","test"));
+        assertFalse(ServicePreparationDemo.hasSessionCookie("prep=wrong; prep=test","test"));
+        assertFalse(ServicePreparationDemo.hasSessionCookie(null,"test"));
+    }
     @TempDir Path files;
     HttpServer server;
     ServicePreparation host;

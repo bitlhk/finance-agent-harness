@@ -34,6 +34,7 @@ public final class ServicePreparationDemo {
         int port=Integer.parseInt(args[1]);Path out=Path.of(args[2]);
         if (port==8090 || port==18148 || port==18290) throw new IllegalArgumentException("USE_ISOLATED_PORT");
         boolean nativeModel=List.of(args).contains("--native-model");
+        Set<String> origins=previewOrigins(port,System.getenv("SERVICE_PREPARATION_PREVIEW_ORIGINS"));
         var executor=Executors.newFixedThreadPool(8);
         var source=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         source.setExecutor(executor);
@@ -74,8 +75,8 @@ public final class ServicePreparationDemo {
         String cookie=UUID.randomUUID().toString();String csrf=UUID.randomUUID().toString();
         http.createContext("/",x->{
             try {
-                String authorityHeader="127.0.0.1:"+port;
-                if(!authorityHeader.equals(x.getRequestHeaders().getFirst("Host"))) {reply(x,403,Map.of("error","HOST_REJECTED"));return;}
+                String authorityHeader=x.getRequestHeaders().getFirst("Host");
+                if(!origins.contains("http://"+authorityHeader)) {reply(x,403,Map.of("error","HOST_REJECTED"));return;}
                 String path=x.getRequestURI().getPath();
                 if(path.equals("/") && x.getRequestMethod().equals("GET")) {
                     try(var in=ServicePreparationDemo.class.getResourceAsStream("/service-preparation.html")) {
@@ -90,9 +91,9 @@ public final class ServicePreparationDemo {
                     reply(x,200,Map.of("csrf",csrf,"customers",host.customers("synthetic-owner"),"assets",assets,
                         "mode",nativeModel?"SYNTHETIC_SOURCE_NATIVE_MODEL":"CONTROLLED_HTTP_FIXTURE"));return;
                 }
-                if(!("prep="+cookie).equals(x.getRequestHeaders().getFirst("Cookie"))) throw new SecurityException("LOGIN_REQUIRED");
+                if(!hasSessionCookie(x.getRequestHeaders().getFirst("Cookie"),cookie)) throw new SecurityException("LOGIN_REQUIRED");
                 if(!"POST".equals(x.getRequestMethod()) || !csrf.equals(x.getRequestHeaders().getFirst("X-CSRF-Token"))
-                        || !("http://"+authorityHeader).equals(x.getRequestHeaders().getFirst("Origin"))) throw new SecurityException("REQUEST_REJECTED");
+                        || !origins.contains(Objects.toString(x.getRequestHeaders().getFirst("Origin"),""))) throw new SecurityException("REQUEST_REJECTED");
                 byte[] bytes=x.getRequestBody().readNBytes(8193);if(bytes.length>8192)throw new IllegalArgumentException("INPUT_TOO_LONG");
                 JsonNode input=HarnessJson.mapper().readTree(bytes);
                 Object result=switch(path) {
@@ -112,6 +113,23 @@ public final class ServicePreparationDemo {
     static void exact(JsonNode value,Set<String> expected) {
         var fields=new HashSet<String>();value.fieldNames().forEachRemaining(fields::add);
         if(!value.isObject() || !fields.equals(expected))throw new IllegalArgumentException("HOST_OWNED_FIELDS");
+    }
+    static Set<String> previewOrigins(int port,String configured) {
+        var origins=new HashSet<>(Set.of("http://127.0.0.1:"+port,"http://localhost:"+port));
+        if(configured!=null && !configured.isBlank()) for(String entry:configured.split(",")) {
+            URI u=URI.create(entry.trim());
+            if(!"http".equals(u.getScheme()) || !("localhost".equals(u.getHost()) || "127.0.0.1".equals(u.getHost()))
+                    || u.getPort()<1 || u.getPort()>65535 || u.getRawUserInfo()!=null
+                    || !u.getRawPath().isEmpty() || u.getRawQuery()!=null || u.getRawFragment()!=null)
+                throw new IllegalArgumentException("LOOPBACK_PREVIEW_ORIGIN_REQUIRED");
+            origins.add(u.toString());
+        }
+        return Set.copyOf(origins);
+    }
+    static boolean hasSessionCookie(String header,String expected) {
+        if(header==null) return false;
+        var matches=Arrays.stream(header.split(";")).map(String::trim).filter(c->c.startsWith("prep=")).toList();
+        return matches.size()==1 && matches.get(0).equals("prep="+expected);
     }
     static Map<String,String> assetManifest() throws Exception {
         Path root=Path.of(System.getProperty("user.dir")).toAbsolutePath();
