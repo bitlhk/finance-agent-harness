@@ -100,6 +100,19 @@ public final class EmployeeAgentWealthSession implements AutoCloseable {
         return value;
     }
 
+    /** Recheck read/save access without issuing a token or contacting CRM. */
+    public Authority authorizePrevisit(String customerRef) {
+        Authority value = current();
+        String capability = EmployeeAgentWealthProvider.WEALTH_PREVISIT_CONTEXT_QUERY;
+        if (!installedCapabilities.contains(capability)
+                || !value.grant().subjects().contains(required(customerRef))
+                || !value.grant().purposes().contains("WEALTH_PREVISIT")
+                || !value.grant().scopes().containsAll(requirements.get(capability))) {
+            throw new SecurityException("HOST_GRANT_REJECTED");
+        }
+        return value;
+    }
+
     @Override public void close() { closed.set(true); }
 
     /** Server-verified snapshot. Never deserialize this record from a chat/build request. */

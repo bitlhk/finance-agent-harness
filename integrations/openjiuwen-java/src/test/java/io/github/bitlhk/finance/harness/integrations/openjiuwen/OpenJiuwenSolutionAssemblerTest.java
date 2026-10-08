@@ -457,20 +457,21 @@ class OpenJiuwenSolutionAssemblerTest {
         try (var solution = new OpenJiuwenSolutionAssembler().assemble(root(), root().resolve(
                 "examples/solutions/customer-manager-service-preparation/solution.yaml"),
                 agent, Map.of("employee-agent-reference", provider), defaults, true)) {
-            assertEquals(2, solution.lock().installations().size());
+            assertEquals(1, solution.lock().installations().size());
             assertTrue(agent.getSystemPromptBuilder().hasSection(section));
             String prompt = agent.getSystemPromptBuilder().build();
             for (String heading : List.of("客户洞察", "事实汇集", "服务建议", "经理复核")) {
                 assertTrue(prompt.contains(heading));
             }
             assertTrue(prompt.contains("待经理复核的草稿"));
-            for (String tool : List.of("wealth_previsit_context_query", "wealth_allocation_context_query")) {
+            assertNull(agent.getAbilityManager().get("wealth_allocation_context_query"));
+            for (String tool : List.of("wealth_previsit_context_query")) {
                 assertNotNull(agent.getAbilityManager().get(tool));
                 var output = (Map<?, ?>) ((Tool) Runner.resourceMgr().getTool(tool))
                         .invoke(Map.of("customerRef", "syn-customer-1"));
                 assertEquals("COMPLETED", output.get("status"));
             }
-            assertEquals(Set.of("wealth.previsit-context.query", "wealth.allocation-context.query"),
+            assertEquals(Set.of("wealth.previsit-context.query"),
                     calls.stream().map(CapabilityRequestV1::capabilityId).collect(java.util.stream.Collectors.toSet()));
             assertTrue(calls.stream().allMatch(call -> call.context().principalType() == FinanceContextV1.PrincipalType.EMPLOYEE));
         }
