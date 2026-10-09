@@ -134,6 +134,9 @@ public final class OpenJiuwenSolutionAssembler {
             }
         }
         validateCapabilityCoverage(loadedDomainPacks, loadedCapabilityPacks);
+        if (loadedCapabilityPacks.isEmpty() && (loadedDomainPacks.isEmpty()
+                || loadedDomainPacks.stream().anyMatch(pack -> pack.skills().isEmpty())))
+            throw new IllegalArgumentException("METHOD_ONLY_REQUIRES_INSTALLED_SKILL");
         Map<String, OpenJiuwenCapabilityInstaller.ProviderBinding> providerBindings =
                 resolveProviderBindings(spec, providers, loadedCapabilityPacks);
         Set<String> toolNames = new LinkedHashSet<>();
@@ -465,6 +468,7 @@ public final class OpenJiuwenSolutionAssembler {
             Map<String, FinanceProvider> providers,
             List<FinanceCapabilityPackV1> capabilityPacks) {
         if (spec.providerRefs().isEmpty()) {
+            if (capabilityPacks.isEmpty() && spec.capabilityBindings().isEmpty()) return Map.of();
             throw new IllegalArgumentException("At least one Provider reference is required");
         }
         Map<String, ProviderRef> references = new LinkedHashMap<>();

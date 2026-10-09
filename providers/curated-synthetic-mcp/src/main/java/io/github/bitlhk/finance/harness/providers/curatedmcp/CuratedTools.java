@@ -45,9 +45,10 @@ public final class CuratedTools {
     }
     static Map<String, Object> arguments(Tool tool, Map<String, Object> parameters, String subject, CuratedSourceConfig.Subject policy) {
         var args = new LinkedHashMap<String, Object>(parameters);
-        Set<String> allowed = tool.selector().isEmpty() ? Set.of() : Set.of(tool.selector());
+        Set<String> allowed = tool.selector().isEmpty() ? Set.of() : tool.selector().equals("customer_id")
+                ? Set.of("customer_id", "synthetic_customer_id") : Set.of(tool.selector());
         if (tool.name().equals("prepare_wealth_allocation_context")) {
-            allowed = Set.of("customer_id", "investable_amount", "investment_horizon_years", "liquidity_ratio");
+            allowed = Set.of("customer_id", "synthetic_customer_id", "investable_amount", "investment_horizon_years", "liquidity_ratio");
             for (String key : List.of("investable_amount", "investment_horizon_years", "liquidity_ratio")) {
                 Object value = args.get(key);
                 if (args.containsKey(key)) {
@@ -71,7 +72,14 @@ public final class CuratedTools {
             if (ref == null || ref.isBlank()) throw new IllegalArgumentException("CURATED_SELECTOR_REQUIRED");
             if (tool.selector().equals("customer_id")) {
                 if (!subject.equals(ref)) throw new SecurityException("CURATED_SUBJECT_MISMATCH");
-                ref = policy.customerId();
+                if ("BOUND_SUBJECT".equals(policy.customerSelection())) {
+                    if (args.containsKey("synthetic_customer_id")) throw new IllegalArgumentException("CURATED_SELECTION_NOT_ENABLED");
+                    ref = policy.customerId();
+                } else {
+                    Object selected = args.remove("synthetic_customer_id");
+                    if (!(selected instanceof String id) || id.isBlank()) throw new IllegalArgumentException("CURATED_SYNTHETIC_SELECTOR_REQUIRED");
+                    ref = id;
+                }
             }
             args.put(tool.selector(), ref);
         }

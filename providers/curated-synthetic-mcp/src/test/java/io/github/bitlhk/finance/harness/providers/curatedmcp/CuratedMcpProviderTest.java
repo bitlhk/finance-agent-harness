@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
+import io.github.bitlhk.finance.harness.core.observation.*;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,7 +31,7 @@ class CuratedMcpProviderTest {
     volatile CountDownLatch releaseDelete = new CountDownLatch(0);
     AtomicReference<ManagedProviderFactoryV01.SourceSession> session = new AtomicReference<>(
             new ManagedProviderFactoryV01.SourceSession("bank-secret-never-forward", "host-customer", "actor", "host-session", Instant.now().plusSeconds(300)));
-    volatile boolean isError, wrongIdentity, schemaMismatch, sse, structuredContent;
+    volatile boolean isError, wrongIdentity, schemaMismatch, sse, structuredContent, stateless;
     volatile Runnable afterList = () -> {};
     volatile Runnable afterCall = () -> {};
     @FunctionalInterface interface Attack { boolean respond(String method, com.sun.net.httpserver.HttpExchange exchange) throws java.io.IOException; }
@@ -43,6 +44,7 @@ class CuratedMcpProviderTest {
         serverExecutor = Executors.newVirtualThreadPerTaskExecutor();server.setExecutor(serverExecutor);
         server.createContext("/mcp", exchange -> {
             requests.incrementAndGet();
+            if (stateless) exchange.getResponseHeaders().set("X-Finance-Source-Sha256", "a".repeat(64));
             assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
             try {
                 if (exchange.getRequestMethod().equals("GET")) {
@@ -69,11 +71,14 @@ class CuratedMcpProviderTest {
                 String method = body.path("method").asText();
                 if (method.equals("initialize")) {
                     assertNull(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"), "Initialize must not resume a session");
-                    String id = initializeSessionId.get();active.add(id);sessions.add(id);
-                    exchange.getResponseHeaders().set("Mcp-Session-Id", id);
+                    if (!stateless) {
+                        String id = initializeSessionId.get();active.add(id);sessions.add(id);
+                        exchange.getResponseHeaders().set("Mcp-Session-Id", id);
+                    }
                     result = Map.of("protocolVersion", "2025-06-18", "capabilities", Map.of("tools", Map.of()), "serverInfo", Map.of("name", "synthetic-test", "version", "1"));
                 } else {
-                    assertTrue(active.contains(exchange.getRequestHeaders().getFirst("Mcp-Session-Id")));
+                    if (stateless) assertNull(exchange.getRequestHeaders().getFirst("Mcp-Session-Id"));
+                    else assertTrue(active.contains(exchange.getRequestHeaders().getFirst("Mcp-Session-Id")));
                     if (method.equals("notifications/initialized")) { exchange.sendResponseHeaders(202, -1);return; }
                     if (method.equals("tools/list")) {
                         result = Map.of("tools", CuratedTools.ALL.stream().map(t -> Map.of("name", t.name(), "inputSchema", schema(t, schemaMismatch))).toList());
@@ -152,6 +157,132 @@ class CuratedMcpProviderTest {
         return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
                 timeout, session::get, () -> null, ignored -> {}), config());
     }
+    CuratedMcpProvider selectedCustomers() {
+        stateless = true;
+        var source = new CuratedSourceConfig("curated-synthetic-source.v3", endpoint, "1.0.0", config().toolSchemaPins(),
+                Map.of("host-customer", new CuratedSourceConfig.Subject(null,
+                        Map.of("get_customer_profile", Set.of("C005", "C006")), "SYNTHETIC_ALLOWLIST")),
+                new CuratedSourceConfig.RuntimePolicy("STATELESS_BOUNDED", "a".repeat(64)));
+        return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
+                Duration.ofSeconds(3), session::get, () -> null, ignored -> {}), source);
+    }
+    CapabilityRequestV1 selectedRequest(String id) {
+        return request("get_customer_profile", Map.of("customer_id", "host-customer", "synthetic_customer_id", id));
+    }
+    @Test void selectedCustomersPreserveSourceIdentityAndRejectUnconfiguredResourcesBeforeHttp() {
+        var provider = selectedCustomers();
+        var grant = new BoundFinanceProvider.Grant("actor", FinanceContextV1.PrincipalType.CUSTOMER,
+                Set.of("host-customer"), Set.of("synthetic-evaluation"), Set.of(CuratedTools.named("get_customer_profile").scope()),
+                "host-session", "test", Instant.now().plusSeconds(30));
+        var bound = new BoundFinanceProvider(provider, () -> grant, new CuratedMcpFactoryV01().requirements());
+        for (String id : List.of("C005", "C006")) {
+            var result = bound.query(selectedRequest(id));
+            assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+            assertEquals(id, HarnessJson.mapper().valueToTree(result.data()).at("/sourceResult/profile/customerId").asText());
+        }
+        assertEquals(List.of("C005", "C006"), calls.stream().map(c -> c.at("/params/arguments/customer_id").asText()).toList());
+        int before = requests.get();
+        for (String id : List.of("C007", "I001", "host-customer"))
+            assertEquals("NOT_AUTHORIZED", bound.query(selectedRequest(id)).error().failureClass());
+        assertThrows(SecurityException.class, () -> bound.query(request("get_customer_profile", Map.of("customer_id", "C005", "synthetic_customer_id", "C005"))));
+        assertEquals("INVALID_INPUT", provider.query(request("get_customer_profile", Map.of())).error().failureClass());
+        assertEquals(before, requests.get());assertTrue(sessions.isEmpty());assertTrue(active.isEmpty());
+    }
+    @Test void selectedCustomersStillRequireCurrentSessionAndGrant() {
+        var provider = selectedCustomers();
+        var request = selectedRequest("C005");
+        var initial = session.get();
+        var invalid = Arrays.asList(null,
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "other", "actor", "host-session", Instant.now().plusSeconds(30)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "other", "host-session", Instant.now().plusSeconds(30)),
+                new ManagedProviderFactoryV01.SourceSession("secret", "host-customer", "actor", "other", Instant.now().plusSeconds(30)));
+        for (var value : invalid) {
+            session.set(value);
+            assertEquals("NOT_AUTHORIZED", provider.query(request).error().failureClass());
+        }
+        session.set(initial);
+        var grants = new AtomicReference<>(new BoundFinanceProvider.Grant("actor", FinanceContextV1.PrincipalType.CUSTOMER,
+                Set.of("host-customer"), Set.of("synthetic-evaluation"), Set.of(), "host-session", "test", Instant.now().plusSeconds(30)));
+        var bound = new BoundFinanceProvider(provider, grants::get, new CuratedMcpFactoryV01().requirements());
+        assertThrows(SecurityException.class, () -> bound.query(request));
+        assertEquals(0, requests.get());assertTrue(calls.isEmpty());
+    }
+    @Test void selectedCustomerRevocationBeforeDispatchAndBeforeDeliveryDoesNotLeakResult() {
+        var provider = selectedCustomers();var initial = session.get();
+        afterList = () -> session.set(null);
+        assertEquals("NOT_AUTHORIZED", provider.query(selectedRequest("C005")).error().failureClass());
+        assertTrue(calls.isEmpty());
+        session.set(initial);afterList = () -> {};afterCall = () -> session.set(null);
+        var result = provider.query(selectedRequest("C006"));
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());assertTrue(active.isEmpty());
+    }
+    @Test void selectedCustomerCannotAcceptEvenAnotherAllowlistedCustomersResponse() {
+        var provider = selectedCustomers();
+        mutateResult = data -> {
+            var profile = new LinkedHashMap<>((Map<String, Object>) data.get("profile"));
+            profile.put("customerId", "C006");data.put("profile", profile);
+        };
+        var result = provider.query(selectedRequest("C005"));
+        assertEquals("NOT_AUTHORIZED", result.error().failureClass());assertTrue(result.data().isEmpty());
+        assertEquals(1, calls.size());
+    }
+    CuratedMcpProvider observed(java.util.function.Supplier<ObservationRun> run,
+            java.util.function.Consumer<ManagedProviderFactoryV01.HttpAttempt> attempts) {
+        return new CuratedMcpProvider(new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:1"),
+                Duration.ofSeconds(2), session::get, run, attempts), config());
+    }
+    @Test void httpEvidenceHasExplicitParentsAndNoCustomerContent() throws Exception {
+        var events = new CopyOnWriteArrayList<ObservationEventV01>();
+        var attempts = new CopyOnWriteArrayList<ManagedProviderFactoryV01.HttpAttempt>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        try (var parent = run.bindParent("capability-parent")) {
+            assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> run, attempts::add)
+                    .query(request("get_wealth_policy_basis", Map.of())).status());
+        }
+        var exchanges = events.stream().filter(e -> e.component().equals("provider-mcp")).toList();
+        assertEquals(2, exchanges.size());
+        assertTrue(exchanges.stream().allMatch(e -> "capability-parent".equals(e.parentSpanId())));
+        var ends = events.stream().filter(e -> e.component().equals("provider-http") && e.phase() == ObservationEventV01.Phase.END).toList();
+        assertFalse(ends.isEmpty());
+        assertTrue(ends.stream().allMatch(e -> e.parentSpanId().equals(exchanges.getFirst().spanId())));
+        assertTrue(ends.stream().anyMatch(e -> "200".equals(e.links().get("httpStatus"))
+                && e.dispatch() == ObservationEventV01.Dispatch.SENT));
+        assertTrue(attempts.stream().anyMatch(a -> a.method().equals("DELETE") && a.status() == 200));
+        assertTrue(attempts.stream().allMatch(a -> a.route().equals("/mcp")));
+        String serialized = HarnessJson.mapper().writeValueAsString(events);
+        for (String forbidden : List.of("bank-secret", "host-customer", "C005", "rules", "Mcp-Session-Id"))
+            assertFalse(serialized.contains(forbidden));
+        int count = events.size(); Thread.sleep(50); assertEquals(count, events.size(), "Events must close before Provider returns");
+    }
+    @Test void observationFailuresDoNotRewriteCompletedReadsOrRetry() {
+        var run = new ObservationRun("request", "boot", "instance", e -> { throw new IllegalStateException("SINK_FAILED"); });
+        assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> run, e -> { throw new IllegalStateException("ATTEMPT_FAILED"); })
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(run.droppedEvents() > 0); assertEquals(1, calls.size());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, observed(() -> { throw new IllegalStateException("SUPPLIER_FAILED"); }, e -> {})
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertEquals(2, calls.size());
+    }
+    @Test void rejectedAuthorityHasNoHttpAttemptOrSyntheticObservation() {
+        session.set(null);
+        var events = new ArrayList<ObservationEventV01>(); var attempts = new ArrayList<ManagedProviderFactoryV01.HttpAttempt>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        assertEquals(CapabilityResultV1.Status.FAILED, observed(() -> run, attempts::add)
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(events.isEmpty()); assertTrue(attempts.isEmpty()); assertEquals(0, requests.get());
+    }
+    @Test void connectionFailureDoesNotClaimRequestWasSent() {
+        server.stop(0);
+        var events = new CopyOnWriteArrayList<ObservationEventV01>();
+        var run = new ObservationRun("request", "boot", "instance", e -> { events.add(e); return true; });
+        assertEquals(CapabilityResultV1.Status.FAILED, observed(() -> run, e -> fail("No response received"))
+                .query(request("get_wealth_policy_basis", Map.of())).status());
+        assertTrue(events.stream().anyMatch(e -> e.component().equals("provider-http") && e.phase() == ObservationEventV01.Phase.END));
+        assertTrue(events.stream().noneMatch(e -> e.dispatch() == ObservationEventV01.Dispatch.SENT));
+        assertTrue(events.stream().noneMatch(e -> e.links().containsKey("httpStatus")));
+    }
     CapabilityRequestV1 request(String name, Map<String, Object> args) {
         var tool = CuratedTools.named(name);
         return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, tool.capabilityId(), CapabilityRequestV1.Operation.QUERY,
@@ -216,6 +347,22 @@ class CuratedMcpProviderTest {
         assertEquals(CapabilityResultV1.Status.FAILED, provider().query(request("get_wealth_policy_basis", Map.of())).status());
         assertEquals(0, calls.size());
         assertEquals(1, deletes.get());assertTrue(active.isEmpty());
+    }
+    @Test void sourceAccessDenialIsNotAnOrdinaryUpstreamFailure() {
+        for (int status : List.of(401, 403)) for (String phase : List.of("tools/list", "tools/call")) {
+            calls.clear();
+            attack = (method, exchange) -> {
+                if (!phase.equals(method)) return false;
+                exchange.sendResponseHeaders(status, -1);
+                return true;
+            };
+            var result = provider().query(request("get_wealth_policy_basis", Map.of()));
+            assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+            assertEquals("NOT_AUTHORIZED", result.error().failureClass(), status + ":" + phase);
+            assertTrue(result.data().isEmpty());
+            assertEquals(phase.equals("tools/call") ? 1 : 0, calls.size());
+            assertTrue(active.isEmpty(), "Source refusal must not skip owned session cleanup");
+        }
     }
     @Test void expiredAuthorityAfterListStillReclaimsItsSessionWithoutCallingTool() {
         afterList = () -> session.set(new ManagedProviderFactoryV01.SourceSession("expired", "host-customer", "actor", "host-session", Instant.now().minusSeconds(1)));
@@ -525,7 +672,7 @@ class CuratedMcpProviderTest {
         assertThrows(IllegalArgumentException.class, () -> CuratedSourceConfig.load(file, "0".repeat(64)));
         var config = config();
         assertThrows(IllegalArgumentException.class, () -> new CuratedSourceConfig(config.schemaVersion(), URI.create("http://example.com/mcp"), config.contractVersion(), config.toolSchemaPins(), config.subjects()));
-        assertThrows(IllegalArgumentException.class, () -> new CuratedMcpFactoryV01().create(
+        assertThrows(IllegalArgumentException.class, () -> new CuratedMcpFactoryV01(Map.of()).create(
                 new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", endpoint, Duration.ofSeconds(1), session::get, () -> null, ignored -> {}), Map.of()));
     }
 }

@@ -46,7 +46,16 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
                 if (!current.equals(initial)) throw new SecurityException("CURATED_AUTHORITY_CHANGED");
             };
             sourcePhase = true;
-            var result = transport.call(source, authority.timeout(), tool, args, guard);
+            McpSchema.CallToolResult result;
+            try (var observation = new McpHttpObservation(authority, request)) {
+                try {
+                    result = transport.call(source, authority.timeout(), tool, args, guard, observation);
+                    observation.finish(true);
+                } catch (RuntimeException failure) {
+                    observation.finish(false);
+                    throw failure;
+                }
+            }
             guard.run();
             if (Boolean.TRUE.equals(result.isError())) return failure(request, "UPSTREAM_FAILURE", "MCP_IS_ERROR", Map.of("mcpIsError", true));
             var mapper = CuratedTools.responseMapper();
@@ -70,6 +79,9 @@ public final class CuratedMcpProvider implements DescribedFinanceProvider, Invoc
                     "contractVersion", source.contractVersion(), "inputSha256", CuratedTools.schemaPin(args),
                     "outputSha256", CuratedSourceConfig.sha(bytes), "sourceConfigSha256", source.canonicalDigest(),
                     "schemaSha256", source.toolSchemaPins().get(tool.name()), "synthetic", true));
+            if (source.runtimePolicy() != null) payload.put("sourceIdentity", Map.of(
+                    "sha256", source.runtimePolicy().sourceIdentitySha256(),
+                    "verification", "RESPONSE_HEADER_MATCHED_PIN", "authentication", "NOT_PROVIDED_BY_MARKER"));
             // COMPLETED describes this read, not a positive business decision or source readiness.
             var states = new LinkedHashMap<String, Object>();
             for (String key : List.of("decision", "status", "readiness")) if (data.has(key)) states.put(key, mapper.convertValue(data.get(key), Object.class));

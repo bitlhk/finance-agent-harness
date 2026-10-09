@@ -45,7 +45,7 @@
     },
     "capabilityPackRefs": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
@@ -55,7 +55,7 @@
     },
     "providerRefs": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
@@ -83,6 +83,20 @@
       "$ref": "#/$defs/assetRef"
     }
   },
+  "allOf": [{
+    "if": {"properties": {"providerRefs": {"maxItems": 0}}},
+    "then": {
+      "required": ["capabilityPackRefs"],
+      "properties": {
+        "capabilityPackRefs": {"maxItems": 0},
+        "domainPackRefs": {"minItems": 1},
+        "capabilityBindings": {"maxProperties": 0}
+      }
+    }
+  }, {
+    "if": {"required": ["capabilityPackRefs"], "properties": {"capabilityPackRefs": {"maxItems": 0}}},
+    "then": {"properties": {"providerRefs": {"maxItems": 0}}}
+  }],
   "$defs": {
     "runtimeRef": {
       "type": "object",

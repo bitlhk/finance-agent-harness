@@ -23,16 +23,22 @@ public final class RuntimeQualification {
     public static final Set<String> TASK_CHECKS = Set.of("task-native-confirmation", "task-repeated-confirmation",
             "task-unknown-recovery", "task-revoke-before-return", "task-owner-isolation", "task-persistent-restart",
             "task-parameter-freeze", "task-cancel-late", "task-storage-failure", "task-http-bank");
+    public static final Set<String> METHOD_CHECKS = Set.of("method-native", "method-isolation", "method-revocation",
+            "method-unknown-tool", "method-cancel", "method-model-error", "method-parameters", "method-admission",
+            "method-qualification", "method-observation", "method-sink-degradation", "method-case-workspace");
     private final List<RuntimeInventory.Artifact> artifacts;
     private final String collectorDigest, digest, source;
     private final boolean taskQualified;
+    private final boolean methodOnly;
 
     RuntimeQualification(List<RuntimeInventory.Artifact> artifacts, String collectorDigest, String digest, String source) {
-        this(artifacts, collectorDigest, digest, source, false);
+        this(artifacts, collectorDigest, digest, source, false, false);
     }
-    private RuntimeQualification(List<RuntimeInventory.Artifact> artifacts, String collectorDigest, String digest, String source, boolean taskQualified) {
+    RuntimeQualification(List<RuntimeInventory.Artifact> artifacts, String collectorDigest, String digest, String source,
+                         boolean taskQualified, boolean methodOnly) {
         this.artifacts = List.copyOf(artifacts); this.collectorDigest = collectorDigest; this.digest = digest; this.source = source;
         this.taskQualified = taskQualified;
+        this.methodOnly = methodOnly;
     }
 
     public static RuntimeQualification load(Path file, String trustedDigest) throws IOException {
@@ -43,14 +49,17 @@ public final class RuntimeQualification {
         if (!VERSION.equals(report.schemaVersion()) || report.collectors() == null || report.collectors().size() != 1)
             throw new SecurityException("QUALIFICATION_UNVERIFIED");
         Collector collector = report.collectors().getFirst();
-        var declaration = AgentScopeObservationCollector.declaration(true);
+        if (collector.evidence() == null || collector.evidence().size() != 1)
+            throw new SecurityException("COLLECTOR_QUALIFICATION_INCOMPLETE");
+        Path root = file.toRealPath().getParent();
+        Proof proof = HarnessJson.mapper().readValue(Files.readAllBytes(evidence(root, collector.evidence().getFirst())), Proof.class);
+        boolean method = "agentscope-method-qualification-evidence.v0.1".equals(proof.schemaVersion());
+        var declaration = method ? AgentScopeObservationCollector.methodDeclaration(true) : AgentScopeObservationCollector.declaration(true);
         var semantics = declaration.capabilities().stream().map(ObservationCapabilitiesV01.Capability::semanticId).collect(java.util.stream.Collectors.toSet());
         if (!declaration.collectorId().equals(collector.collectorId()) || !collector.passed() || !semantics.equals(collector.semantics())
                 || collector.evidence() == null || collector.evidence().size() != 1) throw new SecurityException("COLLECTOR_QUALIFICATION_INCOMPLETE");
-        Path root = file.toRealPath().getParent();
-        Proof proof = HarnessJson.mapper().readValue(Files.readAllBytes(evidence(root, collector.evidence().getFirst())), Proof.class);
         boolean task = "agentscope-task-qualification-evidence.v0.1".equals(proof.schemaVersion());
-        if (!(task || "agentscope-query-qualification-evidence.v0.1".equals(proof.schemaVersion())) || !"agentscope".equals(proof.family())
+        if (!(method || task || "agentscope-query-qualification-evidence.v0.1".equals(proof.schemaVersion())) || !"agentscope".equals(proof.family())
                 || !"2.0.3".equals(proof.sdkVersion()) || !"PASS".equals(proof.status()) || proof.collectorDeclaration() == null
                 || !declaration.identityDigest().equals(proof.collectorDeclaration().identityDigest())
                 || !identity(proof.artifacts(), declaration.identityDigest()).equals(collector.identity()))
@@ -72,9 +81,11 @@ public final class RuntimeQualification {
             if (Set.of("compound", "multi-turn", "missing-data").contains(check.id()) && distinct.size() != 3)
                 throw new SecurityException("QUALIFICATION_REPETITIONS_MISSING");
         }
-        if (!checks.containsAll(REQUIRED_CHECKS)) throw new SecurityException("QUALIFICATION_CHECKS_MISSING");
+        if (!checks.containsAll(method ? METHOD_CHECKS : REQUIRED_CHECKS)) throw new SecurityException("QUALIFICATION_CHECKS_MISSING");
         if (task && !checks.containsAll(TASK_CHECKS)) throw new SecurityException("TASK_QUALIFICATION_CHECKS_MISSING");
-        return new RuntimeQualification(proof.artifacts(), declaration.identityDigest(), trustedDigest, file.toUri().toString(), task);
+        if (method && proof.artifacts().stream().anyMatch(a -> a.role().startsWith("PROVIDER:")))
+            throw new SecurityException("METHOD_QUALIFICATION_MUST_NOT_INCLUDE_PROVIDER");
+        return new RuntimeQualification(proof.artifacts(), declaration.identityDigest(), trustedDigest, file.toUri().toString(), task, method);
     }
 
     private static void checkedFile(Path file, long limit) throws IOException {
@@ -105,6 +116,9 @@ public final class RuntimeQualification {
         if (!comparable(artifacts).equals(comparable(actual))) throw new SecurityException("QUALIFICATION_ARTIFACT_MISMATCH");
     }
     public String digest() { return digest; }
+    public void requireMode(boolean actualMethodOnly) {
+        if (methodOnly != actualMethodOnly) throw new SecurityException("QUALIFICATION_EXECUTION_MODE_MISMATCH");
+    }
     public void requireTask() {
         if (!taskQualified) throw new SecurityException("TASK_RUNTIME_QUALIFICATION_REQUIRED");
     }

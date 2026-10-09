@@ -31,7 +31,8 @@ class AgentScopeQueryTest {
                         ROOT.resolve("integrations/agentscope-java/target/controlled-evidence/" + RUN).toString()));
                 Files.createDirectories(directory);
                 var rows = harnesses.stream().map(h -> Map.of("modelHttp", h.model.requests, "bankHttp", h.bank.requests,
-                        "observations", h.events, "callbackThreads", h.threads, "replies", h.replies, "terminalMemoryChecks", h.memoryChecks)).toList();
+                        "observations", h.events, "callbackThreads", h.threads, "replies", h.replies, "terminalMemoryChecks", h.memoryChecks,
+                        "toolAttemptEvidence", h.session.toolAttemptEvidence())).toList();
                 Files.write(directory.resolve(c.getRequiredTestMethod().getName() + "-" + UUID.randomUUID() + ".json"),
                         HarnessJson.mapper().writerWithDefaultPrettyPrinter().writeValueAsBytes(Map.of("test", c.getDisplayName(),
                                 "testMethod", c.getRequiredTestMethod().getName(), "checkIds", c.getTags(), "status", status, "failure", failure, "sessions", rows,
@@ -41,6 +42,24 @@ class AgentScopeQueryTest {
     };
     @AfterEach void cleanup() { harnesses.forEach(Harness::close); }
     Harness harness(Response... responses) throws Exception { var h = new Harness(responses); harnesses.add(h); return h; }
+
+    @Test void toolAttemptWindowProvesZeroAndMissingIsNotComplete() throws Exception {
+        var h = harness(text("No tool needed."));
+        assertEquals("UNKNOWN", h.session.toolAttemptEvidence().get("status"));
+        h.call("Reply without tools.");
+        var evidence = h.session.toolAttemptEvidence();
+        assertEquals("COMPLETE", evidence.get("status"));
+        assertEquals(List.of(), evidence.get("attempts"));
+        assertNotNull(evidence.get("startedAt")); assertNotNull(evidence.get("endedAt"));
+    }
+
+    @Test void unknownToolSelectionIsStillAnAttemptNotZero() throws Exception {
+        var h = harness(tool("not_installed", Map.of()));
+        assertThrows(RuntimeException.class, () -> h.call("Try an unavailable tool."));
+        var evidence = h.session.toolAttemptEvidence();
+        assertEquals("PARTIAL", evidence.get("status"));
+        assertFalse(((List<?>)evidence.get("attempts")).isEmpty());
+    }
 
     private io.github.bitlhk.finance.harness.execution.CaseFileWorkspaceV1 caseFiles(Harness h) throws Exception {
         String digest = HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
@@ -59,6 +78,8 @@ class AgentScopeQueryTest {
         assertEquals(List.of(), files.evidence().get("reads"));
         assertTrue(h.session.lock().containsKey("caseWorkspace"));
         assertEquals("Read case.", h.call("Read the declared case.txt.").text());
+        assertEquals("COMPLETE", h.session.toolAttemptEvidence().get("status"));
+        assertEquals(2, ((List<?>)h.session.toolAttemptEvidence().get("attempts")).size());
         assertEquals(2, h.model.requests.size());
         assertFalse(h.model.requests.getFirst().get("rawBody").toString().contains("CASE_ONLY_9182"));
         assertTrue(h.model.requests.getLast().get("rawBody").toString().contains("CASE_ONLY_9182"));
@@ -148,14 +169,23 @@ class AgentScopeQueryTest {
         h.session = h.prepared.openSession(new AgentScopeQuerySession.Identity(h.principal, FinanceContextV1.PrincipalType.CUSTOMER,
                 h.subject, h.sessionId, "customer-self-service", "isolated", FinanceContextV1.AuthenticationLevel.STRONG, 2), h.grant::get,
                 new ModelConnection(h.model.uri(), "controlled", "fixture-key", Duration.ofSeconds(10),
-                        new ModelConnection.Generation(0.25, 0.8, 1234)));
-        assertEquals("Explicit parameters.", h.call("Hello.").text());
+                        new ModelConnection.Generation(0.25, 0.8, 1234, "disabled")));
+        var ordinary = h.input("Hello.");
+        var captures = new CopyOnWriteArrayList<Map<String, Object>>();
+        var input = new AgentScopeQuerySession.Input(ordinary.text(), ordinary.requestId(), ordinary.traceId(),
+                ordinary.businessTime(), ordinary.observation(), ordinary.parentId(),
+                new ModelDiagnostics(true, () -> true, (id, boundary, state, value) -> {
+                    if (boundary.equals("CLIENT_REQUEST_PREPARED")) captures.add(value);
+                }));
+        assertEquals("Explicit parameters.", h.session.invoke(input).block(Duration.ofSeconds(20)).text());
+        assertEquals(Map.of("type", "disabled"), captures.getFirst().get("thinking"));
         assertEquals(1, h.model.requests.size());
         var sent = HarnessJson.mapper().readTree(h.model.requests.getFirst().get("rawBody").toString());
         assertEquals("controlled", sent.path("model").asText());
         assertEquals(0.25, sent.path("temperature").asDouble());
         assertEquals(0.8, sent.path("top_p").asDouble());
         assertEquals(1234, sent.path("max_tokens").asInt());
+        assertEquals("disabled", sent.path("thinking").path("type").asText());
         assertEquals(0, h.bank.customerReads());
     }
     @Test void invalidGenerationParametersFailBeforeModelOrBankCalls() throws Exception {
@@ -166,6 +196,7 @@ class AgentScopeQueryTest {
             assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, value, 1234));
         assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 0));
         assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 32769));
+        assertThrows(IllegalArgumentException.class, () -> new ModelConnection.Generation(0.2, 0.8, 100, "enabled"));
         assertEquals(0, h.model.requests.size());
         assertEquals(0, h.bank.customerReads());
     }
@@ -253,6 +284,23 @@ class AgentScopeQueryTest {
             var h = harness(response, text("MUST_NOT_SEND"));
             assertThrows(RuntimeException.class, () -> h.call("Query."));
             assertEquals(1, h.model.requests.size()); assertEquals(0, h.bank.requests.size()); assertFalse(h.session.valid());
+        }
+    }
+    @Test void queryInputRejectionHasBoundedEvidenceAndNoProviderCall() throws Exception {
+        for (var arguments : List.of(Map.<String, Object>of("accountId", ""), Map.<String, Object>of("subjectRef", "PRIVATE_OTHER_CUSTOMER"))) {
+            var h = harness(tool("account_balance_query", arguments), text("MUST_NOT_SEND"));
+            var error = assertThrows(SecurityException.class, () -> h.call("Read authorized accounts."));
+            assertEquals("NATIVE_TOOL_ERROR_STOP", error.getMessage());
+            assertEquals(1, h.model.requests.size());
+            assertEquals(0, h.bank.customerReads());
+            assertFalse(h.session.valid());
+            var rejected = h.events.stream().filter(e -> e.operation().equals("query-input-validation")
+                    && e.phase() == ObservationEventV01.Phase.END).toList();
+            assertEquals(1, rejected.size());
+            assertEquals(ObservationEventV01.Outcome.DENIED, rejected.getFirst().outcome());
+            assertEquals("CAPABILITY_ARGUMENTS_INVALID", rejected.getFirst().links().get("responseStatus"));
+            assertEquals("account.balance.query", rejected.getFirst().links().get("capabilityId"));
+            assertFalse(h.events.toString().contains("PRIVATE_OTHER_CUSTOMER"));
         }
     }
     @Test void wrongHostAndSourceSubjectsAreDenied() throws Exception {

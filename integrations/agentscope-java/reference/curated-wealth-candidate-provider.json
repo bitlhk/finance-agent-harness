@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "curated-synthetic-mcp", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-curated-synthetic-mcp:0.1.0-SNAPSHOT",
+  "connectionKind": "synthetic-bank-http.v1",
+  "configurationFiles": [
+    {"id": "source", "pathEnvironment": "FH_CURATED_MCP_CONFIG",
+     "digestEnvironment": "FH_CURATED_MCP_CONFIG_SHA256", "maxBytes": 262144}
+  ],
+  "supports": [{
+    "pack": {"id": "curated-synthetic-wealth", "version": "1.1.0"},
+    "capabilityIds": [
+      "eval.synthetic.get-customer-portfolio.query",
+      "eval.synthetic.get-wealth-policy-basis.query",
+      "eval.synthetic.prepare-wealth-allocation-context.query",
+      "eval.synthetic.wealth-assistant-product-info.query"
+    ],
+    "operation": "QUERY"
+  }]
+}

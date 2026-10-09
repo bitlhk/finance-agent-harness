@@ -33,7 +33,7 @@
     },
     "capabilities": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "uniqueItems": true,
       "items": {
         "type": "string",
@@ -109,5 +109,12 @@
         }
       }
     }
-  }
+  },
+  "allOf": [{
+    "if": {"properties": {"capabilities": {"maxItems": 0}}},
+    "then": {
+      "required": ["skills"],
+      "properties": {"skills": {"minItems": 1}, "capabilityPackRefs": {"maxItems": 0}}
+    }
+  }]
 }

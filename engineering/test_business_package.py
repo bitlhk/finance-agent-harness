@@ -53,6 +53,22 @@ class BusinessPackageTest(unittest.TestCase):
             with zipfile.ZipFile(traversal, "w") as archive: archive.writestr("../SKILL.md", "bad")
             with self.assertRaises(PackageError): inspect(traversal)
 
+    def test_readonly_template_is_a_preserved_reference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); self.source(root)
+            (root / 'templates').mkdir()
+            (root / 'templates/answer.md').write_text('Output structure, not executable code.')
+            definition = json.loads((root / 'package-source.json').read_text())
+            definition['files'].append('templates/answer.md')
+            (root / 'package-source.json').write_text(json.dumps(definition))
+            package = root / 'template.zip'
+            build(root, package)
+            manifest = inspect(package)['manifest']
+            self.assertEqual(next(f['role'] for f in manifest['files'] if f['path'] == 'templates/answer.md'), 'REFERENCE')
+            from business_package import safe_name
+            for name in ('templates/code.py', 'templates/code.js', 'templates/code.sh'):
+                with self.assertRaises(PackageError): safe_name(name)
+
 
 if __name__ == "__main__":
     unittest.main()

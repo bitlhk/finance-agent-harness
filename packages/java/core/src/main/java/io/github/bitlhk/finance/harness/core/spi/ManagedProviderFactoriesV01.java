@@ -16,7 +16,6 @@ public final class ManagedProviderFactoriesV01 {
                     || values.putIfAbsent(factory.providerId(), factory) != null)
                 throw new IllegalArgumentException("PROVIDER_FACTORY_INVALID_OR_DUPLICATE");
         }
-        if (values.isEmpty()) throw new IllegalArgumentException("PROVIDER_FACTORIES_MISSING");
         factories = Collections.unmodifiableMap(values);
     }
 
@@ -39,16 +38,29 @@ public final class ManagedProviderFactoriesV01 {
     public Map<String, FinanceProvider> create(ManagedProviderFactoryV01.Connection connection,
                                               Supplier<BoundFinanceProvider.Grant> grants,
                                               Set<String> selectedProviders) {
-        if (selectedProviders.isEmpty()) throw new IllegalArgumentException("PROVIDER_FACTORY_SELECTION_EMPTY");
-        var pending = new LinkedHashMap<String, ManagedProviderFactoryV01>();
-        var remaining = new ArrayDeque<>(selectedProviders);
-        while (!remaining.isEmpty()) {
-            String id = remaining.removeFirst();
-            if (pending.containsKey(id)) continue;
-            var factory = factories.get(id);
-            if (factory == null) throw new IllegalArgumentException("PROVIDER_FACTORY_DEPENDENCY_UNAVAILABLE");
-            pending.put(id, factory); remaining.addAll(factory.dependencies());
-        }
+        return create(connection, grants, selectedProviders, Map.of());
+    }
+
+    public Map<String, Map<String, String>> configurationDigests(Set<String> selectedProviders) {
+        var result = new LinkedHashMap<String, Map<String, String>>();
+        closure(selectedProviders).forEach((id, factory) -> {
+            var digests = Map.copyOf(factory.configurationDigests());
+            digests.forEach((key, digest) -> {
+                if (!key.matches("[a-z][a-z0-9-]{0,63}") || !digest.matches("[a-f0-9]{64}"))
+                    throw new IllegalArgumentException("PROVIDER_CONFIGURATION_IDENTITY_INVALID");
+            });
+            if (!digests.isEmpty()) result.put(id, digests);
+        });
+        return Map.copyOf(result);
+    }
+
+    public Map<String, FinanceProvider> create(ManagedProviderFactoryV01.Connection connection,
+                                              Supplier<BoundFinanceProvider.Grant> grants,
+                                              Set<String> selectedProviders,
+                                              Map<String, Map<String, String>> expectedConfiguration) {
+        if (!configurationDigests(selectedProviders).equals(expectedConfiguration))
+            throw new IllegalArgumentException("PROVIDER_CONFIGURATION_LOCK_MISMATCH");
+        var pending = closure(selectedProviders);
         var bound = new LinkedHashMap<String, BoundFinanceProvider>();
         while (!pending.isEmpty()) {
             boolean progressed = false;
@@ -74,5 +86,18 @@ public final class ManagedProviderFactoriesV01 {
         var observed = new LinkedHashMap<String, FinanceProvider>();
         bound.forEach((id, provider) -> observed.put(id, new ObservedFinanceProvider(provider, id, connection.observation())));
         return Map.copyOf(observed);
+    }
+
+    private LinkedHashMap<String, ManagedProviderFactoryV01> closure(Set<String> selectedProviders) {
+        var pending = new LinkedHashMap<String, ManagedProviderFactoryV01>();
+        var remaining = new ArrayDeque<>(selectedProviders);
+        while (!remaining.isEmpty()) {
+            String id = remaining.removeFirst();
+            if (pending.containsKey(id)) continue;
+            var factory = factories.get(id);
+            if (factory == null) throw new IllegalArgumentException("PROVIDER_FACTORY_DEPENDENCY_UNAVAILABLE");
+            pending.put(id, factory); remaining.addAll(factory.dependencies());
+        }
+        return pending;
     }
 }

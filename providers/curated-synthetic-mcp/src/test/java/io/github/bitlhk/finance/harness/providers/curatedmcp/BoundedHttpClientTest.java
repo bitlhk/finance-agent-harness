@@ -9,6 +9,34 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BoundedHttpClientTest {
+    @Test void pinnedSourceIdentityMustMatchBeforeResponseParsing() throws Exception {
+        var headers = new AtomicReference<List<String>>(List.of());
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/mcp", exchange -> {
+            headers.get().forEach(v -> exchange.getResponseHeaders().add("X-Finance-Source-Sha256", v));
+            exchange.sendResponseHeaders(200, 2);
+            try (var body = exchange.getResponseBody()) { body.write("{}".getBytes()); }
+        });
+        server.start();
+        var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
+                "http://127.0.0.1:" + server.getAddress().getPort() + "/mcp")).build();
+        try {
+            for (var values : List.of(List.<String>of(), List.of("b".repeat(64)), List.of("a".repeat(64), "a".repeat(64)))) {
+                headers.set(values);
+                try (var builder = new BoundedHttpClient.Builder(java.time.Duration.ofSeconds(2), true, "a".repeat(64))) {
+                    var client = builder.build(); var consumed = new AtomicBoolean();
+                    assertThrows(java.io.IOException.class, () -> client.send(request, info -> {
+                        consumed.set(true); return HttpResponse.BodySubscribers.ofString(java.nio.charset.StandardCharsets.UTF_8);
+                    }));
+                    assertFalse(consumed.get());
+                }
+            }
+            headers.set(List.of("a".repeat(64)));
+            try (var builder = new BoundedHttpClient.Builder(java.time.Duration.ofSeconds(2), true, "a".repeat(64))) {
+                assertEquals("{}", builder.build().send(request, HttpResponse.BodyHandlers.ofString()).body());
+            }
+        } finally { server.stop(0); }
+    }
     @Test void statelessPolicyRejectsSessionHeadersBeforeSdkAndDoesNotGuessCleanupOwnership() throws Exception {
         var calls = new AtomicInteger();
         var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);

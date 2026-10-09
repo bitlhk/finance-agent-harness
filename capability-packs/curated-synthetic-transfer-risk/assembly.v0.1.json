@@ -3,7 +3,7 @@
   "kind": "capability-pack",
   "owner": {
     "id": "curated-synthetic-transfer-risk",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "requiredFeatures": [
     "query.v1",

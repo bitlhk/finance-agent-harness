@@ -27,6 +27,7 @@ public record FinanceDomainPackV1(
         packId = matching(packId, "packId", PACK_ID);
         version = required(version, "version");
         profile = required(profile, "profile");
+        Objects.requireNonNull(capabilities, "capabilities must be explicit, including an empty method-only declaration");
         capabilities = immutableStrings(capabilities);
         capabilityPackRefs = capabilityPackRefs == null ? List.of() : List.copyOf(capabilityPackRefs);
         capabilityPackRefs.forEach(ref -> Objects.requireNonNull(ref, "capabilityPackRef"));
@@ -35,6 +36,8 @@ public record FinanceDomainPackV1(
         outOfScope = immutableStrings(outOfScope);
         sourceReferences = immutableStrings(sourceReferences);
         skills.forEach(skill -> Objects.requireNonNull(skill, "skill"));
+        if (capabilities.isEmpty() && (skills.isEmpty() || !capabilityPackRefs.isEmpty()))
+            throw new IllegalArgumentException("METHOD_ONLY_REQUIRES_SKILL_AND_NO_CAPABILITY_DEPENDENCIES");
     }
 
     public record AssetRef(String id, String version) {

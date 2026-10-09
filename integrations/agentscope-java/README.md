@@ -27,6 +27,15 @@ Raw requests, each repeated test, JUnit reports/logs, dependency tree, qualifica
 actual installation Lock and assessment are retained. The bank request totals include
 separate direct-Provider comparisons; they are not all Agent invocations.
 
+QUERY input validation also emits a bounded `query-input-validation` observation
+before invoking the native SDK tool executor. A rejected input records
+`DENIED / CAPABILITY_ARGUMENTS_INVALID` and the capability ID, not parameter
+values. This closes a diagnostic gap where native SDK validation rejected a call
+before `AgentTool.callAsync` and no Provider span existed. SDK validation, tool
+entry authorization and terminal session invalidation remain in place; this is
+not automatic parameter correction or a retry mechanism. Previously missing
+parameter evidence is not reconstructed from this new event.
+
 `FixtureBank` and `ControlledModel` are test sources. `isolatedHost/` is compiled separately
 by the script. Neither is in the integration JAR or registered as an Agent tool.
 The example bank Provider is a test-scoped dependency; a production Host supplies its own
@@ -123,9 +132,12 @@ compilation, original digest functions, local-only schema policy and the synchro
 snapshot receiver interface. It has no SDK imports or Agent loop. Old public records and
 entry points remain facades; TASK/checkpoint/recovery stay in OpenJiuwen.
 
-networknt 1.5.6 and 2.0.0 have incompatible ABIs. The common module therefore does not
-depend on either: each adapter makes a small version-specific validator call while sharing
-the same local-reference policy. No old SDK pin is upgraded to make the new adapter work.
+The common module does not depend on networknt: each adapter makes a small validator
+call while sharing the same local-reference policy. Both Java adapters now use networknt
+2.0.0, also required by the managed MCP SDK 0.17.2. The former OpenJiuwen adapter's
+1.5.6 dependency selected an incompatible ABI in the packaged Host; this is an adapter
+dependency correction, not an OpenJiuwen or AgentScope Runtime SDK upgrade. Exact Host
+classpath probes and fresh qualification are required before deploying this change.
 
 ## Fixed SDK Evidence
 

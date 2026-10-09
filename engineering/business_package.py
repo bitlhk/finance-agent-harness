@@ -38,6 +38,7 @@ def safe_name(value: str) -> str:
         raise PackageError("PACKAGE_PATH_INVALID")
     allowed = value == "skill/SKILL.md" or value == "validation-summary.json" or (
         value.startswith("references/") and path.suffix.lower() in {".md", ".txt", ".json", ".yaml", ".yml"}
+    ) or (value.startswith("templates/") and path.suffix.lower() in {".md", ".txt"}
     ) or (value.startswith("cases/") and path.suffix.lower() == ".json")
     if not allowed:
         raise PackageError("PACKAGE_FILE_TYPE_UNSUPPORTED")

@@ -18,13 +18,25 @@ public final class AgentScopeObservationCollector {
                 capability("capability.result", Boundary.PROVIDER, Set.of("capabilityId", "providerId", "harnessRequestId", "businessStatus", "at"), verified),
                 capability("model.call", Boundary.MODEL_CLIENT, Set.of("harnessRequestId", "component", "operation", "at"), verified)));
     }
+    public static ObservationCapabilitiesV01 methodDeclaration(boolean verified) {
+        return new ObservationCapabilitiesV01(ObservationCapabilitiesV01.VERSION, "agentscope-method-collector", VERSION,
+                declaration(verified).capabilities().stream()
+                        .filter(c -> Set.of("host.installation", "host.authorization", "model.call").contains(c.semanticId()))
+                        .map(c -> new Capability(c.semanticId(), c.semanticVersion(), c.boundary(), c.fields(),
+                                c.support(), c.sdkSupport(), verified ? Verification.VERIFIED : Verification.NOT_CHECKED,
+                                verified ? List.of("agentscope-method-qualification-v01") : List.of(),
+                                Availability.ENABLED, Authorization.NOT_REQUIRED)).toList());
+    }
     private static Capability capability(String id, Boundary boundary, Set<String> fields, boolean verified) {
         return new Capability(id, "0.1", boundary, fields, Support.SUPPORTED, Support.SUPPORTED,
                 verified ? Verification.VERIFIED : Verification.NOT_CHECKED,
                 verified ? List.of("agentscope-query-qualification-v01") : List.of(), Availability.ENABLED, Authorization.NOT_REQUIRED);
     }
     public static List<Requirement> baseline() {
-        return declaration(false).capabilities().stream().map(c -> new Requirement(c.semanticId(), c.semanticVersion(),
+        return baseline(false);
+    }
+    public static List<Requirement> baseline(boolean methodOnly) {
+        return (methodOnly ? methodDeclaration(false) : declaration(false)).capabilities().stream().map(c -> new Requirement(c.semanticId(), c.semanticVersion(),
                 Obligation.REQUIRED, c.boundary(), Content.METADATA, c.fields(), Set.of())).toList();
     }
 

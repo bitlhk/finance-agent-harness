@@ -9,10 +9,15 @@ public final class ModelConnection {
     private final URI baseUri;
     private final String model, secret;
     private final Duration timeout;
-    public record Generation(double temperature, double topP, int maxTokens) {
+    public record Generation(double temperature, double topP, int maxTokens, String thinkingType) {
+        public Generation(double temperature, double topP, int maxTokens) {
+            this(temperature, topP, maxTokens, null);
+        }
         public Generation {
             if (!Double.isFinite(temperature) || temperature < 0 || temperature > 2
                     || !Double.isFinite(topP) || topP <= 0 || topP > 1 || maxTokens < 1 || maxTokens > 32768)
+                throw new IllegalArgumentException("INVALID_MODEL_GENERATION_PARAMETERS");
+            if (thinkingType != null && !"disabled".equals(thinkingType))
                 throw new IllegalArgumentException("INVALID_MODEL_GENERATION_PARAMETERS");
         }
     }
@@ -26,7 +31,7 @@ public final class ModelConnection {
         if ((!"https".equals(baseUri.getScheme()) && !(loopback && "http".equals(baseUri.getScheme())))
                 || baseUri.getUserInfo() != null || baseUri.getQuery() != null || baseUri.getFragment() != null
                 || model == null || model.isBlank() || apiKey == null || apiKey.isBlank()
-                || timeout.isNegative() || timeout.isZero() || timeout.compareTo(Duration.ofSeconds(60)) > 0)
+                || timeout.isNegative() || timeout.isZero() || timeout.compareTo(Duration.ofSeconds(120)) > 0)
             throw new IllegalArgumentException("INVALID_MANAGED_MODEL_CONNECTION");
         this.baseUri = URI.create(baseUri.toString().replaceAll("/+$", "")); this.model = model; secret = apiKey; this.timeout = timeout;
         this.generation = generation;

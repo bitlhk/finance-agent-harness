@@ -27,6 +27,12 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>finance-provider-curated-synthetic-mcp</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>finance-harness-execution</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -36,7 +42,7 @@
         <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
-            <version>1.5.6</version>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "method-only-observation",
+  "version": "0.1.0",
+  "requirements": [
+    {"semanticId": "host.installation", "semanticVersion": "0.1", "obligation": "REQUIRED", "boundary": "HOST", "content": "METADATA", "fields": ["component", "operation", "at"], "capabilityIds": []},
+    {"semanticId": "host.authorization", "semanticVersion": "0.1", "obligation": "REQUIRED", "boundary": "HOST", "content": "METADATA", "fields": ["harnessRequestId", "outcome", "at"], "capabilityIds": []},
+    {"semanticId": "model.call", "semanticVersion": "0.1", "obligation": "REQUIRED", "boundary": "MODEL_CLIENT", "content": "METADATA", "fields": ["harnessRequestId", "component", "operation", "at"], "capabilityIds": []}
+  ]
+}

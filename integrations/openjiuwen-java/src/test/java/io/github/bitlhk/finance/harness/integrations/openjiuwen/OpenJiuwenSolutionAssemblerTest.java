@@ -34,6 +34,67 @@ class OpenJiuwenSolutionAssemblerTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test void methodOnlyInstallsRealSkillWithoutInventingProviderOrTool() throws Exception {
+        Path solution = methodOnlySolution();
+        var assembler = new OpenJiuwenSolutionAssembler();
+        var prepared = assembler.prepare(temporaryDirectory, solution, Map.of());
+        assertTrue(prepared.capabilityPacks().isEmpty());
+        assertEquals("Method-only instructions.", prepared.domainPacks().getFirst().skills().getFirst().instructions());
+        assertThrows(SecurityException.class, () -> prepared.openQueries(customerWealthDefaults(), true, "method-only")
+                .query("account.balance.query", Map.of(), "uninstalled"));
+        try (var installed = assembler.install(prepared, cleanAgent("method-only"), customerWealthDefaults(), true,
+                new TaskCheckpointStore.Memory(), "method-only")) {
+            var lock = new ObjectMapper().valueToTree(installed.lock());
+            assertEquals(1, lock.path("domainInstallations").size());
+            assertEquals(0, lock.path("installations").size());
+            assertFalse(lock.toString().contains("PROVIDER_RUNTIME"));
+        }
+    }
+
+    @Test void emptyPlanAndUndeclaredMethodRequirementsRemainRejected() throws Exception {
+        var mapper = new ObjectMapper();
+        Path solution = methodOnlySolution();
+        var input = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(solution.toFile());
+        input.putArray("domainPackRefs");
+        Files.writeString(solution, input.toString());
+        Path emptySolution = solution;
+        assertThrows(IllegalArgumentException.class, () -> new OpenJiuwenSolutionAssembler()
+                .prepare(temporaryDirectory, emptySolution, Map.of()));
+        solution = methodOnlySolution();
+        Path domain = temporaryDirectory.resolve("method/pack.yaml");
+        Files.writeString(domain, Files.readString(domain).replace("capabilities: []", "capabilities: [account.balance.query]"));
+        Path missingCapability = solution;
+        assertThrows(IllegalArgumentException.class, () -> new OpenJiuwenSolutionAssembler()
+                .prepare(temporaryDirectory, missingCapability, Map.of()));
+    }
+
+    private Path methodOnlySolution() throws Exception {
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        var input = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(root().resolve(
+                "examples/solutions/wealth-facts-kit/solution.yaml").toFile());
+        input.remove("profileRef"); input.remove("evaluationPackRef");
+        input.putArray("capabilityPackRefs"); input.putArray("providerRefs"); input.putObject("capabilityBindings");
+        input.putArray("domainPackRefs").addObject().put("id", "method-only").put("version", "0.1.0")
+                .put("source", "repo://method");
+        Files.createDirectories(temporaryDirectory.resolve("method"));
+        Files.writeString(temporaryDirectory.resolve("method/SKILL.md"), "Method-only instructions.");
+        Files.writeString(temporaryDirectory.resolve("method/pack.yaml"), """
+                schemaVersion: finance-domain-pack.v1
+                packId: method-only
+                version: 0.1.0
+                profile: shared-read-only
+                capabilities: []
+                skills:
+                  - directory: method-only
+                    entry: SKILL.md
+                scope: []
+                outOfScope: []
+                """);
+        Path path = temporaryDirectory.resolve("solution.json");
+        Files.writeString(path, input.toString());
+        return path;
+    }
+
     @Test void enhancedDescriptionsAreDigestLockedAndMatchInstalledTools() throws Exception {
         var assembler = new OpenJiuwenSolutionAssembler();
         FinanceProvider provider = new DescribedFinanceProvider() {

@@ -4,8 +4,11 @@ import io.github.bitlhk.finance.harness.assembly.AssetDigests;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01;
 import io.github.bitlhk.finance.harness.integrations.agentscope.*;
+import io.github.bitlhk.finance.harness.providers.curatedmcp.*;
+import io.github.bitlhk.finance.harness.core.spi.*;
 import java.net.URI;
 import java.nio.file.*;
+import java.time.Duration;
 import java.util.*;
 import java.util.jar.JarFile;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -13,15 +16,18 @@ import javax.xml.parsers.DocumentBuilderFactory;
 /** Offline operator tool: verifies test reports and tested class bytes before emitting Host qualification. */
 public final class QualificationWorker {
     public static void main(String[] args) throws Exception {
+        boolean tasks = args.length == 4 && "--tasks".equals(args[3]);
+        boolean curated = args.length == 6 && "--curated".equals(args[3]);
+        if (!(args.length == 3 || tasks || curated)) throw new IllegalArgumentException("QUALIFICATION_MODE_INVALID");
         Path root = Path.of(args[0]).toRealPath(), raw = Path.of(args[1]).toRealPath(), out = Path.of(args[2]).toAbsolutePath();
         Files.createDirectories(out);
         var factory = DocumentBuilderFactory.newInstance();
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        var xml = factory.newDocumentBuilder().parse(root.resolve("integrations/agentscope-java/target/surefire-reports/TEST-io.github.bitlhk.finance.harness.integrations.agentscope.AgentScopeQueryTest.xml").toFile());
+        String testClass = curated ? "CuratedNativeQueryTest" : "AgentScopeQueryTest";
+        var xml = factory.newDocumentBuilder().parse(root.resolve("integrations/agentscope-java/target/surefire-reports/TEST-io.github.bitlhk.finance.harness.integrations.agentscope." + testClass + ".xml").toFile());
         var suite = xml.getDocumentElement();
         if (!"0".equals(suite.getAttribute("failures")) || !"0".equals(suite.getAttribute("errors")) || !"0".equals(suite.getAttribute("skipped"))) throw new IllegalStateException("JUNIT_NOT_PASS");
         int testCount = Integer.parseInt(suite.getAttribute("tests"));
-        boolean tasks = args.length > 3 && "--tasks".equals(args[3]);
         Set<String> required = new HashSet<>(RuntimeQualification.REQUIRED_CHECKS);
         if (tasks) {
             var taskXml = factory.newDocumentBuilder().parse(root.resolve("integrations/agentscope-java/target/surefire-reports/TEST-io.github.bitlhk.finance.harness.integrations.agentscope.AgentScopeTaskSessionTest.xml").toFile());
@@ -31,7 +37,11 @@ public final class QualificationWorker {
             testCount += Integer.parseInt(taskSuite.getAttribute("tests"));
             required.addAll(RuntimeQualification.TASK_CHECKS);
         }
-        var provider = IsolatedHost.provider(URI.create("http://127.0.0.1:9"), "inventory", "inventory", "inventory");
+        DescribedFinanceProvider provider = curated ? new CuratedMcpProvider(
+                new ManagedProviderFactoryV01.Connection("synthetic-bank-http.v1", URI.create("http://127.0.0.1:9"),
+                        Duration.ofSeconds(5), () -> null, () -> null, ignored -> {}),
+                CuratedSourceConfig.load(Path.of(args[4]), args[5]))
+                : IsolatedHost.provider(URI.create("http://127.0.0.1:9"), "inventory", "inventory", "inventory");
         var actual = RuntimeInventory.inspect(List.of(provider));
         Map<String, List<RuntimeQualification.Evidence>> proofs = new TreeMap<>();
         int rows = 0; long modelHttp = 0, bankHttp = 0;
@@ -40,6 +50,9 @@ public final class QualificationWorker {
             for (Path file : files.filter(p -> p.toString().endsWith(".json")).sorted().toList()) {
                 var row = HarnessJson.mapper().readTree(file.toFile());
                 if (!"PASS".equals(row.path("status").asText())) throw new IllegalStateException("RAW_TEST_FAILED:" + file);
+                if (curated && (!args[5].equals(row.path("sourceConfigDigest").asText())
+                        || !"NATIVE_CURATED_COVERAGE_NOT_QUALIFICATION".equals(row.path("scope").asText())))
+                    throw new IllegalStateException("CURATED_EVIDENCE_SOURCE_MISMATCH");
                 var tested = HarnessJson.mapper().readerForListOf(RuntimeInventory.Artifact.class).<List<RuntimeInventory.Artifact>>readValue(row.path("runtimeArtifacts"));
                 for (var artifact : actual) {
                     var old = tested.stream().filter(a -> a.role().equals(artifact.role())).findFirst().orElseThrow();
@@ -50,7 +63,10 @@ public final class QualificationWorker {
                 Files.copy(file, destination);
                 var ref = new RuntimeQualification.Evidence("raw/" + file.getFileName(), AssetDigests.sha256(destination).substring(7));
                 for (var id : row.path("checkIds")) proofs.computeIfAbsent(id.asText(), ignored -> new ArrayList<>()).add(ref);
-                for (var session : row.path("sessions")) { modelHttp += session.path("modelHttp").size(); bankHttp += session.path("bankHttp").size(); }
+                for (var session : row.path("sessions")) {
+                    modelHttp += session.path("modelHttp").size();
+                    bankHttp += session.path(curated ? "httpAttempts" : "bankHttp").size();
+                }
                 rows++;
             }
         }
@@ -69,7 +85,7 @@ public final class QualificationWorker {
         if (tasks) RuntimeQualification.load(qualification, digest).requireTask();
         Files.writeString(out.resolve("qualification.sha256"), digest + "\n");
         IsolatedHost.write(out.resolve("summary.json"), Map.of("status", "PASS", "tests", rows, "requiredChecks", required,
-                "modelHttpRequests", modelHttp, "bankHttpRequestsIncludingDirectComparison", bankHttp,
+                "modelHttpRequests", modelHttp, curated ? "sourceHttpResponsesIncludingProtocol" : "bankHttpRequestsIncludingDirectComparison", bankHttp,
                 "qualificationDigest", digest, "realModelGate", "NOT_RUN", "qualificationNature", "TRUSTED_OPERATOR_ASSERTION_NOT_CRYPTOGRAPHIC_TEST_ATTESTATION"));
         System.out.println("Qualified controlled HTTP: tests=" + rows + " modelHttp=" + modelHttp + " bankHttp=" + bankHttp + " sha256=" + digest);
     }

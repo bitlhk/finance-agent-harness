@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "finance-observation-requirements.v0.1",
+  "id": "curated-post-loan-observation",
+  "version": "0.1.0",
+  "requirements": [
+    {
+      "semanticId": "capability.result",
+      "semanticVersion": "0.1",
+      "obligation": "REQUIRED",
+      "boundary": "PROVIDER",
+      "content": "METADATA",
+      "fields": [
+        "capabilityId",
+        "providerId",
+        "harnessRequestId",
+        "businessStatus",
+        "at"
+      ],
+      "capabilityIds": [
+        "eval.synthetic.search-risk-enterprises.query",
+        "eval.synthetic.get-post-loan-risk-snapshot.query",
+        "eval.synthetic.evaluate-post-loan-risk-escalation.query"
+      ]
+    }
+  ]
+}

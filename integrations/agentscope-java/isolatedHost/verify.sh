@@ -4,8 +4,10 @@ root="$(cd "$(dirname "$0")/../../.." && pwd)"
 repo="${FH_MAVEN_REPO:-$root/target/m2-agentscope}"
 run="${1:-${FH_PROBE_OUTPUT:-$root/target/agentscope-probe-$(date -u +%Y%m%dT%H%M%SZ)}}"
 qualification_args=()
+qualification_tests=AgentScopeQueryTest
 if [[ "${2:-}" == "--tasks" ]]; then
   qualification_args+=(--tasks)
+  qualification_tests=AgentScopeQueryTest,AgentScopeTaskSessionTest
 elif [[ -n "${2:-}" ]]; then
   printf 'Unsupported qualification mode: %s\n' "$2" >&2
   exit 2
@@ -20,6 +22,7 @@ mvn -B -Dmaven.repo.local="$repo" \
   -pl :finance-harness-core,:finance-harness-assembly,:finance-harness-cashflow,:finance-provider-non-ai-banking,:finance-harness-agentscope-java \
   clean -l "$run/clean.log"
 mvn -B -Dmaven.repo.local="$repo" -pl integrations/agentscope-java -am install \
+  -Dtest="$qualification_tests" -Dsurefire.failIfNoSpecifiedTests=false \
   -Dagentscope.evidenceDirectory="$run/raw" -l "$run/maven.log"
 mvn -B -Dmaven.repo.local="$repo" -pl integrations/agentscope-java dependency:copy-dependencies \
   -DincludeScope=test -DexcludeGroupIds=org.junit.jupiter,org.junit.platform,org.opentest4j,org.apiguardian \

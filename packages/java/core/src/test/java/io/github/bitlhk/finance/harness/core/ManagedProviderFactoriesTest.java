@@ -17,7 +17,11 @@ class ManagedProviderFactoriesTest {
             }, () -> null, ignored -> {});
 
     ManagedProviderFactoryV01 factory(String id, String kind, Set<String> dependencies, String sourceScope) {
+        return factory(id, kind, dependencies, sourceScope, Map.of());
+    }
+    ManagedProviderFactoryV01 factory(String id, String kind, Set<String> dependencies, String sourceScope, Map<String, String> configuration) {
         return new ManagedProviderFactoryV01() {
+            public Map<String, String> configurationDigests() { return configuration; }
             public String providerId() { return id; }
             public String connectionKind() { return kind; }
             public Set<String> dependencies() { return dependencies; }
@@ -63,6 +67,20 @@ class ManagedProviderFactoriesTest {
         assertEquals(Set.of("source", "projection"), providers.keySet());
         assertEquals(0, identities.get()); assertEquals(0, reads.get());
     }
+    @Test void configurationIdentityCoversSelectedDependencyClosureOnly() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("projection", "controlled-http", Set.of("source"), "source:read"),
+                factory("source", "controlled-http", Set.of(), "source:read", Map.of("source", "a".repeat(64))),
+                factory("unused", "controlled-http", Set.of(), "unused:read", Map.of("bad", "not-a-digest"))));
+        var expected = Map.of("source", Map.of("source", "a".repeat(64)));
+        assertEquals(expected, registry.configurationDigests(Set.of("projection")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("projection")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("projection"),
+                Map.of("source", Map.of("source", "b".repeat(64)))));
+        assertEquals(Set.of("projection", "source"), registry.create(connection, () -> null, Set.of("projection"), expected).keySet());
+        assertThrows(IllegalArgumentException.class, () -> registry.configurationDigests(Set.of("unused")));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
     @Test void currentGrantIsCheckedOnEveryCallNotDerivedFromRequirements() {
         var registry = new ManagedProviderFactoriesV01(List.of(factory("source", "controlled-http", Set.of(), "source:read")));
         var current = new java.util.concurrent.atomic.AtomicReference<>(grant(Set.of("facts:read")));
@@ -88,8 +106,19 @@ class ManagedProviderFactoriesTest {
         var source = factory("source", "controlled-http", Set.of(), "source:read");
         assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01(List.of(source, source)));
     }
-    @Test void noFactoriesCannotPass() {
-        assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01(List.of()));
+    @Test void explicitEmptySelectionNeedsNoProviderConnectionOrGrant() {
+        var registry = new ManagedProviderFactoriesV01(List.of());
+        assertEquals(Map.of(), registry.configurationDigests(Set.of()));
+        assertEquals(Set.of(), registry.sourceScopes(Map.of()));
+        assertEquals(Map.of(), registry.create(null, () -> { throw new AssertionError("No grant requested"); }, Set.of()));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of("missing")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, Set.of(),
+                Map.of("unused", Map.of("source", "a".repeat(64)))));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
+    @Test void emptySelectionDoesNotInstantiateAvailableFactory() {
+        var registry = new ManagedProviderFactoriesV01(List.of(factory("one", "unused", Set.of(), "facts:read")));
+        assertEquals(Map.of(), registry.create(null, () -> null, Set.of()));
     }
     @Test void missingDependencyRejected() {
         var registry = new ManagedProviderFactoriesV01(List.of(factory("one", "controlled-http", Set.of("missing"), "one:read")));

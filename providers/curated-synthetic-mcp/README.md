@@ -1,8 +1,48 @@
 # Curated Synthetic MCP Provider (Draft)
 
-NOT QUALIFIED / NOT HOST-INTEGRATED / NOT DEPLOYED. This module is not in the
-finance asset catalog or either Java Host support profile. ServiceLoader discovery
-is not admission. No Builder/Eval changes or TASK implementation are included.
+Latest candidate: source.v3 separates trusted Host identity from an explicitly
+allowlisted synthetic customer resource. The isolated seven-Pack native suite
+now covers 16 tools and C005/C006 cases on both Java Runtimes, including an
+independent packaged AgentScope JVM. This is not wealth Skill/Builder acceptance.
+The earlier six-Pack generated-Host results below are historical evidence; they
+must be refreshed for the changed Provider artifact, Pack versions and source
+configuration before release. Catalog 0.2.9 adds the seventh Pack as a candidate
+for generated-Host verification, with REQUIRED result observation. It is not a
+production admission or a claim that the original wealth Skill has passed.
+
+HISTORICAL SIX-PACK HOST QUALIFICATION / NOT DEPLOYED. The earlier catalog
+declared six read-only cohort Packs (12 tools), restricted to local-read-only
+Java hosts. Wealth was outside that admission cohort. Native QUERY evidence
+does not replace exact generated-Host qualification. ServiceLoader discovery and
+catalog membership are not installation, grants or deployment readiness.
+
+The `hosts-r10` isolated run on 2026-10-03 built actual OpenJiuwen and AgentScope
+Java Hosts, exercised all twelve cohort tools, compared scalar facts with the
+independent synthetic source and verified REQUIRED collector proof admission and
+missing-proof rejection. It used a controlled model, not the original Skill
+cohort or a real-model/browser acceptance run. Qualification is bound to those
+exact generated artifacts and source configuration, not reusable on deployment
+with a different endpoint/configuration. The Builder engineering entry is
+`engineering/verify_curated_generated_hosts.py`; keep its raw reports and Locks.
+
+The six cohort Packs have separate REQUIRED `capability.result` observation
+declarations under `observation-packs/readonly/curated-*.json`. Each declaration
+covers one whole Pack; selecting one Pack must not require the other five.
+`eval-projection.v1.json` version 0.2.2 declares scalar fact paths for all sixteen
+candidate tools; this evidence vocabulary is not runtime admission. Customer and allocation variants use optional
+fields with explicit NOT_PROVIDED markers, distinct from null and empty arrays.
+The audit material exclusion description is an optional indexed leaf. The Eval
+consumer must preserve source row indices when only some materials provide it;
+missing does not mean excluded, zero or empty. Consumers that reject sparse
+optional leaves need the corresponding compatible Launcher update before using
+this projection. This metadata update is not a new executable Provider release.
+The source output contract still validates each supported variant before return.
+The parameterless policy query pins `/policyVersion` to the reference policy;
+the Provider still separately requires the configured `policy` resource grant.
+It does not enable capture, grant resource access or mark answers correct. The
+Eval Launcher must bind its server-owned resource scope and exact canonical source
+configuration, verify the Host receipt, and apply size/field limits. The source
+business date remains separate from the Host result timestamp.
 
 ## Boundaries
 
@@ -56,11 +96,40 @@ Published tool names are `curated_<original_name>`, not the original Skill names
 Original Skill references MUST be migrated with an explicit tool/contract binding;
 uploading an unchanged Skill is not automatically compatible.
 
-For customer tools, Harness input `customer_id` is the **Host-authorized
+By default (`BOUND_SUBJECT`), Harness input `customer_id` is the **Host-authorized
 subjectRef**, e.g. `host-customer`, NOT source `C005`. It must equal the context
 subject. Only the reviewed source configuration maps that subject to `C005`,
 `C006` or `I001`. Source results retain the original source customer ID; they do
 not pretend that the source ID is the Host identity.
+
+Candidate source version `curated-synthetic-source.v3` additionally permits an
+explicit per-subject `customerSelection: SYNTHETIC_ALLOWLIST`. This mode is only
+for this pinned loopback synthetic source. Harness `customer_id` STILL equals the
+trusted Host subjectRef, preserving the unchanged BoundFinanceProvider selector
+check. A separate `synthetic_customer_id` preserves the case's explicit resource
+(for example C005 or C006); that value must be in the trusted subject's **per-tool**
+resource allowlist. The Provider translates it to the source's `customer_id` only
+after both checks; the extra selector is never forwarded to MCP. It never takes the first entry or
+derives a grant from Skill text. `customerId` must be absent in this mode; mixing
+implicit mapping with explicit selection is rejected. v1/v2 cannot enable it.
+
+The Host subject remains the authenticated evaluation identity, not the selected
+synthetic customer. Current session, principal, session reference and scope checks,
+BoundFinanceProvider grants, transport refresh and returned-identity validation
+are unchanged. Even a response for a different allowlisted customer is discarded.
+This is not delegated access to real bank customers and must not be copied into a
+real-bank Provider as an authorization shortcut. The customer mode and resource
+sets are in the canonical digest; exact config bytes remain separately pinned.
+Existing v1/v2 canonical digests do not change when BOUND_SUBJECT is defaulted.
+BOUND_SUBJECT rejects `synthetic_customer_id` rather than silently ignoring it.
+
+This candidate mode has Provider-level tests, not generated-Host qualification or
+wealth Skill admission. Customer and wealth Pack 1.1.0 distinguish these two
+parameters and declare the mode-dependent requirement. 1.0.0 Locks must not be
+silently rebound. Before using the new mode in a generated Agent, validate the
+method's explicit binding and rerun the exact native/Host, projection and
+original-case gates. Do not reuse old proofs or publish the wealth cohort just
+because this configuration now parses.
 
 `reference` and `product_id` values must belong to that subject's per-tool resource
 allowlist. Defaults are expanded before authorization, so omitting `reference`
@@ -70,30 +139,49 @@ Extra parameters, wrong types and invalid numeric ranges are rejected locally.
 Valid but different wealth constraints are passed through for source DEGRADED
 semantics, never silently replaced by the reference defaults.
 
-Seven `curated-synthetic-*` Packs version `1.0.0` cover customer, wealth, insurance,
+Seven `curated-synthetic-*` Packs cover customer, wealth, insurance,
 research, audit, transfer-risk and post-loan. Packs remain atomic. There is no
-placeholder tool for a zero-tool method and no formal catalog registration.
+placeholder tool for a zero-tool method. All seven Packs now have candidate catalog
+and Provider assembly declarations. A separate isolated-test declaration under
+`integrations/agentscope-java/reference/curated-wealth-candidate-provider.json`
+supports native validation, not generated-Host acceptance. The factory's
+16-tool SPI contract must pass the same generated-Host gates before release.
+Customer/wealth are now 1.1.0;
+the other five Packs remain 1.0.0.
 
 ## Host Configuration Injection
 
-No new SPI. Factory requires both Host environment variables:
+Factory uses the existing managed Provider SPI, with optional local configuration
+digest reporting. It requires both Host environment variables:
 
 ```
 FH_CURATED_MCP_CONFIG=/absolute/reviewed/source.json
 FH_CURATED_MCP_CONFIG_SHA256=<sha256 of exact source.json bytes>
 ```
 
-Managed Factory construction now requires `curated-synthetic-source.v2` and
+Managed Factory construction requires `curated-synthetic-source.v2` or v3 and
 `runtimePolicy` with mode `STATELESS_BOUNDED` and a 64-hex `sourceIdentitySha256`.
 The mode and digest are part of the canonical source config identity. The HTTP
 client rejects source session headers before passing a body to the SDK, without
 guessing ownership or sending a fallback DELETE. Legacy v1 direct Provider
 construction remains for isolated regression only, not Factory admission.
 
+Every v2 response must contain exactly one `X-Finance-Source-Sha256` header equal
+to the fixed source identity. Missing, duplicate or different markers fail before
+the SDK body consumer. The bounded source entry adds this from its startup-verified
+manifest, overriding downstream values. This detects deployment mismatches on the
+managed loopback path; it is NOT cryptographic remote attestation, authentication,
+or permission. A hostile process able to spoof the marker is not excluded by it.
+
 The file must be a regular non-symlink file under non-symlink parents, at most
 256 KiB; duplicate/unknown JSON fields and a hash mismatch are rejected.
 The Host must protect BOTH the file and expected hash. Hash pinning does not
-protect against an actor allowed to replace both values.
+protect against an actor allowed to replace both values. The candidate Builder/Host
+additionally freeze the file-byte hash in service Lock, require it at factory
+construction and instance start, carry it into Runtime Lock and collector identity,
+and compare it in Eval delivery/execution evidence. Replacing file plus environment
+pin without replacing the reviewed installation is rejected. Configuration changes
+require new qualification; no old Agent is automatically upgraded.
 
 Illustrative shape only (placeholder pins deliberately do not work):
 
@@ -148,6 +236,9 @@ object digest, distinct from the exact file-byte hash used by the factory.
 This is local execution metadata, NOT an independent source authenticity receipt
 or a Host qualification. Source asOf remains in sourceResult; outer asOf is read
 time. Bank access credentials and raw endpoint are not placed in result evidence.
+For v2/v3, `sourceIdentity` separately records `RESPONSE_HEADER_MATCHED_PIN` and
+`authentication: NOT_PROVIDED_BY_MARKER`. Failed reads do not receive this success
+marker. File-byte, canonical configuration and source-manifest hashes are distinct.
 
 ## Tests
 
@@ -170,6 +261,11 @@ calls all 16 original tools through this Provider/SDK, checks UNKNOWN/UNAVAILABL
 and DEGRADED preservation, and terminates its child process. It runs once with
 the legacy stateful source and once with the bounded stateless entry, requiring
 the exact source/dependency identity and source.v2 configuration for the latter.
+The bounded run also uses source.v3 to read the original C005 and C006 customer
+profile, portfolio and allocation context, verifies returned identities and the
+canonical config pin, and refuses unconfigured I001 without another HTTP attempt.
+Focused tests cover missing/expired/mismatched Host sessions, missing grants,
+revocation before dispatch and delivery, and wrong-customer source responses.
 This checks SDK/Provider compatibility without changing deployment defaults.
 The separate Eval TCP tests check rejection, disconnect and request bounds;
 neither suite alone qualifies the complete Host deployment described below.
@@ -186,6 +282,13 @@ The existing authority rotation/revocation/expiry and no-token-forwarding tests
 remain mandatory. These local tests do not qualify a Host deployment.
 
 ## Remaining Release Gates
+
+The two `BLOCK_*` items below concern the legacy **stateful** source path, which
+remains outside managed Factory admission. The current candidate uses the pinned
+`STATELESS_BOUNDED` v2 source instead; it does not claim to solve remote ownership
+or reclaim an unowned stateful session. Current release gates are exact generated
+Host qualification, the original Skill cohort (including its no-tool method),
+real-model evidence and the authenticated Eval browser workflow.
 
 - The HTTP/SSE body ingress limit and focused cancellation regressions above are
   implemented as a candidate, not Host admission. Header limits, aggregate Host
@@ -242,10 +345,11 @@ remain mandatory. These local tests do not qualify a Host deployment.
   pins, a finite bound on in-flight requests/disconnect handling as well as idle
   expiry, and end-to-end orphan-reclamation/isolation evidence against the actual
   source. Merely having a TTL constructor option does not clear this gate.
-- Future artifact/Host Lock and both runtime qualifications MUST bind source
+- Artifact/Host Lock and both runtime qualifications MUST bind source
   configuration (exact file and canonical digest), schema pins, subject/resource
   mappings, Provider jar/dependencies, Pack bytes and reference source manifest.
-  Current factory pinning alone is not that Lock or a qualification.
+  The controlled generated-Host run verifies these bindings; factory pinning
+  alone is still not that Lock or a qualification for another deployment.
 - Real source credentials beyond loopback are unsupported. Source authenticity,
   resource ownership and dynamic scope policies need Host-reviewed provisioning;
   a tool name, source label or readOnlyHint does not confer authority.
@@ -254,5 +358,6 @@ remain mandatory. These local tests do not qualify a Host deployment.
   gates. Required output structures and focused cleanup tests are implemented;
   this draft still does not certify every additional business field, financial
   relationship, source authenticity or remote cleanup outcome.
-- Builder generic packaging/admission and explicit Skill migration bindings are
-  intentionally outside this change. Neither Runtime is marked ready.
+- Builder generated-Host qualification is now exercised by the companion
+  verifier. Original Skill migration bindings and end-user release acceptance
+  remain pending; neither complete Skill cohort is marked ready for promotion.

@@ -16,6 +16,8 @@ final class BoundedHttpClient extends HttpClient {
     private final HttpClient delegate;
     private final Duration timeout;
     private final boolean requireStateless;
+    private final String sourceIdentity;
+    private final McpHttpObservation observation;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         var thread = new Thread(r, "curated-mcp-http-deadline");
         thread.setDaemon(true);
@@ -25,14 +27,18 @@ final class BoundedHttpClient extends HttpClient {
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private volatile boolean stopping;
 
-    private BoundedHttpClient(HttpClient delegate, Duration timeout, boolean requireStateless) {
+    private BoundedHttpClient(HttpClient delegate, Duration timeout, boolean requireStateless, String sourceIdentity, McpHttpObservation observation) {
         this.delegate = delegate;
         this.timeout = timeout;
         this.requireStateless = requireStateless;
+        this.sourceIdentity = sourceIdentity;
+        this.observation = observation;
     }
 
     void checkHealthy() {
-        if (failure.get() != null) throw new IllegalStateException("CURATED_HTTP_INGRESS_FAILED", failure.get());
+        var cause = failure.get();
+        if (cause instanceof SecurityException denied) throw denied;
+        if (cause != null) throw new IllegalStateException("CURATED_HTTP_INGRESS_FAILED", cause);
     }
 
     void stopReads() {
@@ -47,10 +53,20 @@ final class BoundedHttpClient extends HttpClient {
             exchange.abort(new CancellationException("CURATED_READ_CLOSED"), false);
             return exchange.result;
         }
+        if (!exchange.beginObservation(request.method())) return exchange.result;
         try {
             exchange.deadline = timer.schedule(() -> exchange.abort(new HttpTimeoutException("CURATED_HTTP_DEADLINE"), true),
                     timeout.toNanos(), TimeUnit.NANOSECONDS);
             var future = delegate.sendAsync(request, info -> {
+                if (exchange.observation != null) exchange.observation.headers(info.statusCode());
+                if (sourceIdentity != null && !info.headers().allValues("X-Finance-Source-Sha256").equals(List.of(sourceIdentity)))
+                    throw new IllegalArgumentException("CURATED_SOURCE_IDENTITY_MISMATCH");
+                if (info.statusCode() == 401 || info.statusCode() == 403) {
+                    // Preserve the trusted source's denial across the SDK's async exception wrappers.
+                    var denied = new SecurityException("CURATED_SOURCE_ACCESS_DENIED");
+                    failure.compareAndSet(null, denied);
+                    throw denied;
+                }
                 if (requireStateless && info.headers().firstValue("Mcp-Session-Id").isPresent())
                     throw new IllegalArgumentException("CURATED_STATEFUL_SOURCE_REJECTED");
                 if (info.headers().firstValueAsLong("Content-Length").orElse(0) > MAX_BODY_BYTES)
@@ -70,7 +86,7 @@ final class BoundedHttpClient extends HttpClient {
             if (exchange.result.isDone()) future.cancel(true);
             future.whenComplete((response, error) -> {
                 if (error != null) exchange.abort(error, true);
-                else exchange.result.complete(response);
+                else exchange.complete(response);
             });
         } catch (RuntimeException error) { exchange.abort(error, true); }
         return exchange.result;
@@ -82,20 +98,41 @@ final class BoundedHttpClient extends HttpClient {
         volatile CompletableFuture<?> upstream;
         volatile LimitedSubscriber<T> subscriber;
         volatile ScheduledFuture<?> deadline;
+        volatile McpHttpObservation.Attempt observation;
+        private boolean ending;
         Exchange(boolean cleanup) {
             this.cleanup = cleanup;
             result.whenComplete((value, error) -> {
                 active.remove(this);
                 if (deadline != null) deadline.cancel(false);
                 if (result.isCancelled()) {
+                    if (observation != null) observation.finish(new CancellationException("CURATED_HTTP_CANCELLED"));
                     if (subscriber != null) subscriber.cancel();
                     if (upstream != null) upstream.cancel(true);
                 }
             });
         }
+        synchronized boolean beginObservation(String method) {
+            if (ending || result.isDone()) return false;
+            if (BoundedHttpClient.this.observation != null)
+                observation = BoundedHttpClient.this.observation.start(method);
+            return true;
+        }
+        private synchronized boolean claimEnd() {
+            if (ending || result.isDone()) return false;
+            ending = true;
+            return true;
+        }
+        void complete(HttpResponse<T> response) {
+            if (!claimEnd()) return;
+            if (observation != null) observation.finish(null);
+            result.complete(response);
+        }
         void abort(Throwable error, boolean record) {
-            if (result.isDone()) return;
+            if (!claimEnd()) return;
             if (record) failure.compareAndSet(null, error);
+            if (observation != null) observation.finish(error);
+            // Cancellation may re-enter a body subscriber; never hold the Exchange monitor here.
             result.completeExceptionally(error);
             if (subscriber != null) subscriber.cancel();
             if (upstream != null) upstream.cancel(true);
@@ -188,15 +225,24 @@ final class BoundedHttpClient extends HttpClient {
         private final HttpClient.Builder delegate = HttpClient.newBuilder().followRedirects(Redirect.NEVER).version(Version.HTTP_1_1);
         private final Duration timeout;
         private final boolean requireStateless;
+        private final String sourceIdentity;
+        private McpHttpObservation observation;
         private BoundedHttpClient client;
         Builder(Duration timeout) { this(timeout, false); }
         Builder(Duration timeout, boolean requireStateless) {
+            this(timeout, requireStateless, null);
+        }
+        Builder(Duration timeout, boolean requireStateless, String sourceIdentity) {
             this.timeout = timeout; this.requireStateless = requireStateless;
+            if (sourceIdentity != null && (!requireStateless || !sourceIdentity.matches("[a-f0-9]{64}")))
+                throw new IllegalArgumentException("CURATED_SOURCE_IDENTITY_INVALID");
+            this.sourceIdentity = sourceIdentity;
         }
         BoundedHttpClient client() { return Objects.requireNonNull(client); }
+        Builder observations(McpHttpObservation value) { observation = value; return this; }
         @Override public HttpClient build() {
             if (client != null) throw new IllegalStateException("CURATED_HTTP_CLIENT_ALREADY_BUILT");
-            client = new BoundedHttpClient(delegate.build(), timeout, requireStateless);
+            client = new BoundedHttpClient(delegate.build(), timeout, requireStateless, sourceIdentity, observation);
             return client;
         }
         @Override public void close() { if (client != null) client.close(); }

@@ -33,6 +33,45 @@ class OpenJiuwenFinanceBridgeTest {
                     Set.of("fallback:read", "wealth:read", "channel:write"));
 
     @Test
+    void queryPreservesExplicitNullsAndListPositionsInCanonicalFacts() throws Exception {
+        var valuation = new java.util.LinkedHashMap<String, Object>();
+        valuation.put("consensus", null);
+        valuation.put("zero", 0);
+        var periods = new java.util.ArrayList<>(java.util.Arrays.asList(10, null, 30));
+        var source = new java.util.LinkedHashMap<String, Object>();
+        source.put("valuation", valuation);
+        source.put("periods", periods);
+        source.put("nextPageToken", null);
+        var bridge = bridge(new FinanceProvider() {
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                return result(request, CapabilityResultV1.Status.COMPLETED, "read", source, null, null);
+            }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("Read-only test");
+            }
+        });
+        var output = bridge.query(invocation(QUERY, Set.of("wealth:read"), Map.of(), Map.of()));
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, output.status());
+        var mapper = io.github.bitlhk.finance.harness.core.HarnessJson.mapper();
+        var facts = mapper.valueToTree(output).path("data").path("result");
+        assertTrue(facts.has("nextPageToken"));
+        assertTrue(facts.path("nextPageToken").isNull());
+        assertTrue(output.data().containsKey("nextPageToken"), "legacy flattened view must also preserve null");
+        assertEquals(null, output.data().get("nextPageToken"));
+        assertTrue(facts.path("valuation").has("consensus"), "explicit missing value must not disappear");
+        assertTrue(facts.path("valuation").path("consensus").isNull());
+        assertEquals(0, facts.path("valuation").path("zero").asInt());
+        assertFalse(facts.path("valuation").has("absent"));
+        assertEquals(3, facts.path("periods").size());
+        assertTrue(facts.path("periods").get(1).isNull());
+        assertEquals(30, facts.path("periods").get(2).asInt());
+        valuation.put("consensus", "later mutation");
+        periods.set(1, 999);
+        assertEquals(facts, mapper.valueToTree(output).path("data").path("result"));
+        assertEquals(facts, mapper.readTree(mapper.writeValueAsBytes(output)).path("data").path("result"));
+    }
+
+    @Test
     void externalHostSessionIsNotTakenFromModelArgumentsOrTaskId() {
         AtomicReference<CapabilityRequestV1> captured = new AtomicReference<>();
         FinanceProvider provider = new FinanceProvider() {

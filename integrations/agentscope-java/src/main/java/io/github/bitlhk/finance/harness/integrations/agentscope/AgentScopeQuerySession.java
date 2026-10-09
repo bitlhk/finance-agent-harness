@@ -62,11 +62,14 @@ public final class AgentScopeQuerySession implements AutoCloseable {
     private final Identity identity;
     private final Supplier<BoundFinanceProvider.Grant> grants;
     private final Map<String, BoundFinanceProvider> providers;
+    private final Map<String, QueryInputValidator> queryValidators = new HashMap<>();
     private final ReActAgent agent;
     private final Map<String, Object> installationLock;
     private final TaskHost taskHost;
     private final String taskScope;
     private final CaseFileWorkspaceV1 caseFiles;
+    private volatile Map<String, Object> lastToolEvidence = Map.of("status", "UNKNOWN");
+    public Map<String, Object> toolAttemptEvidence() { return lastToolEvidence; }
     private final AtomicBoolean valid = new AtomicBoolean(true), busy = new AtomicBoolean();
     private final Set<String> requestIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -91,6 +94,10 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         prepared.bindings.forEach((id, binding) -> bound.put(id, new BoundFinanceProvider(binding.provider(), grants, requirements)));
         providers = Map.copyOf(bound);
         Toolkit toolkit = new Toolkit();
+        prepared.bindings.forEach((id, binding) -> {
+            if (binding.capability().operation().name().equals("QUERY"))
+                queryValidators.put(id, new QueryInputValidator(binding.capability().inputSchema()));
+        });
         prepared.bindings.forEach((id, binding) -> toolkit.registerAgentTool(binding.capability().operation().name().equals("TASK")
                 ? new AgentScopeTaskTool(id, binding.capability().toolName(), prepared.catalog.description(id), binding.capability().inputSchema())
                 : new QueryTool(id, binding)));
@@ -112,6 +119,9 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                             .stream(false).httpTransport(transport).build()
                             .stream(messages, tools, options(model))
                             .doOnNext(response -> {
+                                call.toolEvidence.responseObserved();
+                                for (var block : response.getContent()) if (block instanceof ToolUseBlock t)
+                                    call.toolEvidence.attempt(t.getId(), t.getName(), "MODEL_SELECTED");
                                 call.requireAuthorized("parsed-model-response");
                                 var text = new StringBuilder(); var calls = new ArrayList<Map<String, Object>>();
                                 for (var block : response.getContent()) {
@@ -139,6 +149,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                 .stream(false).temperature(0.0).executionConfig(execution(model.timeout()));
         var generation = model.generation();
         if (generation != null) options.temperature(generation.temperature()).topP(generation.topP()).maxTokens(generation.maxTokens());
+        if (generation != null && generation.thinkingType() != null)
+            options.additionalBodyParam("thinking", Map.of("type", generation.thinkingType()));
         return options.build();
     }
     public Set<String> installedTools() { return Set.copyOf(agent.getToolkit().getToolNames()); }
@@ -148,6 +160,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         return Mono.defer(() -> {
             if (!valid.get()) return Mono.error(new SecurityException("SESSION_GENERATION_INVALID"));
             if (!busy.compareAndSet(false, true)) return Mono.error(new IllegalStateException("SESSION_BUSY"));
+            lastToolEvidence = Map.of("status", "UNKNOWN", "requestId", input.requestId());
             final Invocation call;
             try {
                 if (!requestIds.add(input.requestId())) throw new IllegalArgumentException("DUPLICATE_REQUEST_ID");
@@ -162,14 +175,17 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             return agent.call(input.text(), context)
                     .map(message -> {
                         call.requireAuthorized("host-delivery");
+                        lastToolEvidence = call.toolEvidence.finish(true);
                         return new Reply(message.getTextContent(), input.requestId(), identity.generation(), List.copyOf(call.executions), call.run.droppedEvents(), call.diagnosticFailures.get(), List.copyOf(call.taskResults));
                     })
                     // Release before delivering a terminal signal: downstream may start the next turn inline.
                     .doOnSuccess(reply -> { if (terminated.compareAndSet(false, true)) busy.set(false); })
                     .doOnError(failure -> {
+                        lastToolEvidence = call.toolEvidence.finish(false);
                         if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
                     })
                     .doOnCancel(() -> {
+                        lastToolEvidence = call.toolEvidence.finish(false);
                         if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
                     })
                     .doFinally(signal -> clearIfInvalid()).contextWrite(ctx -> ctx.put(Invocation.class, call));
@@ -246,10 +262,12 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         final List<Map<String, Object>> taskResults = new CopyOnWriteArrayList<>();
         final Set<String> toolCallIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
         final AtomicLong diagnosticFailures = new AtomicLong();
+        final ToolAttemptEvidenceV1 toolEvidence;
         void capture(String callId, String boundary, Map<String, Object> value) {
             if (!input.diagnostics().capture(callId, boundary, value)) diagnosticFailures.incrementAndGet();
         }
         Invocation(Input input) {
+            toolEvidence = new ToolAttemptEvidenceV1(input.requestId());
             this.input = input; run = input.observation(); parent = input.parentId();
             var current = grants.get();
             if (current == null) throw new SecurityException("HOST_GRANT_REJECTED");
@@ -260,6 +278,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             try (var span = run.start(parent, "host", "authorization/" + point, Map.of("harnessRequestId", context.requestId()))) {
                 try {
                     if (!valid.get()) throw new SecurityException("SESSION_GENERATION_INVALID");
+                    if (providers.isEmpty()) BoundFinanceProvider.checkContext(grants.get(), context);
                     for (var entry : providers.entrySet()) entry.getValue().checkAccess(request(entry.getKey(), Map.of()));
                     span.finish(Outcome.RETURNED, Map.of());
                 } catch (RuntimeException failure) { valid.set(false); span.notSent(); span.finish(Outcome.DENIED, Map.of()); throw failure; }
@@ -319,7 +338,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         private final String id;
         private final AgentScopeQueryAssembler.Binding binding;
         private final QueryInputValidator validator;
-        QueryTool(String id, AgentScopeQueryAssembler.Binding binding) { this.id = id; this.binding = binding; validator = new QueryInputValidator(binding.capability().inputSchema()); }
+        QueryTool(String id, AgentScopeQueryAssembler.Binding binding) { this.id = id; this.binding = binding; validator = queryValidators.get(id); }
         public String getName() { return binding.capability().toolName(); }
         public String getDescription() { return prepared.catalog.description(id); }
         public Map<String, Object> getParameters() { return binding.capability().inputSchema(); }
@@ -357,7 +376,16 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         }
         public Mono<String> onSystemPrompt(Agent ignored, RuntimeContext context, String prompt) {
             var time = context.get(Invocation.class).input.businessTime();
-            return Mono.just(prompt + "\nTrusted business date: " + time.businessDate() + "\nBusiness timezone: " + time.timeZone()
+            return Mono.just(prompt + "\n" + """
+                    HOST_CONTEXT_PROVENANCE_V1
+                    Business date, timezone, tool availability and deployment information are execution context,
+                    not user-provided facts. Keep user statements, tool-returned facts and host context distinct.
+                    Use the business date to resolve relative dates only when the task permits it; never replace
+                    an explicit user date or list the host date as a fact supplied by the user.
+                    If the task or Skill limits facts to user input, list only facts traceable to that input.
+                    Missing tools explain an execution limitation, not a customer fact. Mention that limitation
+                    separately only when relevant. Preserve uncertainty; do not infer balances from tool availability.
+                    """ + "Trusted business date: " + time.businessDate() + "\nBusiness timezone: " + time.timeZone()
                     + "\nBusiness time source: " + time.source());
         }
         public Flux<AgentEvent> onModelCall(Agent ignored, RuntimeContext context, ModelCallInput input, Function<ModelCallInput, Flux<AgentEvent>> next) {
@@ -372,9 +400,29 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         }
         public Flux<AgentEvent> onActing(Agent ignored, RuntimeContext context, ActingInput input, Function<ActingInput, Flux<AgentEvent>> next) {
             return Flux.defer(() -> {
+                for (var tool : input.toolCalls()) context.get(Invocation.class).toolEvidence
+                        .attempt(tool.getId(), tool.getName(), "DISPATCH_ATTEMPT");
                 context.get(Invocation.class).requireAuthorized("before-tool");
                 for (var tool : input.toolCalls()) if (!installedTools().contains(tool.getName()))
                     return Flux.error(new SecurityException("TOOL_NOT_INSTALLED"));
+                // SDK validation may reject before AgentTool.callAsync. Record that
+                // boundary without retaining arguments or relaxing native checks.
+                var call = context.get(Invocation.class);
+                for (var tool : input.toolCalls()) {
+                    for (var entry : prepared.bindings.entrySet()) {
+                        var validator = queryValidators.get(entry.getKey());
+                        if (validator == null || !entry.getValue().capability().toolName().equals(tool.getName())) continue;
+                        try (var span = call.run.start(call.parent, "runtime-tool", "query-input-validation", Map.of("capabilityId", entry.getKey()))) {
+                            try {
+                                validator.validate(tool.getInput());
+                                span.finish(Outcome.COMPLETED, Map.of());
+                            } catch (IllegalArgumentException rejected) {
+                                span.finish(Outcome.DENIED, Map.of("responseStatus", "CAPABILITY_ARGUMENTS_INVALID"));
+                                return Flux.error(new SecurityException("NATIVE_TOOL_ERROR_STOP"));
+                            }
+                        }
+                    }
+                }
                 return next.apply(input).doOnNext(event -> {
                     if (event instanceof ToolResultEndEvent end && end.getState() == ToolResultState.ERROR) {
                         invalidate(); throw new SecurityException("NATIVE_TOOL_ERROR_STOP");
