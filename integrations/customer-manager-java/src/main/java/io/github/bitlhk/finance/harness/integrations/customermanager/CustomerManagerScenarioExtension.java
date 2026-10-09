@@ -14,7 +14,7 @@ import java.util.*;
 /** Declarative managed-Host extension. Browser input cannot provide authority, credentials or asset paths. */
 public final class CustomerManagerScenarioExtension implements ManagedScenarioExtensionV01 {
     public static final String ID = "customer-manager-service-preparation.v1";
-    private static final Set<String> ACTIONS = Set.of("select", "prepare", "read", "review", "versions", "read-version", "replay");
+    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "review", "versions", "read-version", "replay");
 
     @Override public String id() { return ID; }
     @Override public Set<String> actions() { return ACTIONS; }
@@ -43,6 +43,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final String owner, sessionId;
         private final ServicePreparation task;
         private final InstalledPreparationMethod method;
+        private String selectedCustomer;
         private volatile boolean closed;
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
@@ -53,12 +54,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     "steps", List.of("CUSTOMER_AND_GOAL", "FACT_COLLECTION", "PREPARATION_REPORT", "MANAGER_REVIEW"),
                     "method", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(), "lockDigest", method.lockDigest()));
         }
-        @Override public Map<String,Object> call(String action, JsonNode body) throws Exception {
+        @Override public synchronized Map<String,Object> call(String action, JsonNode body) throws Exception {
             current(); if (!ACTIONS.contains(action) || body == null || !body.isObject()) throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             return switch (action) {
+                case "chat" -> { exact(body,"query"); yield chat(text(body,"query")); }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
-                    yield Map.of("generation",task.select(owner,text(body,"customerAlias"),text(body,"goal")),"status","SELECTED");
+                    selectedCustomer=text(body,"customerAlias");
+                    yield Map.of("generation",task.select(owner,selectedCustomer,text(body,"goal")),"status","SELECTED");
                 }
                 case "prepare" -> { exact(body,"generation"); yield value(task.prepare(owner,integer(body,"generation"))); }
                 case "read", "replay" -> { exact(body,"reportId"); yield value(task.read(owner,text(body,"reportId"))); }
@@ -67,6 +70,31 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case "read-version" -> { exact(body,"reportId","revision"); yield value(task.readVersion(owner,text(body,"reportId"),integer(body,"revision"))); }
                 default -> throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             };
+        }
+        private Map<String,Object> chat(String query) throws Exception {
+            List<String> customers=task.customers(owner);
+            var decision=CustomerManagerDialogue.resolve(query,customers,selectedCustomer);
+            if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
+                return Map.of("status","ANSWERED","response","当前可以查询你被授权服务的合成客户，并依据 CRM 只读事实和已安装方法生成待复核的访前或回访准备报告。报告支持复核、版本回读和运行回放；产品推荐、CRM 写入、消息发送和交易尚未安装。");
+            if(decision.action()==CustomerManagerDialogue.Action.LIST_CUSTOMERS)
+                return Map.of("status","ANSWERED","response","你当前可服务的合成客户有："+String.join("、",customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
+            if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_MULTIPLE)
+                return Map.of("status","NEED_CLARIFICATION","response","本轮提到了多位客户，请先明确要服务哪一位："+String.join("、",decision.mentioned())+"。");
+            if(decision.action()==CustomerManagerDialogue.Action.UNSUPPORTED_PRODUCT)
+                return Map.of("status","UNSUPPORTED","response","当前场景只安装了客户资料与访前服务准备能力，尚未安装产品查询、适当性筛选或推荐能力。我可以先汇集授权客户事实并准备沟通重点。");
+            if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
+                return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位授权合成客户。你也可以先问“我负责哪些客户？”。");
+            String customer=decision.customer();
+            selectedCustomer=customer;
+            long generation=task.select(owner,customer,query);
+            JsonNode report=task.prepare(owner,generation);
+            String status=report.path("status").asText();
+            String response="READY_FOR_REVIEW".equals(status)
+                    ? "已根据当前授权 CRM 事实和已安装方法生成 "+customer+" 的服务准备报告，请核对来源、缺项和待复核建议。"
+                    : "已保留 "+customer+" 的有效 CRM 事实，但服务准备报告未完整生成；请查看缺项和失败说明。";
+            var result=new LinkedHashMap<String,Object>();
+            result.put("status",status);result.put("response",response);result.put("customer",customer);
+            result.put("report",value(report));return Map.copyOf(result);
         }
         @Override public Map<String,Object> status() {
             var value=new LinkedHashMap<String,Object>(bootstrap());value.put("status","ACTIVE");return value;
