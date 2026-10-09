@@ -117,6 +117,7 @@ public final class EnterpriseCreditAuditApplication {
                 .configureModelClient("OpenAI", settings.apiKey(), settings.baseUrl(), settings.model(), true);
         config.getModelConfigObj().setTemperature(0.1);
         config.getModelConfigObj().setMaxTokens(2200);
+        config.getModelConfigObj().setExtraField("thinking", Map.of("type", "disabled"));
         ModelClientConfig original = config.getModelClientConfig();
         ModelClientConfig.Builder client = ModelClientConfig.builder().clientId(original.getClientId())
                 .clientProvider(original.getClientProvider()).apiKey(original.getApiKey()).apiBase(original.getApiBase())
