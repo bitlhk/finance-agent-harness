@@ -53,7 +53,10 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             var chunks=Runner.runAgentStreaming(agent,Map.of("query",input),sid,null,List.of(StreamMode.OUTPUT));
             while(chunks.hasNext()) {
                 Object chunk=chunks.next();
-                if(chunk instanceof OutputSchema output && "llm_output".equals(output.getType())
+                // OpenJiuwen providers do not use one stable OutputSchema type for model
+                // deltas. This agent has no tools, so accept textual content from any
+                // output envelope and keep the report parser/validator as the trust boundary.
+                if(chunk instanceof OutputSchema output
                         && output.getPayload() instanceof Map<?,?> payload && payload.get("content")!=null)
                     parser.accept(String.valueOf(payload.get("content")));
             }
