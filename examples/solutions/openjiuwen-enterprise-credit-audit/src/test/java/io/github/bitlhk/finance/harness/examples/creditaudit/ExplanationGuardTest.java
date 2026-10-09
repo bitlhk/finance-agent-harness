@@ -11,5 +11,7 @@ class ExplanationGuardTest {
                 () -> EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed("建议批准授信。"));
         assertThrows(IllegalArgumentException.class,
                 () -> EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(""));
+        assertThrows(IllegalArgumentException.class,
+                () -> EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed("{output=, result_type=answer}"));
     }
 }

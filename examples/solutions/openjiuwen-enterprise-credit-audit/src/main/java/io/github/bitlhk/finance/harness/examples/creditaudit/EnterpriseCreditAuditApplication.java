@@ -190,6 +190,8 @@ public final class EnterpriseCreditAuditApplication {
         private static final List<String> PROHIBITED = List.of("批准授信", "同意放款", "拒绝贷款", "认定欺诈", "自动审批通过");
         static void requireAllowed(String response) {
             if (response == null || response.isBlank()) throw new IllegalArgumentException("EMPTY_MODEL_EXPLANATION");
+            if (response.matches("\\{output=\\s*,\\s*result_type=answer}"))
+                throw new IllegalArgumentException("EMPTY_MODEL_EXPLANATION");
             for (String phrase : PROHIBITED) if (response.contains(phrase)) throw new IllegalArgumentException("MODEL_DECISION_BOUNDARY_VIOLATION");
         }
     }
