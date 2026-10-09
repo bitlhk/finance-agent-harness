@@ -56,7 +56,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 // OpenJiuwen providers do not use one stable OutputSchema type for model
                 // deltas. This agent has no tools, so accept textual content from any
                 // output envelope and keep the report parser/validator as the trust boundary.
-                if (chunk instanceof OutputSchema || chunk instanceof WorkflowOutput) {
+                if (chunk instanceof OutputSchema output && "llm_output".equals(output.getType())) {
                     String content = render(chunk);
                     if (!content.isBlank()) parser.accept(content);
                 }
