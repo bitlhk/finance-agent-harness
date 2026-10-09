@@ -1,9 +1,9 @@
 ---
 name: customer-manager-service-preparation
 description: 授权合成客户的财富访前准备，保留事实依据、缺项及待复核状态。
-version: 0.1.0
+version: 0.2.0
 license: Apache-2.0
-allowed-tools: wealth_previsit_context_query
+allowed-tools: wealth_previsit_context_query, wealth_allocation_context_query
 metadata:
   capabilityId: skill.wealth.service-preparation
   profile: employee-assisted
@@ -27,8 +27,10 @@ metadata:
 ## 服务建议
 
 围绕拜访目标形成触发事件、核心矛盾、最多三个关键问题及沟通要点。
-本批未安装产品查询或配置能力。需要讨论具体产品时，将其列为后续待核实事项，
-不自动查询、不补造产品，不将已有访前事实当成适当性批准。
+用户明确提出产品讨论，且金额、期限和渠道齐全时，使用 `wealth_allocation_context_query`
+读取版本化合成产品目录的确定性筛选结果。只可解释 `eligibleProducts`；
+`excludedProducts` 只用于说明排除原因，不能改写成候选。候选始终是待经理复核草稿，
+不等于购买建议、适当性最终批准或交易指令。参数不完整时先询问，不自行补值。
 
 ## 经理复核
 
@@ -43,7 +45,7 @@ metadata:
 1. 客户与拜访目标。
 2. 已核验事实：事实、来源、数据日期；缺失日期明确标注。
 3. 服务准备建议：建议、事实依据、需确认条件。
-4. 不在本批范围内的产品需求：标为待后续核实，不生成候选。
+4. 如已执行产品筛选：候选、适当性依据、目录与规则版本；否则说明未执行原因。
 5. 缺项与待核实问题。
 6. 经理复核清单和跟进草稿，明确标为待复核、未写入。
 

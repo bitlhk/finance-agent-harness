@@ -515,7 +515,8 @@
       "displayName": "客户经理 CRM 只读 Provider",
       "source": "repo://providers/customer-crm",
       "capabilities": [
-        "wealth.previsit-context.query"
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {

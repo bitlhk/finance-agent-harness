@@ -15,7 +15,7 @@ class CustomerCrmProviderTest {
         var factory = new CustomerCrmFactoryV01();
         assertEquals(CustomerCrmProvider.PROVIDER_ID, factory.providerId());
         assertEquals("customer-crm-readonly.v1", factory.connectionKind());
-        assertEquals(Set.of(CustomerCrmProvider.CAPABILITY), factory.requirements().keySet());
+        assertEquals(Set.of(CustomerCrmProvider.CAPABILITY, CustomerCrmProvider.ALLOCATION_CAPABILITY), factory.requirements().keySet());
         assertEquals(CapabilityRequestV1.Operation.QUERY,
                 provider.descriptor().capabilities().getFirst().operation());
     }
@@ -42,7 +42,7 @@ class CustomerCrmProviderTest {
                         "businessAsOf", "2026-10-08T00:00:00Z"));
                 case "customerDomainProfiles" -> List.of(Map.of("globalCustomerId", "CUST-000001",
                         "profileType", "wealth", "runtimeStatus", "active", "detailSchemaVersion", "1",
-                        "detail", "{\"riskLevel\":\"R2\",\"totalAssets\":125000}"));
+                        "detail", "{\"riskAssessment\":{\"riskLevel\":\"C3\",\"validUntil\":\"2027-01-01T00:00:00Z\"},\"totalAssets\":125000}"));
                 default -> List.of();
             };
             byte[] body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(
@@ -56,6 +56,15 @@ class CustomerCrmProviderTest {
                 () -> "fixture-token");
         provider = new CustomerCrmProvider("owner-1", client, () -> authority(Set.of("CUST-000001")),
                 Clock.fixed(now, ZoneOffset.UTC));
+    }
+    private CapabilityRequestV1 allocationRequest() {
+        var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, "request-products", "trace-products",
+                "employee-1", FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness", "WEALTH_PRODUCT_REVIEW",
+                "CUST-000001", "session-1", FinanceContextV1.AuthenticationLevel.BASIC,
+                Set.of("wealth:allocation:read"));
+        return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, CustomerCrmProvider.ALLOCATION_CAPABILITY,
+                CapabilityRequestV1.Operation.QUERY, context, Map.of("customerRef","CUST-000001","amount",100000,
+                "horizonMonths",12,"channel","手机银行"), null, null, Map.of(), null);
     }
     @AfterEach void stop() { server.stop(0); }
 
@@ -95,5 +104,14 @@ class CustomerCrmProviderTest {
     }
     @Test void executeIsAlwaysRejected() {
         assertThrows(SecurityException.class, () -> provider.executeTask(request("CUST-000001")));
+    }
+    @Test void screensVersionedSyntheticProductsDeterministically() {
+        CapabilityResultV1 result=provider.query(allocationRequest());
+        assertEquals(CapabilityResultV1.Status.COMPLETED,result.status());
+        assertEquals("ready",result.data().get("status"));
+        List<?> eligible=(List<?>)result.data().get("eligibleProducts");
+        assertEquals(2,eligible.size());
+        assertTrue(result.data().toString().contains("wealth-suitability-v1"));
+        assertFalse(result.data().toString().contains("fixture-token"));
     }
 }

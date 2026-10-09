@@ -45,6 +45,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final ServicePreparation task;
         private final InstalledPreparationMethod method;
         private String selectedCustomer;
+        private String pendingProductCustomer;
+        private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
         private volatile boolean closed;
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
@@ -75,23 +77,50 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 default -> throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             };
         }
-        private Map<String,Object> chat(String query) throws Exception {
+        @Override public synchronized Map<String,Object> callStreaming(String action, JsonNode body, EventSink sink) throws Exception {
+            current();
+            if (!"chat".equals(action)) return call(action, body);
+            exactChat(body);
+            return chat(text(body,"query"), sink);
+        }
+        private Map<String,Object> chat(String query) throws Exception { return chat(query, event -> {}); }
+        private Map<String,Object> chat(String query, EventSink sink) throws Exception {
             List<String> customers=task.customers(owner);
             var decision=CustomerManagerDialogue.resolve(query,customers,selectedCustomer);
             if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
-                return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，并按指定客户和服务目标汇集资料与持仓事实，依据已安装的专业方法生成待复核的回访准备建议。当前不支持产品推荐、CRM 写入、消息发送或交易办理。");
+                return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，汇集资料与持仓事实并生成待复核的回访准备建议。你也可以提供客户、金额、期限和渠道，让我从合成产品目录中形成待复核候选；我不会执行购买、CRM 写入、消息发送或交易办理。");
             if(decision.action()==CustomerManagerDialogue.Action.LIST_CUSTOMERS)
                 return Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_MULTIPLE)
                 return Map.of("status","NEED_CLARIFICATION","response","本轮提到了多位客户，请先明确要服务哪一位："+displayNames(decision.mentioned())+"。");
-            if(decision.action()==CustomerManagerDialogue.Action.UNSUPPORTED_PRODUCT)
-                return Map.of("status","UNSUPPORTED","response","当前场景只安装了客户资料与访前服务准备能力，尚未安装产品查询、适当性筛选或推荐能力。我可以先汇集授权客户事实并准备沟通重点。");
+            boolean product=decision.action()==CustomerManagerDialogue.Action.PRODUCT_REVIEW||pendingProductCustomer!=null;
+            if(product) {
+                String customer=decision.customer()!=null?decision.customer():pendingProductCustomer;
+                if(customer==null||customer.isBlank())return Map.of("status","NEED_CLARIFICATION","response","请先告诉我要为哪位获授权客户筛选产品候选。");
+                pendingProductCustomer=customer;pendingProductArguments.putAll(productArguments(query));
+                var missing=new ArrayList<String>();if(!pendingProductArguments.containsKey("amount"))missing.add("拟配置金额");
+                if(!pendingProductArguments.containsKey("horizonMonths"))missing.add("投资期限");
+                if(!pendingProductArguments.containsKey("channel"))missing.add("办理渠道（手机银行或网点）");
+                if(!missing.isEmpty())return Map.of("status","NEED_CLARIFICATION","response","为 "+displayName(customer)+" 筛选产品候选前，请补充："+String.join("、",missing)+"。候选只供经理复核，不会执行购买。");
+                selectedCustomer=customer;long generation=task.select(owner,customer,query);
+                sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
+                JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
+                pendingProductCustomer=null;pendingProductArguments.clear();
+                int eligible=report.path("productReview").path("eligibleProducts").size();
+                var result=new LinkedHashMap<String,Object>();result.put("status",report.path("status").asText());
+                result.put("response",eligible>0
+                        ? "我已按明确的金额、期限和渠道完成确定性筛选，并形成 "+displayName(customer)+" 的待复核产品候选。请核对产品目录版本、适当性依据和排除原因。"
+                        : "我已按明确的金额、期限和渠道完成确定性筛选，但当前没有通过规则校验的产品候选。请查看排除原因，不会用相邻产品替代。");
+                result.put("customer",customer);result.put("report",value(report));return Map.copyOf(result);
+            }
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
                 return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位获授权客户。你也可以先问“我负责哪些客户？”。");
             String customer=decision.customer();
             selectedCustomer=customer;
+            sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of(
+                    "stage","AUTHORIZATION_CONFIRMED","label","已核对客户服务范围")));
             long generation=task.select(owner,customer,query);
-            JsonNode report=task.prepare(owner,generation);
+            JsonNode report=task.prepare(owner,generation,listener(sink));
             String status=report.path("status").asText();
             String response="READY_FOR_REVIEW".equals(status)
                     ? "我已依据当前获授权的客户事实和专业方法，为 "+displayName(customer)+" 整理了回访准备建议。请结合事实来源和待核实事项进行复核。"
@@ -99,6 +128,18 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             var result=new LinkedHashMap<String,Object>();
             result.put("status",status);result.put("response",response);result.put("customer",customer);
             result.put("report",value(report));return Map.copyOf(result);
+        }
+        private ServicePreparation.PreparationListener listener(EventSink sink) {
+            return new ServicePreparation.PreparationListener(){
+                @Override public void stage(String stage,JsonNode ignored) throws Exception {
+                    String label=switch(stage){case "FACTS_READY"->"客户事实已取得";case "REPORT_GENERATION_STARTED"->"正在生成待复核建议";default->stage;};
+                    sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage",stage,"label",label)));
+                }
+                @Override public void reportDelta(ServicePreparation.ReportDelta delta) throws Exception {
+                    sink.emit(Map.of("type","CUSTOM","name","finance.report.delta","value",Map.of(
+                            "section",delta.section(),"text",delta.text(),"factRefs",delta.factRefs())));
+                }
+            };
         }
         @Override public Map<String,Object> status() {
             var value=new LinkedHashMap<String,Object>(bootstrap());value.put("status","ACTIVE");return value;
@@ -114,6 +155,16 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     }
     static String displayNames(Collection<String> values) {
         return String.join("、", values.stream().map(CustomerManagerScenarioExtension::displayName).toList());
+    }
+    static Map<String,Object> productArguments(String query) {
+        var result=new LinkedHashMap<String,Object>();
+        var amount=java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(万|元)").matcher(query);
+        if(amount.find())result.put("amount",Double.parseDouble(amount.group(1))*("万".equals(amount.group(2))?10000:1));
+        var months=java.util.regex.Pattern.compile("(\\d+)\\s*(年|个月|月)").matcher(query);
+        if(months.find())result.put("horizonMonths",Integer.parseInt(months.group(1))*("年".equals(months.group(2))?12:1));
+        if(query.contains("手机银行")||query.contains("手机端"))result.put("channel","手机银行");
+        else if(query.contains("网点")||query.contains("柜面"))result.put("channel","网点");
+        return Map.copyOf(result);
     }
 
     private static InstalledPreparationMethod installedMethod(Path root) throws Exception {

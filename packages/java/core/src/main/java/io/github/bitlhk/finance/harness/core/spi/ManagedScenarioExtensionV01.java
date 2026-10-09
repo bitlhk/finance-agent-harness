@@ -22,9 +22,15 @@ public interface ManagedScenarioExtensionV01 {
                    String instanceId, String ownerRef, ModelConnection model) {}
 
     interface Session extends AutoCloseable {
+        @FunctionalInterface interface EventSink {
+            void emit(Map<String,Object> event) throws Exception;
+        }
         String sessionId();
         Map<String,Object> bootstrap() throws Exception;
         Map<String,Object> call(String action, JsonNode body) throws Exception;
+        default Map<String,Object> callStreaming(String action, JsonNode body, EventSink sink) throws Exception {
+            return call(action, body);
+        }
         Map<String,Object> status() throws Exception;
         @Override void close();
     }

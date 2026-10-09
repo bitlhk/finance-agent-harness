@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 public final class CustomerCrmProvider implements DescribedFinanceProvider {
     public static final String PROVIDER_ID = "customer-crm-readonly";
     public static final String CAPABILITY = "wealth.previsit-context.query";
+    public static final String ALLOCATION_CAPABILITY = "wealth.allocation-context.query";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     private static final ObjectMapper JSON = new ObjectMapper();
     private final String ownerRef;
@@ -41,12 +42,15 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
 
     @Override public ProviderDescriptorV1 descriptor() {
         return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION, PROVIDER_ID, PROVIDER_VERSION,
-                List.of(new ProviderDescriptorV1.CapabilitySupport(CAPABILITY, CapabilityRequestV1.Operation.QUERY)));
+                List.of(new ProviderDescriptorV1.CapabilitySupport(CAPABILITY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(ALLOCATION_CAPABILITY, CapabilityRequestV1.Operation.QUERY)));
     }
 
     @Override public CapabilityResultV1 query(CapabilityRequestV1 request) {
-        if (!CAPABILITY.equals(request.capabilityId()) || request.operation() != CapabilityRequestV1.Operation.QUERY)
+        if (request.operation() != CapabilityRequestV1.Operation.QUERY
+                || !Set.of(CAPABILITY,ALLOCATION_CAPABILITY).contains(request.capabilityId()))
             throw new IllegalArgumentException("CRM_QUERY_NOT_INSTALLED");
+        if (ALLOCATION_CAPABILITY.equals(request.capabilityId())) return allocation(request);
         FinanceContextV1 context = request.context();
         if (context.principalType() != FinanceContextV1.PrincipalType.EMPLOYEE
                 || !"WEALTH_PREVISIT".equals(context.purpose())
@@ -93,6 +97,52 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
                 readinessReasons, List.of(), "customer-crm", parseAsOf(asOf), null, null);
     }
 
+    private CapabilityResultV1 allocation(CapabilityRequestV1 request) {
+        FinanceContextV1 context=request.context();
+        if(context.principalType()!=FinanceContextV1.PrincipalType.EMPLOYEE
+                ||!"WEALTH_PRODUCT_REVIEW".equals(context.purpose())
+                ||!context.scopes().contains("wealth:allocation:read"))throw new SecurityException("CRM_QUERY_CONTEXT_REJECTED");
+        String customerRef=required(context.subjectRef()); CustomerCrmAuthority before=authorize(customerRef);
+        double amount=positiveNumber(request.parameters().get("amount"),"ALLOCATION_AMOUNT_REQUIRED");
+        int horizon=(int)positiveNumber(request.parameters().get("horizonMonths"),"ALLOCATION_HORIZON_REQUIRED");
+        String channel=required(String.valueOf(request.parameters().getOrDefault("channel","")));
+        List<JsonNode> profiles=client.find("customerDomainProfiles",
+                "and(globalCustomerId[eq]:"+quote(customerRef)+",runtimeStatus[eq]:"+quote("active")+")",20);
+        JsonNode wealth=profiles.stream().filter(row->"wealth".equals(text(row,"profileType"))).findFirst()
+                .orElseThrow(()->new IllegalStateException("WEALTH_PROFILE_MISSING"));
+        JsonNode detail=parseObject(wealth.path("detail")); JsonNode assessment=detail.path("riskAssessment");
+        int customerRisk=riskOrdinal(assessment.path("riskLevel").asText());
+        String validUntil=assessment.path("validUntil").asText("");
+        if(customerRisk<1||validUntil.isBlank()||!validAfter(validUntil,clock.instant()))
+            return failed(request,"CUSTOMER_SUITABILITY_CONTEXT_INVALID");
+        JsonNode catalog=catalog(); var eligible=new ArrayList<Map<String,Object>>();var excluded=new ArrayList<Map<String,Object>>();
+        for(JsonNode product:catalog.path("products")) {
+            String reason=null;int productRisk=riskOrdinal(product.path("riskLevel").asText());
+            if(!"在售".equals(product.path("status").asText()))reason="PRODUCT_NOT_SELLABLE";
+            else if(productRisk<1||productRisk>customerRisk)reason="RISK_MISMATCH";
+            else if(!contains(product.path("channels"),channel))reason="CHANNEL_NOT_ALLOWED";
+            else if(amount<product.path("minAmount").asDouble())reason="AMOUNT_BELOW_MINIMUM";
+            else if(horizon<product.path("termMonths").asInt())reason="HORIZON_TOO_SHORT";
+            var item=new LinkedHashMap<String,Object>();
+            for(String key:List.of("productId","name","category","riskLevel","status","minAmount","termMonths","channels"))
+                item.put(key,JSON.convertValue(product.path(key),Object.class));
+            item.put("dataAsOf",catalog.path("dataAsOf").asText());
+            if(reason==null){item.put("policyCode","WEALTH_SUITABILITY_MATCH:ELIGIBLE");eligible.add(Map.copyOf(item));}
+            else {item.put("reasonCode",reason);excluded.add(Map.copyOf(item));}
+        }
+        CustomerCrmAuthority after=authorize(customerRef);if(!before.equals(after))throw new SecurityException("CRM_AUTHORITY_CHANGED");
+        var data=new LinkedHashMap<String,Object>();data.put("schema","harness.wealth-allocation-context.v1");
+        data.put("status",eligible.isEmpty()?"no_eligible_products":"ready");data.put("customerRef",customerRef);
+        data.put("customerRiskLevel","C"+customerRisk);data.put("assessmentValidUntil",validUntil);
+        data.put("request",Map.of("amount",amount,"horizonMonths",horizon,"channel",channel));
+        data.put("eligibleProducts",List.copyOf(eligible));data.put("excludedProducts",List.copyOf(excluded));
+        data.put("policySource",Map.of("ruleVersion","wealth-suitability-v1","catalogVersion",catalog.path("catalogVersion").asText(),
+                "catalogDigest",digest(catalog),"dataAsOf",catalog.path("dataAsOf").asText()));
+        return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,context.requestId(),context.traceId(),
+                CapabilityResultV1.Status.COMPLETED,"已完成合成产品目录的确定性适当性筛选。",Map.copyOf(data),
+                List.of(),List.of(),"customer-crm",Instant.parse(catalog.path("dataAsOf").asText()),null,null);
+    }
+
     @Override public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
         throw new SecurityException("CRM_PROVIDER_READ_ONLY");
     }
@@ -111,6 +161,18 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         try { return JSON.readTree(value.asText()); }
         catch (Exception invalid) { throw new IllegalStateException("CRM_JSON_FIELD_INVALID", invalid); }
     }
+    private static JsonNode catalog() {
+        try(var in=CustomerCrmProvider.class.getResourceAsStream("/customer-manager-products.v1.json")) {
+            if(in==null)throw new IllegalStateException("PRODUCT_CATALOG_MISSING");return JSON.readTree(in);
+        }catch(java.io.IOException failure){throw new IllegalStateException("PRODUCT_CATALOG_INVALID",failure);}
+    }
+    private static double positiveNumber(Object value,String code){
+        if(!(value instanceof Number number)||!Double.isFinite(number.doubleValue())||number.doubleValue()<=0)throw new IllegalArgumentException(code);
+        return number.doubleValue();
+    }
+    private static int riskOrdinal(String value){var matcher=java.util.regex.Pattern.compile("(?i)^[CR]?([1-5])$").matcher(value.trim());return matcher.matches()?Integer.parseInt(matcher.group(1)):-1;}
+    private static boolean validAfter(String value,Instant now){try{return Instant.parse(value).isAfter(now);}catch(Exception ignored){return false;}}
+    private static boolean contains(JsonNode values,String expected){for(JsonNode value:values)if(expected.equals(value.asText()))return true;return false;}
     private CapabilityResultV1 failed(CapabilityRequestV1 request, String code) {
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(),
                 request.context().traceId(), CapabilityResultV1.Status.FAILED, "CRM 客户事实查询失败。",

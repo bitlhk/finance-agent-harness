@@ -17,7 +17,7 @@ capabilities:
     inputSchema:
       type: object
       additionalProperties: false
-      required: [customerRef]
+      required: [customerRef, amount, horizonMonths, channel]
       properties:
         customerRef:
           type: string
@@ -35,16 +35,4 @@ capabilities:
           type: string
           minLength: 1
           maxLength: 64
-        keyword:
-          type: string
-          minLength: 1
-          maxLength: 120
-        productType:
-          type: string
-          minLength: 1
-          maxLength: 64
-        maxProducts:
-          type: integer
-          minimum: 1
-          maximum: 20
     requiredScopes: [wealth:allocation:read]

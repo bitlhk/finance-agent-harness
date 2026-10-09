@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class CustomerManagerScenarioExtensionInputTest {
     @Test
@@ -21,5 +22,13 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals("周明远、沈嘉禾", CustomerManagerScenarioExtension.displayNames(
                 java.util.List.of("合成客户周明远", "合成客户沈嘉禾")));
         assertEquals("周明远", CustomerManagerScenarioExtension.displayName("周明远"));
+    }
+
+    @Test void extractsOnlyExplicitProductReviewParameters() {
+        var values=CustomerManagerScenarioExtension.productArguments("为周明远筛选10万元、12个月、手机银行可办理的产品候选");
+        assertEquals(100000.0,values.get("amount"));
+        assertEquals(12,values.get("horizonMonths"));
+        assertEquals("手机银行",values.get("channel"));
+        assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
 }

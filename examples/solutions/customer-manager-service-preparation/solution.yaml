@@ -18,12 +18,16 @@ capabilityPackRefs:
   - id: wealth-manager-previsit
     version: 0.1.0
     source: repo://capability-packs/wealth-manager-previsit
+  - id: wealth-allocation-context
+    version: 0.1.0
+    source: repo://capability-packs/wealth-allocation-context
 providerRefs:
   - id: customer-crm-readonly
     version: 0.1.0-SNAPSHOT
     source: maven://io.github.bitlhk.finance:finance-provider-customer-crm:0.1.0-SNAPSHOT
 capabilityBindings:
   wealth.previsit-context.query: customer-crm-readonly
+  wealth.allocation-context.query: customer-crm-readonly
 modelRef: env://FINANCE_AGENT_MODEL
 evaluationPackRef:
   id: wealth-facts-controlled

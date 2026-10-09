@@ -21,6 +21,24 @@ public final class ServicePreparation implements AutoCloseable {
     @FunctionalInterface public interface ReportGenerator {
         ObjectNode generate(InstalledPreparationMethod method, String goal,
                             List<String> factIds, JsonNode context) throws Exception;
+        default ObjectNode generateStreaming(InstalledPreparationMethod method, String goal,
+                List<String> factIds, JsonNode context, java.util.function.Consumer<ReportDelta> sink) throws Exception {
+            ObjectNode value = generate(method, goal, factIds, context);
+            for (String section : List.of("communicationFocus", "preparationAdvice"))
+                value.path(section).forEach(item -> sink.accept(new ReportDelta(section,
+                        item.path("text").asText(), jsonStrings(item.path("factRefs")))));
+            for (String section : List.of("pendingItems", "reviewChecklist"))
+                value.path(section).forEach(item -> sink.accept(new ReportDelta(section, item.asText(), List.of())));
+            return value;
+        }
+    }
+    public record ReportDelta(String section, String text, List<String> factRefs) {
+        public ReportDelta { factRefs = List.copyOf(factRefs); }
+    }
+    public interface PreparationListener {
+        PreparationListener NONE = new PreparationListener() {};
+        default void stage(String stage, JsonNode snapshot) throws Exception {}
+        default void reportDelta(ReportDelta delta) throws Exception {}
     }
     private record Selection(long generation, String alias, String customer, String goal,
                              Mapping mapping, PreparationAccess.Snapshot authority) {}
@@ -84,6 +102,20 @@ public final class ServicePreparation implements AutoCloseable {
         }
     }
     public ObjectNode prepare(String caller, long expectedGeneration) throws Exception {
+        return prepare(caller, expectedGeneration, PreparationListener.NONE);
+    }
+    public ObjectNode prepare(String caller, long expectedGeneration, PreparationListener listener) throws Exception {
+        return prepareInternal(caller, expectedGeneration, null, listener);
+    }
+    public ObjectNode prepareProduct(String caller, long expectedGeneration, Map<String,Object> arguments,
+            PreparationListener listener) throws Exception {
+        if(arguments==null||!arguments.keySet().equals(Set.of("amount","horizonMonths","channel")))
+            throw new IllegalArgumentException("PRODUCT_REVIEW_ARGUMENTS_REQUIRED");
+        return prepareInternal(caller, expectedGeneration, Map.copyOf(arguments), listener);
+    }
+    private ObjectNode prepareInternal(String caller, long expectedGeneration, Map<String,Object> productArguments,
+            PreparationListener listener) throws Exception {
+        Objects.requireNonNull(listener);
         final Selection s; final String run = UUID.randomUUID().toString();
         final ObjectNode report = HarnessJson.mapper().createObjectNode();
         synchronized (this) {
@@ -129,16 +161,42 @@ public final class ServicePreparation implements AutoCloseable {
                 context.path("readiness").path("reasons").forEach(missing::add);
                 report.put("status",missing.isEmpty()?"READY_FOR_REVIEW":"PARTIAL");
                 var ids = new ArrayList<String>();
-                context.path("customer").fieldNames().forEachRemaining(k -> ids.add("/customer/"+k.replace("~","~0").replace("/","~1")));
+                collectFactRefs(context, "", ids, 200);
                 report.set("factRefs",HarnessJson.mapper().valueToTree(ids));
+                ObjectNode generationContext=(ObjectNode)context.deepCopy();
+                if(productArguments!=null) {
+                    synchronized(this){current(s,run);}
+                    CapabilityResultV1 allocation=access.query(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments);
+                    synchronized(this){current(s,run);}
+                    if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
+                        missing.add("产品适当性筛选未完成");
+                        if(allocation.error()!=null)report.put("failureCode",allocation.error().sourceCode());
+                    } else {
+                        JsonNode productReview=HarnessJson.mapper().valueToTree(allocation.data());
+                        report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        for(int i=0;i<productReview.path("eligibleProducts").size();i++) {
+                            final int productIndex=i;
+                            JsonNode product=productReview.path("eligibleProducts").path(i);
+                            product.fieldNames().forEachRemaining(k->ids.add("/productReview/eligibleProducts/"+productIndex+"/"+k.replace("~","~0").replace("/","~1")));
+                        }
+                        report.withArray("events").add("PRODUCT_POLICY_SCREENED");
+                    }
+                }
                 String factsStatus = report.path("status").asText();
                 report.put("status","PARTIAL"); report.put("explanationStatus","RUNNING");
                 report.withArray("events").add("FACTS_PRESERVED");
                 synchronized (this) { current(s,run); persist(report); }
+                listener.stage("FACTS_READY", report.deepCopy());
                 try {
                     synchronized (this) { current(s,run); }
-                    ObjectNode generated = generator.generate(method, s.goal(), List.copyOf(ids), context.deepCopy());
-                    validateGenerated(generated, ids, context, s.goal());
+                    listener.stage("REPORT_GENERATION_STARTED", report.deepCopy());
+                    ObjectNode generated = generator.generateStreaming(method, s.goal(), List.copyOf(ids), generationContext.deepCopy(), delta -> {
+                        validateDelta(delta, ids, generationContext, s.goal());
+                        try { listener.reportDelta(delta); }
+                        catch (RuntimeException failure) { throw failure; }
+                        catch (Exception failure) { throw new ListenerFailure(failure); }
+                    });
+                    validateGenerated(generated, ids, generationContext, s.goal());
                     report.set("modelSuggestion", generated.deepCopy());
                     report.put("explanationStatus","READY");
                     report.put("status",factsStatus);
@@ -267,7 +325,12 @@ public final class ServicePreparation implements AutoCloseable {
             if (focus != null) for (String ref : focus) {
                 var point=points.addObject();point.put("text","请经理结合该事实准备沟通");point.putArray("factRefs").add(ref);
             }
-            generated.putArray("preparationAdvice");generated.putArray("pendingItems");
+            var advice=generated.putArray("preparationAdvice");
+            if(focus!=null&&!focus.isEmpty()) {
+                var item=advice.addObject();item.put("text","先核对已取得事实，再确认本次服务目标");
+                item.putArray("factRefs").add(focus.getFirst());
+            }
+            generated.putArray("pendingItems");
             generated.putArray("reviewChecklist").add("核对事实来源和业务日期");
             return generated;
         };
@@ -278,7 +341,8 @@ public final class ServicePreparation implements AutoCloseable {
         Set<String> actual=new HashSet<>();generated.fieldNames().forEachRemaining(actual::add);
         if (!actual.equals(expected)) throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
         for(String section:List.of("communicationFocus","preparationAdvice")) {
-            JsonNode values=generated.path(section);if(!values.isArray()||values.size()>8)throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
+            JsonNode values=generated.path(section);if(!values.isArray()||values.isEmpty()||values.size()>8)
+                throw new IllegalArgumentException("MODEL_REPORT_EMPTY");
             for(JsonNode value:values) {
                 if(!value.isObject()||value.path("text").asText().isBlank()||value.path("text").asText().length()>500
                         ||!value.path("factRefs").isArray()||value.path("factRefs").isEmpty())
@@ -295,6 +359,38 @@ public final class ServicePreparation implements AutoCloseable {
         String allowed=facts.toString()+" "+goal;
         java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+    }
+    private static void validateDelta(ReportDelta delta, List<String> ids, JsonNode facts, String goal) {
+        if (!Set.of("communicationFocus","preparationAdvice","pendingItems","reviewChecklist").contains(delta.section())
+                || delta.text()==null || delta.text().isBlank() || delta.text().length()>500)
+            throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
+        boolean evidenced=Set.of("communicationFocus","preparationAdvice").contains(delta.section());
+        if (evidenced && (delta.factRefs().isEmpty() || !ids.containsAll(delta.factRefs()))
+                || !evidenced && !delta.factRefs().isEmpty())
+            throw new IllegalArgumentException("UNKNOWN_FACT_REF");
+        String allowed=facts.toString()+" "+goal;
+        var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
+        while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+    }
+    private static List<String> jsonStrings(JsonNode values) {
+        var result=new ArrayList<String>(); values.forEach(value->result.add(value.asText())); return List.copyOf(result);
+    }
+    private static void collectFactRefs(JsonNode node, String path, List<String> refs, int limit) {
+        if (refs.size() >= limit || node == null || node.isNull()) return;
+        if (node.isValueNode()) {
+            if (!path.isBlank()) refs.add(path);
+            return;
+        }
+        if (node.isArray()) {
+            for (int i=0; i<node.size() && refs.size()<limit; i++) collectFactRefs(node.path(i), path+"/"+i, refs, limit);
+            return;
+        }
+        node.fields().forEachRemaining(entry -> {
+            if (refs.size() < limit) collectFactRefs(entry.getValue(), path+"/"+entry.getKey().replace("~","~0").replace("/","~1"), refs, limit);
+        });
+    }
+    private static final class ListenerFailure extends RuntimeException {
+        ListenerFailure(Exception cause) { super(cause); }
     }
     private static boolean causedByTimeout(Throwable failure) {
         for (Throwable current = failure; current != null; current = current.getCause()) {

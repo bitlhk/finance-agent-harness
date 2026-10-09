@@ -16,7 +16,7 @@ scope:
 outOfScope:
   - CRM 写入及自动发送
   - 产品购买和转账
-  - 产品资料检索与产品配置建议（后续批次）
+  - 产品购买、自动成交或绕过经理复核的推荐
   - 真实客户生产服务
 sourceReferences:
   - employee-agent@0503bab254d52ac496bcf5fd51e23532aee975fe/examples/wealth-manager-reference-role-pack

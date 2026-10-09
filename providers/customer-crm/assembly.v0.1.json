@@ -8,5 +8,9 @@
     "pack": {"id": "wealth-manager-previsit", "version": "0.1.0"},
     "capabilityIds": ["wealth.previsit-context.query"],
     "operation": "QUERY"
+  }, {
+    "pack": {"id": "wealth-allocation-context", "version": "0.1.0"},
+    "capabilityIds": ["wealth.allocation-context.query"],
+    "operation": "QUERY"
   }]
 }

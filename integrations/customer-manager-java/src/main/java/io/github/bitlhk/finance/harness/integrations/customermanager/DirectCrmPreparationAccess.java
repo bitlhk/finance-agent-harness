@@ -30,14 +30,16 @@ public final class DirectCrmPreparationAccess implements PreparationAccess {
     @Override public CapabilityResultV1 query(String requestId, String traceId, String customerRef,
             String capabilityId, Map<String, Object> arguments) {
         Snapshot before = authorize(customerRef);
-        if (!arguments.isEmpty()) throw new IllegalArgumentException("PREVISIT_ARGUMENTS_INVALID");
+        boolean allocation=CustomerCrmProvider.ALLOCATION_CAPABILITY.equals(capabilityId);
+        if (!allocation && !arguments.isEmpty()) throw new IllegalArgumentException("PREVISIT_ARGUMENTS_INVALID");
         FinanceContextV1 context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION,
                 requestId, traceId, before.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE,
-                "finance-harness", "WEALTH_PREVISIT", customerRef, sessionRef,
-                before.authenticationLevel(), Set.of("wealth:previsit:read"));
+                "finance-harness", allocation?"WEALTH_PRODUCT_REVIEW":"WEALTH_PREVISIT", customerRef, sessionRef,
+                before.authenticationLevel(), Set.of(allocation?"wealth:allocation:read":"wealth:previsit:read"));
+        var parameters=new LinkedHashMap<String,Object>(arguments);parameters.put("customerRef",customerRef);
         CapabilityRequestV1 request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 capabilityId, CapabilityRequestV1.Operation.QUERY, context,
-                Map.of("customerRef", customerRef), null, null, Map.of(), null);
+                Map.copyOf(parameters), null, null, Map.of(), null);
         CapabilityResultV1 result = provider.query(request);
         if (!before.equals(authorize(customerRef))) throw new SecurityException("CRM_AUTHORITY_CHANGED");
         return result;

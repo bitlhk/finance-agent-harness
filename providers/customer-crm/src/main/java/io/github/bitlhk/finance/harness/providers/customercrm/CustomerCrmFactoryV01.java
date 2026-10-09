@@ -10,7 +10,8 @@ public final class CustomerCrmFactoryV01 implements ManagedProviderFactoryV01 {
     @Override public String providerId() { return CustomerCrmProvider.PROVIDER_ID; }
     @Override public String connectionKind() { return "customer-crm-readonly.v1"; }
     @Override public Map<String, Set<String>> requirements() {
-        return Map.of(CustomerCrmProvider.CAPABILITY, Set.of("wealth:previsit:read"));
+        return Map.of(CustomerCrmProvider.CAPABILITY, Set.of("wealth:previsit:read"),
+                CustomerCrmProvider.ALLOCATION_CAPABILITY, Set.of("wealth:allocation:read"));
     }
     @Override public DescribedFinanceProvider create(Connection connection,
             Map<String, BoundFinanceProvider> dependencies) {

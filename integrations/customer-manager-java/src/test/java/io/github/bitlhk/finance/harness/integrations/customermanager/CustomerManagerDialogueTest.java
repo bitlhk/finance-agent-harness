@@ -35,8 +35,10 @@ class CustomerManagerDialogueTest {
         assertEquals(CustomerManagerDialogue.Action.CLARIFY_CUSTOMER,
                 CustomerManagerDialogue.resolve("帮我准备回访",CUSTOMERS,null).action());
     }
-    @Test void productRecommendationRemainsOutsideInstalledScope() {
-        assertEquals(CustomerManagerDialogue.Action.UNSUPPORTED_PRODUCT,
+    @Test void productRequestEntersControlledReviewFlow() {
+        assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
                 CustomerManagerDialogue.resolve("给周明远推荐理财产品",CUSTOMERS,null).action());
+        assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
+                CustomerManagerDialogue.resolve("为周明远筛选10万元的产品候选",CUSTOMERS,null).action());
     }
 }

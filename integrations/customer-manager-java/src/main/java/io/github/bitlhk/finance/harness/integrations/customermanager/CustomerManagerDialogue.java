@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Deterministic safety gate around the conversational surface; it never grants customer access. */
 final class CustomerManagerDialogue {
-    enum Action { DESCRIBE_CAPABILITIES, LIST_CUSTOMERS, PREPARE, CLARIFY_CUSTOMER, CLARIFY_MULTIPLE, UNSUPPORTED_PRODUCT }
+    enum Action { DESCRIBE_CAPABILITIES, LIST_CUSTOMERS, PREPARE, CLARIFY_CUSTOMER, CLARIFY_MULTIPLE, PRODUCT_REVIEW }
     record Decision(Action action, String customer, List<String> mentioned) {}
 
     static Decision resolve(String query, List<String> customers, String selected) {
@@ -18,9 +18,11 @@ final class CustomerManagerDialogue {
                 || query.contains("列表") || query.contains("名单") || query.contains("名下")))
             return new Decision(Action.LIST_CUSTOMERS,null,mentioned);
         if (mentioned.size()>1) return new Decision(Action.CLARIFY_MULTIPLE,null,mentioned);
-        if (query.contains("推荐") || query.contains("产品匹配") || query.contains("买什么")
-                || query.contains("理财产品") || query.contains("适合的产品"))
-            return new Decision(Action.UNSUPPORTED_PRODUCT,null,mentioned);
+        boolean productIntent = query.contains("推荐") || query.contains("买什么")
+                || query.contains("理财产品") || query.contains("产品")
+                && (query.contains("匹配") || query.contains("筛选") || query.contains("候选") || query.contains("适合"));
+        if (productIntent)
+            return new Decision(Action.PRODUCT_REVIEW,mentioned.isEmpty()?selected:mentioned.getFirst(),mentioned);
         String customer=mentioned.isEmpty()?selected:mentioned.getFirst();
         return customer==null || customer.isBlank()
                 ? new Decision(Action.CLARIFY_CUSTOMER,null,mentioned)
