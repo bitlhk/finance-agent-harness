@@ -22,6 +22,7 @@
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>providers/non-ai-banking</module>
+        <module>providers/curated-synthetic-mcp</module>
         <module>providers/fraud-mining</module>
         <module>providers/employee-agent</module>
         <module>integrations/employee-agent-java</module>

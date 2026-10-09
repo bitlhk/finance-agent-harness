@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-audit",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.audit-case-context.query",
+      "toolName": "curated_audit_case_context",
+      "name": "Synthetic audit_case_context",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: audit_case_context. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "AU001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:audit_case_context:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.evaluate-audit-human-review.query",
+      "toolName": "curated_evaluate_audit_human_review",
+      "name": "Synthetic evaluate_audit_human_review",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: evaluate_audit_human_review. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "AU001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:evaluate_audit_human_review:read"
+      ]
+    }
+  ]
+}

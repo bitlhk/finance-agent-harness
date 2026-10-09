@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "curated-reference-contract.v1",
+  "version": "1.0.0",
+  "status": "DRAFT_NOT_QUALIFIED",
+  "source": "finance-eval-unified-v1/integrations/openjiuwen",
+  "files": {
+    "reference_mcp.py": "3903fc1d79a835f8050e4727b3f2d96f029545ae92fee3f90079170ab59840fa",
+    "role_fixtures.py": "2d68952e0633e61ad283ad07c74f728f5f4ad6cf917e92033e8a9cd32fe91c7a",
+    "role-fixtures.json": "5b6c171ac631614735758561487d126190464a30c7a3ec88c3edae7f71d4fd88"
+  },
+  "transport": "streamable-http",
+  "sdk": "io.modelcontextprotocol.sdk:mcp:0.17.2",
+  "capabilityNamespace": "eval.synthetic",
+  "toolNamePrefix": "curated_",
+  "sourceToolCount": 16,
+  "skillCompatibility": "EXPLICIT_MIGRATION_BINDING_REQUIRED",
+  "qualification": "NOT_OBSERVED"
+}

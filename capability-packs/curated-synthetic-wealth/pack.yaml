@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-wealth",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.get-customer-portfolio.query",
+      "toolName": "curated_get_customer_portfolio",
+      "name": "Synthetic get_customer_portfolio",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: get_customer_portfolio. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "Host-authorized subjectRef, NOT source C005/C006/I001; Provider maps it explicitly."
+          }
+        },
+        "required": [
+          "customer_id"
+        ]
+      },
+      "requiredScopes": [
+        "eval:synthetic:get_customer_portfolio:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.get-wealth-policy-basis.query",
+      "toolName": "curated_get_wealth_policy_basis",
+      "name": "Synthetic get_wealth_policy_basis",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: get_wealth_policy_basis. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "requiredScopes": [
+        "eval:synthetic:get_wealth_policy_basis:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.prepare-wealth-allocation-context.query",
+      "toolName": "curated_prepare_wealth_allocation_context",
+      "name": "Synthetic prepare_wealth_allocation_context",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: prepare_wealth_allocation_context. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "Host-authorized subjectRef, NOT source C005/C006/I001; Provider maps it explicitly."
+          },
+          "investable_amount": {
+            "type": "number",
+            "minimum": 0,
+            "default": 750000
+          },
+          "investment_horizon_years": {
+            "type": "number",
+            "minimum": 0,
+            "default": 3
+          },
+          "liquidity_ratio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.2
+          }
+        },
+        "required": [
+          "customer_id"
+        ]
+      },
+      "requiredScopes": [
+        "eval:synthetic:prepare_wealth_allocation_context:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.wealth-assistant-product-info.query",
+      "toolName": "curated_wealth_assistant_product_info",
+      "name": "Synthetic wealth_assistant_product_info",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: wealth_assistant_product_info. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist."
+          }
+        },
+        "required": [
+          "product_id"
+        ]
+      },
+      "requiredScopes": [
+        "eval:synthetic:wealth_assistant_product_info:read"
+      ]
+    }
+  ]
+}

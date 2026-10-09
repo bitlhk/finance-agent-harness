@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "curated-synthetic-post-loan",
+  "version": "1.0.0",
+  "systemPrompt": "Draft synthetic MCP tools only. Tool names have curated_ prefixes and require explicit Skill migration. customer_id is the authorized Host subjectRef, not the MCP customer ID. COMPLETED means the read completed: preserve sourceState and sourceResult including UNKNOWN, UNAVAILABLE, DEGRADED and missing facts. Never claim live Wind, underwriting, approval, transfer execution or regulatory classification changes.",
+  "capabilities": [
+    {
+      "capabilityId": "eval.synthetic.search-risk-enterprises.query",
+      "toolName": "curated_search_risk_enterprises",
+      "name": "Synthetic search_risk_enterprises",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: search_risk_enterprises. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "海岳制造"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:search_risk_enterprises:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.get-post-loan-risk-snapshot.query",
+      "toolName": "curated_get_post_loan_risk_snapshot",
+      "name": "Synthetic get_post_loan_risk_snapshot",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: get_post_loan_risk_snapshot. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "DEMO-ENTERPRISE-001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:get_post_loan_risk_snapshot:read"
+      ]
+    },
+    {
+      "capabilityId": "eval.synthetic.evaluate-post-loan-risk-escalation.query",
+      "toolName": "curated_evaluate_post_loan_risk_escalation",
+      "name": "Synthetic evaluate_post_loan_risk_escalation",
+      "description": "Read-only reference_mcp fixture via actual MCP; not live data or authorization. Source tool: evaluate_post_loan_risk_escalation. Preserve unknown, unavailable, degraded and missing facts. Requires explicit Skill migration binding.",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "Explicit synthetic resource reference; must be in the subject allowlist.",
+            "default": "DEMO-ENTERPRISE-001"
+          }
+        }
+      },
+      "requiredScopes": [
+        "eval:synthetic:evaluate_post_loan_risk_escalation:read"
+      ]
+    }
+  ]
+}

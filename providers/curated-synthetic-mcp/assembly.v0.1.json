@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "curated-synthetic-mcp",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-curated-synthetic-mcp:0.1.0-SNAPSHOT",
+  "connectionKind": "synthetic-bank-http.v1",
+  "supports": [
+    {
+      "pack": {
+        "id": "curated-synthetic-customer",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.get-customer-profile.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-wealth",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.get-customer-portfolio.query",
+        "eval.synthetic.get-wealth-policy-basis.query",
+        "eval.synthetic.prepare-wealth-allocation-context.query",
+        "eval.synthetic.wealth-assistant-product-info.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-insurance",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.list-products.query",
+        "eval.synthetic.get-product-detail.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-research",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.wind-stock-data.query",
+        "eval.synthetic.wind-financial-docs.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-audit",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.audit-case-context.query",
+        "eval.synthetic.evaluate-audit-human-review.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-transfer-risk",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.account-balance-query.query",
+        "eval.synthetic.fraud-transfer-risk-assess.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "curated-synthetic-post-loan",
+        "version": "1.0.0"
+      },
+      "capabilityIds": [
+        "eval.synthetic.search-risk-enterprises.query",
+        "eval.synthetic.get-post-loan-risk-snapshot.query",
+        "eval.synthetic.evaluate-post-loan-risk-escalation.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}
