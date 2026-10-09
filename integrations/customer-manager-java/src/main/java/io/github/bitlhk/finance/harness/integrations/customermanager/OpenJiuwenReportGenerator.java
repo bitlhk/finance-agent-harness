@@ -13,6 +13,7 @@ import java.util.*;
 
 /** Model-backed wording over Host-authorized facts and the installed method. */
 final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenerator {
+    static final int REPORT_MAX_TOKENS = 900;
     private final ReActAgent agent;
 
     OpenJiuwenReportGenerator(String provider, String key, String base, String model) {
@@ -24,7 +25,9 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "前两项是对象数组，每项只能含text和factRefs，factRefs必须来自输入；后两项是字符串数组。"
                 + "不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
                 .maxIterations(1).build().configureModelClient(required(provider), required(key), required(base), required(model), true);
-        config.getModelConfigObj().setTemperature(0.1); agent.configure(config);
+        config.getModelConfigObj().setTemperature(0.1);
+        config.getModelConfigObj().setMaxTokens(REPORT_MAX_TOKENS);
+        agent.configure(config);
         if (!Runner.start()) throw new IllegalStateException("RUNTIME_START_FAILED");
     }
 

@@ -145,7 +145,11 @@ public final class ServicePreparation implements AutoCloseable {
                 } catch (Exception failure) {
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
-                    missing.add("沟通重点生成失败，事实已保留，准备报告尚未完整生成");
+                    boolean timedOut = causedByTimeout(failure);
+                    report.put("failureCode", timedOut ? "REPORT_MODEL_TIMEOUT" : "REPORT_MODEL_FAILED");
+                    missing.add(timedOut
+                            ? "服务准备建议生成超时，已查询的客户事实仍完整保留"
+                            : "沟通重点生成失败，事实已保留，准备报告尚未完整生成");
                 }
             }
             report.put("finishedAt",Instant.now().toString());
@@ -291,6 +295,14 @@ public final class ServicePreparation implements AutoCloseable {
         String allowed=facts.toString()+" "+goal;
         java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+    }
+    private static boolean causedByTimeout(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            String type = current.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+            String message = String.valueOf(current.getMessage()).toLowerCase(Locale.ROOT);
+            if (type.contains("timeout") || message.contains("timeout") || message.contains("timed out")) return true;
+        }
+        return false;
     }
     @Override public synchronized void close() { closed=true;generation++;selected=null;activeRun=null;access.close(); }
 }

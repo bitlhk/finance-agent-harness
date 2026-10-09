@@ -122,6 +122,8 @@ class ServicePreparationTest {
         assertEquals("PARTIAL",r.path("status").asText());
         assertEquals(1000,r.at("/facts/customer/totalAssets").asInt());
         assertEquals("FAILED",r.path("explanationStatus").asText());
+        assertEquals("REPORT_MODEL_TIMEOUT",r.path("failureCode").asText());
+        assertTrue(r.path("missingEvidence").toString().contains("超时"));
         var saved=host.review("owner-a",r.path("reportId").asText(),r.path("reportRevision").asInt(),"说明未完成，事实已核验");
         assertEquals("PARTIAL",saved.path("status").asText());assertEquals(1,calls.get());
     }
