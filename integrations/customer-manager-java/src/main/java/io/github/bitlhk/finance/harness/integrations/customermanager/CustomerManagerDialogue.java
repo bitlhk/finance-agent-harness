@@ -9,7 +9,7 @@ final class CustomerManagerDialogue {
 
     static Decision resolve(String query, List<String> customers, String selected) {
         Objects.requireNonNull(query); Objects.requireNonNull(customers);
-        List<String> mentioned=customers.stream().filter(query::contains).toList();
+        List<String> mentioned=customers.stream().filter(customer -> mentions(query, customer)).toList();
         if (query.contains("能做什么") || query.contains("可以做什么") || query.contains("有什么能力")
                 || query.contains("怎么用") || query.contains("帮助"))
             return new Decision(Action.DESCRIBE_CAPABILITIES,null,mentioned);
@@ -24,6 +24,14 @@ final class CustomerManagerDialogue {
         return customer==null || customer.isBlank()
                 ? new Decision(Action.CLARIFY_CUSTOMER,null,mentioned)
                 : new Decision(Action.PREPARE,customer,mentioned);
+    }
+
+    private static boolean mentions(String query, String displayName) {
+        if (query.contains(displayName)) return true;
+        String syntheticPrefix = "合成客户";
+        return displayName.startsWith(syntheticPrefix)
+                && displayName.length() > syntheticPrefix.length()
+                && query.contains(displayName.substring(syntheticPrefix.length()));
     }
 
     private CustomerManagerDialogue() {}

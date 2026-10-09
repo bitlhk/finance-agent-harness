@@ -20,6 +20,11 @@ class CustomerManagerDialogueTest {
         assertEquals(CustomerManagerDialogue.Action.PREPARE,first.action());assertEquals("周明远",first.customer());
         assertEquals("周明远",CustomerManagerDialogue.resolve("再看看缺项",CUSTOMERS,first.customer()).customer());
     }
+    @Test void resolvesUniqueShortNameOnlyWithinTheAuthorizedSyntheticList() {
+        var result=CustomerManagerDialogue.resolve("帮我准备周明远的回访",List.of("合成客户周明远","合成客户沈嘉禾"),null);
+        assertEquals(CustomerManagerDialogue.Action.PREPARE,result.action());
+        assertEquals("合成客户周明远",result.customer());
+    }
     @Test void rejectsAmbiguousOrMissingCustomer() {
         assertEquals(CustomerManagerDialogue.Action.CLARIFY_MULTIPLE,
                 CustomerManagerDialogue.resolve("比较周明远和沈嘉禾",CUSTOMERS,null).action());
