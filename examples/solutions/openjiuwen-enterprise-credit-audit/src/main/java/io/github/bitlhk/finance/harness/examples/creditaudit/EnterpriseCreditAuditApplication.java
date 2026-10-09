@@ -11,6 +11,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
+import io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
 import io.github.bitlhk.finance.harness.integrations.openjiuwen.OpenJiuwenFinanceBridge;
 import io.github.bitlhk.finance.harness.integrations.openjiuwen.OpenJiuwenSolutionAssembler;
@@ -45,9 +46,10 @@ public final class EnterpriseCreditAuditApplication {
                 DemoRuleSet.load(Path.of(requiredEnv("FH_CREDIT_AUDIT_RULE_FILE"))));
         var provider = new RecordingProvider(base);
         var context = context(owner, principal, session);
+        var controlledProvider = bindHost(provider, context);
         List<CapabilityResultV1> deterministic = List.of(
-                base.query(request(EnterpriseCreditMaterialAuditProvider.FINANCIAL, materialSetRef, context)),
-                base.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, materialSetRef, context)));
+                controlledProvider.query(request(EnterpriseCreditMaterialAuditProvider.FINANCIAL, materialSetRef, context)),
+                controlledProvider.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, materialSetRef, context)));
 
         Settings settings = Settings.fromEnvironment();
         ReActAgent agent = createAgent(settings);
@@ -90,7 +92,8 @@ public final class EnterpriseCreditAuditApplication {
             report.put("explanation", response);
             report.put("explanationError", explanationError);
             report.put("model", settings.model());
-            report.put("modelParameters", Map.of("temperature", 0.1, "maxTokens", 2200));
+            report.put("modelParameters", Map.of("temperature", 0.1, "maxTokens", 2200,
+                    "thinking", "disabled"));
             report.put("methodVersion", "0.1.0");
             report.put("toolAttempts", provider.attempts());
             report.put("installationLock", lock.toString());
@@ -133,6 +136,17 @@ public final class EnterpriseCreditAuditApplication {
     private static CapabilityRequestV1 request(String capability, String ref, FinanceContextV1 context) {
         return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, capability,
                 CapabilityRequestV1.Operation.QUERY, context, Map.of("materialSetRef", ref), null, null, Map.of(), null);
+    }
+
+    static BoundFinanceProvider bindHost(DescribedFinanceProvider provider, FinanceContextV1 context) {
+        var grant = new BoundFinanceProvider.Grant(context.principalId(), context.principalType(),
+                Set.of(context.subjectRef()), Set.of(context.purpose()), context.scopes(), context.sessionRef(),
+                "synthetic-credit-audit-authority", Instant.now().plusSeconds(3600));
+        return new BoundFinanceProvider(provider, () -> grant, Map.of(
+                EnterpriseCreditMaterialAuditProvider.FINANCIAL,
+                Set.of("credit-audit:financial-statement:read"),
+                EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL,
+                Set.of("credit-audit:application-contract:read")));
     }
 
     private static FinanceContextV1 context(String owner, String principal, String session) {
