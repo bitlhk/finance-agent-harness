@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "enterprise-credit-material-audit", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-enterprise-credit-material-audit:0.1.0-SNAPSHOT",
+  "connectionKind": "local-credit-materials.v1",
+  "supports": [
+    {
+      "pack": {"id": "enterprise-financial-statement-verification", "version": "0.1.0"},
+      "capabilityIds": ["enterprise.financial-statement.verify"],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {"id": "enterprise-application-contract-verification", "version": "0.1.0"},
+      "capabilityIds": ["enterprise.application-contract.verify"],
+      "operation": "QUERY"
+    }
+  ]
+}

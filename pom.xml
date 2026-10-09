@@ -24,6 +24,7 @@
         <module>providers/non-ai-banking</module>
         <module>providers/curated-synthetic-mcp</module>
         <module>providers/fraud-mining</module>
+        <module>providers/enterprise-credit-material-audit</module>
         <module>providers/employee-agent</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>

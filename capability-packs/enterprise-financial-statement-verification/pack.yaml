@@ -1,0 +1,22 @@
+schemaVersion: finance-capability-pack.v1
+packId: enterprise-financial-statement-verification
+version: 0.1.0
+systemPrompt: |
+  核验对象由宿主冻结的 materialSetRef 指定。不得猜测或改写引用。
+  工具只计算资产、负债与权益的勾稽关系。勾稽一致不代表财报真实。
+capabilities:
+  - capabilityId: enterprise.financial-statement.verify
+    toolName: enterprise_financial_statement_verify
+    name: 企业财报勾稽核验
+    description: 使用锁定材料集中的结构化字段，确定性核验资产是否等于负债加权益，并保留字段来源。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materialSetRef]
+      properties:
+        materialSetRef:
+          type: string
+          pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{2,95}$'
+          description: 由可信宿主为当前主体、任务和会话冻结的材料集引用，不得自行生成。
+    requiredScopes: ["credit-audit:financial-statement:read"]

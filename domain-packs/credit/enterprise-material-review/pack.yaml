@@ -1,0 +1,21 @@
+schemaVersion: finance-domain-pack.v1
+packId: enterprise-credit-material-review
+version: 0.1.0
+profile: internal-control
+capabilities:
+  - enterprise.financial-statement.verify
+  - enterprise.application-contract.verify
+skills:
+  - directory: enterprise-material-review
+    entry: skills/enterprise-material-review/SKILL.md
+scope:
+  - 企业财报资产负债权益勾稽核验
+  - 申请表与用途合同主体及金额一致性核验
+  - 确定性结果的证据矩阵解释和最小补件建议
+outOfScope:
+  - OCR、图片真伪、印章和签名识别
+  - 完整授信尽调、自动审批、欺诈认定、拒贷或放款决定
+  - 将材料提交或勾稽一致解释为真实性证明
+sourceReferences:
+  - finance-harness-smart-audit@afb5e05
+  - employee-agent-smart-audit@0503bab254d52ac496bcf5fd51e23532aee975fe

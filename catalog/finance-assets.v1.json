@@ -256,6 +256,27 @@
           "local-simulator-task"
         ]
       }
+    },
+    {
+      "id": "enterprise-credit-material-review",
+      "version": "0.1.0",
+      "displayName": "企业信贷材料核验辅助",
+      "profile": "internal-control",
+      "source": "repo://domain-packs/credit/enterprise-material-review",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "enterprise.financial-statement.verify",
+        "enterprise.application-contract.verify"
+      ],
+      "dependencies": [
+        {"kind": "capability-pack", "id": "enterprise-financial-statement-verification", "version": "0.1.0"},
+        {"kind": "capability-pack", "id": "enterprise-application-contract-verification", "version": "0.1.0"}
+      ],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
     }
   ],
   "capabilityPacks": [
@@ -572,6 +593,32 @@
           "local-simulator-task"
         ]
       }
+    },
+    {
+      "id": "enterprise-financial-statement-verification",
+      "version": "0.1.0",
+      "displayName": "企业财报勾稽核验",
+      "source": "repo://capability-packs/enterprise-financial-statement-verification",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["enterprise.financial-statement.verify"],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
+    },
+    {
+      "id": "enterprise-application-contract-verification",
+      "version": "0.1.0",
+      "displayName": "申请与用途合同一致性核验",
+      "source": "repo://capability-packs/enterprise-application-contract-verification",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["enterprise.application-contract.verify"],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
     }
   ],
   "providers": [
@@ -696,6 +743,23 @@
           "employee-assisted"
         ]
       }
+    },
+    {
+      "id": "enterprise-credit-material-audit",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "企业信贷材料核验合成 Provider",
+      "source": "repo://providers/enterprise-credit-material-audit",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-enterprise-credit-material-audit:0.1.0-SNAPSHOT",
+      "capabilities": [
+        "enterprise.financial-statement.verify",
+        "enterprise.application-contract.verify"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
     }
   ],
   "evalPacks": [
@@ -749,9 +813,17 @@
       "displayName": "收支合同受控案例（非模型质量评测）",
       "source": "repo://conformance/fixtures/cashflow/v0.1",
       "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "enterprise-credit-material-audit-controlled",
+      "version": "0.1.0",
+      "displayName": "企业信贷材料核验受控案例（非业务审批评测）",
+      "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-04.curated-risk-inputs-candidate-1",
+  "catalogRevision": "2026-10-09.enterprise-credit-material-audit-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
