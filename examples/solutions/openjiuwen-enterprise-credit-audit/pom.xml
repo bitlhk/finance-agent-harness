@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.bitlhk.finance</groupId>
+        <artifactId>finance-agent-harness-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../../pom.xml</relativePath>
+    </parent>
+    <artifactId>finance-example-openjiuwen-enterprise-credit-audit</artifactId>
+    <name>Finance Example - OpenJiuwen Enterprise Credit Material Audit</name>
+    <dependencies>
+        <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-openjiuwen-java</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-enterprise-credit-material-audit</artifactId><version>${project.version}</version></dependency>
+        <dependency>
+            <groupId>com.openjiuwen</groupId><artifactId>agent-core-java</artifactId><version>${openjiuwen.core.version}</version>
+            <exclusions><exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+    </dependencies>
+    <build><plugins><plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.6.3</version>
+        <configuration><mainClass>io.github.bitlhk.finance.harness.examples.creditaudit.EnterpriseCreditAuditApplication</mainClass></configuration>
+    </plugin></plugins></build>
+</project>
