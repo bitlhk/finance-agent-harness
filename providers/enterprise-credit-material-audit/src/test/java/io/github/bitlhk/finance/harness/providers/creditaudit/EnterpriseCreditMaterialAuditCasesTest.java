@@ -58,6 +58,57 @@ class EnterpriseCreditMaterialAuditCasesTest {
         assertEquals("200.00", ((Map<?, ?>) result.data().get("values")).get("difference"));
     }
 
+    @Test void crossMaterialResultCarriesEveryFrozenComparabilityDimensionAndSource() throws Exception {
+        MaterialSet set = materialSet("amount-difference");
+        write(set);
+        var result = provider().query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL,
+                set.materialSetId(), context()));
+
+        Map<?, ?> basis = (Map<?, ?>) result.data().get("verificationBasis");
+        assertEquals("CROSS_MATERIAL", basis.get("mode"));
+        assertEquals("COMPARABLE", basis.get("outcome"));
+        List<Map<String, Object>> dimensions = (List<Map<String, Object>>) basis.get("dimensions");
+        assertEquals(List.of("subject", "period", "currency", "unit", "businessBasis"),
+                dimensions.stream().map(item -> String.valueOf(item.get("name"))).toList());
+        assertTrue(dimensions.stream().allMatch(item -> "MATCH".equals(item.get("outcome"))));
+        Map<String, Object> period = dimensions.stream()
+                .filter(item -> "period".equals(item.get("name"))).findFirst().orElseThrow();
+        List<Map<String, Object>> values = (List<Map<String, Object>>) period.get("values");
+        assertEquals(2, values.size());
+        assertEquals("/period", ((Map<?, ?>) values.get(0).get("sourceLocator")).get("value"));
+        assertEquals("2026-Q3", ((Map<?, ?>) values.get(0).get("value")).get("label"));
+    }
+
+    @Test void nonComparableResultRetainsBothConflictingPeriodValues() throws Exception {
+        MaterialSet set = materialSet("period-mismatch");
+        write(set);
+        var result = provider().query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL,
+                set.materialSetId(), context()));
+
+        Map<?, ?> basis = (Map<?, ?>) result.data().get("verificationBasis");
+        assertEquals("NOT_COMPARABLE", basis.get("outcome"));
+        List<Map<String, Object>> dimensions = (List<Map<String, Object>>) basis.get("dimensions");
+        Map<String, Object> period = dimensions.stream()
+                .filter(item -> "period".equals(item.get("name"))).findFirst().orElseThrow();
+        assertEquals("MISMATCH", period.get("outcome"));
+        List<Map<String, Object>> values = (List<Map<String, Object>>) period.get("values");
+        assertEquals(List.of("2026-Q3", "2026-Q2"), values.stream()
+                .map(item -> String.valueOf(((Map<?, ?>) item.get("value")).get("label"))).toList());
+    }
+
+    @Test void financialResultCarriesStatementIdentityPeriodAndBasis() throws Exception {
+        MaterialSet set = materialSet("balanced");
+        write(set);
+        var result = provider().query(request(EnterpriseCreditMaterialAuditProvider.FINANCIAL,
+                set.materialSetId(), context()));
+
+        Map<?, ?> basis = (Map<?, ?>) result.data().get("verificationBasis");
+        assertEquals("SINGLE_MATERIAL", basis.get("mode"));
+        assertEquals("RECORDED", basis.get("outcome"));
+        assertEquals(5, ((List<?>) basis.get("dimensions")).size());
+        assertTrue(String.valueOf(basis).contains("BALANCE_SHEET_END"));
+    }
+
     @Test void ownerPrincipalSessionAndTaskAreAllEnforced() throws Exception {
         MaterialSet set = materialSet("balanced");
         write(set);

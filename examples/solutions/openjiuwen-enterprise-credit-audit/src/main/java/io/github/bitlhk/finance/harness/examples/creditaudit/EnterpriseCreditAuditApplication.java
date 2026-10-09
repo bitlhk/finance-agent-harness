@@ -75,7 +75,7 @@ public final class EnterpriseCreditAuditApplication {
                 response = render(Runner.runAgent(agent, Map.of(
                         "query", explanationPrompt(materialSetRef, deterministic),
                         "conversation_id", conversation), conversation, null));
-                ExplanationGuard.requireAllowed(response);
+                ExplanationGuard.requireAllowed(response, deterministic);
                 explanationStatus = "COMPLETED";
                 explanationError = "";
             } catch (Exception exception) {
@@ -108,7 +108,11 @@ public final class EnterpriseCreditAuditApplication {
 
     static String explanationPrompt(String reference, List<CapabilityResultV1> results) throws Exception {
         return "当前材料集引用为 " + reference + "。以下确定性结果已经由 Harness 计算并冻结，请只解释这些结果，"
-                + "不得修改数值、补造材料或形成通过/拒绝/授信/放款/欺诈结论。给出证据矩阵、影响和最小补件：\n"
+                + "不得修改数值、补造材料或形成通过/拒绝/授信/放款/欺诈结论。verificationBasis 是核验时实际使用的"
+                + "主体、期间、币种、单位和业务口径依据：outcome 为 MATCH 或 RECORDED 时，不得因为这些字段未出现在"
+                + "values 中而写成缺失、未知或无法确认；NOT_COMPARABLE 或 MISSING 才按真实缺口说明。"
+                + "正文使用业务语言，例如‘发现不一致’‘缺少必要字段’‘当前材料不可比’，原始状态码只在技术证据中"
+                + "必要时保留。最小补件只针对结果中明确存在的缺失或不可比原因。给出证据矩阵、影响和最小补件：\n"
                 + HarnessJson.mapper().writeValueAsString(results);
     }
 
@@ -208,6 +212,35 @@ public final class EnterpriseCreditAuditApplication {
             if (response.matches("\\{output=\\s*,\\s*result_type=answer}"))
                 throw new IllegalArgumentException("EMPTY_MODEL_EXPLANATION");
             for (String phrase : PROHIBITED) if (response.contains(phrase)) throw new IllegalArgumentException("MODEL_DECISION_BOUNDARY_VIOLATION");
+        }
+
+        static void requireAllowed(String response, List<CapabilityResultV1> results) {
+            requireAllowed(response);
+            for (String label : confirmedDimensions(results)) {
+                if (response.contains(label + "字段未在结果中给出")
+                        || response.contains(label + "未在结果中给出")
+                        || response.contains(label + "可比性无法")
+                        || response.contains("无法确认" + label)) {
+                    throw new IllegalArgumentException("MODEL_EXPLANATION_CONTRADICTS_CONFIRMED_BASIS:" + label);
+                }
+            }
+        }
+
+        private static Set<String> confirmedDimensions(List<CapabilityResultV1> results) {
+            var labels = new java.util.LinkedHashSet<String>();
+            for (CapabilityResultV1 result : results) {
+                Object basis = result.data().get("verificationBasis");
+                if (!(basis instanceof Map<?, ?> basisMap)
+                        || !(basisMap.get("dimensions") instanceof List<?> dimensions)) continue;
+                for (Object dimension : dimensions) {
+                    if (!(dimension instanceof Map<?, ?> item)) continue;
+                    String outcome = String.valueOf(item.get("outcome"));
+                    if (("MATCH".equals(outcome) || "RECORDED".equals(outcome)) && item.get("label") != null) {
+                        labels.add(String.valueOf(item.get("label")));
+                    }
+                }
+            }
+            return Set.copyOf(labels);
         }
     }
 

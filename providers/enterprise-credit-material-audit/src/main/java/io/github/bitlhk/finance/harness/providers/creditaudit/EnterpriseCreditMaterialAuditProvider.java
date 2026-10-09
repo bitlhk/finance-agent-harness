@@ -87,6 +87,7 @@ public final class EnterpriseCreditMaterialAuditProvider implements DescribedFin
         data.put("rule", Map.of("id", evaluation.ruleSetId(), "version", evaluation.ruleVersion(),
                 "classification", "DEMO", "businessDate", set.trustedBusinessDate().toString()));
         data.put("values", evaluation.values());
+        data.put("verificationBasis", evaluation.verificationBasis());
         data.put("evidence", evaluation.evidence());
         data.put("advisoryOnly", true);
         data.put("authenticityVerified", false);
