@@ -5,6 +5,11 @@ profile: internal-control
 capabilities:
   - enterprise.financial-statement.verify
   - enterprise.application-contract.verify
+capabilityPackRefs:
+  - id: enterprise-financial-statement-verification
+    version: 0.1.0
+  - id: enterprise-application-contract-verification
+    version: 0.1.0
 skills:
   - directory: enterprise-material-review
     entry: skills/enterprise-material-review/SKILL.md
