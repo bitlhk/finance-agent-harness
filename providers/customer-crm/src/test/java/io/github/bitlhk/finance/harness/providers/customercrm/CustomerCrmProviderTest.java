@@ -112,6 +112,7 @@ class CustomerCrmProviderTest {
         List<?> eligible=(List<?>)result.data().get("eligibleProducts");
         assertEquals(2,eligible.size());
         assertTrue(result.data().toString().contains("wealth-suitability-v1"));
+        assertTrue(result.data().toString().contains("PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON"));
         assertFalse(result.data().toString().contains("fixture-token"));
     }
 }

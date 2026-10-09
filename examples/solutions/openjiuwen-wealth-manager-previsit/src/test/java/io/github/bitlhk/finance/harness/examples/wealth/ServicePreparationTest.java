@@ -211,6 +211,15 @@ class ServicePreparationTest {
     @Test void reportPathCannotEscapePrivateStore() {
         assertThrows(IllegalArgumentException.class,()->host.read("owner-a","../another-owner"));
     }
+    @Test void eligibleProductsCannotBeExplainedAsIneligible() throws Exception {
+        var facts=HarnessJson.mapper().readTree("""
+                {"productReview":{"eligibleProducts":[{"name":"稳健产品"}]}}
+                """);
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateProductSemantics(
+                "当前没有同时满足条件的合格候选",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateProductSemantics(
+                "当前有一个待经理复核的合格候选",facts));
+    }
     @Test void nativeOpenJiuwenModelSelectsOnlyExistingFactReferences() throws Exception {
         var modelCalls=new AtomicInteger();
         server.createContext("/v1/chat/completions",x->{

@@ -205,6 +205,7 @@ public final class ServicePreparation implements AutoCloseable {
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
                     boolean timedOut = causedByTimeout(failure);
                     report.put("failureCode", timedOut ? "REPORT_MODEL_TIMEOUT" : "REPORT_MODEL_FAILED");
+                    report.set("fallbackSuggestion", deterministicFallback(generationContext));
                     missing.add(timedOut
                             ? "服务准备建议生成超时，已查询的客户事实仍完整保留"
                             : "沟通重点生成失败，事实已保留，准备报告尚未完整生成");
@@ -359,6 +360,7 @@ public final class ServicePreparation implements AutoCloseable {
         String allowed=facts.toString()+" "+goal;
         java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+        validateProductSemantics(generated.toString(),facts);
     }
     private static void validateDelta(ReportDelta delta, List<String> ids, JsonNode facts, String goal) {
         if (!Set.of("communicationFocus","preparationAdvice","pendingItems","reviewChecklist").contains(delta.section())
@@ -371,6 +373,39 @@ public final class ServicePreparation implements AutoCloseable {
         String allowed=facts.toString()+" "+goal;
         var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+        validateProductSemantics(delta.text(),facts);
+    }
+    static void validateProductSemantics(String text, JsonNode facts) {
+        if(facts.path("productReview").path("eligibleProducts").isEmpty())return;
+        String compact=text.replaceAll("\\s+","");
+        for(String conflict:List.of("没有同时满足","不存在同时满足","无可推荐合格产品","没有合格候选","无合格候选"))
+            if(compact.contains(conflict))throw new IllegalArgumentException("PRODUCT_ELIGIBILITY_CONFLICT");
+    }
+    private static ObjectNode deterministicFallback(JsonNode facts) {
+        ObjectNode fallback=HarnessJson.mapper().createObjectNode();
+        var focus=fallback.putArray("communicationFocus");var advice=fallback.putArray("preparationAdvice");
+        var pending=fallback.putArray("pendingItems");var checklist=fallback.putArray("reviewChecklist");
+        String name=facts.at("/customer/displayName").asText("该客户");
+        String status=facts.at("/customer/customerStatus").asText("");
+        var first=focus.addObject();first.put("text",status.isBlank()
+                ? "本次服务对象为"+name+"，请先确认本次回访目标。"
+                : "本次服务对象为"+name+"，当前客户状态为"+status+"，请先确认本次回访目标。");
+        var firstRefs=first.putArray("factRefs");firstRefs.add("/customer/displayName");
+        if(!status.isBlank())firstRefs.add("/customer/customerStatus");
+        JsonNode products=facts.path("productReview").path("eligibleProducts");
+        if(products.isArray()&&!products.isEmpty()) {
+            var product=focus.addObject();product.put("text","当前规则筛选得到"+products.size()+"个待经理复核的产品候选，候选资格以产品卡片和规则版本为准。");
+            var refs=product.putArray("factRefs");for(int i=0;i<products.size();i++)refs.add("/productReview/eligibleProducts/"+i+"/name");
+            var prepare=advice.addObject();prepare.put("text","与客户沟通前，请复核候选产品的期限、风险等级、最低金额和办理渠道，不将待复核候选表述为购买建议。");
+            prepare.putArray("factRefs").add("/productReview/policySource/ruleVersion");
+        } else {
+            var prepare=advice.addObject();prepare.put("text","回访前请结合已取得的客户资料，确认服务目标、缺失信息和需要进一步授权查询的事项。");
+            prepare.putArray("factRefs").add("/customer/displayName");
+        }
+        pending.add("自然语言建议未完整生成，请经理依据已核验事实继续复核。");
+        checklist.add("核对客户、事实来源、业务日期和本次服务目标。");
+        checklist.add("确认页面中的内容未被当作CRM写入、购买建议或交易指令。");
+        return fallback;
     }
     private static List<String> jsonStrings(JsonNode values) {
         var result=new ArrayList<String>(); values.forEach(value->result.add(value.asText())); return List.copyOf(result);

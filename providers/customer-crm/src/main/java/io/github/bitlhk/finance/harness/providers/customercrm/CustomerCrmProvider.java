@@ -136,6 +136,9 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         data.put("customerRiskLevel","C"+customerRisk);data.put("assessmentValidUntil",validUntil);
         data.put("request",Map.of("amount",amount,"horizonMonths",horizon,"channel",channel));
         data.put("eligibleProducts",List.copyOf(eligible));data.put("excludedProducts",List.copyOf(excluded));
+        data.put("eligibilityPolicy",Map.of(
+                "horizonRule","PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON",
+                "description","产品期限不超过客户可接受期限即满足期限条件"));
         data.put("policySource",Map.of("ruleVersion","wealth-suitability-v1","catalogVersion",catalog.path("catalogVersion").asText(),
                 "catalogDigest",digest(catalog),"dataAsOf",catalog.path("dataAsOf").asText()));
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,context.requestId(),context.traceId(),
