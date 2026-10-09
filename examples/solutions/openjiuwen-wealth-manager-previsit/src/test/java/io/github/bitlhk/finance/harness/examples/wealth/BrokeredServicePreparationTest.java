@@ -50,7 +50,7 @@ class BrokeredServicePreparationTest {
     @Test void generateReviewReadPreservesFactsWithoutRequery() throws Exception {
         var report=task.prepare("owner",select());String id=report.path("reportId").asText();
         assertEquals("READY_FOR_REVIEW",report.path("status").asText());
-        var saved=task.review("owner",id,1,"engineering review");
+        var saved=task.review("owner",id,report.path("reportRevision").asInt(),"engineering review");
         assertEquals(saved,task.read("owner",id));assertEquals(report.path("facts"),saved.path("facts"));
         assertThrows(SecurityException.class,()->task.read("another-owner",id));assertEquals(1,calls.get());
     }
@@ -59,15 +59,16 @@ class BrokeredServicePreparationTest {
         var report=task.prepare("owner",select());
         assertEquals("PARTIAL",report.path("status").asText());assertTrue(report.has("facts"));
         assertEquals("FAILED",report.path("explanationStatus").asText());
-        var saved=task.review("owner",report.path("reportId").asText(),1,"incomplete explanation noted");
+        var saved=task.review("owner",report.path("reportId").asText(),report.path("reportRevision").asInt(),"incomplete explanation noted");
         assertEquals("PARTIAL",saved.path("status").asText());assertEquals(1,calls.get());
     }
     @Test void authorityChangeDuringExplanationDiscardsTheReport() throws Exception {
         explanation=(goal,ids,context)->{revision="scope-2";return ids.stream().limit(2).toList();};
         long generation=select();
         assertThrows(SecurityException.class,()->task.prepare("owner",generation));
-        try(var files=java.nio.file.Files.list(reports)) {
-            var record=HarnessJson.mapper().readTree(files.findFirst().orElseThrow().toFile());
+        try(var files=java.nio.file.Files.walk(reports)) {
+            var record=HarnessJson.mapper().readTree(files.filter(java.nio.file.Files::isRegularFile)
+                .filter(p->p.getFileName().toString().startsWith("v")).reduce((a,b)->b).orElseThrow().toFile());
             assertEquals("DISCARDED",record.path("status").asText());assertFalse(record.has("facts"));
         }
         assertEquals(1,calls.get());

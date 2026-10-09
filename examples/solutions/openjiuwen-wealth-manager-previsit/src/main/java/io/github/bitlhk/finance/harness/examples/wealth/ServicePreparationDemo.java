@@ -2,6 +2,7 @@ package io.github.bitlhk.finance.harness.examples.wealth;
 
 import com.sun.net.httpserver.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openjiuwen.core.runner.Runner;
 import com.openjiuwen.core.singleagent.agents.*;
 import com.openjiuwen.core.singleagent.schema.AgentCard;
@@ -69,7 +70,7 @@ public final class ServicePreparationDemo {
         ServicePreparation.Explanation explain=(goal,ids,context)->ids.stream().filter(s->!s.endsWith("customerId")).limit(3).toList();
         if(nativeModel) explain=nativeExplanation();
         Map<String,String> assets=assetManifest();
-        var host=new ServicePreparation("synthetic-owner",session,()->new ServicePreparation.Mapping("synthetic-mapping-v1",
+        var host=new ServicePreparation("synthetic-owner",new EmployeeAgentPreparationAccess(session),()->new ServicePreparation.Mapping("synthetic-mapping-v1",
             Map.of("合成客户甲","syn-client-a","合成客户乙","syn-client-b")),explain,out,assets);
         var http=HttpServer.create(new InetSocketAddress("127.0.0.1",port),0);http.setExecutor(executor);
         String cookie=UUID.randomUUID().toString();String csrf=UUID.randomUUID().toString();
@@ -172,6 +173,30 @@ public final class ServicePreparationDemo {
                 var result=new ArrayList<String>();for(JsonNode ref:refs){if(!ref.isTextual())throw new IllegalArgumentException("INVALID_FOCUS_REF");result.add(ref.asText());}
                 return result;
             }finally{Runner.release(sid);}
+        };
+    }
+    static ServicePreparation.ReportGenerator nativeReportGenerator(String key,String base,String model) {
+        var agent=new ReActAgent(AgentCard.builder().id("service-preparation-report")
+            .name("客户经理服务准备报告").description("依据已安装方法和已核实事实生成待复核建议").build());
+        var config=ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role","system","content",
+            "你只能依据输入中的installedMethod、goal、factIds和facts生成待经理复核的服务准备建议。"
+            +"只输出JSON对象，字段严格为communicationFocus、preparationAdvice、pendingItems、reviewChecklist。"
+            +"前两项是对象数组，每项只能含text和factRefs，factRefs必须来自输入；后两项是字符串数组。"
+            +"不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
+            .maxIterations(1).build().configureModelClient("OpenAI",key,base,model,true);
+        config.getModelConfigObj().setTemperature(0.1);agent.configure(config);
+        if(!Runner.start())throw new IllegalStateException("RUNTIME_START_FAILED");
+        return (method,goal,ids,context)->{
+            String sid=UUID.randomUUID().toString();
+            try {
+                Object value=Runner.runAgent(agent,Map.of("query",HarnessJson.mapper().writeValueAsString(Map.of(
+                    "installedMethod",Map.of("id",method.id(),"version",method.version(),"digest",method.digest(),
+                        "lockDigest",method.lockDigest(),"content",method.content()),
+                    "goal",goal,"factIds",ids,"facts",context))),sid,null);
+                JsonNode generated=HarnessJson.mapper().readTree(render(value));
+                if(!generated.isObject())throw new IllegalArgumentException("INVALID_REPORT_OUTPUT");
+                return ((ObjectNode)generated).deepCopy();
+            } finally { Runner.release(sid); }
         };
     }
     private static String render(Object value) {

@@ -72,7 +72,7 @@ class ServicePreparationTest {
             new ManagedProviderFactoryV01.Connection(EmployeeAgentWealthFactoryV01.CONNECTION_KIND,
                 URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(5),()->null,()->null,c->{}),
             Set.of(ServicePreparation.CAPABILITY));
-        host=new ServicePreparation("owner-a",session,mapping::get,(goal,ids,context)->{
+        host=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(goal,ids,context)->{
             models.incrementAndGet();if(explainFail)throw new TimeoutException("synthetic failure");
             return unknownRef?List.of("/unknown"):List.of("/customer/totalAssets");
         },files,Map.of("provider","employee-agent-reference@0.1.0-SNAPSHOT","capability","wealth-manager-previsit@0.1.0"));
@@ -86,14 +86,18 @@ class ServicePreparationTest {
         var r=prepare();String id=r.path("reportId").asText();
         assertEquals("READY_FOR_REVIEW",r.path("status").asText(),r.toString());
         assertEquals("2026-10-01T00:00:00Z",r.path("dataAsOf").asText());
-        assertFalse(r.path("execution").path("evidence").isEmpty());
-        var saved=host.review("owner-a",id,1,"已核实事实，准备回访；未写 CRM");
+        assertFalse(r.path("sourceReceipt").isEmpty());
+        int generatedRevision=r.path("reportRevision").asInt();
+        var saved=host.review("owner-a",id,generatedRevision,"已核实事实，准备回访；未写 CRM");
         assertEquals("syn-manager",saved.path("reviewerRef").asText());
-        assertEquals(2,saved.path("reportRevision").asInt());
+        assertEquals(generatedRevision+1,saved.path("reportRevision").asInt());
         assertEquals(1,saved.path("reviewHistory").size());
         assertEquals(saved,host.read("owner-a",id));host.read("owner-a",id);
+        assertEquals("RUNNING",host.readVersion("owner-a",id,1).path("status").asText());
+        assertEquals("PENDING",host.readVersion("owner-a",id,generatedRevision).path("reviewStatus").asText());
+        assertEquals("REVIEWED",host.readVersion("owner-a",id,generatedRevision+1).path("reviewStatus").asText());
         assertEquals(1,calls.get());assertEquals(1,models.get());
-        assertThrows(IllegalStateException.class,()->host.review("owner-a",id,1,"重复意见"));
+        assertThrows(IllegalStateException.class,()->host.review("owner-a",id,generatedRevision,"重复意见"));
     }
     @Test void unauthorizedCustomerNoCallOrReport() {
         assertThrows(SecurityException.class,()->host.select("owner-a","越权客户","回访"));
@@ -118,7 +122,7 @@ class ServicePreparationTest {
         assertEquals("PARTIAL",r.path("status").asText());
         assertEquals(1000,r.at("/facts/customer/totalAssets").asInt());
         assertEquals("FAILED",r.path("explanationStatus").asText());
-        var saved=host.review("owner-a",r.path("reportId").asText(),1,"说明未完成，事实已核验");
+        var saved=host.review("owner-a",r.path("reportId").asText(),r.path("reportRevision").asInt(),"说明未完成，事实已核验");
         assertEquals("PARTIAL",saved.path("status").asText());assertEquals(1,calls.get());
     }
     @Test void unknownModelFactRejected() throws Exception {
@@ -127,7 +131,7 @@ class ServicePreparationTest {
     @Test void factsCanBeReadButNotReviewedWhileExplanationIsRunning() throws Exception {
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
         Path store=files.resolve("pending");
-        try(var pending=new ServicePreparation("owner-a",session,mapping::get,(g,ids,c)->{
+        try(var pending=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(g,ids,c)->{
                 entered.countDown();assertTrue(release.await(5,TimeUnit.SECONDS));
                 return List.of("/customer/totalAssets");
             },store,Map.of());var executor=Executors.newVirtualThreadPerTaskExecutor()) {
@@ -137,16 +141,16 @@ class ServicePreparationTest {
                 assertTrue(entered.await(5,TimeUnit.SECONDS));
                 String id;
                 try(var paths=Files.list(store)) {
-                    id=paths.filter(p->p.toString().endsWith(".json")).findFirst().orElseThrow()
-                        .getFileName().toString().replace(".json","");
+                    id=paths.filter(Files::isDirectory).findFirst().orElseThrow().getFileName().toString();
                 }
                 var partial=pending.read("owner-a",id);
                 assertEquals(1000,partial.at("/facts/customer/totalAssets").asInt());
                 assertEquals("RUNNING",partial.path("explanationStatus").asText());
-                assertThrows(IllegalStateException.class,()->pending.review("owner-a",id,1,"不能提前保存"));
+                int currentRevision=partial.path("reportRevision").asInt();
+                assertThrows(IllegalStateException.class,()->pending.review("owner-a",id,currentRevision,"不能提前保存"));
             } finally { release.countDown(); }
             var done=future.get(5,TimeUnit.SECONDS);
-            var saved=pending.review("owner-a",done.path("reportId").asText(),1,"完成后复核");
+            var saved=pending.review("owner-a",done.path("reportId").asText(),done.path("reportRevision").asInt(),"完成后复核");
             assertEquals("完成后复核",saved.path("reviewOpinion").asText());assertEquals(1,calls.get());
         }
     }
@@ -167,8 +171,8 @@ class ServicePreparationTest {
             beforeResponse=()->{};var r=host.prepare("owner-a",next);
             assertEquals(2000,r.at("/facts/customer/totalAssets").asInt());assertEquals(1,models.get());
         }
-        try(var paths=Files.list(files)) {
-            assertEquals(1,paths.filter(p->{try{return Files.readString(p).contains("LATE_RESULT_DISCARDED");}catch(Exception e){throw new RuntimeException(e);}}).count());
+        try(var paths=Files.walk(files)) {
+            assertEquals(1,paths.filter(Files::isRegularFile).filter(p->{try{return Files.readString(p).contains("LATE_RESULT_DISCARDED");}catch(Exception e){throw new RuntimeException(e);}}).count());
         }
     }
     @Test void switchingPreventsSavingOldDraft() throws Exception {
@@ -195,9 +199,11 @@ class ServicePreparationTest {
     }
     @Test void reportFileSurvivesHostRestartWithoutReexecution() throws Exception {
         var r=prepare();String id=r.path("reportId").asText();
-        try(var reopened=new ServicePreparation("owner-a",session,mapping::get,(g,i,c)->{throw new AssertionError("Replay must not call model");},files,Map.of())) {
+        try(var reopened=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(g,i,c)->{throw new AssertionError("Replay must not call model");},files,Map.of())) {
             assertEquals(HarnessJson.mapper().readTree(r.toString()),reopened.read("owner-a",id));assertEquals(1,calls.get());
-            assertThrows(SecurityException.class,()->reopened.review("owner-a",id,1,"必须重新选择当前任务"));
+            var reviewed=reopened.review("owner-a",id,r.path("reportRevision").asInt(),"重启后完成复核");
+            assertEquals("REVIEWED",reviewed.path("reviewStatus").asText());
+            assertEquals(List.of(1,2,3,4),reopened.versions("owner-a",id));
         }
     }
     @Test void reportPathCannotEscapePrivateStore() {
@@ -214,13 +220,46 @@ class ServicePreparationTest {
                 "usage",Map.of("prompt_tokens",10,"completion_tokens",5,"total_tokens",15)));
             x.getResponseHeaders().set("Content-Type","application/json");x.sendResponseHeaders(200,bytes.length);x.getResponseBody().write(bytes);x.close();
         });
-        try(var nativeHost=new ServicePreparation("owner-a",session,mapping::get,
+        try(var nativeHost=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,
                 ServicePreparationDemo.nativeExplanation("synthetic-key","http://127.0.0.1:"+server.getAddress().getPort()+"/v1","synthetic-model"),
                 files.resolve("native"),Map.of("model","synthetic-model"))) {
             var r=nativeHost.prepare("owner-a",nativeHost.select("owner-a","客户甲","核实资金"));
             assertEquals("READY",r.path("explanationStatus").asText(),r.toString());
-            assertEquals("/customer/totalAssets",r.path("focusFactRefs").get(0).asText());
+            assertEquals("/customer/totalAssets",r.at("/modelSuggestion/communicationFocus/0/factRefs/0").asText());
             assertEquals(1,modelCalls.get());assertEquals(1,calls.get());
         } finally { com.openjiuwen.core.runner.Runner.stop(); }
+    }
+    @Test void installedMethodContentDrivesStructuredModelReportAndIsLocked() throws Exception {
+        Path skill=files.resolve("SKILL.md");
+        Files.writeString(skill,"# 独特服务准备方法\n必须先核对事实日期，再形成沟通建议。\n");
+        byte[] skillBytes=Files.readAllBytes(skill);
+        String digest="sha256:"+HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(skillBytes));
+        var method=InstalledPreparationMethod.load("customer-manager-service-preparation","0.1.0",skill,digest,"sha256:lock-1");
+        var modelCalls=new AtomicInteger();
+        server.createContext("/v1/chat/completions",x->{
+            modelCalls.incrementAndGet();String request=new String(x.getRequestBody().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(request.contains("独特服务准备方法"));assertTrue(request.contains(digest));assertTrue(request.contains("核实资金"));
+            String generated=HarnessJson.mapper().writeValueAsString(Map.of(
+                "communicationFocus",List.of(Map.of("text","结合已核实资产事实准备沟通","factRefs",List.of("/customer/totalAssets"))),
+                "preparationAdvice",List.of(Map.of("text","先向客户确认当前服务目标","factRefs",List.of("/customer/totalAssets"))),
+                "pendingItems",List.of("确认缺失资料"),"reviewChecklist",List.of("核对来源与业务日期")));
+            byte[] bytes=HarnessJson.mapper().writeValueAsBytes(Map.of("id","model-report","model","synthetic-model",
+                "object","chat.completion","created",1,"choices",List.of(Map.of("index",0,"finish_reason","stop",
+                "message",Map.of("role","assistant","content",generated))),
+                "usage",Map.of("prompt_tokens",50,"completion_tokens",20,"total_tokens",70)));
+            x.getResponseHeaders().set("Content-Type","application/json");x.sendResponseHeaders(200,bytes.length);
+            x.getResponseBody().write(bytes);x.close();
+        });
+        try(var methodHost=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,
+                ServicePreparationDemo.nativeReportGenerator("synthetic-key","http://127.0.0.1:"+server.getAddress().getPort()+"/v1","synthetic-model"),
+                files.resolve("method-driven"),Map.of("model","synthetic-model"),method)) {
+            var report=methodHost.prepare("owner-a",methodHost.select("owner-a","客户甲","核实资金"));
+            assertEquals("READY",report.path("explanationStatus").asText(),report.toString());
+            assertEquals(digest,report.at("/method/digest").asText());
+            assertEquals("sha256:lock-1",report.at("/method/lockDigest").asText());
+            assertEquals("/customer/totalAssets",report.at("/modelSuggestion/preparationAdvice/0/factRefs/0").asText());
+            assertEquals(1,modelCalls.get());
+        } finally { com.openjiuwen.core.runner.Runner.stop(); }
+        assertThrows(SecurityException.class,()->InstalledPreparationMethod.load("method","1",skill,"sha256:wrong","sha256:lock"));
     }
 }

@@ -432,14 +432,13 @@ class OpenJiuwenSolutionAssemblerTest {
     }
 
     @Test
-    void servicePreparationInstallsTwoReadonlyToolsAndFourStageMethod() throws Exception {
+    void servicePreparationInstallsCrmQueryAndFourStageMethod() throws Exception {
         var calls = new java.util.ArrayList<CapabilityRequestV1>();
         FinanceProvider provider = new DescribedFinanceProvider() {
             public ProviderDescriptorV1 descriptor() {
                 return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION,
-                        "employee-agent-reference", "0.1.0-SNAPSHOT", List.of(
-                        new ProviderDescriptorV1.CapabilitySupport("wealth.previsit-context.query", CapabilityRequestV1.Operation.QUERY),
-                        new ProviderDescriptorV1.CapabilitySupport("wealth.allocation-context.query", CapabilityRequestV1.Operation.QUERY)));
+                        "customer-crm-readonly", "0.1.0-SNAPSHOT", List.of(
+                        new ProviderDescriptorV1.CapabilitySupport("wealth.previsit-context.query", CapabilityRequestV1.Operation.QUERY)));
             }
             public CapabilityResultV1 query(CapabilityRequestV1 request) {
                 calls.add(request);
@@ -456,7 +455,7 @@ class OpenJiuwenSolutionAssemblerTest {
         String section = "finance-domain-pack:wealth-service-preparation:customer-manager-service-preparation";
         try (var solution = new OpenJiuwenSolutionAssembler().assemble(root(), root().resolve(
                 "examples/solutions/customer-manager-service-preparation/solution.yaml"),
-                agent, Map.of("employee-agent-reference", provider), defaults, true)) {
+                agent, Map.of("customer-crm-readonly", provider), defaults, true)) {
             assertEquals(1, solution.lock().installations().size());
             assertTrue(agent.getSystemPromptBuilder().hasSection(section));
             String prompt = agent.getSystemPromptBuilder().build();

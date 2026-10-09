@@ -16,7 +16,7 @@ public final class BrokeredServicePreparation implements AutoCloseable {
             ServicePreparation.Explanation explanation, Path reports, Map<String,String> assets) throws Exception {
         this.owner=owner;this.broker=broker;
         broker.refresh();
-        task=new ServicePreparation(owner,broker.openSession(),()->new ServicePreparation.Mapping(
+        task=new ServicePreparation(owner,new EmployeeAgentPreparationAccess(broker.openSession()),()->new ServicePreparation.Mapping(
             broker.authority().binding().authorityRef(),broker.customers()),(goal,ids,context)->{
                 try { return explanation.selectFocus(goal,ids,context); }
                 finally { broker.refresh(); }

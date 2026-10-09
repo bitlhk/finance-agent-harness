@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "customer-crm-readonly", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-customer-crm:0.1.0-SNAPSHOT",
+  "connectionKind": "customer-crm-readonly.v1",
+  "supports": [{
+    "pack": {"id": "wealth-manager-previsit", "version": "0.1.0"},
+    "capabilityIds": ["wealth.previsit-context.query"],
+    "operation": "QUERY"
+  }]
+}

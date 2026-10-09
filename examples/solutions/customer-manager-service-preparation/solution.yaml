@@ -9,7 +9,7 @@ runtime:
 profileRef:
   id: employee-assisted
   version: 0.1.0
-  source: repo://profiles
+  source: repo://profiles/employee-assisted.md
 domainPackRefs:
   - id: wealth-service-preparation
     version: 0.1.0
@@ -19,7 +19,13 @@ capabilityPackRefs:
     version: 0.1.0
     source: repo://capability-packs/wealth-manager-previsit
 providerRefs:
-  - id: employee-agent-reference
+  - id: customer-crm-readonly
     version: 0.1.0-SNAPSHOT
-    source: repo://providers/employee-agent
+    source: maven://io.github.bitlhk.finance:finance-provider-customer-crm:0.1.0-SNAPSHOT
+capabilityBindings:
+  wealth.previsit-context.query: customer-crm-readonly
 modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: wealth-facts-controlled
+  version: 0.1.0
+  source: repo://conformance/fixtures/wealth/v0.1
