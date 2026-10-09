@@ -31,9 +31,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         String sessionId = UUID.randomUUID().toString();
         var access = new DirectCrmPreparationAccess(owner, sessionId, provider);
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
+        var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
         ServicePreparation task = new ServicePreparation(owner, access,
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
-                new OpenJiuwenReportGenerator(requiredEnv("FH_MODEL_KEY"), requiredEnv("FH_MODEL_URL"), requiredEnv("FH_MODEL_NAME")),
+                new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method);
         return new Managed(owner, sessionId, task, method);

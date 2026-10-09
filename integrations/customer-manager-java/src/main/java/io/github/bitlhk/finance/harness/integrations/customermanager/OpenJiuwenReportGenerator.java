@@ -15,7 +15,7 @@ import java.util.*;
 final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenerator {
     private final ReActAgent agent;
 
-    OpenJiuwenReportGenerator(String key, String base, String model) {
+    OpenJiuwenReportGenerator(String provider, String key, String base, String model) {
         agent = new ReActAgent(AgentCard.builder().id("service-preparation-report")
                 .name("客户经理服务准备报告").description("依据已安装方法和已核实事实生成待复核建议").build());
         var config = ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role", "system", "content",
@@ -23,7 +23,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "只输出JSON对象，字段严格为communicationFocus、preparationAdvice、pendingItems、reviewChecklist。"
                 + "前两项是对象数组，每项只能含text和factRefs，factRefs必须来自输入；后两项是字符串数组。"
                 + "不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
-                .maxIterations(1).build().configureModelClient("OpenAI", required(key), required(base), required(model), true);
+                .maxIterations(1).build().configureModelClient(required(provider), required(key), required(base), required(model), true);
         config.getModelConfigObj().setTemperature(0.1); agent.configure(config);
         if (!Runner.start()) throw new IllegalStateException("RUNTIME_START_FAILED");
     }

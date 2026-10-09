@@ -11,8 +11,15 @@ public interface ManagedScenarioExtensionV01 {
     Set<String> actions();
     Session open(Context context) throws Exception;
 
+    record ModelConnection(String clientProvider, String apiKey, String apiBase, String modelName) {
+        @Override public String toString() {
+            return "ModelConnection[clientProvider=" + clientProvider + ", apiKey=[REDACTED], apiBase="
+                    + apiBase + ", modelName=" + modelName + "]";
+        }
+    }
+
     record Context(Path artifactRoot, Path privateStateRoot, String buildId,
-                   String instanceId, String ownerRef) {}
+                   String instanceId, String ownerRef, ModelConnection model) {}
 
     interface Session extends AutoCloseable {
         String sessionId();
