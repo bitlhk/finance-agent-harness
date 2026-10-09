@@ -10,8 +10,9 @@ final class CustomerManagerDialogue {
     static Decision resolve(String query, List<String> customers, String selected) {
         Objects.requireNonNull(query); Objects.requireNonNull(customers);
         List<String> mentioned=customers.stream().filter(customer -> mentions(query, customer)).toList();
-        if (query.contains("能做什么") || query.contains("可以做什么") || query.contains("有什么能力")
-                || query.contains("怎么用") || query.contains("帮助"))
+        if (query.matches(".*能(?:帮我|为我)?做什么.*") || query.contains("可以做什么")
+                || query.contains("有什么能力") || query.contains("能提供什么")
+                || query.contains("怎么用") || query.contains("如何使用") || query.contains("使用帮助"))
             return new Decision(Action.DESCRIBE_CAPABILITIES,null,mentioned);
         if (query.contains("客户") && (query.contains("我负责") || query.contains("哪些")
                 || query.contains("列表") || query.contains("名单") || query.contains("名下")))

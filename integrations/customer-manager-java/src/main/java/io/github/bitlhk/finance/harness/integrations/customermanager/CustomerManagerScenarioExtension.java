@@ -79,23 +79,23 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             List<String> customers=task.customers(owner);
             var decision=CustomerManagerDialogue.resolve(query,customers,selectedCustomer);
             if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
-                return Map.of("status","ANSWERED","response","当前可以查询你被授权服务的合成客户，并依据 CRM 只读事实和已安装方法生成待复核的访前或回访准备报告。报告支持复核、版本回读和运行回放；产品推荐、CRM 写入、消息发送和交易尚未安装。");
+                return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，并按指定客户和服务目标汇集资料与持仓事实，依据已安装的专业方法生成待复核的回访准备建议。当前不支持产品推荐、CRM 写入、消息发送或交易办理。");
             if(decision.action()==CustomerManagerDialogue.Action.LIST_CUSTOMERS)
-                return Map.of("status","ANSWERED","response","你当前可服务的合成客户有："+String.join("、",customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
+                return Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_MULTIPLE)
-                return Map.of("status","NEED_CLARIFICATION","response","本轮提到了多位客户，请先明确要服务哪一位："+String.join("、",decision.mentioned())+"。");
+                return Map.of("status","NEED_CLARIFICATION","response","本轮提到了多位客户，请先明确要服务哪一位："+displayNames(decision.mentioned())+"。");
             if(decision.action()==CustomerManagerDialogue.Action.UNSUPPORTED_PRODUCT)
                 return Map.of("status","UNSUPPORTED","response","当前场景只安装了客户资料与访前服务准备能力，尚未安装产品查询、适当性筛选或推荐能力。我可以先汇集授权客户事实并准备沟通重点。");
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
-                return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位授权合成客户。你也可以先问“我负责哪些客户？”。");
+                return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位获授权客户。你也可以先问“我负责哪些客户？”。");
             String customer=decision.customer();
             selectedCustomer=customer;
             long generation=task.select(owner,customer,query);
             JsonNode report=task.prepare(owner,generation);
             String status=report.path("status").asText();
             String response="READY_FOR_REVIEW".equals(status)
-                    ? "已根据当前授权 CRM 事实和已安装方法生成 "+customer+" 的服务准备报告，请核对来源、缺项和待复核建议。"
-                    : "已保留 "+customer+" 的有效 CRM 事实，但服务准备报告未完整生成；请查看缺项和失败说明。";
+                    ? "我已依据当前获授权的客户事实和专业方法，为 "+displayName(customer)+" 整理了回访准备建议。请结合事实来源和待核实事项进行复核。"
+                    : "已保留 "+displayName(customer)+" 的有效客户事实，但服务准备建议未完整生成；请查看缺项和失败说明。";
             var result=new LinkedHashMap<String,Object>();
             result.put("status",status);result.put("response",response);result.put("customer",customer);
             result.put("report",value(report));return Map.copyOf(result);
@@ -105,6 +105,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         }
         @Override public void close() { if(!closed){closed=true;task.close();} }
         private void current(){if(closed)throw new SecurityException("SCENARIO_SESSION_CLOSED");}
+    }
+
+    static String displayName(String value) {
+        if (value == null) return "";
+        String normalized = value.trim();
+        return normalized.startsWith("合成客户") && normalized.length() > 4 ? normalized.substring(4) : normalized;
+    }
+    static String displayNames(Collection<String> values) {
+        return String.join("、", values.stream().map(CustomerManagerScenarioExtension::displayName).toList());
     }
 
     private static InstalledPreparationMethod installedMethod(Path root) throws Exception {

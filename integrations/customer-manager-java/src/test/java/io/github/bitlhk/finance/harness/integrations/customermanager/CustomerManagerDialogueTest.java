@@ -14,6 +14,10 @@ class CustomerManagerDialogueTest {
     @Test void describesInstalledBoundaryWithoutSelectingCustomer() {
         assertEquals(CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES,
                 CustomerManagerDialogue.resolve("你现在能做什么？",CUSTOMERS,null).action());
+        assertEquals(CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES,
+                CustomerManagerDialogue.resolve("你现在能帮我做什么？",CUSTOMERS,"周明远").action());
+        assertEquals(CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES,
+                CustomerManagerDialogue.resolve("这个助手如何使用？",CUSTOMERS,"周明远").action());
     }
     @Test void resolvesNamedCustomerAndKeepsItForFollowUp() {
         var first=CustomerManagerDialogue.resolve("帮我准备周明远的回访",CUSTOMERS,null);
