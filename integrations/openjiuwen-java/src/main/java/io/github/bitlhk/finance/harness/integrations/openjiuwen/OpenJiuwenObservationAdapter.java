@@ -13,6 +13,10 @@ import static io.github.bitlhk.finance.harness.core.observation.ObservationEvent
 public final class OpenJiuwenObservationAdapter {
     private ObservationRun run;
     private String parent;
+    private io.github.bitlhk.finance.harness.core.observation.ToolAttemptEvidenceV1 toolEvidence;
+    public synchronized Map<String, Object> finishToolEvidence(boolean normal) {
+        return toolEvidence == null ? Map.of("status", "UNKNOWN") : toolEvidence.finish(normal);
+    }
     private final Map<String, ObservationRun.Span> pending = new HashMap<>();
     private final Map<String, ObservationRun.ParentScope> scopes = new HashMap<>();
 
@@ -24,6 +28,7 @@ public final class OpenJiuwenObservationAdapter {
 
     public synchronized void attach(ObservationRun run, String parent) {
         detach(); this.run = run; this.parent = parent;
+        toolEvidence = new io.github.bitlhk.finance.harness.core.observation.ToolAttemptEvidenceV1(run.requestId());
     }
     public synchronized void detach() {
         pending.values().forEach(ObservationRun.Span::close);
@@ -48,6 +53,21 @@ public final class OpenJiuwenObservationAdapter {
                 key = "tool:" + (id == null ? "unobserved" : id);
             }
             String event = context.getEvent().name();
+            if (event.equals("AFTER_MODEL_CALL") && !context.hasForceFinishRequest()) {
+                if (context.getInputs() instanceof com.openjiuwen.core.singleagent.rail.ModelCallInputs model
+                        && model.getResponse() instanceof com.openjiuwen.core.foundation.llm.schema.AssistantMessage message) {
+                    toolEvidence.responseObserved();
+                    Object calls = message.toApiFormat().get("tool_calls");
+                    if (calls instanceof java.util.List<?> list) for (Object item : list) {
+                        if (item instanceof Map<?, ?> call && call.get("function") instanceof Map<?, ?> function)
+                            toolEvidence.attempt((String)call.get("id"), (String)function.get("name"), "MODEL_SELECTED");
+                        else toolEvidence.gap("UNRECOGNIZED_TOOL_SELECTION");
+                    }
+                    else if (calls != null) toolEvidence.gap("UNRECOGNIZED_TOOL_SELECTIONS");
+                } else toolEvidence.gap("UNRECOGNIZED_MODEL_RESPONSE");
+            }
+            if (event.equals("BEFORE_TOOL_CALL") && context.getInputs() instanceof ToolCallInputs tool)
+                toolEvidence.attempt(tool.getToolCall() == null ? null : tool.getToolCall().getId(), tool.getToolName(), "DISPATCH_ATTEMPT");
             if (event.equals("BEFORE_MODEL_CALL") || event.equals("BEFORE_TOOL_CALL")) {
                 var previous = pending.remove(key);
                 if (previous != null) previous.close();
@@ -73,6 +93,7 @@ public final class OpenJiuwenObservationAdapter {
                 if (span != null) span.finish(Outcome.RETURNED, Map.of());
             }
         } catch (RuntimeException ignored) {
+            if (toolEvidence != null) toolEvidence.gap("CALLBACK_CAPTURE_FAILED");
             // A malformed SDK observation must not change authorization or business execution.
         }
     }

@@ -68,6 +68,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
     private final TaskHost taskHost;
     private final String taskScope;
     private final CaseFileWorkspaceV1 caseFiles;
+    private volatile Map<String, Object> lastToolEvidence = Map.of("status", "UNKNOWN");
+    public Map<String, Object> toolAttemptEvidence() { return lastToolEvidence; }
     private final AtomicBoolean valid = new AtomicBoolean(true), busy = new AtomicBoolean();
     private final Set<String> requestIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -117,6 +119,9 @@ public final class AgentScopeQuerySession implements AutoCloseable {
                             .stream(false).httpTransport(transport).build()
                             .stream(messages, tools, options(model))
                             .doOnNext(response -> {
+                                call.toolEvidence.responseObserved();
+                                for (var block : response.getContent()) if (block instanceof ToolUseBlock t)
+                                    call.toolEvidence.attempt(t.getId(), t.getName(), "MODEL_SELECTED");
                                 call.requireAuthorized("parsed-model-response");
                                 var text = new StringBuilder(); var calls = new ArrayList<Map<String, Object>>();
                                 for (var block : response.getContent()) {
@@ -155,6 +160,7 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         return Mono.defer(() -> {
             if (!valid.get()) return Mono.error(new SecurityException("SESSION_GENERATION_INVALID"));
             if (!busy.compareAndSet(false, true)) return Mono.error(new IllegalStateException("SESSION_BUSY"));
+            lastToolEvidence = Map.of("status", "UNKNOWN", "requestId", input.requestId());
             final Invocation call;
             try {
                 if (!requestIds.add(input.requestId())) throw new IllegalArgumentException("DUPLICATE_REQUEST_ID");
@@ -169,14 +175,17 @@ public final class AgentScopeQuerySession implements AutoCloseable {
             return agent.call(input.text(), context)
                     .map(message -> {
                         call.requireAuthorized("host-delivery");
+                        lastToolEvidence = call.toolEvidence.finish(true);
                         return new Reply(message.getTextContent(), input.requestId(), identity.generation(), List.copyOf(call.executions), call.run.droppedEvents(), call.diagnosticFailures.get(), List.copyOf(call.taskResults));
                     })
                     // Release before delivering a terminal signal: downstream may start the next turn inline.
                     .doOnSuccess(reply -> { if (terminated.compareAndSet(false, true)) busy.set(false); })
                     .doOnError(failure -> {
+                        lastToolEvidence = call.toolEvidence.finish(false);
                         if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
                     })
                     .doOnCancel(() -> {
+                        lastToolEvidence = call.toolEvidence.finish(false);
                         if (terminated.compareAndSet(false, true)) { invalidate(); busy.set(false); }
                     })
                     .doFinally(signal -> clearIfInvalid()).contextWrite(ctx -> ctx.put(Invocation.class, call));
@@ -253,10 +262,12 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         final List<Map<String, Object>> taskResults = new CopyOnWriteArrayList<>();
         final Set<String> toolCallIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
         final AtomicLong diagnosticFailures = new AtomicLong();
+        final ToolAttemptEvidenceV1 toolEvidence;
         void capture(String callId, String boundary, Map<String, Object> value) {
             if (!input.diagnostics().capture(callId, boundary, value)) diagnosticFailures.incrementAndGet();
         }
         Invocation(Input input) {
+            toolEvidence = new ToolAttemptEvidenceV1(input.requestId());
             this.input = input; run = input.observation(); parent = input.parentId();
             var current = grants.get();
             if (current == null) throw new SecurityException("HOST_GRANT_REJECTED");
@@ -389,6 +400,8 @@ public final class AgentScopeQuerySession implements AutoCloseable {
         }
         public Flux<AgentEvent> onActing(Agent ignored, RuntimeContext context, ActingInput input, Function<ActingInput, Flux<AgentEvent>> next) {
             return Flux.defer(() -> {
+                for (var tool : input.toolCalls()) context.get(Invocation.class).toolEvidence
+                        .attempt(tool.getId(), tool.getName(), "DISPATCH_ATTEMPT");
                 context.get(Invocation.class).requireAuthorized("before-tool");
                 for (var tool : input.toolCalls()) if (!installedTools().contains(tool.getName()))
                     return Flux.error(new SecurityException("TOOL_NOT_INSTALLED"));
