@@ -58,7 +58,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         @Override public synchronized Map<String,Object> call(String action, JsonNode body) throws Exception {
             current(); if (!ACTIONS.contains(action) || body == null || !body.isObject()) throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             return switch (action) {
-                case "chat" -> { exact(body,"query"); yield chat(text(body,"query")); }
+                case "chat" -> {
+                    exactChat(body);
+                    yield chat(text(body,"query"));
+                }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
                     selectedCustomer=text(body,"customerAlias");
@@ -127,4 +130,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     private static String text(JsonNode body,String name){return required(body.path(name).asText(null),"SCENARIO_FIELD_REQUIRED");}
     private static int integer(JsonNode body,String name){if(!body.path(name).canConvertToInt())throw new IllegalArgumentException("SCENARIO_FIELD_INVALID");return body.path(name).asInt();}
     private static void exact(JsonNode body,String... names){Set<String> expected=Set.of(names),actual=new HashSet<>();body.fieldNames().forEachRemaining(actual::add);if(!actual.equals(expected))throw new IllegalArgumentException("SCENARIO_BODY_INVALID");}
+    static void exactChat(JsonNode body) {
+        Set<String> actual = new HashSet<>();
+        body.fieldNames().forEachRemaining(actual::add);
+        if (!actual.equals(Set.of("query")) && !actual.equals(Set.of("query", "runId"))) {
+            throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
+        }
+    }
 }
