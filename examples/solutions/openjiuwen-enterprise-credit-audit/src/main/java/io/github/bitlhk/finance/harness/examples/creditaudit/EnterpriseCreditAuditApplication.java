@@ -30,6 +30,9 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class EnterpriseCreditAuditApplication {
+    static final int MODEL_TIMEOUT_SECONDS = 90;
+    static final int MODEL_MAX_RETRIES = 0;
+
     private EnterpriseCreditAuditApplication() { }
 
     public static void main(String[] args) throws Exception {
@@ -128,7 +131,8 @@ public final class EnterpriseCreditAuditApplication {
         ModelClientConfig original = config.getModelClientConfig();
         ModelClientConfig.Builder client = ModelClientConfig.builder().clientId(original.getClientId())
                 .clientProvider(original.getClientProvider()).apiKey(original.getApiKey()).apiBase(original.getApiBase())
-                .timeout(120).maxRetries(1).verifySsl(original.isVerifySsl()).headers(original.getHeaders());
+                .timeout(MODEL_TIMEOUT_SECONDS).maxRetries(MODEL_MAX_RETRIES)
+                .verifySsl(original.isVerifySsl()).headers(original.getHeaders());
         original.getExtraFields().forEach(client::extraField);
         config.setModelClientConfig(client.build());
         ReActAgent agent = new ReActAgent(AgentCard.builder().id("enterprise-credit-material-audit")
