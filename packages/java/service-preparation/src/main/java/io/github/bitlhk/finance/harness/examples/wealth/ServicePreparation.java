@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
 import java.nio.file.*;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -186,6 +189,9 @@ public final class ServicePreparation implements AutoCloseable {
                 ObjectNode factAssessment=assessFacts(s.goal(),context,report.path("productReview"));
                 report.set("factAssessment",factAssessment.deepCopy());
                 generationContext.set("factAssessment",factAssessment.deepCopy());
+                ObjectNode factPresentation=presentFacts(context,Instant.now());
+                report.set("factPresentation",factPresentation.deepCopy());
+                generationContext.set("factPresentation",factPresentation.deepCopy());
                 if(productArguments==null) {
                     if (!"READY".equals(context.path("readiness").path("status").asText())) missing.add("来源未声明准备条件全部就绪");
                     data.path("missingInputs").forEach(missing::add);
@@ -295,6 +301,7 @@ public final class ServicePreparation implements AutoCloseable {
             item.put("customer",value.path("customerAlias").asText());item.put("goal",value.path("goal").asText());
             item.put("savedAt",value.path("reviewedAt").asText(value.path("finishedAt").asText(value.path("startedAt").asText())));
             item.put("reviewerRef",value.path("reviewerRef").asText());
+            item.put("reviewOpinion",value.path("reviewOpinion").asText());
             result.add(Map.copyOf(item));
         }
         return List.copyOf(result);
@@ -409,6 +416,51 @@ public final class ServicePreparation implements AutoCloseable {
         }
         result.put("goal",goal);result.put("status",missing.isEmpty()?"READY":"PARTIAL");
         return result;
+    }
+    static ObjectNode presentFacts(JsonNode facts,Instant evaluatedAt) {
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("evaluatedAt",evaluatedAt.toString());
+        String asOf=facts.path("dataAsOf").asText("");result.put("dataAsOf",asOf);
+        if(!asOf.isBlank())try {
+            long age=Math.max(0,ChronoUnit.DAYS.between(Instant.parse(asOf),evaluatedAt));
+            result.put("ageDays",age);result.put("freshnessStatus",age==0?"CURRENT_DAY":"HISTORICAL_SNAPSHOT");
+        } catch(java.time.format.DateTimeParseException invalid) { result.put("freshnessStatus","DATE_UNPARSEABLE"); }
+        else result.put("freshnessStatus","DATE_MISSING");
+        JsonNode wealth=findProfile(facts,"wealth"),detail=wealth.path("detail");
+        JsonNode portfolio=detail.path("portfolioSummary");
+        if(portfolio.isObject()||detail.has("totalAssets")||detail.has("availableCash")||detail.has("investedAssets")) {
+            ObjectNode summary=result.putObject("portfolio");
+            for(String field:List.of("totalAssets","availableCash","investedAssets","dataAsOf"))
+                if(portfolio.has(field))summary.set(field,portfolio.path(field).deepCopy());
+                else if(detail.has(field))summary.set(field,detail.path(field).deepCopy());
+        }
+        JsonNode risk=detail.path("riskAssessment");
+        if(risk.isObject()) {
+            ObjectNode summary=result.putObject("riskAssessment");
+            for(String field:List.of("riskLevel","riskPreference","validUntil"))
+                if(risk.has(field))summary.set(field,risk.path(field).deepCopy());
+        }
+        var holdings=result.putArray("holdings");
+        detail.path("holdings").forEach(value->copyDisplayFact(holdings.addObject(),value,
+                List.of("productName","category","balance","status","maturityDate")));
+        var maturities=result.putArray("maturities");LocalDate today=evaluatedAt.atZone(ZoneOffset.UTC).toLocalDate();
+        detail.path("maturities").forEach(value->{
+            ObjectNode item=maturities.addObject();copyDisplayFact(item,value,
+                    List.of("productName","amount","status","maturityDate"));
+            String date=value.path("maturityDate").asText("");
+            try {
+                if(!date.isBlank()&&LocalDate.parse(date).isBefore(today)) {
+                    item.put("verificationStatus","PAST_DATE_STATUS_UNVERIFIED");
+                    item.put("warning","到期日已过，实际兑付状态和资金去向待核实");
+                } else item.put("verificationStatus","SOURCE_STATUS_CURRENTLY_UNVERIFIED");
+            } catch(java.time.format.DateTimeParseException invalid) {
+                item.put("verificationStatus","DATE_UNPARSEABLE");item.put("warning","到期日期无法核验");
+            }
+        });
+        return result;
+    }
+    private static void copyDisplayFact(ObjectNode target,JsonNode source,List<String> fields) {
+        for(String field:fields)if(source.has(field))target.set(field,source.path(field).deepCopy());
     }
     private static JsonNode findProfile(JsonNode facts,String type) {
         for(JsonNode profile:facts.path("profiles"))if(type.equals(profile.path("profileType").asText()))return profile;

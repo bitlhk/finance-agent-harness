@@ -119,6 +119,22 @@ class ServicePreparationTest {
         assertTrue(missing.contains("未取得风险测评资料"),missing);
         assertTrue(missing.contains("未取得近期联系、事项或到期事件"),missing);
     }
+    @Test void presentationKeepsValuesAndFlagsPastMaturityForVerification() throws Exception {
+        var facts=HarnessJson.mapper().readTree("""
+            {"dataAsOf":"2026-08-27T12:00:00Z","profiles":[{"profileType":"wealth","detail":{
+              "portfolioSummary":{"totalAssets":1800000,"availableCash":360000,"investedAssets":1440000},
+              "riskAssessment":{"riskLevel":"C3","validUntil":"2027-08-27T23:59:59Z"},
+              "holdings":[{"productName":"稳健配置组合","balance":900000,"status":"active","maturityDate":"2027-03-15"}],
+              "maturities":[{"productName":"到期现金管理计划","amount":300000,"status":"upcoming","maturityDate":"2026-09-18"}]
+            }}]}""");
+        var value=ServicePreparation.presentFacts(facts,Instant.parse("2026-10-10T00:00:00Z"));
+        assertEquals(1800000,value.at("/portfolio/totalAssets").asInt());
+        assertEquals("C3",value.at("/riskAssessment/riskLevel").asText());
+        assertEquals("稳健配置组合",value.at("/holdings/0/productName").asText());
+        assertEquals("PAST_DATE_STATUS_UNVERIFIED",value.at("/maturities/0/verificationStatus").asText());
+        assertTrue(value.at("/maturities/0/warning").asText().contains("待核实"));
+        assertEquals("HISTORICAL_SNAPSHOT",value.path("freshnessStatus").asText());
+    }
     @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
         explainEmpty=true;var report=prepare();
         assertEquals("PARTIAL",report.path("status").asText());
@@ -131,6 +147,7 @@ class ServicePreparationTest {
         assertEquals(id,host.latest("owner-a").orElseThrow().path("reportId").asText());
         var summaries=host.versionSummaries("owner-a",id);
         assertEquals(reviewed.path("reportRevision").asInt(),summaries.getLast().get("revision"));
+        assertEquals("完成工程复核",summaries.getLast().get("reviewOpinion"));
         var replay=host.replay("owner-a",id,generated.path("reportRevision").asInt());
         assertEquals(0,replay.at("/replayEvidence/businessFactProviderCalls").asInt(),replay.toString());
         assertEquals(0,replay.at("/replayEvidence/modelGenerationCalls").asInt(),replay.toString());
