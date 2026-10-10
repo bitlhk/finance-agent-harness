@@ -83,6 +83,7 @@ class ServicePreparationTest {
                 URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(5),()->null,()->null,c->{}),
             Set.of(ServicePreparation.CAPABILITY));
         host=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(goal,ids,context)->{
+            assertFalse(context.has("factPresentation"),"display projection must not enter the model fact namespace");
             models.incrementAndGet();if(explainFail)throw new TimeoutException("synthetic failure");if(explainEmpty)return List.of();
             return unknownRef?List.of("/unknown"):List.of("/customer/totalAssets");
         },files,Map.of("provider","employee-agent-reference@0.1.0-SNAPSHOT","capability","wealth-manager-previsit@0.1.0"));

@@ -191,7 +191,6 @@ public final class ServicePreparation implements AutoCloseable {
                 generationContext.set("factAssessment",factAssessment.deepCopy());
                 ObjectNode factPresentation=presentFacts(context,Instant.now());
                 report.set("factPresentation",factPresentation.deepCopy());
-                generationContext.set("factPresentation",factPresentation.deepCopy());
                 if(productArguments==null) {
                     if (!"READY".equals(context.path("readiness").path("status").asText())) missing.add("来源未声明准备条件全部就绪");
                     data.path("missingInputs").forEach(missing::add);
