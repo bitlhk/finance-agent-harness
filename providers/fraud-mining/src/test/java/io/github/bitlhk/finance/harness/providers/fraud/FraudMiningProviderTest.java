@@ -15,21 +15,32 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FraudMiningProviderTest {
     private HttpServer server;
     private FraudMiningProvider provider;
+    private final AtomicInteger requests = new AtomicInteger();
+    private boolean requireSession;
+    private static final String HOST_SESSION = "synthetic-host-session-001";
 
     @BeforeEach
     void startServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/api/v1/samples", exchange -> {
+            requests.incrementAndGet();
+            if (requireSession && !HOST_SESSION.equals(exchange.getRequestHeaders().getFirst("X-Session-Id"))) {
+                writeJson(exchange, 403, "{\"code\":403,\"data\":null}");
+                return;
+            }
             String query = exchange.getRequestURI().getRawQuery();
             if (query != null && query.contains("keyword=upstream-error")) {
                 writeJson(exchange, 500, "{\"code\":500,\"message\":\"failed\",\"data\":null}");
@@ -89,6 +100,59 @@ class FraudMiningProviderTest {
         assertEquals("FRAUD_SERVICE_UNAVAILABLE", result.error().sourceCode());
         assertTrue(result.error().retryable());
         assertFalse(result.data().containsKey("decision"));
+    }
+
+    @Test
+    void authenticatedHostSessionIsSentWithoutEnteringPublicResult() {
+        requireSession = true;
+        provider = authenticated(HOST_SESSION, Instant.now().plusSeconds(60));
+        CapabilityResultV1 result = provider.query(request("fraud-001"));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertEquals("BLOCK", result.data().get("decision"));
+        assertEquals(1, requests.get());
+        assertFalse(result.toString().contains(HOST_SESSION));
+        assertFalse(new FraudMiningProvider.HostSession(HOST_SESSION, Instant.now()).toString().contains(HOST_SESSION));
+    }
+
+    @Test
+    void expiredHostSessionMakesNoHttpRequest() {
+        provider = authenticated(HOST_SESSION, Instant.now().minusSeconds(1));
+        CapabilityResultV1 result = provider.query(request("normal-001"));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("FRAUD_SESSION_EXPIRED", result.error().sourceCode());
+        assertEquals(0, requests.get());
+    }
+
+    @Test
+    void wrongOrMissingHostSessionNeverProducesAllow() {
+        requireSession = true;
+        assertEquals(CapabilityResultV1.Status.FAILED, provider.query(request("normal-001")).status());
+        provider = authenticated("synthetic-wrong-session-001", Instant.now().plusSeconds(60));
+        CapabilityResultV1 result = provider.query(request("normal-001"));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertFalse(result.data().containsKey("decision"));
+        assertFalse(result.toString().contains("synthetic-wrong-session-001"));
+    }
+
+    @Test
+    void authenticationCannotBeMissingOrInjectHeadersOrUsePlaintextRemote() {
+        assertThrows(NullPointerException.class, () -> FraudMiningProvider.Config.authenticated(
+                URI.create("https://example.test"), Duration.ofSeconds(2), null));
+        for (String credential : List.of("", "x", "synthetic-session\r\nInjected:yes", "password=synthetic")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new FraudMiningProvider.HostSession(credential, Instant.now()));
+        }
+        var session = new FraudMiningProvider.HostSession(HOST_SESSION, Instant.now().plusSeconds(60));
+        for (String endpoint : List.of("http://example.test", "https://user:pass@example.test", "https://example.test?key=x")) {
+            assertThrows(IllegalArgumentException.class, () -> FraudMiningProvider.Config.authenticated(
+                    URI.create(endpoint), Duration.ofSeconds(2), session));
+        }
+    }
+
+    private FraudMiningProvider authenticated(String credential, Instant expiry) {
+        return new FraudMiningProvider(FraudMiningProvider.Config.authenticated(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), Duration.ofSeconds(2),
+                new FraudMiningProvider.HostSession(credential, expiry)));
     }
 
     private CapabilityRequestV1 request(String subjectRef) {

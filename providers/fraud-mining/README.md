@@ -19,3 +19,13 @@
 - `customerRef`：未提供 `accountRef` 时使用。
 
 该 Provider 不执行转账。转账系统仍须在预检和提交阶段消费风险结论并执行阻断。
+
+## 可选宿主会话鉴权
+
+原有 `Config(baseUri, timeout)` 保持兼容。受保护服务使用
+`Config.authenticated(baseUri, timeout, new HostSession(sessionId, expiresAt))`；
+会话只由可信宿主配置，以 `X-Session-Id` 传给服务，不能从模型参数取得。
+到期会话在发送请求前失败；远端拒绝也返回 FAILED，不降级为 ALLOW 或匿名请求。
+认证配置要求 HTTPS；隔离开发服务可使用数值 loopback HTTP。密钥禁止进入日志、
+模型上下文或公开证据；HostSession 的字符串展示始终隐藏凭据。
+生产宿主负责签发、续期、撤销及服务身份/ACL；此 Provider 不替代银行授权系统。

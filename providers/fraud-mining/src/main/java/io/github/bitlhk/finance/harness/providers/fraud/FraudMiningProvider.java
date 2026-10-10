@@ -91,11 +91,19 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
     private CapabilityResultV1 assess(CapabilityRequestV1 request, String subjectRef) throws Exception {
         String path = "/api/v1/samples?page=1&page_size=20&keyword="
                 + URLEncoder.encode(subjectRef, StandardCharsets.UTF_8);
-        HttpRequest upstreamRequest = HttpRequest.newBuilder(config.baseUri().resolve(path))
+        HttpRequest.Builder upstream = HttpRequest.newBuilder(config.baseUri().resolve(path))
                 .timeout(config.timeout())
                 .header("Accept", "application/json")
-                .GET()
-                .build();
+                .GET();
+        HostSession session = config.hostSession();
+        if (session != null) {
+            if (!Instant.now().isBefore(session.expiresAt())) {
+                return failure(request, "AUTHORIZATION_REQUIRED", "FRAUD_SESSION_EXPIRED", false,
+                        "host session is no longer valid");
+            }
+            upstream.header("X-Session-Id", session.sessionId());
+        }
+        HttpRequest upstreamRequest = upstream.build();
         HttpResponse<String> response = http.send(upstreamRequest, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("fraud service returned HTTP " + response.statusCode());
@@ -206,7 +214,32 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         }
     }
 
-    public record Config(URI baseUri, Duration timeout) {
+    /** Private credential supplied by the trusted Host, never request parameters or model output. */
+    public record HostSession(String sessionId, Instant expiresAt) {
+        public HostSession {
+            if (sessionId == null || !sessionId.matches("[A-Za-z0-9_-]{16,256}")) {
+                throw new IllegalArgumentException("host session identifier is invalid");
+            }
+            Objects.requireNonNull(expiresAt, "expiresAt");
+        }
+
+        @Override
+        public String toString() {
+            return "HostSession[credential=redacted]";
+        }
+    }
+
+    public record Config(URI baseUri, Duration timeout, HostSession hostSession) {
+        /** Preserve anonymous legacy integrations; protected services reject this mode themselves. */
+        public Config(URI baseUri, Duration timeout) {
+            this(baseUri, timeout, null);
+        }
+
+        /** Authenticated integrations cannot silently fall back to an anonymous request. */
+        public static Config authenticated(URI baseUri, Duration timeout, HostSession hostSession) {
+            return new Config(baseUri, timeout, Objects.requireNonNull(hostSession, "hostSession"));
+        }
+
         public Config {
             Objects.requireNonNull(baseUri, "baseUri");
             Objects.requireNonNull(timeout, "timeout");
@@ -215,6 +248,13 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             }
             if (timeout.isZero() || timeout.isNegative()) {
                 throw new IllegalArgumentException("timeout must be positive");
+            }
+            if (hostSession != null && (baseUri.getRawUserInfo() != null
+                    || baseUri.getRawQuery() != null || baseUri.getRawFragment() != null
+                    || !("https".equalsIgnoreCase(baseUri.getScheme())
+                    || ("http".equalsIgnoreCase(baseUri.getScheme())
+                    && List.of("127.0.0.1", "[::1]", "::1").contains(baseUri.getHost()))))) {
+                throw new IllegalArgumentException("authenticated service URI must use HTTPS or numeric loopback");
             }
             String normalized = baseUri.toString().endsWith("/")
                     ? baseUri.toString()
