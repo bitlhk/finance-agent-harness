@@ -493,6 +493,56 @@ class OpenJiuwenSolutionAssemblerTest {
     }
 
     @Test
+    void servicePreparationInstallsCrmQueryAndFourStageMethod() throws Exception {
+        var calls = new java.util.ArrayList<CapabilityRequestV1>();
+        FinanceProvider provider = new DescribedFinanceProvider() {
+            public ProviderDescriptorV1 descriptor() {
+                return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION,
+                        "customer-crm-readonly", "0.1.0-SNAPSHOT", List.of(
+                        new ProviderDescriptorV1.CapabilitySupport("wealth.previsit-context.query", CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport("wealth.allocation-context.query", CapabilityRequestV1.Operation.QUERY)));
+            }
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                calls.add(request);
+                return completed(request, Map.of("fixture", true));
+            }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("No write capability in this candidate");
+            }
+        };
+        var agent = cleanAgent("service-preparation");
+        var defaults = new OpenJiuwenFinanceBridge.InvocationDefaults("synthetic-manager", "syn-customer-1",
+                FinanceContextV1.PrincipalType.EMPLOYEE, "synthetic-test", "WEALTH_PREVISIT",
+                FinanceContextV1.AuthenticationLevel.STRONG, Set.of("wealth:previsit:read", "wealth:allocation:read"));
+        String section = "finance-domain-pack:wealth-service-preparation:customer-manager-service-preparation";
+        try (var solution = new OpenJiuwenSolutionAssembler().assemble(root(), root().resolve(
+                "examples/solutions/customer-manager-service-preparation/solution.yaml"),
+                agent, Map.of("customer-crm-readonly", provider), defaults, true)) {
+            assertEquals(2, solution.lock().installations().size());
+            assertTrue(agent.getSystemPromptBuilder().hasSection(section));
+            String prompt = agent.getSystemPromptBuilder().build();
+            for (String heading : List.of("客户洞察", "事实汇集", "服务建议", "经理复核")) {
+                assertTrue(prompt.contains(heading));
+            }
+            assertTrue(prompt.contains("待经理复核的草稿"));
+            assertNotNull(agent.getAbilityManager().get("wealth_allocation_context_query"));
+            var previsit = (Map<?, ?>) ((Tool) Runner.resourceMgr().getTool("wealth_previsit_context_query"))
+                    .invoke(Map.of("customerRef", "syn-customer-1"));
+            assertEquals("COMPLETED", previsit.get("status"));
+            var allocation = (Map<?, ?>) ((Tool) Runner.resourceMgr().getTool("wealth_allocation_context_query"))
+                    .invoke(Map.of("customerRef", "syn-customer-1", "amount", 100000, "horizonMonths", 12,
+                            "channel", "手机银行"));
+            assertEquals("COMPLETED", allocation.get("status"));
+            assertEquals(Set.of("wealth.previsit-context.query", "wealth.allocation-context.query"),
+                    calls.stream().map(CapabilityRequestV1::capabilityId).collect(java.util.stream.Collectors.toSet()));
+            assertTrue(calls.stream().allMatch(call -> call.context().principalType() == FinanceContextV1.PrincipalType.EMPLOYEE));
+        }
+        assertNull(agent.getAbilityManager().get("wealth_allocation_context_query"));
+        assertNull(agent.getAbilityManager().get("wealth_previsit_context_query"));
+        assertFalse(agent.getSystemPromptBuilder().hasSection(section));
+    }
+
+    @Test
     void wealthSolutionInstallsProfessionalSkillAndRequiredCapabilityTogether() throws Exception {
         Path root = root();
         AtomicReference<CapabilityRequestV1> captured = new AtomicReference<>();

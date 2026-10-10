@@ -66,3 +66,37 @@ EA 拒绝或异常的原始文字不直接回流，改为稳定的错误码和�
 - 不允许客户侧 Profile 调用；
 - 不将 EA 内部凭据写入结果或 Evidence；
 - 不把该参考 Provider 表述为银行生产 CRM Provider。
+
+## 客户经理服务准备候选
+
+新增独立的 `wealth-allocation-context` Capability Pack，将
+`wealth.allocation-context.query` 映射到 EA 的 `prepare_wealth_allocation_context`。
+旧访前 Pack 的工具集合及业务范围保持不变，新能力必须显式安装并由宿主授予
+`wealth:allocation:read`，目录声明不会授予权限。
+
+参数仅映射 `customerRef`、`amount`、`horizonMonths`、`channel`、`keyword`、
+`productType` 和 `maxProducts`。可选参数没有提供时不补默认业务值；无效值在签发
+Token 和发出请求前拒绝。身份字段不能通过工具参数覆盖。
+
+产品结果保留 EA 返回的 `eligibleProducts` 和只用于解释的 `excludedProducts`。
+成功候选必须有政策来源、回执和允许候选输出的 Readiness；缺失时不暴露产品。
+`no_eligible_products` 保留为空候选结果，不能替换为相邻产品，也不表示完成产品配置。
+MCP 查询 `COMPLETED` 仅表示取得上下文，不代表整个访前业务流程已完成。
+
+财富查询返回前重新检查员工绑定及 `authorityRef`，绑定撤销、过期或替换时丢弃结果。
+这不能替代宿主对最终响应提交的原子代际校验，也不能撤回已经发出的外部请求。
+
+候选专业方法与 Solution 位于：
+
+- `domain-packs/wealth/service-preparation`
+- `examples/solutions/customer-manager-service-preparation/solution.yaml`
+
+当前只验证本地合成 MCP 和 OpenJiuwen 工具装配；员工目录接线、真实授权联调、
+经理复核持久化与 CRM 确认写入仍待完成，不得据此启用线上场景。
+
+`EmployeeAgentWealthFactoryV01` 复用已有 `ManagedProviderFactoriesV01` 注册与
+`BoundFinanceProvider` 授权包装。它由员工 Host 显式传入可信 Runtime 身份、
+逐次 Token 供应器及可撤销的 adoption-owner 绑定，不提供无参构造或自动
+ServiceLoader 注册，避免现有模拟银行 Host 意外获得员工工具。
+连接类型为 `employee-agent-platform-mcp.v1`，拒绝复用 `synthetic-bank-http.v1`。
+工厂创建本身不读取客户、不解析员工绑定、不申请 Token，也不授予权限。

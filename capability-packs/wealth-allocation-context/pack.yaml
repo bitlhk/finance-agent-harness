@@ -1,0 +1,38 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-allocation-context
+version: 0.1.0
+systemPrompt: |
+  Only use wealth_allocation_context_query for policy-screened product discussion.
+  eligibleProducts are candidates for manager review, not an instruction to buy.
+  excludedProducts explain exclusions and must never become recommendations.
+  Preserve source policy, data dates and readiness. Do not guess missing amount,
+  investment horizon or channel. No eligible products means no replacement suggestion.
+  This tool does not purchase products, transfer money, or write CRM records.
+capabilities:
+  - capabilityId: wealth.allocation-context.query
+    toolName: wealth_allocation_context_query
+    name: 财富产品候选依据
+    description: 读取授权客户的适当性筛选结果、候选产品及排除原因，仅供客户经理复核，不执行购买。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [customerRef, amount, horizonMonths, channel]
+      properties:
+        customerRef:
+          type: string
+          minLength: 1
+          maxLength: 128
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10000000000
+        horizonMonths:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1200
+        channel:
+          type: string
+          minLength: 1
+          maxLength: 64
+    requiredScopes: [wealth:allocation:read]

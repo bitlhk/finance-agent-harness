@@ -1,0 +1,52 @@
+{
+  "status": "BACKEND_CANDIDATE_ONLY",
+  "branch": "feat/customer-manager-previsit-mvp-v01",
+  "baseCommit": "964080335eaecd83bc016641bddd9e8bb02f3f31",
+  "employeeAgentSourceCommit": "0503bab254d52ac496bcf5fd51e23532aee975fe",
+  "checks": [
+    {
+      "command": "mvn -pl providers/employee-agent -am test -q",
+      "exitCode": 0,
+      "newFactoryTests": 3,
+      "scope": "Factory registration is side-effect-free; simulator identity and ungranted allocation access rejected. Host wiring is still pending."
+    },
+    {
+      "command": "mvn test -q",
+      "exitCode": 0,
+      "tests": 395,
+      "passed": 387,
+      "skipped": 8,
+      "failures": 0,
+      "errors": 0,
+      "scope": "Local deterministic fixtures and runtime integration, not online business acceptance",
+      "skippedGroups": ["Live capability description AB", "Live Employee Agent wealth and insurance", "Live bank wealth and balance", "Live transfer", "Live preferences", "Live fraud"]
+    },
+    {
+      "command": "python engineering/verify_component_assembly.py",
+      "exitCode": 0,
+      "declarations": 8,
+      "packDeclarations": 6,
+      "supportedCapabilities": 7,
+      "scope": "Existing declared components remain valid; new employee components are not managed-host qualified"
+    }
+  ],
+  "onlineObservation": {
+    "action": "Read-only release manifest and service state inspection",
+    "serviceState": "active",
+    "builderCommit": "86c6f2230adfb26bd6608d71b57c0a52fd0349d8",
+    "harnessCommit": "964080335eaecd83bc016641bddd9e8bb02f3f31",
+    "productionChanged": false
+  },
+  "releaseGatesPending": [
+    "Dedicated synthetic employee identity and customer assignment verified",
+    "Managed employee-assisted host wiring to the explicitly registered Provider factory",
+    "Catalog scenario and review interaction",
+    "Persistent manager review with actor, report version and reason",
+    "Confirmed synthetic CRM followup and cancellation",
+    "Live model and authorized Provider end-to-end verification",
+    "Browser regression and rollback-qualified deployment"
+  ],
+  "merged": false,
+  "deployed": false,
+  "dotAcceptanceReady": false
+}

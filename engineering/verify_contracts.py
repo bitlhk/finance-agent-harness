@@ -247,13 +247,19 @@ def main():
         if "field" in case: value["capabilities"][0][case["field"]] = case["value"]
         assert validator("observation-capabilities.v0.1").is_valid(value) == case["valid"], case["name"]
     print(f"PASS: {len(collector_cases)} shared collector cases (also consumed by Java)")
-    selection = json.loads((ROOT / "observation-packs/readonly/selection.json").read_text())
-    validator("observation-selection.v0.1").validate(selection)
-    for unit in selection["units"]:
-        value = json.loads((ROOT / unit["source"].removeprefix("repo://")).read_text())
-        validator("observation-requirements.v0.1").validate(value)
-        assert set(value["requirements"][0]["capabilityIds"]) == set(unit["capabilityIds"])
-    print(f"PASS: selection and {len(selection['units'])} unit requirement declarations")
+    unit_count = 0
+    for path in ("observation-packs/readonly/selection.json", "observation-packs/managed/selection.json"):
+        selection = json.loads((ROOT / path).read_text())
+        validator("observation-selection.v0.1").validate(selection)
+        for unit in selection["units"]:
+            value = json.loads((ROOT / unit["source"].removeprefix("repo://")).read_text())
+            validator("observation-requirements.v0.1").validate(value)
+            declared = set(unit["capabilityIds"])
+            observed = {capability for requirement in value["requirements"]
+                        for capability in requirement["capabilityIds"]}
+            assert observed == declared
+            unit_count += 1
+    print(f"PASS: 2 selections and {unit_count} unit requirement declarations")
 
 
 if __name__ == "__main__":

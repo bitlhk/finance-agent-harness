@@ -36,6 +36,19 @@
           "employee-assisted"
         ]
       }
+    },
+    {
+      "id": "customer-manager-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "Customer Manager Service Preparation Java Integration",
+      "source": "repo://integrations/customer-manager-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-customer-manager-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"],
+        "profiles": ["employee-assisted"]
+      }
     }
   ],
   "profiles": [
@@ -57,7 +70,7 @@
       "id": "employee-assisted",
       "version": "0.1.0",
       "displayName": "员工辅助",
-      "source": "repo://profiles",
+      "source": "repo://profiles/employee-assisted.md",
       "governanceRef": "finance-harness-core"
     },
     {
@@ -90,6 +103,19 @@
     }
   ],
   "domainPacks": [
+    {
+      "id": "wealth-service-preparation",
+      "version": "0.1.0",
+      "displayName": "客户经理访前服务准备（待宿主验收）",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/wealth/service-preparation",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["wealth.previsit-context.query"],
+      "dependencies": [
+        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"}
+      ],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
     {
       "id": "wealth-shared-facts",
       "version": "0.1.1",
@@ -416,6 +442,15 @@
       }
     },
     {
+      "id": "wealth-allocation-context",
+      "version": "0.1.0",
+      "displayName": "财富产品候选依据（待运行接线验收）",
+      "source": "repo://capability-packs/wealth-allocation-context",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["wealth.allocation-context.query"],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "wealth-customer-context",
       "version": "0.1.0",
       "displayName": "客户财富上下文能力",
@@ -668,12 +703,29 @@
       }
     },
     {
+      "id": "customer-crm-readonly",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "客户经理 CRM 只读 Provider",
+      "source": "repo://providers/customer-crm",
+      "capabilities": [
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
+    },
+    {
       "id": "employee-agent-reference",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "岗位智能体财富参考 Provider",
       "source": "repo://providers/employee-agent",
       "capabilities": [
-        "wealth.previsit-context.query"
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {

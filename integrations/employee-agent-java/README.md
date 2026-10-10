@@ -63,3 +63,27 @@ jti
 - Provider 继续负责 Canonical Capability 与 EA MCP 的协议映射；
 - Core 不依赖本模块；
 - Builder 只装配本模块及环境变量占位，不接触真实密钥。
+
+## 客户服务准备 Host 接线候选
+
+`EmployeeAgentWealthSession` 复用 `EmployeeAgentWealthFactoryV01`、
+`ManagedProviderFactoriesV01`、`BoundFinanceProvider` 和现有 EA MCP Provider。
+它不是登录服务、授权服务器或新的任务引擎，不自动安装能力，不自动创建 EA 岗位。
+
+构造时由可信 Host 提供当前登录 Owner、会话、Runtime 身份、实际安装能力集合、
+`Authority` 供应器和逐次 Token 供应器。`Authority` 组合既有员工归属绑定及实授 Grant，
+由 EA／银行授权来源核实；浏览器、模型、能力包和邮箱均不能生成该对象。
+供应器应读取同一版本的当前授权快照，不在每次读取时自造或续期授权。
+
+查询只支持显式安装的访前上下文和配置候选上下文；`customerRef` 由 Host 单独传入，
+且必须属于实授客户集合。身份、认证级别、Scope 和会话不接受工具参数覆盖。
+未授权、未安装、过期、Owner／岗位／会话不一致在源数据读取前拒绝；返回后再次核对
+完整快照，包括客户集合和 Scope，变化时不暴露事实。关闭后不可恢复或再次读取。
+
+没有持锁网络等待或自动重试。已派发的外部查询不能因此撤销。
+该适配不代替运行 Controller 的最终响应代际 CAS；关闭与最后一次校验之后的响应提交竞争
+仍由 Host 控制，不能仅凭此类宣称请求生命周期贯通。
+
+本地合成 HTTP 测试：`EmployeeAgentWealthSessionTest`。
+当前尚未接入线上 Linggan→EA 授权快照解析、受管 Java 页面或经理复核保存，
+不能把测试通过称为真实账号／CRM 已打通。旧六卡和生产环境不受本候选影响。

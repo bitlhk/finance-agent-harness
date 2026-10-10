@@ -30,6 +30,8 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String WEALTH_PREVISIT_CONTEXT_QUERY = "wealth.previsit-context.query";
     public static final String HOST_TOOL = "prepare_wealth_previsit_context";
+    public static final String WEALTH_ALLOCATION_CONTEXT_QUERY = "wealth.allocation-context.query";
+    public static final String ALLOCATION_HOST_TOOL = "prepare_wealth_allocation_context";
 
     private static final String ENDPOINT = "/api/internal/platform-tools/mcp";
     static final String CONTENT_PREFIX = "EA_WEALTH_PREVISIT_CONTEXT:";
@@ -54,7 +56,9 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
                 PROVIDER_ID,
                 PROVIDER_VERSION,
                 List.of(new ProviderDescriptorV1.CapabilitySupport(
-                        WEALTH_PREVISIT_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY)));
+                        WEALTH_PREVISIT_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                WEALTH_ALLOCATION_CONTEXT_QUERY, CapabilityRequestV1.Operation.QUERY)));
     }
 
     @Override
@@ -66,8 +70,17 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
         }
 
         try {
-            checkAccess(request);
-            return callPrevisitTool(request, requiredParameter(request.parameters(), "customerRef"));
+            EmployeeAgentIdentityBinding initialBinding = config.identityBinding().get();
+            EmployeeAgentIdentityBinding.verify(initialBinding, config.runtimeIdentity(), request);
+            CapabilityResultV1 result = callPrevisitTool(
+                    request, requiredParameter(request.parameters(), "customerRef"));
+            // The host may revoke the adoption while the remote query is in flight.
+            EmployeeAgentIdentityBinding currentBinding = config.identityBinding().get();
+            EmployeeAgentIdentityBinding.verify(currentBinding, config.runtimeIdentity(), request);
+            if (!initialBinding.authorityRef().equals(currentBinding.authorityRef())) {
+                throw new SecurityException("EA_AUTHORITY_CHANGED");
+            }
+            return result;
         } catch (SecurityException denied) {
             return failure(request, "NOT_AUTHORIZED", "EA_IDENTITY_BINDING_REJECTED", false,
                     "Host identity does not match verified EA binding", List.of("VERIFY_HOST_BINDING"));
@@ -98,7 +111,7 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
             return failure(request, "INVALID_INPUT", "QUERY_OPERATION_REQUIRED", false,
                     "query requires operation QUERY", List.of("USE_QUERY_OPERATION"));
         }
-        if (!WEALTH_PREVISIT_CONTEXT_QUERY.equals(request.capabilityId())) {
+        if (!WEALTH_PREVISIT_CONTEXT_QUERY.equals(request.capabilityId()) && !allocation(request)) {
             return failure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
                     "unsupported query capability: " + request.capabilityId(), List.of("CHECK_CAPABILITY_ID"));
         }
@@ -110,7 +123,48 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
             return failure(request, "INVALID_INPUT", "CUSTOMER_REF_REQUIRED", false,
                     "customerRef is required", List.of("SELECT_AUTHORIZED_CUSTOMER"));
         }
+        if (allocation(request)) {
+            try {
+                allocationArguments(request.parameters());
+            } catch (IllegalArgumentException invalid) {
+                return failure(request, "INVALID_INPUT", "ALLOCATION_ARGUMENTS_INVALID", false,
+                        "Allocation arguments are invalid", List.of("CHECK_ARGUMENTS"));
+            }
+        }
         return null;
+    }
+
+    private static boolean allocation(CapabilityRequestV1 request) {
+        return WEALTH_ALLOCATION_CONTEXT_QUERY.equals(request.capabilityId());
+    }
+
+    private static Map<String, Object> allocationArguments(Map<String, Object> parameters) {
+        Map<String, String> fields = Map.of("customerRef", "customer_id", "amount", "amount",
+                "horizonMonths", "horizon_months", "channel", "channel", "keyword", "keyword",
+                "productType", "product_type", "maxProducts", "max_products");
+        if (!fields.keySet().containsAll(parameters.keySet())) {
+            throw new IllegalArgumentException("UNKNOWN_ALLOCATION_ARGUMENT");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (var entry : parameters.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            if (List.of("amount", "horizonMonths", "maxProducts").contains(name)) {
+                if (!(value instanceof Number number)) throw new IllegalArgumentException("NUMBER_REQUIRED");
+                double numeric = number.doubleValue();
+                double maximum = "amount".equals(name) ? 10_000_000_000d
+                        : "horizonMonths".equals(name) ? 1200d : 20d;
+                if (!Double.isFinite(numeric) || numeric <= 0 || numeric > maximum
+                        || ("maxProducts".equals(name) && numeric != Math.floor(numeric))) {
+                    throw new IllegalArgumentException("NUMBER_OUT_OF_RANGE");
+                }
+            } else if (!(value instanceof String text) || text.isBlank()
+                    || text.length() > ("customerRef".equals(name) ? 128 : "keyword".equals(name) ? 120 : 64)) {
+                throw new IllegalArgumentException("TEXT_REQUIRED");
+            }
+            result.put(fields.get(name), value);
+        }
+        return result;
     }
 
     private CapabilityResultV1 callPrevisitTool(CapabilityRequestV1 request, String customerRef)
@@ -122,8 +176,9 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
                 "id", request.context().requestId(),
                 "method", "tools/call",
                 "params", Map.of(
-                        "name", HOST_TOOL,
-                        "arguments", Map.of("customer_id", customerRef)));
+                        "name", allocation(request) ? ALLOCATION_HOST_TOOL : HOST_TOOL,
+                        "arguments", allocation(request) ? allocationArguments(request.parameters())
+                                : Map.of("customer_id", customerRef)));
         HttpRequest.Builder builder = HttpRequest.newBuilder(config.baseUri().resolve(ENDPOINT))
                 .timeout(config.timeout())
                 .header("Accept", "application/json")
@@ -180,12 +235,13 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
             return failure(request, "UPSTREAM_FAILURE", "EA_RESULT_MISSING", false,
                     "Employee Agent MCP result contains no text", List.of("CHECK_EA_TOOL_RESULT"));
         }
-        if (!text.startsWith(CONTENT_PREFIX)) {
+        String prefix = allocation(request) ? "EA_WEALTH_ALLOCATION_CONTEXT:" : CONTENT_PREFIX;
+        if (!text.startsWith(prefix)) {
             return failure(request, "UPSTREAM_FAILURE", "EA_RESULT_CONTRACT_MISMATCH", false,
                     "Employee Agent returned an unexpected wealth result", List.of("CHECK_EA_TOOL_VERSION"));
         }
 
-        JsonNode previsit = JSON.readTree(text.substring(CONTENT_PREFIX.length()));
+        JsonNode previsit = JSON.readTree(text.substring(prefix.length()));
         if (!previsit.isObject()) {
             return failure(request, "UPSTREAM_FAILURE", "EA_CONTEXT_INVALID", false,
                     "Employee Agent wealth context is not an object", List.of("CHECK_EA_TOOL_RESULT"));
@@ -194,6 +250,41 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
             return failure(request, "UPSTREAM_FAILURE", "EA_WEALTH_CONTEXT_BLOCKED", false,
                     "Employee Agent could not provide authorized wealth context",
                     List.of("FOLLOW_EA_REMEDIATION"));
+        }
+
+        if (allocation(request) && (!"ea.wealth-allocation-context.v1".equals(previsit.path("schema").asText())
+                || !List.of("ready", "no_eligible_products").contains(previsit.path("status").asText())
+                || !previsit.path("eligibleProducts").isArray()
+                || !previsit.path("excludedProducts").isArray()
+                || !previsit.path("policySource").path("ready").asBoolean(false)
+                || previsit.path("customer").path("customerId").asText().isBlank()
+                || ("no_eligible_products".equals(previsit.path("status").asText())
+                    != previsit.path("eligibleProducts").isEmpty()))) {
+            return failure(request, "UPSTREAM_FAILURE", "EA_ALLOCATION_CONTEXT_INVALID", false,
+                    "Employee Agent did not return a policy-validated product set", List.of("CHECK_EA_TOOL_RESULT"));
+        }
+        JsonNode receipt = result.path("_meta").path("eaContextReceipt");
+        if (allocation(request)) {
+            if (receipt.path("receiptId").asText().isBlank()
+                    || receipt.path("receiptFingerprint").asText().isBlank()
+                    || previsit.path("policySource").path("versionLabel").asText().isBlank()
+                    || previsit.path("policySource").path("sourceLocator").asText().isBlank()) {
+                return failure(request, "UPSTREAM_FAILURE", "EA_ALLOCATION_EVIDENCE_MISSING", false,
+                        "Product context lacks source evidence", List.of("CHECK_EA_TOOL_RESULT"));
+            }
+            try {
+                Instant.parse(receipt.path("createdAt").asText());
+            } catch (DateTimeParseException invalid) {
+                return failure(request, "UPSTREAM_FAILURE", "EA_ALLOCATION_EVIDENCE_MISSING", false,
+                        "Product context lacks valid receipt time", List.of("CHECK_EA_TOOL_RESULT"));
+            }
+            if ("ready".equals(previsit.path("status").asText())
+                    && (!"READY".equals(previsit.path("readiness").path("status").asText())
+                    || !stringList(previsit.path("readiness").get("allowedOutcomes"))
+                        .contains("governed_asset_allocation_candidates"))) {
+                return failure(request, "NOT_AUTHORIZED", "EA_ALLOCATION_OUTCOME_NOT_ALLOWED", false,
+                        "Employee Agent readiness does not allow product candidates", remediation(previsit));
+            }
         }
 
         for (String returned : List.of(previsit.path("customer").path("customerId").asText(""),
@@ -205,20 +296,20 @@ public final class EmployeeAgentWealthProvider implements DescribedFinanceProvid
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("previsitContext", JSON.convertValue(previsit, Map.class));
-        JsonNode receipt = result.path("_meta").path("eaContextReceipt");
+        data.put(allocation(request) ? "allocationContext" : "previsitContext", JSON.convertValue(previsit, Map.class));
         Map<String, Object> hostEvidence = compactReceipt(receipt);
         if (!hostEvidence.isEmpty()) {
             data.put("hostEvidence", hostEvidence);
         }
-        data.put("hostCapability", HOST_TOOL);
+        data.put("hostCapability", allocation(request) ? ALLOCATION_HOST_TOOL : HOST_TOOL);
 
         return new CapabilityResultV1(
                 CapabilityResultV1.SCHEMA_VERSION,
                 request.context().requestId(),
                 request.context().traceId(),
                 CapabilityResultV1.Status.COMPLETED,
-                previsit.path("message").asText("财富客户访前上下文已准备。"),
+                previsit.path("message").asText(allocation(request)
+                        ? "产品候选依据已返回，请按适当性条件复核；未执行购买。" : "财富客户访前上下文已准备。"),
                 data,
                 stringList(previsit.get("missingInputs")),
                 remediation(previsit),
