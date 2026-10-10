@@ -41,4 +41,20 @@ class CustomerManagerDialogueTest {
         assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
                 CustomerManagerDialogue.resolve("为周明远筛选10万元的产品候选",CUSTOMERS,null).action());
     }
+
+    @Test void negatedProductLanguageDoesNotOverrideExplicitPreparation() {
+        var result=CustomerManagerDialogue.resolve(
+                "只做澄清性回访，不正式推荐或业务写回",CUSTOMERS,"周明远");
+        assertEquals(CustomerManagerDialogue.Action.PREPARE,result.action());
+        assertEquals("周明远",result.customer());
+        assertTrue(CustomerManagerDialogue.rejectsProductSelection("先不推荐产品，帮我准备回访"));
+        assertTrue(CustomerManagerDialogue.requestsPreparation("先不推荐产品，帮我准备回访"));
+    }
+
+    @Test void explicitCancellationClosesProductTaskInsteadOfPreparingAReport() {
+        assertEquals(CustomerManagerDialogue.Action.CANCEL_PRODUCT,
+                CustomerManagerDialogue.resolve("取消产品筛选",CUSTOMERS,"周明远").action());
+        assertEquals(CustomerManagerDialogue.Action.CANCEL_PRODUCT,
+                CustomerManagerDialogue.resolve("暂不推荐产品",CUSTOMERS,"周明远").action());
+    }
 }
