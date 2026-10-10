@@ -157,8 +157,11 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         for (String key : List.of("profileType", "detailSchemaVersion"))
             if (!text(node, key).isBlank()) value.put(key, text(node, key));
         for (String key : List.of("demographics", "preferences", "insuranceFacts", "detail", "fieldProvenance"))
-            if (node.has(key) && !node.path(key).isNull() && !node.path(key).asText("").isBlank())
-                value.put(key, JSON.convertValue(parseObject(node.path(key)), Object.class));
+            if (node.has(key) && !node.path(key).isNull()) {
+                JsonNode parsed=parseObject(node.path(key));
+                if (!(parsed.isTextual() && parsed.asText().isBlank()) && !parsed.isMissingNode())
+                    value.put(key, JSON.convertValue(parsed, Object.class));
+            }
         return Map.copyOf(value);
     }
     private boolean hasBusinessDetail(Map<String,Object> profile) {

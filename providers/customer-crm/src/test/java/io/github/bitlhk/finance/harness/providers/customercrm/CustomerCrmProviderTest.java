@@ -42,7 +42,8 @@ class CustomerCrmProviderTest {
                         "businessAsOf", "2026-10-08T00:00:00Z"));
                 case "customerDomainProfiles" -> List.of(Map.of("globalCustomerId", "CUST-000001",
                         "profileType", "wealth", "runtimeStatus", "active", "detailSchemaVersion", "1",
-                        "detail", "{\"riskAssessment\":{\"riskLevel\":\"C3\",\"validUntil\":\"2027-01-01T00:00:00Z\"},\"totalAssets\":125000}"));
+                        "detail", Map.of("riskAssessment",Map.of("riskLevel","C3","validUntil","2027-01-01T00:00:00Z"),
+                                "totalAssets",125000,"recentEvents",List.of(Map.of("type","FOLLOW_UP_DUE")))));
                 default -> List.of();
             };
             byte[] body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(
@@ -86,6 +87,10 @@ class CustomerCrmProviderTest {
         CapabilityResultV1 result = provider.query(request("CUST-000001"));
         assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
         assertEquals("CUST-000001", ((Map<?,?>)((Map<?,?>)result.data().get("previsitContext")).get("customer")).get("customerId"));
+        Map<?,?> context=(Map<?,?>)result.data().get("previsitContext");
+        Map<?,?> profile=(Map<?,?>)((List<?>)context.get("profiles")).getFirst();
+        assertTrue(profile.get("detail") instanceof Map);
+        assertEquals("READY",((Map<?,?>)context.get("readiness")).get("status"));
         assertEquals("mapping-v1", ((Map<?,?>)result.data().get("hostEvidence")).get("mappingRevision"));
         assertFalse(result.data().toString().contains("fixture-token"));
     }
