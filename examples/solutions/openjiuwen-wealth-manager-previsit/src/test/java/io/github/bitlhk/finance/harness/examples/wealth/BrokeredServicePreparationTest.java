@@ -72,7 +72,8 @@ class BrokeredServicePreparationTest {
         assertThrows(SecurityException.class,()->task.prepare("owner",generation));
         try(var files=java.nio.file.Files.walk(reports)) {
             var record=HarnessJson.mapper().readTree(files.filter(java.nio.file.Files::isRegularFile)
-                .filter(p->p.getFileName().toString().startsWith("v")).reduce((a,b)->b).orElseThrow().toFile());
+                .filter(p->p.getFileName().toString().matches("v[0-9]+\\.json"))
+                .max(Comparator.comparing(p->p.getFileName().toString())).orElseThrow().toFile());
             assertEquals("DISCARDED",record.path("status").asText());assertFalse(record.has("facts"));
         }
         assertEquals(1,calls.get());
