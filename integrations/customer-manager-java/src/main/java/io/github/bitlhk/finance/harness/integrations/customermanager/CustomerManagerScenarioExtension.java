@@ -2,6 +2,7 @@ package io.github.bitlhk.finance.harness.integrations.customermanager;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.spi.ManagedScenarioExtensionV01;
 import io.github.bitlhk.finance.harness.examples.wealth.*;
@@ -14,7 +15,7 @@ import java.util.*;
 /** Declarative managed-Host extension. Browser input cannot provide authority, credentials or asset paths. */
 public final class CustomerManagerScenarioExtension implements ManagedScenarioExtensionV01 {
     public static final String ID = "customer-manager-service-preparation.v1";
-    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "latest", "review", "versions", "read-version", "replay");
+    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "latest", "review", "versions", "read-version", "replay", "note");
 
     @Override public String id() { return ID; }
     @Override public Set<String> actions() { return ACTIONS; }
@@ -47,9 +48,17 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private String selectedCustomer, selectedGoal;
         private String pendingProductCustomer;
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
+        private final Map<String,ObjectNode> taskContexts=new HashMap<>();
         private volatile boolean closed;
-        Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) {
+        Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
+            var latest=task.latest(owner);
+            if(latest.isPresent()) {
+                JsonNode report=latest.get();selectedCustomer=report.path("customerAlias").asText(null);
+                selectedGoal=report.path("goal").asText(null);
+                if(selectedCustomer!=null&&report.path("taskContext").isObject())
+                    taskContexts.put(selectedCustomer,(ObjectNode)report.path("taskContext").deepCopy());
+            }
         }
         @Override public String sessionId() { return sessionId; }
         @Override public Map<String,Object> bootstrap() {
@@ -67,7 +76,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case "select" -> {
                     exact(body,"customerAlias","goal");
                     selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
-                    yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal),"status","SELECTED");
+                    yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
                 }
                 case "prepare" -> { exact(body,"generation"); yield value(task.prepare(owner,integer(body,"generation"))); }
                 case "read" -> { exact(body,"reportId"); yield value(task.read(owner,text(body,"reportId"))); }
@@ -84,6 +93,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case "versions" -> { exact(body,"reportId");String id=text(body,"reportId");yield Map.of(
                         "reportId",id,"versions",task.versions(owner,id),"items",task.versionSummaries(owner,id)); }
                 case "read-version" -> { exact(body,"reportId","revision"); yield value(task.readVersion(owner,text(body,"reportId"),integer(body,"revision"))); }
+                case "note" -> {
+                    exactOneOf(body,Set.of("reportId"),Set.of("reportId","revision"));
+                    Integer revision=body.has("revision")?integer(body,"revision"):null;
+                    yield value(task.note(owner,text(body,"reportId"),revision));
+                }
                 default -> throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             };
         }
@@ -112,7 +126,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!pendingProductArguments.containsKey("horizonMonths"))missing.add("投资期限");
                 if(!pendingProductArguments.containsKey("channel"))missing.add("办理渠道（手机银行或网点）");
                 if(!missing.isEmpty())return Map.of("status","NEED_CLARIFICATION","response","为 "+displayName(customer)+" 筛选产品候选前，请补充："+String.join("、",missing)+"。候选只供经理复核，不会执行购买。");
-                selectedCustomer=customer;selectedGoal=query;long generation=task.select(owner,customer,query);
+                ObjectNode taskContext=updateContext(customer,query);
+                selectedCustomer=customer;selectedGoal=query;long generation=task.select(owner,customer,query,taskContext);
                 sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
                 JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
                 pendingProductCustomer=null;pendingProductArguments.clear();
@@ -126,10 +141,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
                 return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位获授权客户。你也可以先问“我负责哪些客户？”。");
             String customer=decision.customer();
+            ObjectNode taskContext=updateContext(customer,query);
             selectedCustomer=customer;selectedGoal=query;
             sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of(
                     "stage","AUTHORIZATION_CONFIRMED","label","已核对客户服务范围")));
-            long generation=task.select(owner,customer,query);
+            long generation=task.select(owner,customer,query,taskContext);
             JsonNode report=task.prepare(owner,generation,listener(sink));
             String status=report.path("status").asText();
             String response="READY_FOR_REVIEW".equals(status)
@@ -138,6 +154,13 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             var result=new LinkedHashMap<String,Object>();
             result.put("status",status);result.put("response",response);result.put("customer",customer);
             result.put("report",value(report));return Map.copyOf(result);
+        }
+        private ObjectNode context(String customer) {
+            return taskContexts.computeIfAbsent(customer,ignored->CustomerManagerTaskContext.empty());
+        }
+        private ObjectNode updateContext(String customer,String query) {
+            ObjectNode updated=CustomerManagerTaskContext.update(context(customer),query);
+            taskContexts.put(customer,updated);return updated;
         }
         private ServicePreparation.PreparationListener listener(EventSink sink) {
             return new ServicePreparation.PreparationListener(){
