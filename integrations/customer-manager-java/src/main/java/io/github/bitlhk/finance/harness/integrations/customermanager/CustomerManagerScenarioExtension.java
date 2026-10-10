@@ -75,6 +75,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
+                    clearPendingProduct();
                     selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
                     yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
                 }
@@ -110,14 +111,21 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private Map<String,Object> chat(String query) throws Exception { return chat(query, event -> {}); }
         private Map<String,Object> chat(String query, EventSink sink) throws Exception {
             List<String> customers=task.customers(owner);
-            var decision=CustomerManagerDialogue.resolve(query,customers,selectedCustomer);
+            String conversationalCustomer=selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
+            var decision=CustomerManagerDialogue.resolve(query,customers,conversationalCustomer);
+            if(CustomerManagerDialogue.rejectsProductSelection(query)) clearPendingProduct();
             if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
                 return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，汇集资料与持仓事实并生成待复核的回访准备建议。你也可以提供客户、金额、期限和渠道，让我从合成产品目录中形成待复核候选；我不会执行购买、CRM 写入、消息发送或交易办理。");
             if(decision.action()==CustomerManagerDialogue.Action.LIST_CUSTOMERS)
                 return Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_MULTIPLE)
                 return Map.of("status","NEED_CLARIFICATION","response","本轮提到了多位客户，请先明确要服务哪一位："+displayNames(decision.mentioned())+"。");
-            boolean product=decision.action()==CustomerManagerDialogue.Action.PRODUCT_REVIEW||pendingProductCustomer!=null;
+            if(decision.action()==CustomerManagerDialogue.Action.CANCEL_PRODUCT) {
+                clearPendingProduct();
+                return Map.of("status","ANSWERED","response","已取消尚未完成的产品候选筛选。你可以继续准备客户回访或提出新的服务目标。");
+            }
+            boolean product=shouldUseProductFlow(decision.action(),pendingProductCustomer!=null,query);
+            if(!product && pendingProductCustomer!=null) clearPendingProduct();
             if(product) {
                 String customer=decision.customer()!=null?decision.customer():pendingProductCustomer;
                 if(customer==null||customer.isBlank())return Map.of("status","NEED_CLARIFICATION","response","请先告诉我要为哪位获授权客户筛选产品候选。");
@@ -130,7 +138,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 selectedCustomer=customer;selectedGoal=query;long generation=task.select(owner,customer,query,taskContext);
                 sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
                 JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
-                pendingProductCustomer=null;pendingProductArguments.clear();
+                clearPendingProduct();
                 int eligible=report.path("productReview").path("eligibleProducts").size();
                 var result=new LinkedHashMap<String,Object>();result.put("status",report.path("status").asText());
                 result.put("response",eligible>0
@@ -154,6 +162,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             var result=new LinkedHashMap<String,Object>();
             result.put("status",status);result.put("response",response);result.put("customer",customer);
             result.put("report",value(report));return Map.copyOf(result);
+        }
+        private void clearPendingProduct() {
+            pendingProductCustomer=null;
+            pendingProductArguments.clear();
         }
         private ObjectNode context(String customer) {
             return taskContexts.computeIfAbsent(customer,ignored->CustomerManagerTaskContext.empty());
@@ -202,6 +214,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         if(query.contains("手机银行")||query.contains("手机端"))result.put("channel","手机银行");
         else if(query.contains("网点")||query.contains("柜面"))result.put("channel","网点");
         return Map.copyOf(result);
+    }
+
+    static boolean shouldUseProductFlow(CustomerManagerDialogue.Action action, boolean pendingProduct, String query) {
+        if(action==CustomerManagerDialogue.Action.PRODUCT_REVIEW) return true;
+        if(!pendingProduct || action==CustomerManagerDialogue.Action.CANCEL_PRODUCT) return false;
+        return action!=CustomerManagerDialogue.Action.PREPARE || !CustomerManagerDialogue.requestsPreparation(query);
     }
 
     private static InstalledPreparationMethod installedMethod(Path root) throws Exception {
