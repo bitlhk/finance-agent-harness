@@ -45,7 +45,7 @@ public final class ServicePreparation implements AutoCloseable {
         default void reportDelta(ReportDelta delta) throws Exception {}
     }
     private record Selection(long generation, String alias, String customer, String goal,
-                             Mapping mapping, PreparationAccess.Snapshot authority) {}
+                             JsonNode taskContext, Mapping mapping, PreparationAccess.Snapshot authority) {}
     private final String owner;
     private final PreparationAccess access;
     private final Supplier<Mapping> mappings;
@@ -89,6 +89,9 @@ public final class ServicePreparation implements AutoCloseable {
         }).map(Map.Entry::getKey).sorted().toList();
     }
     public synchronized long select(String caller, String alias, String goal) {
+        return select(caller, alias, goal, HarnessJson.mapper().createObjectNode());
+    }
+    public synchronized long select(String caller, String alias, String goal, JsonNode taskContext) {
         owner(caller);
         // Even a rejected selection invalidates the old customer's active report generation.
         generation++; selected = null; activeRun = null;
@@ -97,7 +100,8 @@ public final class ServicePreparation implements AutoCloseable {
         if (m == null || !m.customers().containsKey(alias)) throw new SecurityException("CUSTOMER_MAPPING_MISSING");
         String customer = m.customers().get(alias);
         var authority = access.authorize(customer);
-        selected = new Selection(generation, alias, customer, goal, m, authority);
+        if (taskContext == null || !taskContext.isObject()) throw new IllegalArgumentException("TASK_CONTEXT_INVALID");
+        selected = new Selection(generation, alias, customer, goal, taskContext.deepCopy(), m, authority);
         return generation;
     }
     private void current(Selection s, String run) {
@@ -133,6 +137,7 @@ public final class ServicePreparation implements AutoCloseable {
             report.put("reportId",run); report.put("runId",run); report.put("ownerRef",owner);
             report.put("customerRef",s.customer()); report.put("customerAlias",s.alias());
             report.put("goal",s.goal()); report.put("generation",s.generation());
+            report.set("taskContext",s.taskContext().deepCopy());
             report.put("mappingRevision",s.mapping().revision());
             report.put("authorityRef",s.authority().authorityRef());
             report.put("startedAt",Instant.now().toString()); report.put("status","RUNNING");
@@ -167,6 +172,8 @@ public final class ServicePreparation implements AutoCloseable {
                 collectFactRefs(context, "", ids, 200);
                 report.set("factRefs",HarnessJson.mapper().valueToTree(ids));
                 ObjectNode generationContext=(ObjectNode)context.deepCopy();
+                generationContext.set("taskContext",s.taskContext().deepCopy());
+                collectFactRefs(s.taskContext(),"/taskContext",ids,ids.size()+100);
                 if(productArguments!=null) {
                     synchronized(this){current(s,run);}
                     businessProviderCalls.incrementAndGet();
@@ -192,6 +199,10 @@ public final class ServicePreparation implements AutoCloseable {
                 ObjectNode factAssessment=assessFacts(s.goal(),context,report.path("productReview"));
                 report.set("factAssessment",factAssessment.deepCopy());
                 generationContext.set("factAssessment",factAssessment.deepCopy());
+                ObjectNode factState=factState(context,s.taskContext(),data.path("hostEvidence"),Instant.now());
+                report.set("factState",factState.deepCopy());generationContext.set("factState",factState.deepCopy());
+                collectFactRefs(factState,"/factState",ids,ids.size()+160);
+                report.set("clarificationQuestions",clarificationQuestions(factAssessment,s.taskContext()));
                 ObjectNode factPresentation=presentFacts(context,Instant.now());
                 report.set("factPresentation",factPresentation.deepCopy());
                 ObjectNode temporalAssessment=temporalAssessment(factPresentation);
@@ -367,6 +378,23 @@ public final class ServicePreparation implements AutoCloseable {
         evidence.put("recordedAt",Instant.now().toString());
         return result;
     }
+    public synchronized ObjectNode note(String caller,String id,Integer revision) throws Exception {
+        long providerBefore=businessProviderCalls.get(),modelBefore=modelGenerationCalls.get();
+        ObjectNode report=revision==null?read(caller,id):readVersion(caller,id,revision);
+        String markdown=renderNote(report);
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("schemaVersion","manager-note.v0.1");
+        result.put("reportId",id);result.put("reportRevision",report.path("reportRevision").asInt());
+        result.put("fileName","customer-preparation-"+id.substring(0,8)+"-v"+report.path("reportRevision").asInt()+".md");
+        result.put("mediaType","text/markdown; charset=utf-8");result.put("content",markdown);
+        byte[] bytes=markdown.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        result.put("byteLength",bytes.length);result.put("sha256",hash(bytes));
+        result.put("generatedAt",Instant.now().toString());result.put("displayTimeZone","Asia/Shanghai");
+        result.put("businessWriteCalls",0);
+        result.put("businessFactProviderCalls",businessProviderCalls.get()-providerBefore);
+        result.put("modelGenerationCalls",modelGenerationCalls.get()-modelBefore);
+        return result;
+    }
     private Path path(String id) {
         if (!UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException("INVALID_REPORT_ID");
         Path p = records.resolve(id+".json");
@@ -390,7 +418,9 @@ public final class ServicePreparation implements AutoCloseable {
             if (!latest.path("digest").asText().equals(hash(bytes))) throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
             return version;
         }
-        return path(id); // Historical flat-file reports remain readable.
+        Path legacy=path(id);
+        if(!Files.isRegularFile(legacy))throw new IllegalArgumentException("REPORT_NOT_FOUND");
+        return legacy; // Historical flat-file reports remain readable.
     }
     private void persist(ObjectNode r) throws Exception {
         int next = r.path("reportRevision").asInt() + 1;
@@ -446,6 +476,76 @@ public final class ServicePreparation implements AutoCloseable {
         result.put("goal",goal);result.put("status",missing.isEmpty()?"READY":"PARTIAL");
         return result;
     }
+    static ObjectNode factState(JsonNode facts,JsonNode taskContext,JsonNode receipt,Instant evaluatedAt) {
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("schemaVersion","service-preparation-fact-state.v0.1");
+        var items=result.putArray("items");
+        boolean receiptVerified=!receipt.path("receiptId").asText().isBlank();
+        addFactState(items,"customer.identity",facts.path("customer"),"SYSTEM_RECORD",
+                receipt.path("providerId").asText("customer-crm-readonly"),receiptVerified?"VERIFIED":"UNVERIFIED",
+                facts.path("customer").isObject()?"PRESENT":"UNKNOWN","CURRENT",facts.path("dataAsOf").asText(""));
+        JsonNode wealth=findProfile(facts,"wealth"),detail=wealth.path("detail");
+        addFactState(items,"wealth.portfolio",detail.path("portfolioSummary"),"SYSTEM_RECORD",
+                "customer-crm-readonly",receiptVerified?"VERIFIED":"UNVERIFIED",
+                detail.path("portfolioSummary").isObject()?"PRESENT":"UNKNOWN","CURRENT",facts.path("dataAsOf").asText(""));
+        JsonNode risk=detail.path("riskAssessment");String validity="UNKNOWN";
+        String validUntil=risk.path("validUntil").asText("");
+        try { if(!validUntil.isBlank())validity=LocalDate.parse(validUntil.substring(0,Math.min(10,validUntil.length())))
+                .isBefore(evaluatedAt.atZone(ZoneOffset.UTC).toLocalDate())?"EXPIRED":"CURRENT"; }
+        catch(java.time.format.DateTimeParseException ignored){validity="UNKNOWN";}
+        addFactState(items,"wealth.riskAssessment",risk,"SYSTEM_RECORD","customer-crm-readonly",
+                receiptVerified?"VERIFIED":"UNVERIFIED",risk.isObject()?"PRESENT":"UNKNOWN",validity,validUntil);
+        taskContext.path("facts").forEach(value->items.add(value.deepCopy()));
+        return result;
+    }
+    private static void addFactState(com.fasterxml.jackson.databind.node.ArrayNode items,String key,JsonNode value,
+            String sourceKind,String sourceRef,String verification,String completeness,String validity,String recordedAt) {
+        ObjectNode item=items.addObject();item.put("key",key);item.set("value",value.deepCopy());
+        ObjectNode source=item.putObject("source");source.put("kind",sourceKind);source.put("ref",sourceRef);
+        if(recordedAt!=null&&!recordedAt.isBlank())source.put("recordedAt",recordedAt);
+        item.putObject("verification").put("status",verification);
+        item.putObject("completeness").put("status",completeness);
+        item.putObject("validity").put("status",validity);
+    }
+    private static com.fasterxml.jackson.databind.node.ArrayNode clarificationQuestions(JsonNode assessment,JsonNode taskContext) {
+        var result=HarnessJson.mapper().createArrayNode();
+        for(JsonNode item:taskContext.path("questions"))if(result.size()<3)result.add(item.asText());
+        for(JsonNode item:assessment.path("missing"))if(result.size()<3)result.add(item.path("label").asText()+"："+item.path("impact").asText());
+        return result;
+    }
+    private static String renderNote(JsonNode report) {
+        StringBuilder out=new StringBuilder("# 客户回访准备笔记\n\n");
+        out.append("- 客户：").append(display(report.path("facts").path("customer").path("displayName").asText(report.path("customerAlias").asText()))).append("\n");
+        out.append("- 目标：").append(report.path("goal").asText()).append("\n");
+        out.append("- 报告版本：v").append(report.path("reportRevision").asInt()).append("\n");
+        out.append("- 业务数据截至：").append(report.path("dataAsOf").asText("待核实")).append("\n");
+        out.append("- 生成记录：").append(report.path("finishedAt").asText(report.path("startedAt").asText("待核实"))).append("（UTC，页面按北京时间展示）\n");
+        out.append("- 状态：").append(report.path("reviewStatus").asText("PENDING")).append("\n\n");
+        out.append("## 事实与状态\n\n");
+        for(JsonNode item:report.path("factState").path("items"))out.append("- ").append(item.path("key").asText()).append("：")
+                .append(item.path("value").isValueNode()?item.path("value").asText():item.path("value").toString())
+                .append("；来源 ").append(item.path("source").path("kind").asText("UNKNOWN"))
+                .append("；核验 ").append(item.path("verification").path("status").asText("UNVERIFIED"))
+                .append("；完整性 ").append(item.path("completeness").path("status").asText("UNKNOWN"))
+                .append("；有效性 ").append(item.path("validity").path("status").asText("UNKNOWN")).append("\n");
+        JsonNode suggestion=report.has("modelSuggestion")?report.path("modelSuggestion"):report.path("fallbackSuggestion");
+        appendNoteSection(out,"沟通重点",suggestion.path("communicationFocus"),true);
+        appendNoteSection(out,"准备建议",suggestion.path("preparationAdvice"),true);
+        appendNoteSection(out,"关键追问",report.path("clarificationQuestions"),false);
+        appendNoteSection(out,"待办草稿（尚未写入 CRM）",suggestion.path("pendingItems"),false);
+        out.append("\n## 依据\n\n- Provider：").append(report.path("sourceReceipt").path("providerId").asText("待核实"));
+        out.append("\n- 方法：").append(report.path("method").path("id").asText("待核实")).append(" ")
+                .append(report.path("method").path("version").asText()).append("\n- 方法摘要：")
+                .append(report.path("method").path("digest").asText("待核实")).append("\n");
+        return out.toString();
+    }
+    private static void appendNoteSection(StringBuilder out,String title,JsonNode values,boolean objects) {
+        out.append("\n## ").append(title).append("\n\n");
+        if(!values.isArray()||values.isEmpty()){out.append("- 暂无\n");return;}
+        for(JsonNode value:values){JsonNode text=objects?value.path("text"):value;out.append("- ").append(text.asText()).append("\n");
+            if(objects&&value.path("factRefs").isArray())out.append("  - 事实引用：").append(jsonStrings(value.path("factRefs"))).append("\n");}
+    }
+    private static String display(String value){return value.startsWith("合成客户")?value.substring(4):value;}
     static ObjectNode presentFacts(JsonNode facts,Instant evaluatedAt) {
         ObjectNode result=HarnessJson.mapper().createObjectNode();
         result.put("evaluatedAt",evaluatedAt.toString());

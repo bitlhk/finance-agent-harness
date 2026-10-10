@@ -112,6 +112,29 @@ class ServicePreparationTest {
         assertEquals(1,calls.get());assertEquals(1,models.get());
         assertThrows(IllegalStateException.class,()->host.review("owner-a",id,generatedRevision,"重复意见"));
     }
+    @Test void taskContextKeepsIndependentFactDimensionsAndNoteUsesCurrentVersionWithoutCalls() throws Exception {
+        var context=HarnessJson.mapper().createObjectNode();context.put("schemaVersion","customer-manager-task-context.v0.1");
+        context.put("taskId",UUID.randomUUID().toString());context.put("revision",2);context.putArray("questions").add("风险测评何时到期？");
+        var fact=context.putArray("facts").addObject();fact.put("key","visit.liquidityAmount");fact.put("value",400000);fact.put("unit","元");
+        fact.putObject("source").put("kind","USER_STATEMENT").put("ref","CURRENT_CONVERSATION");
+        fact.putObject("verification").put("status","UNVERIFIED");fact.putObject("completeness").put("status","PRESENT");
+        fact.putObject("validity").put("status","UNKNOWN");
+        var report=host.prepare("owner-a",host.select("owner-a","客户甲","准备回访",context));
+        assertEquals("USER_STATEMENT",report.at("/factState/items/3/source/kind").asText(),report.toString());
+        assertEquals("UNVERIFIED",report.at("/factState/items/3/verification/status").asText());
+        assertEquals("PRESENT",report.at("/factState/items/3/completeness/status").asText());
+        assertEquals("UNKNOWN",report.at("/factState/items/3/validity/status").asText());
+        int beforeCalls=calls.get(),beforeModels=models.get();
+        var note=host.note("owner-a",report.path("reportId").asText(),report.path("reportRevision").asInt());
+        assertTrue(note.path("content").asText().contains("400000"));
+        assertTrue(note.path("content").asText().contains("用户口述")||note.path("content").asText().contains("USER_STATEMENT"));
+        assertEquals(0,note.path("businessWriteCalls").asInt());
+        assertEquals(0,note.path("businessFactProviderCalls").asInt());
+        assertEquals(0,note.path("modelGenerationCalls").asInt());
+        assertEquals(beforeCalls,calls.get());assertEquals(beforeModels,models.get());
+        assertThrows(IllegalArgumentException.class,()->host.note("owner-a",UUID.randomUUID().toString(),null));
+        assertEquals(beforeCalls,calls.get());assertEquals(beforeModels,models.get());
+    }
     @Test void sparseProfilesArePartialAndExplainMissingBusinessFacts() throws Exception {
         sparseFacts=true;var report=prepare();
         assertEquals("PARTIAL",report.path("status").asText(),report.toString());
