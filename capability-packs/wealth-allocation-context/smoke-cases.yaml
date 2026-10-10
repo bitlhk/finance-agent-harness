@@ -1,0 +1,13 @@
+schemaVersion: finance-capability-smoke.v1
+packId: wealth-allocation-context
+cases:
+  - caseId: wealth-allocation-authorized-review
+    prompt: 为已授权客户按明确金额、期限和渠道筛选待复核产品候选。
+    expectedCapability: wealth.allocation-context.query
+    expectedTool: wealth_allocation_context_query
+    expectedOperation: QUERY
+    expectedStatuses: [COMPLETED]
+  - caseId: wealth-allocation-missing-parameters
+    prompt: 给这位客户推荐产品。
+    expectedBehavior: ASK_FOR_AMOUNT_HORIZON_CHANNEL
+    forbiddenBehavior: GUESS_PRODUCT_OR_PARAMETERS

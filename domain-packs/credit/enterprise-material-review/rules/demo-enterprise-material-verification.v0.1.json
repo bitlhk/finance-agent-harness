@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "finance-audit-demo-rules.v0.1",
+  "ruleSetId": "demo-enterprise-material-verification",
+  "version": "0.1.0",
+  "classification": "DEMO",
+  "lifecycle": "ACTIVE",
+  "effectiveFrom": "2026-01-01",
+  "effectiveTo": "2027-12-31",
+  "amountScale": 2,
+  "roundingMode": "HALF_UP",
+  "capabilities": [
+    "enterprise.financial-statement.verify",
+    "enterprise.application-contract.verify"
+  ]
+}

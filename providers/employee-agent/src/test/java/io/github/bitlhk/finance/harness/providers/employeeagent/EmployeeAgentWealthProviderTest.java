@@ -40,12 +40,30 @@ class EmployeeAgentWealthProviderTest {
     private final AtomicReference<String> observedAdoptId = new AtomicReference<>();
     private final AtomicReference<String> observedSessionId = new AtomicReference<>();
     private final AtomicReference<String> observedProtocol = new AtomicReference<>();
+    private final AtomicReference<EmployeeAgentIdentityBinding> activeBinding = new AtomicReference<>();
+    private volatile Runnable beforeResponse = () -> {};
+    private Map<String, Object> allocationPayload;
+    private Map<String, Object> allocationReceipt;
 
     @BeforeEach
     void startServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/api/internal/platform-tools/mcp", this::handleMcp);
         server.start();
+        activeBinding.set(new EmployeeAgentIdentityBinding("employee-001",
+                new EmployeeAgentRuntimeIdentity("finance-harness-test", "jiuwen_lgj-wealth", "lgj-wealth"),
+                "fixture:adoption-owner", java.time.Instant.now().plusSeconds(60)));
+        allocationPayload = new java.util.LinkedHashMap<>(Map.of(
+                "schema", "ea.wealth-allocation-context.v1", "status", "ready",
+                "customer", Map.of("customerId", "C-005"),
+                "eligibleProducts", java.util.List.of(Map.of("productId", "syn-product-1")),
+                "excludedProducts", java.util.List.of(Map.of("productId", "syn-product-2", "reason", "risk mismatch")),
+                "policySource", Map.of("ready", true, "versionLabel", "synthetic-v1", "sourceLocator", "fixture:policy"),
+                "readiness", Map.of("status", "READY", "allowedOutcomes",
+                        java.util.List.of("governed_asset_allocation_candidates"))));
+        allocationReceipt = new java.util.LinkedHashMap<>(Map.of(
+                "receiptId", "allocation-fixture-1", "receiptFingerprint", "a".repeat(64),
+                "createdAt", "2026-10-08T00:00:00Z"));
         provider = new EmployeeAgentWealthProvider(new EmployeeAgentWealthProvider.Config(
                 URI.create("http://127.0.0.1:" + server.getAddress().getPort()),
                 new EmployeeAgentRuntimeIdentity(
@@ -54,9 +72,7 @@ class EmployeeAgentWealthProviderTest {
                     tokenRequests.incrementAndGet();
                     return TOKEN;
                 },
-                Duration.ofSeconds(5), () -> new EmployeeAgentIdentityBinding("employee-001",
-                        new EmployeeAgentRuntimeIdentity("finance-harness-test", "jiuwen_lgj-wealth", "lgj-wealth"),
-                        "fixture:adoption-owner", java.time.Instant.now().plusSeconds(60))));
+                Duration.ofSeconds(5), activeBinding::get));
     }
 
     @AfterEach
@@ -64,6 +80,129 @@ class EmployeeAgentWealthProviderTest {
         if (server != null) {
             server.stop(0);
         }
+    }
+
+    @Test
+    void rejectsRevocationBeforeDispatchWithoutRequestingToken() {
+        activeBinding.set(null);
+        var result = provider.query(request("C-005"));
+        assertEquals("EA_IDENTITY_BINDING_REJECTED", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+        assertEquals(0, hits.get());
+        assertEquals(0, tokenRequests.get());
+    }
+
+    @Test
+    void discardsFactsWhenBindingIsRevokedBeforeProviderReturns() {
+        beforeResponse = () -> activeBinding.set(null);
+        var result = provider.query(request("C-005"));
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("EA_IDENTITY_BINDING_REJECTED", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+        assertFalse(result.toString().contains("crpt-001"));
+        assertEquals(1, hits.get());
+        assertEquals(1, tokenRequests.get());
+    }
+
+    @Test
+    void discardsResultFromReplacedAuthorityEvenForSameEmployee() {
+        beforeResponse = () -> {
+            var previous = activeBinding.get();
+            activeBinding.set(new EmployeeAgentIdentityBinding(previous.principalId(), previous.runtime(),
+                    "fixture:new-authority", previous.expiresAt()));
+        };
+        var result = provider.query(request("C-005"));
+        assertEquals("EA_IDENTITY_BINDING_REJECTED", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+        assertEquals(1, hits.get());
+    }
+
+    @Test
+    void mapsAllocationToExistingGovernedToolAndPreservesExclusions() {
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005", "amount", 800,
+                "horizonMonths", 12, "maxProducts", 5)));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), result.toString());
+        assertEquals(EmployeeAgentWealthProvider.ALLOCATION_HOST_TOOL,
+                observedBody.get().path("params").path("name").asText());
+        assertEquals(12, observedBody.get().path("params").path("arguments").path("horizon_months").asInt());
+        assertEquals(800, observedBody.get().path("params").path("arguments").path("amount").asInt());
+        assertEquals(allocationPayload, result.data().get("allocationContext"));
+        assertFalse(result.data().containsKey("previsitContext"));
+        assertEquals(1, hits.get());
+    }
+
+    @Test
+    void preservesNoEligibleProductsWithoutInventingReplacement() {
+        allocationPayload.put("status", "no_eligible_products");
+        allocationPayload.put("eligibleProducts", java.util.List.of());
+        allocationPayload.put("readiness", Map.of("status", "DEGRADED", "allowedOutcomes", java.util.List.of("allocation_constraints")));
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status(), result.toString());
+        assertEquals(allocationPayload, result.data().get("allocationContext"));
+        assertFalse(observedBody.get().path("params").path("arguments").has("amount"));
+    }
+
+    @Test
+    void rejectsInvalidAllocationArgumentsBeforeTokenOrNetwork() {
+        for (var invalid : java.util.List.of(
+                Map.<String, Object>of("amount", -1), Map.<String, Object>of("amount", "800"),
+                Map.<String, Object>of("amount", Double.NaN), Map.<String, Object>of("maxProducts", 21),
+                Map.<String, Object>of("maxProducts", 1.5), Map.<String, Object>of("horizonMonths", 1201),
+                Map.<String, Object>of("principalId", "other"), Map.<String, Object>of("channel", ""))) {
+            var params = new java.util.LinkedHashMap<String, Object>(invalid);
+            params.put("customerRef", "C-005");
+            var result = provider.query(allocationRequest(params));
+            assertEquals("ALLOCATION_ARGUMENTS_INVALID", result.error().sourceCode());
+        }
+        assertEquals(0, hits.get());
+        assertEquals(0, tokenRequests.get());
+    }
+
+    @Test
+    void rejectsAllocationForDifferentReturnedCustomer() {
+        allocationPayload.put("customer", Map.of("customerId", "other"));
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals("EA_RESULT_SUBJECT_MISMATCH", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+    }
+
+    @Test
+    void doesNotExposeCandidatesWhenReadinessDeniesOutcome() {
+        allocationPayload.put("readiness", Map.of("status", "DEGRADED", "allowedOutcomes", java.util.List.of("allocation_constraints")));
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals("EA_ALLOCATION_OUTCOME_NOT_ALLOWED", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+    }
+
+    @Test
+    void requiresPolicyAndReceiptEvidenceForAllocation() {
+        allocationReceipt.clear();
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals("EA_ALLOCATION_EVIDENCE_MISSING", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+    }
+
+    @Test
+    void rejectsUnvalidatedPolicyWithoutReturningProducts() {
+        allocationPayload.put("policySource", Map.of("ready", false));
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals("EA_ALLOCATION_CONTEXT_INVALID", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+    }
+
+    @Test
+    void revocationAlsoBlocksAllocationResults() {
+        beforeResponse = () -> activeBinding.set(null);
+        var result = provider.query(allocationRequest(Map.of("customerRef", "C-005")));
+        assertEquals("EA_IDENTITY_BINDING_REJECTED", result.error().sourceCode());
+        assertTrue(result.data().isEmpty());
+        assertEquals(1, hits.get());
+    }
+
+    private static CapabilityRequestV1 allocationRequest(Map<String, Object> params) {
+        var original = request("C-005");
+        return new CapabilityRequestV1(original.schemaVersion(), EmployeeAgentWealthProvider.WEALTH_ALLOCATION_CONTEXT_QUERY,
+                original.operation(), original.context(), params, null, original.idempotencyKey(), Map.of(), null);
     }
 
     @Test
@@ -206,6 +345,15 @@ class EmployeeAgentWealthProviderTest {
         observedSessionId.set(exchange.getRequestHeaders().getFirst("X-Linggan-Session-Id"));
         JsonNode body = HarnessJson.mapper().readTree(exchange.getRequestBody());
         observedBody.set(body);
+        beforeResponse.run();
+        if (EmployeeAgentWealthProvider.ALLOCATION_HOST_TOOL.equals(body.path("params").path("name").asText())) {
+            writeJson(exchange, 200, HarnessJson.mapper().writeValueAsString(Map.of(
+                    "jsonrpc", "2.0", "id", "request-wealth-001", "result", Map.of(
+                            "content", java.util.List.of(Map.of("type", "text", "text",
+                                    "EA_WEALTH_ALLOCATION_CONTEXT:" + HarnessJson.mapper().writeValueAsString(allocationPayload))),
+                            "_meta", Map.of("eaContextReceipt", allocationReceipt)))));
+            return;
+        }
         String customer = body.path("params").path("arguments").path("customer_id").asText();
         if ("UNAUTHORIZED".equals(customer)) {
             writeJson(exchange, 401, "{\"error\":\"unauthorized\"}");

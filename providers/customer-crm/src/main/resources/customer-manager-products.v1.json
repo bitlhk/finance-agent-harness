@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "synthetic-wealth-product-catalog.v1",
+  "catalogVersion": "2026-08-27.1",
+  "dataAsOf": "2026-08-27T12:00:00Z",
+  "products": [
+    {"productId":"SYN-CASH-001","name":"稳健现金管理A","category":"现金管理","riskLevel":"R1","status":"在售","minAmount":1000,"termMonths":1,"channels":["手机银行","网点"]},
+    {"productId":"SYN-FI-002","name":"稳健固收增强A","category":"固收类","riskLevel":"R2","status":"在售","minAmount":10000,"termMonths":6,"channels":["手机银行","网点"]},
+    {"productId":"SYN-MA-003","name":"均衡多资产A","category":"混合类","riskLevel":"R3","status":"在售","minAmount":50000,"termMonths":12,"channels":["网点"]},
+    {"productId":"SYN-EQ-004","name":"成长权益精选A","category":"权益类","riskLevel":"R4","status":"在售","minAmount":100000,"termMonths":24,"channels":["网点"]},
+    {"productId":"SYN-OLD-005","name":"历史固收产品A","category":"固收类","riskLevel":"R2","status":"停售","minAmount":10000,"termMonths":6,"channels":["网点"]}
+  ]
+}

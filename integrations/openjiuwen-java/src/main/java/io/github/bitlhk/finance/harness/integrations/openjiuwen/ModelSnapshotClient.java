@@ -9,7 +9,8 @@ import java.util.*;
 /** Opt-in, synchronous client boundary. The host owns redaction, storage and permissions. */
 public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
     public static final String PROVIDER = "FinanceSnapshotOpenAI";
-    private static final ThreadLocal<Receiver> CURRENT = new ThreadLocal<>();
+    private record ScopeContext(Receiver receiver, Thread owner) { }
+    private static final InheritableThreadLocal<ScopeContext> CURRENT = new InheritableThreadLocal<>();
     public interface Receiver extends io.github.bitlhk.finance.harness.assembly.ModelSnapshotReceiver {
         /** Must freeze/filter content synchronously; never enqueue mutable SDK objects. */
         void capture(String callId, String boundary, String state, Map<String, Object> value);
@@ -27,8 +28,8 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
     private static boolean registered;
     public static AutoCloseable scope(Receiver receiver) {
         if (CURRENT.get() != null) throw new IllegalStateException("SNAPSHOT_SCOPE_ALREADY_ACTIVE");
-        CURRENT.set(Objects.requireNonNull(receiver));
         Thread owner = Thread.currentThread();
+        CURRENT.set(new ScopeContext(Objects.requireNonNull(receiver),owner));
         return () -> {
             if (Thread.currentThread() != owner) throw new IllegalStateException("SNAPSHOT_SCOPE_THREAD_MISMATCH");
             CURRENT.remove();
@@ -42,7 +43,7 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
     @Override public AssistantMessage invoke(Object messages, Object tools, Float temperature, Float topP,
             String model, Integer maxTokens, String stop, BaseOutputParser parser, Float frequencyPenalty,
             Map<String,Object> kwargs) throws Exception {
-        Receiver receiver = CURRENT.get();
+        ScopeContext context=CURRENT.get(); Receiver receiver=context==null?null:context.receiver();
         if (receiver == null) return super.invoke(messages, tools, temperature, topP, model, maxTokens, stop, parser, frequencyPenalty, kwargs);
         String call = UUID.randomUUID().toString();
         try {
@@ -55,6 +56,55 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
             for (String key : List.of("role", "content", "tool_calls")) if (api.containsKey(key)) response.put(key, api.get(key));
             capture(receiver, call, "PARSED_MODEL_RESPONSE", "CAPTURED", response);
             return result;
+        } catch (Exception failed) {
+            capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED", Map.of("reason", "MODEL_CALL_FAILED"));
+            throw failed;
+        } finally {
+            if(Thread.currentThread()!=context.owner())CURRENT.remove();
+        }
+    }
+    @Override public Iterator<AssistantMessageChunk> stream(Object messages, Object tools, Float temperature, Float topP,
+            String model, Integer maxTokens, String stop, BaseOutputParser parser, Float frequencyPenalty,
+            Map<String,Object> kwargs) throws Exception {
+        ScopeContext context=CURRENT.get(); Receiver receiver=context==null?null:context.receiver();
+        if (receiver == null) return super.stream(messages, tools, temperature, topP, model, maxTokens, stop, parser, frequencyPenalty, kwargs);
+        String call = UUID.randomUUID().toString();
+        try {
+            Iterator<AssistantMessageChunk> delegate = withRequestTraceCallback(
+                    request -> capture(receiver, call, "CLIENT_REQUEST_PREPARED", "CAPTURED", request),
+                    () -> super.stream(messages, tools, temperature, topP, model, maxTokens, stop, parser, frequencyPenalty, kwargs));
+            return new Iterator<>() {
+                private final StringBuilder content = new StringBuilder();
+                private boolean captured;
+                public boolean hasNext() {
+                    try {
+                        boolean more=delegate.hasNext();
+                        if(!more)complete();
+                        return more;
+                    } catch(RuntimeException failed) {
+                        capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
+                        if(Thread.currentThread()!=context.owner())CURRENT.remove();
+                        throw failed;
+                    }
+                }
+                public AssistantMessageChunk next() {
+                    try {
+                        AssistantMessageChunk chunk=delegate.next();
+                        Object value=chunk.toApiFormat().get("content");
+                        if(value!=null)content.append(value);
+                        return chunk;
+                    } catch(RuntimeException failed) {
+                        capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
+                        if(Thread.currentThread()!=context.owner())CURRENT.remove();
+                        throw failed;
+                    }
+                }
+                private void complete() {
+                    if(captured)return;captured=true;
+                    capture(receiver,call,"PARSED_MODEL_RESPONSE","CAPTURED",Map.of("role","assistant","content",content.toString()));
+                    if(Thread.currentThread()!=context.owner())CURRENT.remove();
+                }
+            };
         } catch (Exception failed) {
             capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED", Map.of("reason", "MODEL_CALL_FAILED"));
             throw failed;

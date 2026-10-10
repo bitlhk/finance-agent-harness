@@ -16,19 +16,24 @@
         <module>packages/java/core</module>
         <module>packages/java/execution</module>
         <module>packages/java/assembly</module>
+        <module>packages/java/service-preparation</module>
         <module>integrations/agentscope-java</module>
         <module>packages/java/wealth</module>
         <module>packages/java/cashflow</module>
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
+        <module>integrations/customer-manager-java</module>
         <module>providers/non-ai-banking</module>
         <module>providers/curated-synthetic-mcp</module>
         <module>providers/fraud-mining</module>
+        <module>providers/enterprise-credit-material-audit</module>
         <module>providers/employee-agent</module>
+        <module>providers/customer-crm</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
         <module>examples/solutions/openjiuwen-risk-review</module>
+        <module>examples/solutions/openjiuwen-enterprise-credit-audit</module>
         <module>examples/solutions/wealth-facts-kit</module>
     </modules>
 

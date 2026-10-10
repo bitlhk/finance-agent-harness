@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "employee-agent-insurance-reference",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-employee-agent:0.1.0-SNAPSHOT",
+  "connectionKind": "employee-agent-platform-mcp.v1",
+  "supports": [
+    {
+      "pack": {
+        "id": "insurance-advisor-previsit",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "insurance.customer-context.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}
