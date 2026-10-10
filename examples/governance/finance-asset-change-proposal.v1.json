@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.10",
-    "catalogRevision": "2026-10-09.enterprise-credit-material-audit-candidate-1",
+    "catalogVersion": "0.2.11",
+    "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
     "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:f79f972a389fde762a7a6a3f7688aa0caeb3969add025ae62b51442799157c55"
+    "digest": "sha256:4cc51c838be35f45fb7ee4f3e08f3fc5400dbb6a02c8a0503ef2cebbc153b772"
   },
   "target": {
     "kind": "domain-pack",

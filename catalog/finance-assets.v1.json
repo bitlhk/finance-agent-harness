@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.10",
+  "catalogVersion": "0.2.11",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -875,7 +875,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-09.enterprise-credit-material-audit-candidate-1",
+  "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
