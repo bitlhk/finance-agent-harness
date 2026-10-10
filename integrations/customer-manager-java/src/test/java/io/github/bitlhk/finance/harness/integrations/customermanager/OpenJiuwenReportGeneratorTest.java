@@ -6,6 +6,16 @@ import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 class OpenJiuwenReportGeneratorTest {
+    @Test void disablesReasoningOnlyForDeepSeekReportModels() {
+        var deepSeek=new com.openjiuwen.core.foundation.llm.schema.ModelRequestConfig();
+        OpenJiuwenReportGenerator.configureModelRequest(deepSeek,"deepseek-v4-flash");
+        assertEquals(java.util.Map.of("type","disabled"),deepSeek.getExtraFields().get("thinking"));
+
+        var other=new com.openjiuwen.core.foundation.llm.schema.ModelRequestConfig();
+        OpenJiuwenReportGenerator.configureModelRequest(other,"glm-5.3-flash");
+        assertFalse(other.getExtraFields().containsKey("thinking"));
+    }
+
     @Test void streamsAndAcceptsCanonicalReportReturnedByProvider() throws Exception {
         var deltas=new ArrayList<String>();
         var parser=new OpenJiuwenReportGenerator.ReportLines(delta->deltas.add(delta.section()+":"+delta.text()));

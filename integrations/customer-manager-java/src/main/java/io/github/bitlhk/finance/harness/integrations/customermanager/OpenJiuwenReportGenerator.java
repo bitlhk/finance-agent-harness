@@ -36,8 +36,16 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 .maxIterations(1).build().configureModelClient(required(provider), required(key), required(base), required(model), true);
         config.getModelConfigObj().setTemperature(0.1);
         config.getModelConfigObj().setMaxTokens(REPORT_MAX_TOKENS);
+        configureModelRequest(config.getModelConfigObj(), model);
         agent.configure(config);
         if (!Runner.start()) throw new IllegalStateException("RUNTIME_START_FAILED");
+    }
+
+    static void configureModelRequest(com.openjiuwen.core.foundation.llm.schema.ModelRequestConfig config,
+            String model) {
+        if (model != null && model.toLowerCase(Locale.ROOT).contains("deepseek")) {
+            config.setExtraField("thinking", Map.of("type", "disabled"));
+        }
     }
 
     @Override public ObjectNode generate(io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod method,
