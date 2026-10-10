@@ -1,0 +1,22 @@
+schemaVersion: finance-capability-pack.v1
+packId: enterprise-application-contract-verification
+version: 0.1.0
+systemPrompt: |
+  核验对象由宿主冻结的 materialSetRef 指定。不得猜测或改写引用。
+  只有主体、期间、币种、单位和业务口径可比时，才比较申请与用途合同金额。
+capabilities:
+  - capabilityId: enterprise.application-contract.verify
+    toolName: enterprise_application_contract_verify
+    name: 申请与用途合同一致性核验
+    description: 确定性核验申请表与用途合同的主体及金额；不可比时说明原因，不升级为欺诈或拒贷结论。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materialSetRef]
+      properties:
+        materialSetRef:
+          type: string
+          pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{2,95}$'
+          description: 由可信宿主为当前主体、任务和会话冻结的材料集引用，不得自行生成。
+    requiredScopes: ["credit-audit:application-contract:read"]
