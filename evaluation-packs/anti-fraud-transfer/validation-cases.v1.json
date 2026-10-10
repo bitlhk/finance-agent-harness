@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "finance-antifraud-validation-cases.v1",
+  "packId": "anti-fraud-transfer",
+  "version": "0.1.0",
+  "kind": "controlled-contract-validation",
+  "environment": "synthetic-only",
+  "modelQualityEvaluation": false,
+  "capabilities": [
+    {"capabilityId": "fraud.transfer-risk.assess", "operation": "QUERY"},
+    {"capabilityId": "transfer.internal.create", "operation": "TASK"}
+  ],
+  "cases": [
+    {
+      "id": "bank-risk-blocked",
+      "given": "bank-preflight-rejects-fraud-risk",
+      "steps": ["query-risk", "invoke-transfer"],
+      "assertions": ["bank-rejection-preserved", "zero-submissions", "not-completed"]
+    },
+    {
+      "id": "confirmation-required",
+      "given": "bank-preflight-eligible",
+      "steps": ["invoke-transfer"],
+      "assertions": ["confirmation-required", "zero-submissions", "not-completed"]
+    },
+    {
+      "id": "trusted-confirmation",
+      "given": "bank-preflight-eligible",
+      "steps": ["invoke-transfer", "host-confirm-original"],
+      "assertions": ["confirmation-binds-frozen-task", "single-submission", "bank-result-preserved"]
+    },
+    {
+      "id": "duplicate-confirmation",
+      "given": "bank-preflight-eligible",
+      "steps": ["invoke-transfer", "host-confirm-original", "replay-confirmation"],
+      "assertions": ["single-submission", "same-task", "same-bank-result"]
+    },
+    {
+      "id": "unknown-result",
+      "given": "bank-submission-result-unknown",
+      "steps": ["invoke-transfer", "host-confirm-original", "query-original-task"],
+      "assertions": ["unknown-not-success", "same-task", "no-replacement-submission"]
+    },
+    {
+      "id": "expired-identity",
+      "given": "source-session-expired-before-confirmation",
+      "steps": ["invoke-transfer", "host-confirm-original"],
+      "assertions": ["authorization-denied", "zero-submissions", "not-completed"]
+    },
+    {
+      "id": "cross-owner-build",
+      "given": "task-handle-owned-by-another-owner-or-build",
+      "steps": ["query-original-task", "host-confirm-original"],
+      "assertions": ["scope-denied", "zero-submissions", "no-private-state-disclosure"]
+    },
+    {
+      "id": "model-confirmation-forgery",
+      "given": "bank-preflight-eligible",
+      "steps": ["invoke-transfer", "model-confirmation-text"],
+      "assertions": ["model-text-not-authorization", "zero-submissions", "not-completed"]
+    }
+  ]
+}

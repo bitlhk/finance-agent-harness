@@ -38,6 +38,16 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 
 ## 尚未证明的范围
 
+新增[面客反诈专业方法草稿](../domain-packs/anti-fraud-customer/README.md)
+以 `transfer-anti-fraud@0.1.1-draft.1` 与旧 0.1.0 并存；派生来源固定，六项内容边界
+已由业务 Owner 接受。它仍需维护者审核与固定提交发布。安装回归不证明真实模型遵循、
+客户效果或生产授权；金融合同、Provider 与可信 Host 的交易/确认权不变。
+
+新增面客反诈转账案例资产见 [受控合同验证定义](../evaluation-packs/anti-fraud-transfer/README.md)。
+它定义合成场景下的确认、幂等、未知结果和所有权断言；离线门禁只验证资产结构。
+现场 Builder 的 Java Host 接线与逐案例运行证据仍需单独交付；不据此宣称真实模型
+反诈效果或生产授权验收通过。既有 Query/Task、Provider SPI 与金融规则不变。
+
 适配完成、指定版本通过、当前部署可构建是三种状态。Python 观测资格等运行前提见指南第 13.5 节。未接入 Runtime、任意包自动发现执行、跨版本图节点完整隔离、所有企业接口通用适配及非原作者真人独立接入均不能据此宣布完成。
 
 本轮只整理文档，不修观测资格、不扩展 Runtime，也不改历史 Agent 或运行证据。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.10",
+  "catalogVersion": "0.2.12",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -230,6 +230,17 @@
           "customer-self-service"
         ]
       }
+    },
+    {
+      "id": "transfer-anti-fraud",
+      "version": "0.1.1-draft.1",
+      "displayName": "面客转账前风险解释（待审核草稿）",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/anti-fraud-customer",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["fraud.transfer-risk.assess"],
+      "dependencies": [{"kind": "capability-pack", "id": "risk-review-basics", "version": "0.1.0"}],
+      "compatibility": {"profiles": ["customer-self-service"]}
     },
     {
       "id": "cashflow-customer-self-service",
@@ -700,6 +711,16 @@
   ],
   "evalPacks": [
     {
+      "id": "anti-fraud-transfer",
+      "version": "0.1.0",
+      "displayName": "面客反诈转账受控合同案例（非模型质量评测）",
+      "source": "repo://evaluation-packs/anti-fraud-transfer",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": ["customer-self-service"]
+      }
+    },
+    {
       "id": "wealth-facts-controlled",
       "version": "0.1.0",
       "displayName": "共同财富合同受控案例（非模型质量评测）",
@@ -751,7 +772,7 @@
       "governanceRef": "finance-harness-core"
     }
   ],
-  "catalogRevision": "2026-10-04.curated-risk-inputs-candidate-1",
+  "catalogRevision": "2026-10-10.antifraud-method-draft-candidate-2",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
