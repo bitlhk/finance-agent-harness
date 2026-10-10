@@ -62,6 +62,20 @@
         "wealth.allocation-context.query"
       ],
       "source": "repo://capability-packs/wealth-allocation-context/observation.v0.1.json"
+    },
+    {
+      "id": "enterprise-financial-statement-verification",
+      "capabilityIds": [
+        "enterprise.financial-statement.verify"
+      ],
+      "source": "repo://capability-packs/enterprise-financial-statement-verification/observation.v0.1.json"
+    },
+    {
+      "id": "enterprise-application-contract-verification",
+      "capabilityIds": [
+        "enterprise.application-contract.verify"
+      ],
+      "source": "repo://capability-packs/enterprise-application-contract-verification/observation.v0.1.json"
     }
   ]
 }
