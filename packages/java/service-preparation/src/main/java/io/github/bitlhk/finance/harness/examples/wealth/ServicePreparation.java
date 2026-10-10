@@ -178,6 +178,9 @@ public final class ServicePreparation implements AutoCloseable {
                     } else {
                         JsonNode productReview=HarnessJson.mapper().valueToTree(allocation.data());
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        for(String field:List.of("amount","horizonMonths","channel"))
+                            if(productReview.path("request").has(field))
+                                ids.add("/productReview/request/"+field);
                         for(int i=0;i<productReview.path("eligibleProducts").size();i++) {
                             final int productIndex=i;
                             JsonNode product=productReview.path("eligibleProducts").path(i);
@@ -191,6 +194,10 @@ public final class ServicePreparation implements AutoCloseable {
                 generationContext.set("factAssessment",factAssessment.deepCopy());
                 ObjectNode factPresentation=presentFacts(context,Instant.now());
                 report.set("factPresentation",factPresentation.deepCopy());
+                ObjectNode temporalAssessment=temporalAssessment(factPresentation);
+                generationContext.set("temporalAssessment",temporalAssessment.deepCopy());
+                collectFactRefs(temporalAssessment,"/temporalAssessment",ids,ids.size()+40);
+                report.set("factRefs",HarnessJson.mapper().valueToTree(ids));
                 if(productArguments==null) {
                     if (!"READY".equals(context.path("readiness").path("status").asText())) missing.add("来源未声明准备条件全部就绪");
                     data.path("missingInputs").forEach(missing::add);
@@ -473,12 +480,28 @@ public final class ServicePreparation implements AutoCloseable {
             try {
                 if(!date.isBlank()&&LocalDate.parse(date).isBefore(today)) {
                     item.put("verificationStatus","PAST_DATE_STATUS_UNVERIFIED");
+                    item.put("effectiveStatus","PAST_DUE_UNVERIFIED");
                     item.put("warning","到期日已过，实际兑付状态和资金去向待核实");
-                } else item.put("verificationStatus","SOURCE_STATUS_CURRENTLY_UNVERIFIED");
+                } else {
+                    item.put("verificationStatus","SOURCE_STATUS_CURRENTLY_UNVERIFIED");
+                    item.put("effectiveStatus","NOT_PAST_DUE");
+                }
             } catch(java.time.format.DateTimeParseException invalid) {
-                item.put("verificationStatus","DATE_UNPARSEABLE");item.put("warning","到期日期无法核验");
+                item.put("verificationStatus","DATE_UNPARSEABLE");item.put("effectiveStatus","DATE_UNPARSEABLE");
+                item.put("warning","到期日期无法核验");
             }
         });
+        return result;
+    }
+    private static ObjectNode temporalAssessment(JsonNode presentation) {
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.set("evaluatedAt",presentation.path("evaluatedAt").deepCopy());
+        var maturities=result.putArray("maturities");
+        for(int i=0;i<presentation.path("maturities").size();i++) {
+            JsonNode source=presentation.path("maturities").path(i);ObjectNode item=maturities.addObject();
+            for(String field:List.of("productName","maturityDate","status","effectiveStatus","verificationStatus","warning"))
+                if(source.has(field))item.set(field,source.path(field).deepCopy());
+        }
         return result;
     }
     private static void copyDisplayFact(ObjectNode target,JsonNode source,List<String> fields) {
@@ -551,6 +574,7 @@ public final class ServicePreparation implements AutoCloseable {
         java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
         validateProductSemantics(generated.toString(),facts);
+        validateTemporalSemantics(generated.toString(),facts);
     }
     private static void validateDelta(ReportDelta delta, List<String> ids, JsonNode facts, String goal) {
         if (!Set.of("communicationFocus","preparationAdvice","pendingItems","reviewChecklist").contains(delta.section())
@@ -564,12 +588,22 @@ public final class ServicePreparation implements AutoCloseable {
         var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
         validateProductSemantics(delta.text(),facts);
+        validateTemporalSemantics(delta.text(),facts);
     }
     static void validateProductSemantics(String text, JsonNode facts) {
         if(facts.path("productReview").path("eligibleProducts").isEmpty())return;
         String compact=text.replaceAll("\\s+","");
         for(String conflict:List.of("没有同时满足","不存在同时满足","无可推荐合格产品","没有合格候选","无合格候选"))
             if(compact.contains(conflict))throw new IllegalArgumentException("PRODUCT_ELIGIBILITY_CONFLICT");
+    }
+    static void validateTemporalSemantics(String text,JsonNode facts) {
+        String compact=text.replaceAll("\\s+","");
+        if(!compact.contains("即将到期")&&!compact.contains("临近到期")&&!compact.contains("快到期"))return;
+        JsonNode maturities=facts.path("temporalAssessment").path("maturities");
+        boolean future=false;
+        for(JsonNode item:maturities)
+            if("NOT_PAST_DUE".equals(item.path("effectiveStatus").asText()))future=true;
+        if(!future&&!maturities.isEmpty())throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT");
     }
     private static ObjectNode deterministicFallback(JsonNode facts) {
         ObjectNode fallback=HarnessJson.mapper().createObjectNode();
@@ -634,7 +668,7 @@ public final class ServicePreparation implements AutoCloseable {
     }
     private static String modelFailureReason(Throwable failure) {
         if(causedByTimeout(failure))return "MODEL_TIMEOUT";
-        for(String marker:List.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT",
+        for(String marker:List.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT","TEMPORAL_STATUS_CONFLICT",
                 "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID","INVALID_REPORT_FACT_REF",
                 "INVALID_REPORT_STREAM_SECTION","INVALID_REPORT_STREAM_ITEM","INVALID_REPORT_SECTION",
                 "INVALID_REPORT_ITEM","INVALID_REPORT_OBJECT"))if(causedBy(failure,marker))return marker;
@@ -645,7 +679,7 @@ public final class ServicePreparation implements AutoCloseable {
         String reason=modelFailureReason(failure);
         if("MODEL_TIMEOUT".equals(reason)||"MODEL_PROVIDER_OR_RUNTIME_FAILED".equals(reason))return "MODEL_TRANSPORT";
         if(reason.startsWith("INVALID_REPORT_"))return "MODEL_OUTPUT_PARSE";
-        if(Set.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT",
+        if(Set.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT","TEMPORAL_STATUS_CONFLICT",
                 "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID").contains(reason))return "FINAL_OUTPUT_VALIDATION";
         if("STREAM_DELIVERY_FAILED".equals(reason))return "STREAM_DELIVERY";
         return current==null?"UNKNOWN":current;

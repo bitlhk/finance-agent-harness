@@ -29,6 +29,8 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "涉及产品时，只有productReview.eligibleProducts中的产品可以作为候选；excludedProducts只能说明排除原因，不得推荐。"
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
                 + "不得把eligibleProducts描述为不满足请求，也不得声称没有合格候选。"
+                + "temporalAssessment是宿主按当前业务时间计算的时态结论；当effectiveStatus为PAST_DUE_UNVERIFIED时，"
+                + "只能说明到期日已过且状态待核实，不得写成即将到期、临近到期或快到期。"
                 + "不得新增输入事实中没有的操作策略、配置方式、材料名称、流程步骤或合规结论；缺少依据时必须写入pendingItems。"
                 + "text直接写自然、简洁、便于客户经理使用的沟通话术或准备建议，不要添加“沟通焦点：”“服务准备建议：”等栏目名前缀，"
                 + "不要向用户展示JSON字段名、内部路径或英文集合名。"

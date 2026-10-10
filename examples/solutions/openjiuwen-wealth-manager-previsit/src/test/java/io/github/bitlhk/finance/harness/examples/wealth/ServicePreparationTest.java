@@ -84,6 +84,7 @@ class ServicePreparationTest {
             Set.of(ServicePreparation.CAPABILITY));
         host=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(goal,ids,context)->{
             assertFalse(context.has("factPresentation"),"display projection must not enter the model fact namespace");
+            assertTrue(context.has("temporalAssessment"),"deterministic temporal assessment must reach validation context");
             models.incrementAndGet();if(explainFail)throw new TimeoutException("synthetic failure");if(explainEmpty)return List.of();
             return unknownRef?List.of("/unknown"):List.of("/customer/totalAssets");
         },files,Map.of("provider","employee-agent-reference@0.1.0-SNAPSHOT","capability","wealth-manager-previsit@0.1.0"));
@@ -133,8 +134,16 @@ class ServicePreparationTest {
         assertEquals("C3",value.at("/riskAssessment/riskLevel").asText());
         assertEquals("稳健配置组合",value.at("/holdings/0/productName").asText());
         assertEquals("PAST_DATE_STATUS_UNVERIFIED",value.at("/maturities/0/verificationStatus").asText());
+        assertEquals("PAST_DUE_UNVERIFIED",value.at("/maturities/0/effectiveStatus").asText());
         assertTrue(value.at("/maturities/0/warning").asText().contains("待核实"));
         assertEquals("HISTORICAL_SNAPSHOT",value.path("freshnessStatus").asText());
+    }
+    @Test void expiredMaturityCannotBeDescribedAsUpcoming() throws Exception {
+        var facts=HarnessJson.mapper().readTree("""
+            {"temporalAssessment":{"maturities":[{"maturityDate":"2026-09-18","effectiveStatus":"PAST_DUE_UNVERIFIED"}]}}
+            """);
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics("该计划即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("该计划到期日已过，状态待核实",facts));
     }
     @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
         explainEmpty=true;var report=prepare();
