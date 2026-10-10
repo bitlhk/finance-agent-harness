@@ -140,6 +140,8 @@ class ServicePreparationTest {
         explainEmpty=true;var report=prepare();
         assertEquals("PARTIAL",report.path("status").asText());
         assertEquals("MODEL_OUTPUT_EMPTY",report.path("failureCode").asText(),report.toString());
+        assertEquals("FINAL_OUTPUT_VALIDATION",report.at("/modelDiagnostics/stage").asText(),report.toString());
+        assertEquals("MODEL_REPORT_EMPTY",report.at("/modelDiagnostics/failureReasonCode").asText(),report.toString());
         assertFalse(report.path("fallbackSuggestion").isEmpty());
     }
     @Test void latestVersionSummariesAndReplayArePureBusinessReads() throws Exception {
@@ -180,12 +182,16 @@ class ServicePreparationTest {
         assertEquals(1000,r.at("/facts/customer/totalAssets").asInt());
         assertEquals("FAILED",r.path("explanationStatus").asText());
         assertEquals("REPORT_MODEL_TIMEOUT",r.path("failureCode").asText());
+        assertEquals("MODEL_TRANSPORT",r.at("/modelDiagnostics/stage").asText(),r.toString());
+        assertEquals("MODEL_TIMEOUT",r.at("/modelDiagnostics/failureReasonCode").asText(),r.toString());
         assertTrue(r.path("missingEvidence").toString().contains("超时"));
         var saved=host.review("owner-a",r.path("reportId").asText(),r.path("reportRevision").asInt(),"说明未完成，事实已核验");
         assertEquals("PARTIAL",saved.path("status").asText());assertEquals(1,calls.get());
     }
     @Test void unknownModelFactRejected() throws Exception {
-        unknownRef=true;assertEquals("PARTIAL",prepare().path("status").asText());assertEquals(1,calls.get());
+        unknownRef=true;var report=prepare();assertEquals("PARTIAL",report.path("status").asText());
+        assertEquals("UNKNOWN_FACT_REF",report.at("/modelDiagnostics/failureReasonCode").asText(),report.toString());
+        assertEquals(1,calls.get());
     }
     @Test void factsCanBeReadButNotReviewedWhileExplanationIsRunning() throws Exception {
         var entered=new CountDownLatch(1);var release=new CountDownLatch(1);

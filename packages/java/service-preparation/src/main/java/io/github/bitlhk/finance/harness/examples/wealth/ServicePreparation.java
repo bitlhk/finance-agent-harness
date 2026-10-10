@@ -201,29 +201,52 @@ public final class ServicePreparation implements AutoCloseable {
                         ?"READY_FOR_REVIEW":"PARTIAL");
                 String factsStatus = report.path("status").asText();
                 report.put("status","PARTIAL"); report.put("explanationStatus","RUNNING");
+                ObjectNode modelDiagnostics=report.putObject("modelDiagnostics");
+                modelDiagnostics.put("status","RUNNING");modelDiagnostics.put("stage","MODEL_DISPATCH");
+                modelDiagnostics.put("startedAt",Instant.now().toString());modelDiagnostics.put("provisionalDeltaCount",0);
                 report.withArray("events").add("FACTS_PRESERVED");
                 synchronized (this) { current(s,run); persist(report); }
                 listener.stage("FACTS_READY", report.deepCopy());
+                var provisionalDeltas=new AtomicLong();
+                var firstDeltaAt=new java.util.concurrent.atomic.AtomicReference<String>();
+                var modelStage=new java.util.concurrent.atomic.AtomicReference<>("MODEL_DISPATCH");
                 try {
                     synchronized (this) { current(s,run); }
                     listener.stage("REPORT_GENERATION_STARTED", report.deepCopy());
                     modelGenerationCalls.incrementAndGet();
+                    modelStage.set("MODEL_STREAM");
                     ObjectNode generated = generator.generateStreaming(method, s.goal(), List.copyOf(ids), generationContext.deepCopy(), delta -> {
+                        modelStage.set("STREAM_DELTA_VALIDATION");
                         validateDelta(delta, ids, generationContext, s.goal());
+                        firstDeltaAt.compareAndSet(null,Instant.now().toString());provisionalDeltas.incrementAndGet();
+                        modelStage.set("MODEL_STREAM");
                         try { listener.reportDelta(delta); }
                         catch (RuntimeException failure) { throw failure; }
                         catch (Exception failure) { throw new ListenerFailure(failure); }
                     });
+                    modelStage.set("FINAL_OUTPUT_VALIDATION");
                     validateGenerated(generated, ids, generationContext, s.goal());
                     report.set("modelSuggestion", generated.deepCopy());
                     report.put("explanationStatus","READY");
                     report.put("status",factsStatus);
+                    modelDiagnostics.put("status","READY");modelDiagnostics.put("stage","COMPLETED");
+                    modelDiagnostics.put("completedAt",Instant.now().toString());
+                    modelDiagnostics.put("provisionalDeltaCount",provisionalDeltas.get());
+                    if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
+                    report.withArray("events").add("MODEL_SUGGESTION_COMMITTED");
                 } catch (Exception failure) {
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
                     boolean timedOut = causedByTimeout(failure);
                     report.put("failureCode", timedOut ? "REPORT_MODEL_TIMEOUT"
                             : causedBy(failure,"MODEL_REPORT_EMPTY") ? "MODEL_OUTPUT_EMPTY" : "REPORT_MODEL_FAILED");
+                    String reason=modelFailureReason(failure),stage=modelFailureStage(failure,modelStage.get());
+                    modelDiagnostics.put("status","FAILED");modelDiagnostics.put("stage",stage);
+                    modelDiagnostics.put("failureReasonCode",reason);modelDiagnostics.put("completedAt",Instant.now().toString());
+                    modelDiagnostics.put("provisionalDeltaCount",provisionalDeltas.get());
+                    modelDiagnostics.put("discardedProvisionalDeltaCount",provisionalDeltas.get());
+                    if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
+                    report.withArray("events").add(provisionalDeltas.get()>0?"MODEL_DRAFT_DISCARDED":"MODEL_GENERATION_FAILED");
                     report.set("fallbackSuggestion", deterministicFallback(generationContext));
                     missing.add(timedOut
                             ? "服务准备建议生成超时，已查询的客户事实仍完整保留"
@@ -608,6 +631,24 @@ public final class ServicePreparation implements AutoCloseable {
         for(Throwable current=failure;current!=null;current=current.getCause())
             if(String.valueOf(current.getMessage()).contains(marker))return true;
         return false;
+    }
+    private static String modelFailureReason(Throwable failure) {
+        if(causedByTimeout(failure))return "MODEL_TIMEOUT";
+        for(String marker:List.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT",
+                "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID","INVALID_REPORT_FACT_REF",
+                "INVALID_REPORT_STREAM_SECTION","INVALID_REPORT_STREAM_ITEM","INVALID_REPORT_SECTION",
+                "INVALID_REPORT_ITEM","INVALID_REPORT_OBJECT"))if(causedBy(failure,marker))return marker;
+        if(failure instanceof ListenerFailure||causedBy(failure,"ListenerFailure"))return "STREAM_DELIVERY_FAILED";
+        return "MODEL_PROVIDER_OR_RUNTIME_FAILED";
+    }
+    private static String modelFailureStage(Throwable failure,String current) {
+        String reason=modelFailureReason(failure);
+        if("MODEL_TIMEOUT".equals(reason)||"MODEL_PROVIDER_OR_RUNTIME_FAILED".equals(reason))return "MODEL_TRANSPORT";
+        if(reason.startsWith("INVALID_REPORT_"))return "MODEL_OUTPUT_PARSE";
+        if(Set.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT",
+                "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID").contains(reason))return "FINAL_OUTPUT_VALIDATION";
+        if("STREAM_DELIVERY_FAILED".equals(reason))return "STREAM_DELIVERY";
+        return current==null?"UNKNOWN":current;
     }
     @Override public synchronized void close() { closed=true;generation++;selected=null;activeRun=null;access.close(); }
 }
