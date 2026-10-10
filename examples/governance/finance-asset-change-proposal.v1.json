@@ -8,7 +8,7 @@
     "catalogRevision": "2026-10-09.enterprise-credit-material-audit-candidate-1",
     "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:55fb57c5cfd4a3cfafd6aaa4a36368b87a7db348820d91b9d3bc301e1be71093"
+    "digest": "sha256:f79f972a389fde762a7a6a3f7688aa0caeb3969add025ae62b51442799157c55"
   },
   "target": {
     "kind": "domain-pack",

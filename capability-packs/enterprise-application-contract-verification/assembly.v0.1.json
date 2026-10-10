@@ -10,10 +10,5 @@
     "trusted-grants.v1",
     "observation.v0.1"
   ],
-  "defaultDomainPacks": [
-    {
-      "id": "enterprise-credit-material-review",
-      "version": "0.1.0"
-    }
-  ]
+  "defaultDomainPacks": []
 }

@@ -64,7 +64,7 @@
       "id": "internal-control",
       "version": "0.1.0",
       "displayName": "内部审核",
-      "source": "repo://profiles",
+      "source": "repo://profiles/internal-control.md",
       "governanceRef": "finance-harness-core"
     },
     {

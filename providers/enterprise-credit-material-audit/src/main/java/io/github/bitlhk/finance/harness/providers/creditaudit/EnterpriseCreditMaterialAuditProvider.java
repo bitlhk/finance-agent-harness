@@ -27,6 +27,10 @@ public final class EnterpriseCreditMaterialAuditProvider implements DescribedFin
     }
 
     @Override public ProviderDescriptorV1 descriptor() {
+        return descriptorValue();
+    }
+
+    static ProviderDescriptorV1 descriptorValue() {
         return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION, ID, VERSION, List.of(
                 new ProviderDescriptorV1.CapabilitySupport(FINANCIAL, CapabilityRequestV1.Operation.QUERY),
                 new ProviderDescriptorV1.CapabilitySupport(CROSS_MATERIAL, CapabilityRequestV1.Operation.QUERY)));
