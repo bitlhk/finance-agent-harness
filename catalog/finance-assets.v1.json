@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.10",
+  "catalogVersion": "0.2.11",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -36,6 +36,19 @@
           "employee-assisted"
         ]
       }
+    },
+    {
+      "id": "customer-manager-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "Customer Manager Service Preparation Java Integration",
+      "source": "repo://integrations/customer-manager-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-customer-manager-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"],
+        "profiles": ["employee-assisted"]
+      }
     }
   ],
   "profiles": [
@@ -57,14 +70,14 @@
       "id": "employee-assisted",
       "version": "0.1.0",
       "displayName": "员工辅助",
-      "source": "repo://profiles",
+      "source": "repo://profiles/employee-assisted.md",
       "governanceRef": "finance-harness-core"
     },
     {
       "id": "internal-control",
       "version": "0.1.0",
       "displayName": "内部审核",
-      "source": "repo://profiles",
+      "source": "repo://profiles/internal-control.md",
       "governanceRef": "finance-harness-core"
     },
     {
@@ -90,6 +103,19 @@
     }
   ],
   "domainPacks": [
+    {
+      "id": "wealth-service-preparation",
+      "version": "0.1.0",
+      "displayName": "客户经理访前服务准备（待宿主验收）",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/wealth/service-preparation",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["wealth.previsit-context.query"],
+      "dependencies": [
+        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"}
+      ],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
     {
       "id": "wealth-shared-facts",
       "version": "0.1.1",
@@ -256,6 +282,27 @@
           "local-simulator-task"
         ]
       }
+    },
+    {
+      "id": "enterprise-credit-material-review",
+      "version": "0.1.0",
+      "displayName": "企业信贷材料核验辅助",
+      "profile": "internal-control",
+      "source": "repo://domain-packs/credit/enterprise-material-review",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "enterprise.financial-statement.verify",
+        "enterprise.application-contract.verify"
+      ],
+      "dependencies": [
+        {"kind": "capability-pack", "id": "enterprise-financial-statement-verification", "version": "0.1.0"},
+        {"kind": "capability-pack", "id": "enterprise-application-contract-verification", "version": "0.1.0"}
+      ],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
     }
   ],
   "capabilityPacks": [
@@ -416,6 +463,15 @@
       }
     },
     {
+      "id": "wealth-allocation-context",
+      "version": "0.1.0",
+      "displayName": "财富产品候选依据（待运行接线验收）",
+      "source": "repo://capability-packs/wealth-allocation-context",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["wealth.allocation-context.query"],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "wealth-customer-context",
       "version": "0.1.0",
       "displayName": "客户财富上下文能力",
@@ -572,6 +628,32 @@
           "local-simulator-task"
         ]
       }
+    },
+    {
+      "id": "enterprise-financial-statement-verification",
+      "version": "0.1.0",
+      "displayName": "企业财报勾稽核验",
+      "source": "repo://capability-packs/enterprise-financial-statement-verification",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["enterprise.financial-statement.verify"],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
+    },
+    {
+      "id": "enterprise-application-contract-verification",
+      "version": "0.1.0",
+      "displayName": "申请与用途合同一致性核验",
+      "source": "repo://capability-packs/enterprise-application-contract-verification",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["enterprise.application-contract.verify"],
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
     }
   ],
   "providers": [
@@ -668,12 +750,29 @@
       }
     },
     {
+      "id": "customer-crm-readonly",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "客户经理 CRM 只读 Provider",
+      "source": "repo://providers/customer-crm",
+      "capabilities": [
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
+    },
+    {
       "id": "employee-agent-reference",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "岗位智能体财富参考 Provider",
       "source": "repo://providers/employee-agent",
       "capabilities": [
-        "wealth.previsit-context.query"
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
@@ -686,7 +785,7 @@
       "id": "employee-agent-insurance-reference",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "岗位智能体保险参考 Provider",
-      "source": "repo://providers/employee-agent",
+      "source": "repo://providers/employee-agent-insurance",
       "capabilities": [
         "insurance.customer-context.query"
       ],
@@ -695,6 +794,23 @@
         "profiles": [
           "employee-assisted"
         ]
+      }
+    },
+    {
+      "id": "enterprise-credit-material-audit",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "企业信贷材料核验合成 Provider",
+      "source": "repo://providers/enterprise-credit-material-audit",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-enterprise-credit-material-audit:0.1.0-SNAPSHOT",
+      "capabilities": [
+        "enterprise.financial-statement.verify",
+        "enterprise.application-contract.verify"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": ["internal-control"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
       }
     }
   ],
@@ -749,9 +865,17 @@
       "displayName": "收支合同受控案例（非模型质量评测）",
       "source": "repo://conformance/fixtures/cashflow/v0.1",
       "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "enterprise-credit-material-audit-controlled",
+      "version": "0.1.0",
+      "displayName": "企业信贷材料核验受控案例（非业务审批评测）",
+      "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-04.curated-risk-inputs-candidate-1",
+  "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

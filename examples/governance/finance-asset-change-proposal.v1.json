@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.10",
-    "catalogRevision": "2026-10-04.curated-risk-inputs-candidate-1",
+    "catalogVersion": "0.2.11",
+    "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
     "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:6dd8546fe66deba1dbfe4db83e6392f1ea3571279d873b9f29c372dcef78bade"
+    "digest": "sha256:1e170a7191cc9bd8914af3e22b2a0d5d273db0f5ddb779c3bce24df0b85bf614"
   },
   "target": {
     "kind": "domain-pack",

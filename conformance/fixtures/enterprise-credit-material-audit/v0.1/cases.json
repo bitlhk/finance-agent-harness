@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "enterprise-credit-material-audit-cases.v0.1",
+  "frozenAt": "2026-10-09T00:00:00Z",
+  "cases": [
+    {"id":"fin-01-balanced","capability":"financial","variant":"balanced","expected":"CONSISTENT"},
+    {"id":"fin-02-balanced-decimal","capability":"financial","variant":"balanced-decimal","expected":"CONSISTENT"},
+    {"id":"fin-03-difference-positive","capability":"financial","variant":"difference-positive","expected":"INCONSISTENT"},
+    {"id":"fin-04-difference-negative","capability":"financial","variant":"difference-negative","expected":"INCONSISTENT"},
+    {"id":"fin-05-assets-missing","capability":"financial","variant":"assets-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"fin-06-liabilities-missing","capability":"financial","variant":"liabilities-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"fin-07-equity-extraction-failed","capability":"financial","variant":"equity-extraction-failed","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"fin-08-statement-missing","capability":"financial","variant":"statement-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"fin-09-currency-missing","capability":"financial","variant":"currency-missing","expected":"NOT_COMPARABLE"},
+    {"id":"fin-10-unit-missing","capability":"financial","variant":"unit-missing","expected":"NOT_COMPARABLE"},
+    {"id":"fin-11-round-half-up","capability":"financial","variant":"round-half-up","expected":"CONSISTENT"},
+    {"id":"fin-12-malicious-content-ignored","capability":"financial","variant":"malicious-financial-content","expected":"CONSISTENT"},
+    {"id":"cross-01-equal","capability":"cross","variant":"equal","expected":"CONSISTENT"},
+    {"id":"cross-02-amount-difference","capability":"cross","variant":"amount-difference","expected":"INCONSISTENT"},
+    {"id":"cross-03-subject-mismatch","capability":"cross","variant":"subject-mismatch","expected":"NOT_COMPARABLE"},
+    {"id":"cross-04-period-mismatch","capability":"cross","variant":"period-mismatch","expected":"NOT_COMPARABLE"},
+    {"id":"cross-05-currency-mismatch","capability":"cross","variant":"currency-mismatch","expected":"NOT_COMPARABLE"},
+    {"id":"cross-06-unit-mismatch","capability":"cross","variant":"unit-mismatch","expected":"NOT_COMPARABLE"},
+    {"id":"cross-07-basis-mismatch","capability":"cross","variant":"basis-mismatch","expected":"NOT_COMPARABLE"},
+    {"id":"cross-08-application-amount-missing","capability":"cross","variant":"application-amount-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"cross-09-contract-amount-failed","capability":"cross","variant":"contract-amount-failed","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"cross-10-application-missing","capability":"cross","variant":"application-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"cross-11-contract-missing","capability":"cross","variant":"contract-missing","expected":"MISSING_REQUIRED_FIELDS"},
+    {"id":"cross-12-malicious-content-ignored","capability":"cross","variant":"malicious-cross-content","expected":"CONSISTENT"},
+    {"id":"rule-01-expired","capability":"financial","variant":"expired-rule","expected":"NEEDS_HUMAN_REVIEW"},
+    {"id":"rule-02-not-effective","capability":"cross","variant":"future-rule","expected":"NEEDS_HUMAN_REVIEW"}
+  ]
+}

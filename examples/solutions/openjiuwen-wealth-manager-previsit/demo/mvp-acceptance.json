@@ -1,0 +1,69 @@
+{
+  "version": "0.1.0",
+  "purpose": "Implementation and browser acceptance checklist; not an executable runtime contract",
+  "status": "NOT_READY_FOR_BROWSER_ACCEPTANCE",
+  "scenario": "客户经理访前准备",
+  "browseCategory": "客户经营",
+  "runtime": "openjiuwen-java",
+  "dataBoundary": "Synthetic employee and assigned synthetic customers only",
+  "sourceVersions": {
+    "financeHarness": "964080335eaecd83bc016641bddd9e8bb02f3f31",
+    "employeeAgent": "0503bab254d52ac496bcf5fd51e23532aee975fe"
+  },
+  "stages": [
+    {
+      "id": "customer-insight",
+      "title": "客户洞察",
+      "existingAsset": "wealth.previsit-context.query",
+      "hostResponsibility": "Resolve employee adoption owner and authorized customer; never derive permission from model output",
+      "deliverable": "Selected customer, visit objective, risk information and explicit missing information",
+      "gap": "Verified employee binding and customer selection in the managed Builder path"
+    },
+    {
+      "id": "fact-collection",
+      "title": "事实汇集",
+      "existingAsset": "prepare_wealth_previsit_context",
+      "hostResponsibility": "Preserve source receipts and source data dates; retain facts if model explanation fails",
+      "deliverable": "Authorized profile and holdings; cashflow only when separately bound and authorized",
+      "gap": "Managed assembly, evidence presentation and optional cashflow binding"
+    },
+    {
+      "id": "service-preparation",
+      "title": "服务建议",
+      "existingAsset": "wealth-previsit-diagnosis; Employee Agent prepare_wealth_allocation_context",
+      "hostResponsibility": "Only policy-approved eligibleProducts can support product discussion; no purchase or trading",
+      "deliverable": "Evidence-backed talking points, product conditions if available, and questions to verify",
+      "gap": "Allocation adapter implemented in the candidate branch; managed identity wiring, live authorization and browser validation remain pending"
+    },
+    {
+      "id": "manager-review",
+      "title": "经理复核",
+      "existingAsset": "Employee Agent create_customer_followup_task approval and execution receipt",
+      "hostResponsibility": "Record human review and reason; require explicit approval for followup writeback",
+      "deliverable": "Reviewed previsit report; followup receipt only after confirmed execution",
+      "gap": "Review persistence and managed approval wiring; synthetic CRM writeback readiness must be verified"
+    }
+  ],
+  "releasePrerequisites": [
+    "Verified synthetic employee identity, customer assignment and authorization expiry",
+    "Managed build, start, query, evidence replay and stop pass",
+    "Existing six capability combinations retain their contracts and pass regression",
+    "Published artifact and rollback recorded",
+    "Dot package supplies actual synthetic fixture references without credentials"
+  ],
+  "browserCases": [
+    {"id": "WM-MVP-01", "action": "Build from 客户经营 / 客户经理访前准备", "expected": "Build and start succeed; employee-assisted profile is visible", "status": "NOT_RUN"},
+    {"id": "WM-MVP-02", "action": "Prepare an assigned synthetic customer's visit", "expected": "Facts, sources, data dates and visit objective are distinguishable", "status": "NOT_RUN"},
+    {"id": "WM-MVP-03", "action": "Select an unassigned synthetic customer", "expected": "Access denied; no customer facts exposed", "status": "NOT_RUN"},
+    {"id": "WM-MVP-04", "action": "Use a fixture with missing holdings or risk assessment", "expected": "Missing facts explicitly identified; no fabricated values or formal recommendation", "status": "NOT_RUN"},
+    {"id": "WM-MVP-05", "action": "Request product discussion using an authorized allocation context", "expected": "Only eligibleProducts used; source policy and exclusions distinguishable", "status": "NOT_RUN"},
+    {"id": "WM-MVP-06", "action": "Use a fixture with no eligible products", "expected": "No adjacent product substituted; missing conditions explained", "status": "NOT_RUN"},
+    {"id": "WM-MVP-07", "action": "Edit and review the report", "expected": "Review action, actor, report version and reason retained; editing does not alter source facts", "status": "NOT_RUN"},
+    {"id": "WM-MVP-08", "action": "Prepare followup then cancel approval", "expected": "Pending action remains reachable; zero CRM writeback", "status": "NOT_RUN"},
+    {"id": "WM-MVP-09", "action": "Explicitly approve synthetic followup", "expected": "Exactly one writeback and a genuine execution receipt; no transaction submission", "status": "NOT_RUN"},
+    {"id": "WM-MVP-10", "action": "Inject explanation failure after facts are returned in isolation", "expected": "Facts remain visible; explanation failure is not reported as query failure", "status": "NOT_RUN"},
+    {"id": "WM-MVP-11", "action": "Replay completed and denied runs", "expected": "Read-only replay with no new model, Provider or CRM calls", "status": "NOT_RUN"},
+    {"id": "WM-MVP-12", "action": "Switch synthetic customers and revoke authorization during a query", "expected": "No old customer facts reused; revoked query result excluded", "status": "NOT_RUN"}
+  ],
+  "excluded": ["Real customer data", "Product purchase", "Transfer execution", "Automatic outbound messaging", "Smart Audit", "Replicating the full employee-agent platform"]
+}

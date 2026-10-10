@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "insurance-advisor-previsit",
+    "version": "0.1.0"
+  },
+  "requiredFeatures": [
+    "query.v1",
+    "trusted-grants.v1",
+    "observation.v0.1",
+    "employee-authority.v1"
+  ],
+  "defaultDomainPacks": [
+    {
+      "id": "insurance-employee-assisted",
+      "version": "0.1.0"
+    }
+  ]
+}

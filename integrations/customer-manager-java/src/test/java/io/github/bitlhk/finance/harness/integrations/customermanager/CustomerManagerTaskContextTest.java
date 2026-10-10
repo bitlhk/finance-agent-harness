@@ -1,0 +1,56 @@
+package io.github.bitlhk.finance.harness.integrations.customermanager;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class CustomerManagerTaskContextTest {
+    @Test void keepsSourceVerificationCompletenessAndValiditySeparate() {
+        JsonNode context=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "45岁，讨论100万元，12个月内可能用30万元，风险测评及持仓未知");
+        JsonNode amount=find(context,"visit.liquidityAmount");
+        assertEquals(300000,amount.path("value").asDouble());
+        assertEquals("USER_STATEMENT",amount.at("/source/kind").asText());
+        assertEquals("UNVERIFIED",amount.at("/verification/status").asText());
+        assertEquals("PRESENT",amount.at("/completeness/status").asText());
+        assertEquals("UNKNOWN",amount.at("/validity/status").asText());
+        assertTrue(context.path("questions").size()<=3);
+    }
+
+    @Test void oralRiskDoesNotBecomeVerifiedAndUnknownsRemainUnknown() {
+        JsonNode first=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "45岁，讨论100万元，12个月内可能用30万元，风险测评及持仓未知");
+        JsonNode second=CustomerManagerTaskContext.update(first,"口述C3、偏稳健，有效期未给、持仓未知");
+        assertEquals("C3",find(second,"riskAssessment.level").path("value").asText());
+        assertEquals("UNVERIFIED",find(second,"riskAssessment.level").at("/verification/status").asText());
+        assertEquals("UNKNOWN",find(second,"riskAssessment.validUntil").at("/completeness/status").asText());
+        assertEquals("UNKNOWN",find(second,"portfolio.holdings").at("/completeness/status").asText());
+    }
+
+    @Test void correctionCreatesNewVersionAndOnlyUpdatesDeterministicAmounts() {
+        JsonNode first=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "讨论100万元，12个月内可能用30万元");
+        JsonNode second=CustomerManagerTaskContext.update(first,"30万元改成40万元");
+        assertEquals(300000,find(first,"visit.liquidityAmount").path("value").asDouble());
+        assertEquals(400000,find(second,"visit.liquidityAmount").path("value").asDouble());
+        assertEquals(600000,find(second,"visit.remainingDiscussionAmount").path("value").asDouble());
+        assertEquals("DERIVED_FROM_UNVERIFIED_INPUT",
+                find(second,"visit.remainingDiscussionAmount").at("/verification/status").asText());
+        assertFalse(find(second,"visit.remainingDiscussionAmount").has("horizonMonths"));
+        assertTrue(second.path("revision").asInt()>first.path("revision").asInt());
+    }
+
+    @Test void independentCustomerContextsDoNotShareStatements() {
+        JsonNode firstCustomer=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),"讨论100万元，可能使用30万元");
+        JsonNode secondCustomer=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),"口述C3");
+        assertEquals(300000,find(firstCustomer,"visit.liquidityAmount").path("value").asDouble());
+        assertTrue(find(secondCustomer,"visit.liquidityAmount").isMissingNode());
+        assertEquals("C3",find(secondCustomer,"riskAssessment.level").path("value").asText());
+        assertTrue(find(firstCustomer,"riskAssessment.level").isMissingNode());
+    }
+
+    private static JsonNode find(JsonNode context,String key) {
+        for(JsonNode fact:context.path("facts"))if(key.equals(fact.path("key").asText()))return fact;
+        return context.path("missing");
+    }
+}
