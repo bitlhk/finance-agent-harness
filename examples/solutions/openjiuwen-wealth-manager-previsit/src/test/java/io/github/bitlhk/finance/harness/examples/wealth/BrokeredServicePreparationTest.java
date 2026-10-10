@@ -35,7 +35,11 @@ class BrokeredServicePreparationTest {
         server.createContext("/api/internal/platform-tools/mcp",exchange->{
             calls.incrementAndGet();var input=HarnessJson.mapper().readTree(exchange.getRequestBody());
             var context=Map.of("schema","ea.wealth-previsit-context.v1","status","ready",
-                "customer",Map.of("customerId","CUST-000201","displayName","Synthetic A","totalAssets",125000),
+                "customer",Map.of("customerId","CUST-000201","displayName","Synthetic A","customerStatus","active","maskedPhone","139****8201"),
+                "profiles",List.of(Map.of("profileType","wealth","detail",Map.of(
+                    "totalAssets",125000,
+                    "riskAssessment",Map.of("riskLevel","R2"),
+                    "recentEvents",List.of(Map.of("type","FOLLOW_UP_DUE"))))),
                 "dataAsOf","2026-10-09T00:00:00Z","readiness",Map.of("status","READY"));
             ServicePreparationDemo.reply(exchange,200,Map.of("jsonrpc","2.0","id",input.path("id").asText(),
                 "result",Map.of("content",List.of(Map.of("type","text","text","EA_WEALTH_PREVISIT_CONTEXT:"+HarnessJson.mapper().writeValueAsString(context))),

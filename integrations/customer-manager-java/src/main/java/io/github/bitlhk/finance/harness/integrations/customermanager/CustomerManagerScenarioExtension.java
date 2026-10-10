@@ -14,7 +14,7 @@ import java.util.*;
 /** Declarative managed-Host extension. Browser input cannot provide authority, credentials or asset paths. */
 public final class CustomerManagerScenarioExtension implements ManagedScenarioExtensionV01 {
     public static final String ID = "customer-manager-service-preparation.v1";
-    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "review", "versions", "read-version", "replay");
+    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "latest", "review", "versions", "read-version", "replay");
 
     @Override public String id() { return ID; }
     @Override public Set<String> actions() { return ACTIONS; }
@@ -44,7 +44,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final String owner, sessionId;
         private final ServicePreparation task;
         private final InstalledPreparationMethod method;
-        private String selectedCustomer;
+        private String selectedCustomer, selectedGoal;
         private String pendingProductCustomer;
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
         private volatile boolean closed;
@@ -66,13 +66,23 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
-                    selectedCustomer=text(body,"customerAlias");
-                    yield Map.of("generation",task.select(owner,selectedCustomer,text(body,"goal")),"status","SELECTED");
+                    selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
+                    yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal),"status","SELECTED");
                 }
                 case "prepare" -> { exact(body,"generation"); yield value(task.prepare(owner,integer(body,"generation"))); }
-                case "read", "replay" -> { exact(body,"reportId"); yield value(task.read(owner,text(body,"reportId"))); }
+                case "read" -> { exact(body,"reportId"); yield value(task.read(owner,text(body,"reportId"))); }
+                case "latest" -> {
+                    exact(body);var latest=task.latest(owner);var result=new LinkedHashMap<String,Object>();
+                    result.put("found",latest.isPresent());latest.ifPresent(report->result.put("report",value(report)));yield Map.copyOf(result);
+                }
+                case "replay" -> {
+                    exactOneOf(body,Set.of("reportId"),Set.of("reportId","revision"));
+                    Integer revision=body.has("revision")?integer(body,"revision"):null;
+                    yield value(task.replay(owner,text(body,"reportId"),revision));
+                }
                 case "review" -> { exact(body,"reportId","revision","opinion"); yield value(task.review(owner,text(body,"reportId"),integer(body,"revision"),text(body,"opinion"))); }
-                case "versions" -> { exact(body,"reportId"); yield Map.of("reportId",text(body,"reportId"),"versions",task.versions(owner,text(body,"reportId"))); }
+                case "versions" -> { exact(body,"reportId");String id=text(body,"reportId");yield Map.of(
+                        "reportId",id,"versions",task.versions(owner,id),"items",task.versionSummaries(owner,id)); }
                 case "read-version" -> { exact(body,"reportId","revision"); yield value(task.readVersion(owner,text(body,"reportId"),integer(body,"revision"))); }
                 default -> throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             };
@@ -102,7 +112,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!pendingProductArguments.containsKey("horizonMonths"))missing.add("投资期限");
                 if(!pendingProductArguments.containsKey("channel"))missing.add("办理渠道（手机银行或网点）");
                 if(!missing.isEmpty())return Map.of("status","NEED_CLARIFICATION","response","为 "+displayName(customer)+" 筛选产品候选前，请补充："+String.join("、",missing)+"。候选只供经理复核，不会执行购买。");
-                selectedCustomer=customer;long generation=task.select(owner,customer,query);
+                selectedCustomer=customer;selectedGoal=query;long generation=task.select(owner,customer,query);
                 sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
                 JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
                 pendingProductCustomer=null;pendingProductArguments.clear();
@@ -116,7 +126,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
                 return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位获授权客户。你也可以先问“我负责哪些客户？”。");
             String customer=decision.customer();
-            selectedCustomer=customer;
+            selectedCustomer=customer;selectedGoal=query;
             sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of(
                     "stage","AUTHORIZATION_CONFIRMED","label","已核对客户服务范围")));
             long generation=task.select(owner,customer,query);
@@ -131,9 +141,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         }
         private ServicePreparation.PreparationListener listener(EventSink sink) {
             return new ServicePreparation.PreparationListener(){
-                @Override public void stage(String stage,JsonNode ignored) throws Exception {
+                @Override public void stage(String stage,JsonNode snapshot) throws Exception {
                     String label=switch(stage){case "FACTS_READY"->"客户事实已取得";case "REPORT_GENERATION_STARTED"->"正在生成待复核建议";default->stage;};
                     sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage",stage,"label",label)));
+                    if("FACTS_READY".equals(stage))sink.emit(Map.of("type","CUSTOM","name","finance.facts","value",value(snapshot)));
                 }
                 @Override public void reportDelta(ServicePreparation.ReportDelta delta) throws Exception {
                     sink.emit(Map.of("type","CUSTOM","name","finance.report.delta","value",Map.of(
@@ -142,7 +153,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             };
         }
         @Override public Map<String,Object> status() {
-            var value=new LinkedHashMap<String,Object>(bootstrap());value.put("status","ACTIVE");return value;
+            var value=new LinkedHashMap<String,Object>(bootstrap());value.put("status","ACTIVE");
+            if(selectedCustomer!=null)value.put("selectedCustomer",selectedCustomer);
+            if(selectedGoal!=null)value.put("selectedGoal",selectedGoal);
+            return value;
         }
         @Override public void close() { if(!closed){closed=true;task.close();} }
         private void current(){if(closed)throw new SecurityException("SCENARIO_SESSION_CLOSED");}
@@ -190,6 +204,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     private static String text(JsonNode body,String name){return required(body.path(name).asText(null),"SCENARIO_FIELD_REQUIRED");}
     private static int integer(JsonNode body,String name){if(!body.path(name).canConvertToInt())throw new IllegalArgumentException("SCENARIO_FIELD_INVALID");return body.path(name).asInt();}
     private static void exact(JsonNode body,String... names){Set<String> expected=Set.of(names),actual=new HashSet<>();body.fieldNames().forEachRemaining(actual::add);if(!actual.equals(expected))throw new IllegalArgumentException("SCENARIO_BODY_INVALID");}
+    private static void exactOneOf(JsonNode body,Set<String>... choices){Set<String> actual=new HashSet<>();body.fieldNames().forEachRemaining(actual::add);for(Set<String> choice:choices)if(actual.equals(choice))return;throw new IllegalArgumentException("SCENARIO_BODY_INVALID");}
     static void exactChat(JsonNode body) {
         Set<String> actual = new HashSet<>();
         body.fieldNames().forEachRemaining(actual::add);

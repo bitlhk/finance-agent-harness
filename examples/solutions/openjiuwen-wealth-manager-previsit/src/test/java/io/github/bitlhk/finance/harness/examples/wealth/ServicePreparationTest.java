@@ -38,6 +38,8 @@ class ServicePreparationTest {
     volatile Runnable beforeResponse=()->{};
     volatile int providerStatus=200;
     volatile boolean explainFail;
+    volatile boolean explainEmpty;
+    volatile boolean sparseFacts;
     volatile boolean unknownRef;
     volatile boolean missingDate;
     volatile String returnedCustomer;
@@ -57,10 +59,18 @@ class ServicePreparationTest {
             assertEquals("prepare_wealth_previsit_context",input.at("/params/name").asText());
             String customer=input.at("/params/arguments/customer_id").asText();
             beforeResponse.run();
-            var context=Map.of("schema","ea.wealth-previsit-context.v1","status","ready",
-                "customer",Map.of("customerId",returnedCustomer==null?customer:returnedCustomer,"totalAssets",customer.equals("syn-a")?1000:2000),
-                "dataAsOf",missingDate?"":"2026-10-01T00:00:00Z",
-                "readiness",Map.of("status","READY"));
+            var context=new LinkedHashMap<String,Object>();context.put("schema","ea.wealth-previsit-context.v1");context.put("status",sparseFacts?"degraded":"ready");
+            context.put("customer",Map.of("customerId",returnedCustomer==null?customer:returnedCustomer,"displayName",customer,
+                    "customerStatus","active","totalAssets",customer.equals("syn-a")?1000:2000));
+            context.put("profiles",sparseFacts?List.of(Map.of("profileType","wealth","detailSchemaVersion","wealth.v2"))
+                    :List.of(Map.of("profileType","wealth","detailSchemaVersion","wealth.v2","detail",Map.of(
+                            "totalAssets",customer.equals("syn-a")?1000:2000,
+                            "riskAssessment",Map.of("riskLevel","C3","validUntil","2027-10-01T00:00:00Z"),
+                            "recentEvents",List.of(Map.of("type","review_due","date","2026-10-15"))))));
+            context.put("dataAsOf",missingDate?"":"2026-10-01T00:00:00Z");
+            context.put("missingInputs",sparseFacts?List.of("CRM_PROFILE_BUSINESS_DETAIL_MISSING"):List.of());
+            context.put("readiness",Map.of("status",sparseFacts?"PARTIAL":"READY",
+                    "reasons",sparseFacts?List.of("CRM_PROFILE_BUSINESS_DETAIL_MISSING"):List.of()));
             var receipt=Map.of("receiptId","receipt-"+customer,"receiptFingerprint","a".repeat(64),"createdAt","2026-10-08T00:00:00Z");
             byte[] bytes=HarnessJson.mapper().writeValueAsBytes(Map.of("jsonrpc","2.0","id",input.path("id").asText(),
                 "result",Map.of("content",List.of(Map.of("type","text","text","EA_WEALTH_PREVISIT_CONTEXT:"+HarnessJson.mapper().writeValueAsString(context))),
@@ -73,7 +83,7 @@ class ServicePreparationTest {
                 URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(5),()->null,()->null,c->{}),
             Set.of(ServicePreparation.CAPABILITY));
         host=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(goal,ids,context)->{
-            models.incrementAndGet();if(explainFail)throw new TimeoutException("synthetic failure");
+            models.incrementAndGet();if(explainFail)throw new TimeoutException("synthetic failure");if(explainEmpty)return List.of();
             return unknownRef?List.of("/unknown"):List.of("/customer/totalAssets");
         },files,Map.of("provider","employee-agent-reference@0.1.0-SNAPSHOT","capability","wealth-manager-previsit@0.1.0"));
     }
@@ -85,6 +95,7 @@ class ServicePreparationTest {
         assertEquals(List.of("客户乙","客户甲"),host.customers("owner-a"));
         var r=prepare();String id=r.path("reportId").asText();
         assertEquals("READY_FOR_REVIEW",r.path("status").asText(),r.toString());
+        assertEquals("READY",r.at("/factAssessment/status").asText(),r.toString());
         assertEquals("2026-10-01T00:00:00Z",r.path("dataAsOf").asText());
         assertFalse(r.path("sourceReceipt").isEmpty());
         int generatedRevision=r.path("reportRevision").asInt();
@@ -98,6 +109,34 @@ class ServicePreparationTest {
         assertEquals("REVIEWED",host.readVersion("owner-a",id,generatedRevision+1).path("reviewStatus").asText());
         assertEquals(1,calls.get());assertEquals(1,models.get());
         assertThrows(IllegalStateException.class,()->host.review("owner-a",id,generatedRevision,"重复意见"));
+    }
+    @Test void sparseProfilesArePartialAndExplainMissingBusinessFacts() throws Exception {
+        sparseFacts=true;var report=prepare();
+        assertEquals("PARTIAL",report.path("status").asText(),report.toString());
+        assertEquals("PARTIAL",report.at("/factAssessment/status").asText());
+        String missing=report.at("/factAssessment/missing").toString();
+        assertTrue(missing.contains("未取得财富资产或持仓明细"),missing);
+        assertTrue(missing.contains("未取得风险测评资料"),missing);
+        assertTrue(missing.contains("未取得近期联系、事项或到期事件"),missing);
+    }
+    @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
+        explainEmpty=true;var report=prepare();
+        assertEquals("PARTIAL",report.path("status").asText());
+        assertEquals("MODEL_OUTPUT_EMPTY",report.path("failureCode").asText(),report.toString());
+        assertFalse(report.path("fallbackSuggestion").isEmpty());
+    }
+    @Test void latestVersionSummariesAndReplayArePureBusinessReads() throws Exception {
+        var generated=prepare();String id=generated.path("reportId").asText();
+        var reviewed=host.review("owner-a",id,generated.path("reportRevision").asInt(),"完成工程复核");
+        assertEquals(id,host.latest("owner-a").orElseThrow().path("reportId").asText());
+        var summaries=host.versionSummaries("owner-a",id);
+        assertEquals(reviewed.path("reportRevision").asInt(),summaries.getLast().get("revision"));
+        var replay=host.replay("owner-a",id,generated.path("reportRevision").asInt());
+        assertEquals(0,replay.at("/replayEvidence/businessFactProviderCalls").asInt(),replay.toString());
+        assertEquals(0,replay.at("/replayEvidence/modelGenerationCalls").asInt(),replay.toString());
+        assertTrue(replay.at("/replayEvidence/authorizationRevalidated").asBoolean());
+        assertEquals(generated.path("reportRevision").asInt(),replay.at("/report/reportRevision").asInt());
+        assertEquals(1,calls.get());assertEquals(1,models.get());
     }
     @Test void unauthorizedCustomerNoCallOrReport() {
         assertThrows(SecurityException.class,()->host.select("owner-a","越权客户","回访"));

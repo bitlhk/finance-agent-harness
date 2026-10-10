@@ -79,6 +79,8 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         var readinessReasons = new ArrayList<String>();
         if (asOf.isBlank()) readinessReasons.add("CRM_CUSTOMER_BUSINESS_DATE_MISSING");
         if (profiles.isEmpty()) readinessReasons.add("CRM_ACTIVE_PROFILE_MISSING");
+        else if (profileFacts.stream().noneMatch(this::hasBusinessDetail))
+            readinessReasons.add("CRM_PROFILE_BUSINESS_DETAIL_MISSING");
         var previsit = new LinkedHashMap<String,Object>();
         previsit.put("schema", "crm.wealth-previsit-context.v1");
         previsit.put("status", readinessReasons.isEmpty() ? "ready" : "degraded");
@@ -158,6 +160,9 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
             if (node.has(key) && !node.path(key).isNull() && !node.path(key).asText("").isBlank())
                 value.put(key, JSON.convertValue(parseObject(node.path(key)), Object.class));
         return Map.copyOf(value);
+    }
+    private boolean hasBusinessDetail(Map<String,Object> profile) {
+        return profile.keySet().stream().anyMatch(key -> !Set.of("profileType","detailSchemaVersion").contains(key));
     }
     private static JsonNode parseObject(JsonNode value) {
         if (!value.isTextual()) return value;

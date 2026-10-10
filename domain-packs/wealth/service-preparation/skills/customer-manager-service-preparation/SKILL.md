@@ -1,7 +1,7 @@
 ---
 name: customer-manager-service-preparation
 description: 授权合成客户的财富访前准备，保留事实依据、缺项及待复核状态。
-version: 0.2.0
+version: 0.1.0
 license: Apache-2.0
 allowed-tools: wealth_previsit_context_query, wealth_allocation_context_query
 metadata:
