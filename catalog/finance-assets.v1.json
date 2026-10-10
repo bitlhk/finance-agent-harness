@@ -785,7 +785,7 @@
       "id": "employee-agent-insurance-reference",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "岗位智能体保险参考 Provider",
-      "source": "repo://providers/employee-agent",
+      "source": "repo://providers/employee-agent-insurance",
       "capabilities": [
         "insurance.customer-context.query"
       ],

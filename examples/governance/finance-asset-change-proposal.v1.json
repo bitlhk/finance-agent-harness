@@ -8,7 +8,7 @@
     "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
     "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:4cc51c838be35f45fb7ee4f3e08f3fc5400dbb6a02c8a0503ef2cebbc153b772"
+    "digest": "sha256:1e170a7191cc9bd8914af3e22b2a0d5d273db0f5ddb779c3bce24df0b85bf614"
   },
   "target": {
     "kind": "domain-pack",
