@@ -13,6 +13,9 @@ import java.util.*;
 
 /** Model wording over immutable evidence; it has no tools and cannot query or decide transactions. */
 final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.ExplanationGenerator {
+    static final String FACT_REFERENCE_INSTRUCTION = "factRefs 只能逐字选择输入 factIds 中列出的叶字段路径；"
+            + "空数组、空对象及其容器路径不属于可引用事实，不得引用。"
+            + "没有来源信号时，不得引用 signals，应改用 factIds 中已有的查询范围、完整性和来源字段说明结论。";
     private final ReActAgent agent;
     OpenJiuwenFraudReportGenerator(String provider,String key,String base,String model){
         agent=new ReActAgent(AgentCard.builder().id("fraud-risk-verification-report").name("电诈风险核验辅助报告")
@@ -20,6 +23,7 @@ final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.Expl
         String prompt="你只能依据输入中的 installedMethod、purpose、factIds 和 facts 生成只读核验辅助报告。"
                 +"只输出一个 JSON 对象，字段严格为 summary、evidenceInterpretation、pendingItems、reviewChecklist。"
                 +"summary 与 evidenceInterpretation 是对象数组，每项只有 text 和 factRefs；factRefs 必须来自输入 factIds 且非空。"
+                +FACT_REFERENCE_INSTRUCTION
                 +"summary 最多2项，evidenceInterpretation 最多2项，pendingItems 最多3项，reviewChecklist 最多4项；"
                 +"每项 text 或字符串不超过120个中文字符，避免逐字段复述。pendingItems 与 reviewChecklist 是字符串数组。"
                 +"不得补造事实、身份、账户或交易结果。"
