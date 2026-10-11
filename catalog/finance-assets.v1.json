@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.11",
+  "catalogVersion": "0.2.12",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -49,6 +49,19 @@
         "runtimeLanguages": ["java"],
         "profiles": ["employee-assisted"]
       }
+    },
+    {
+      "id": "fraud-verification-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "Fraud Verification Assistance Java Integration",
+      "source": "repo://integrations/fraud-verification-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-fraud-verification-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"],
+        "profiles": ["fraud-investigation"]
+      }
     }
   ],
   "profiles": [
@@ -78,6 +91,13 @@
       "version": "0.1.0",
       "displayName": "内部审核",
       "source": "repo://profiles/internal-control.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "fraud-investigation",
+      "version": "0.1.0",
+      "displayName": "电诈风险核验辅助",
+      "source": "repo://profiles/fraud-investigation.md",
       "governanceRef": "finance-harness-core"
     },
     {
@@ -232,6 +252,25 @@
         "profiles": [
           "internal-control"
         ]
+      }
+    },
+    {
+      "id": "fraud-verification-assistance",
+      "version": "0.1.0",
+      "displayName": "电诈风险核验辅助",
+      "profile": "fraud-investigation",
+      "source": "repo://domain-packs/risk/fraud-verification-assistance",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["fraud.risk-evidence.query"],
+      "dependencies": [{
+        "kind": "capability-pack",
+        "id": "fraud-risk-evidence-query",
+        "version": "0.1.0"
+      }],
+      "compatibility": {
+        "profiles": ["fraud-investigation"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
       }
     },
     {
@@ -580,6 +619,19 @@
       }
     },
     {
+      "id": "fraud-risk-evidence-query",
+      "version": "0.1.0",
+      "displayName": "已知涉诈记录核验",
+      "source": "repo://capability-packs/fraud-risk-evidence-query",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["fraud.risk-evidence.query"],
+      "compatibility": {
+        "profiles": ["fraud-investigation"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
+    },
+    {
       "id": "cashflow-readonly",
       "version": "0.1.0",
       "displayName": "摘要与分类趋势只读能力（候选）",
@@ -739,13 +791,15 @@
       "displayName": "反诈风险参考 Provider",
       "source": "repo://providers/fraud-mining",
       "capabilities": [
-        "fraud.transfer-risk.assess"
+        "fraud.transfer-risk.assess",
+        "fraud.risk-evidence.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
         "profiles": [
           "internal-control",
-          "customer-self-service"
+          "customer-self-service",
+          "fraud-investigation"
         ]
       }
     },
@@ -875,7 +929,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-10.customer-manager-credit-audit-unified-candidate-1",
+  "catalogRevision": "2026-10-11.fraud-risk-verification-mvp-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

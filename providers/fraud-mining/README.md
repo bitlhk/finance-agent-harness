@@ -3,6 +3,13 @@
 该模块把外部反诈服务映射成 Finance Harness 的只读能力
 `fraud.transfer-risk.assess`。它属于南向 Provider，不属于 Harness Core。
 
+同一 Provider 还提供独立的只读能力 `fraud.risk-evidence.query`，用于电诈风险核验辅助。
+新能力只接受宿主授权映射后的 `FRAUD_SOURCE_CINO`，执行精确匹配和有界分页，并显式返回
+查询完整性。它不会复用旧能力的 `ALLOW/BLOCK` 语义，也不会给出放行、阻断或交易指令。
+
+`matchScore`、`modelScore` 和来源标签按原含义分别保留；这些分数不是银行校准后的诈骗概率。
+上游没有稳定快照或版本字段时，结果明确记录为未知，分页完成不冒充稳定快照。
+
 当前参考实现读取反诈系统中的已知风险事件，输出标准化的
 `ALLOW` 或 `BLOCK` 结论及最小证据。银行可替换该 Provider，接入自己的
 黑名单、规则引擎、专业模型或组合风险决策服务。

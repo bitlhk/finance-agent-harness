@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.github.bitlhk.finance</groupId>
+    <artifactId>finance-agent-harness-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <artifactId>finance-integration-fraud-verification-java</artifactId>
+  <name>Finance Harness Fraud Verification Java Integration</name>
+  <description>Managed OpenJiuwen Java scenario extension for read-only fraud-risk evidence verification.</description>
+  <dependencies>
+    <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-fraud-mining</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-service-preparation</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-openjiuwen-java</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>com.openjiuwen</groupId><artifactId>agent-core-java</artifactId><version>${openjiuwen.core.version}</version></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+  </dependencies>
+</project>
