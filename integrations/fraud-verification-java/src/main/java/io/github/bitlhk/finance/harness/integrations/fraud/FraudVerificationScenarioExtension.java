@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.integrations.fraud;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.ManagedScenarioExtensionV01;
 import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
 import io.github.bitlhk.finance.harness.providers.fraud.FraudMiningProvider;
@@ -21,11 +22,12 @@ public final class FraudVerificationScenarioExtension implements ManagedScenario
         Path records=outside(context.privateStateRoot().resolve("fraud-risk-verification-reports"),context.artifactRoot());
         String owner=required(context.ownerRef(),"OWNER_REQUIRED");
         var mappings=(java.util.function.Supplier<FraudSubjectMapping>)()->{try{return FraudSubjectMapping.load(mapping,owner);}catch(RuntimeException e){throw e;}catch(Exception e){throw new IllegalStateException(e);}};
-        FraudMiningProvider provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create(env("FH_FRAUD_URL")),
+        FraudMiningProvider source=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create(env("FH_FRAUD_URL")),
                 Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_FRAUD_TIMEOUT_MILLIS","8000"))),
                 Integer.parseInt(System.getenv().getOrDefault("FH_FRAUD_PAGE_SIZE","100")),
                 Integer.parseInt(System.getenv().getOrDefault("FH_FRAUD_MAX_PAGES","10")),
                 Integer.parseInt(System.getenv().getOrDefault("FH_FRAUD_MAX_RECORDS","1000"))));
+        var provider=new ObservedFinanceProvider(source,FraudMiningProvider.PROVIDER_ID,context.currentObservation());
         InstalledPreparationMethod method=installed(context.artifactRoot());var model=Objects.requireNonNull(context.model());
         var task=new FraudVerificationTask(owner,provider,mappings,new OpenJiuwenFraudReportGenerator(model.clientProvider(),model.apiKey(),model.apiBase(),model.modelName()),method,records,
                 Map.of("capability","fraud-risk-evidence-query@0.1.0","provider","fraud-mining-reference@0.1.0-SNAPSHOT","runtime","openjiuwen-java@0.1.15"));
