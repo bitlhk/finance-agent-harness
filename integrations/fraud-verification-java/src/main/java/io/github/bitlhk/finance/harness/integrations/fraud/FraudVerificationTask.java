@@ -88,9 +88,10 @@ final class FraudVerificationTask implements AutoCloseable {
                 report.put("explanationStatus","NOT_STARTED");report.put("failureCode",result.error()==null?"PROVIDER_FAILED":result.error().sourceCode());
                 report.putArray("missingEvidence").add("风险来源查询未完成，不能形成未命中结论");
             }else{
-                JsonNode facts=HarnessJson.mapper().valueToTree(result.data());
+                ObjectNode facts=HarnessJson.mapper().valueToTree(result.data());
                 if(!selection.subjectRef().equals(facts.path("subjectRef").asText())||!FraudMiningProvider.FRAUD_SOURCE_CINO.equals(facts.path("subjectType").asText()))
                     throw new SecurityException("RESULT_SUBJECT_MISMATCH");
+                facts.put("purpose",selection.purpose());
                 report.set("facts",facts.deepCopy());report.put("verificationStatus",facts.path("verificationStatus").asText("VERIFICATION_INCOMPLETE"));
                 report.put("queryComplete",facts.path("queryComplete").asBoolean(false));report.put("evidenceAsOf",result.asOf().toString());
                 List<String> refs=new ArrayList<>();collect(facts,"",refs,300);report.set("factRefs",HarnessJson.mapper().valueToTree(refs));
