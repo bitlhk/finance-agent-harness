@@ -181,7 +181,8 @@ public final class ServicePreparationDemo {
         var config=ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role","system","content",
             "你只能依据输入中的installedMethod、goal、factIds和facts生成待经理复核的服务准备建议。"
             +"只输出JSON对象，字段严格为communicationFocus、preparationAdvice、pendingItems、reviewChecklist。"
-            +"前两项是对象数组，每项只能含text和factRefs，factRefs必须来自输入；后两项是字符串数组。"
+            +"前两项是对象数组，每项只能含text和factRefs；factRefs必须逐字复制输入factIds中的叶路径，"
+            +"不得缩写为父对象路径，也不得自行拼接路径；后两项是字符串数组。"
             +"不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
             .maxIterations(1).build().configureModelClient("OpenAI",key,base,model,true);
         config.getModelConfigObj().setTemperature(0.1);agent.configure(config);

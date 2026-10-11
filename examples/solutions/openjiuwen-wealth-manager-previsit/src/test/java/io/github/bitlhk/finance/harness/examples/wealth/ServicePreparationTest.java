@@ -167,6 +167,27 @@ class ServicePreparationTest {
             """);
         assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics("该计划即将到期",facts));
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("该计划到期日已过，状态待核实",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不得表述为即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不是即将到期，而是已过期待核实",facts));
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics(
+                "不得把旧状态表述为即将到期，但该产品即将到期",facts));
+    }
+    @Test void approvedAggregateFactRefsExpandToLeavesButUnknownParentsRemainRejected() {
+        var ids=List.of(
+                "/taskContext/facts/0/key","/taskContext/facts/0/value",
+                "/profiles/1/detail/portfolioSummary/totalAssets",
+                "/profiles/1/detail/riskAssessment/riskLevel",
+                "/temporalAssessment/maturities/0/effectiveStatus");
+        assertEquals(List.of("/taskContext/facts/0/key","/taskContext/facts/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/taskContext/facts/0"),ids));
+        assertEquals(List.of("/profiles/1/detail/portfolioSummary/totalAssets"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/1/detail/portfolioSummary"),ids));
+        assertEquals(List.of("/temporalAssessment/maturities/0/effectiveStatus"),
+                ServicePreparation.normalizeFactRefs(List.of("/temporalAssessment/maturities/0"),ids));
+        assertEquals(List.of("/profiles/1/detail"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/1/detail"),ids));
+        assertEquals(List.of("/profiles/9/detail/riskAssessment"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/9/detail/riskAssessment"),ids));
     }
     @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
         explainEmpty=true;var report=prepare();
@@ -345,6 +366,8 @@ class ServicePreparationTest {
         server.createContext("/v1/chat/completions",x->{
             modelCalls.incrementAndGet();String request=new String(x.getRequestBody().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(request.contains("独特服务准备方法"));assertTrue(request.contains(digest));assertTrue(request.contains("核实资金"));
+            assertTrue(request.contains("factRefs必须逐字复制输入factIds中的叶路径"));
+            assertTrue(request.contains("不得缩写为父对象路径"));
             String generated=HarnessJson.mapper().writeValueAsString(Map.of(
                 "communicationFocus",List.of(Map.of("text","结合已核实资产事实准备沟通","factRefs",List.of("/customer/totalAssets"))),
                 "preparationAdvice",List.of(Map.of("text","先向客户确认当前服务目标","factRefs",List.of("/customer/totalAssets"))),
