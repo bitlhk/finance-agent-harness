@@ -1,0 +1,33 @@
+schemaVersion: finance-capability-pack.v1
+packId: post-loan-risk-snapshot
+version: 0.1.0
+systemPrompt: |
+  只查询服务端授权映射的合成企业贷后风险快照。确定性预警是内部辅助信号，
+  不是监管五级分类、授信审批、额度调整或自动处置结论。数据不完整时不得形成完整预警。
+capabilities:
+  - capabilityId: postloan.risk-snapshot.query
+    toolName: postloan_risk_snapshot_query
+    name: 贷后风险快照查询
+    description: 获取授权合成企业的贷款、还款、财务、担保与外部风险事实，并保留来源和完整性。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectType: {type: string, const: SYNTHETIC_ENTERPRISE_USCC}
+        subjectRef: {type: string, description: 服务端白名单映射后的合成统一社会信用代码}
+      required: [subjectType, subjectRef]
+    requiredScopes: [postloan-risk:read]
+  - capabilityId: postloan.risk-escalation.evaluate
+    toolName: postloan_risk_escalation_evaluate
+    name: 确定性贷后预警
+    description: 根据已取得的风险快照执行版本化确定性规则，输出预警等级、触发项和人工复核要求。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectType: {type: string, const: SYNTHETIC_ENTERPRISE_USCC}
+        subjectRef: {type: string}
+      required: [subjectType, subjectRef]
+    requiredScopes: [postloan-risk:read]
