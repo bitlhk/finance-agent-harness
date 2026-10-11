@@ -118,9 +118,20 @@ final class FraudVerificationTask implements AutoCloseable {
         for(String field:List.of("summary","evidenceInterpretation"))for(JsonNode item:value.path(field)){
             if(!item.isObject()||!item.path("text").isTextual()||!item.path("factRefs").isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
             item.path("factRefs").forEach(ref->{if(!allowed.contains(ref.asText())||facts.at(ref.asText()).isMissingNode())throw new IllegalArgumentException("UNKNOWN_FACT_REF");});
-            String text=item.path("text").asText();if(text.contains("允许转账")||text.contains("安全对象")||text.contains("诈骗概率"))throw new IllegalArgumentException("UNSAFE_EXPLANATION");
+            String text=item.path("text").asText();if(text.contains("允许转账")||text.contains("安全对象")||unsafeProbabilityClaim(text))throw new IllegalArgumentException("UNSAFE_EXPLANATION");
         }
         for(String field:List.of("pendingItems","reviewChecklist"))if(!value.path(field).isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
+    }
+    private static boolean unsafeProbabilityClaim(String text){
+        int from=0;
+        while((from=text.indexOf("诈骗概率",from))>=0){
+            int clauseStart=from;
+            while(clauseStart>0&&"，。；、\n".indexOf(text.charAt(clauseStart-1))<0)clauseStart--;
+            String prefix=text.substring(clauseStart,from);
+            if(prefix.chars().noneMatch(value->"不未非禁避".indexOf(value)>=0))return true;
+            from+="诈骗概率".length();
+        }
+        return false;
     }
     synchronized ObjectNode review(String caller,String id,int revision,String opinion)throws Exception{
         ObjectNode report=read(caller,id);if(revision!=report.path("reportRevision").asInt())throw new IllegalStateException("REPORT_VERSION_CONFLICT");
