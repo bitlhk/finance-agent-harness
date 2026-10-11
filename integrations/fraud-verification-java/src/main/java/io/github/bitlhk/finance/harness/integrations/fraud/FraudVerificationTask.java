@@ -92,14 +92,16 @@ final class FraudVerificationTask implements AutoCloseable {
                 if(!selection.subjectRef().equals(facts.path("subjectRef").asText())||!FraudMiningProvider.FRAUD_SOURCE_CINO.equals(facts.path("subjectType").asText()))
                     throw new SecurityException("RESULT_SUBJECT_MISMATCH");
                 facts.put("purpose",selection.purpose());
+                if(facts.path("signals").isArray())facts.put("sourceSignalCount",facts.path("signals").size());
                 report.set("facts",facts.deepCopy());report.put("verificationStatus",facts.path("verificationStatus").asText("VERIFICATION_INCOMPLETE"));
                 report.put("queryComplete",facts.path("queryComplete").asBoolean(false));report.put("evidenceAsOf",result.asOf().toString());
-                List<String> refs=new ArrayList<>();collect(facts,"",refs,300);report.set("factRefs",HarnessJson.mapper().valueToTree(refs));
+                ObjectNode modelFacts=modelFacts(facts);List<String> refs=new ArrayList<>();collect(modelFacts,"",refs,300);
+                report.set("factRefs",HarnessJson.mapper().valueToTree(refs));
                 report.put("status","PARTIAL");report.put("explanationStatus","RUNNING");persist(report);listener.stage("FACTS_READY",report.deepCopy());
                 try{
                     synchronized(this){current(selection,run);}modelCalls.incrementAndGet();
-                    ObjectNode explanation=generator.generate(method,selection.purpose(),List.copyOf(refs),facts.deepCopy());
-                    validate(explanation,refs,facts);synchronized(this){current(selection,run);}
+                    ObjectNode explanation=generator.generate(method,selection.purpose(),List.copyOf(refs),modelFacts.deepCopy());
+                    validate(explanation,refs,modelFacts);synchronized(this){current(selection,run);}
                     report.set("modelExplanation",explanation);report.put("explanationStatus","READY");report.put("status","READY_FOR_REVIEW");
                 }catch(Exception failure){
                     if(failure instanceof SecurityException)throw failure;
@@ -195,6 +197,19 @@ final class FraudVerificationTask implements AutoCloseable {
     }
     private static String hash(byte[] bytes)throws Exception{return "sha256:"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}
     private static long modified(Path p){try{return Files.getLastModifiedTime(p).toMillis();}catch(Exception e){return 0;}}
+    static ObjectNode modelFacts(ObjectNode source){ObjectNode copy=source.deepCopy();pruneEmptyContainers(copy);return copy;}
+    private static void pruneEmptyContainers(JsonNode node){
+        if(node==null||!node.isContainerNode())return;
+        if(node.isArray())node.forEach(FraudVerificationTask::pruneEmptyContainers);
+        else{
+            List<String> remove=new ArrayList<>();
+            node.fields().forEachRemaining(entry->{
+                JsonNode child=entry.getValue();pruneEmptyContainers(child);
+                if(child.isContainerNode()&&child.isEmpty())remove.add(entry.getKey());
+            });
+            remove.forEach(((ObjectNode)node)::remove);
+        }
+    }
     private static void collect(JsonNode node,String path,List<String> refs,int limit){if(refs.size()>=limit||node==null||node.isNull())return;if(node.isValueNode()){if(!path.isBlank())refs.add(path);return;}if(node.isArray()){for(int i=0;i<node.size();i++)collect(node.path(i),path+"/"+i,refs,limit);}else node.fields().forEachRemaining(e->collect(e.getValue(),path+"/"+e.getKey().replace("~","~0").replace("/","~1"),refs,limit));}
     @Override public synchronized void close(){closed=true;selected=null;activeRun=null;}
 }

@@ -15,7 +15,8 @@ import java.util.*;
 final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.ExplanationGenerator {
     static final String FACT_REFERENCE_INSTRUCTION = "factRefs 只能逐字选择输入 factIds 中列出的叶字段路径；"
             + "空数组、空对象及其容器路径不属于可引用事实，不得引用。"
-            + "没有来源信号时，不得引用 signals，应改用 factIds 中已有的查询范围、完整性和来源字段说明结论。";
+            + "sourceSignalCount 为宿主根据来源 signals 确定性计算的数量；数量为0时如需说明无来源信号，"
+            + "只能引用 /sourceSignalCount，不得引用 signals。";
     private final ReActAgent agent;
     OpenJiuwenFraudReportGenerator(String provider,String key,String base,String model){
         agent=new ReActAgent(AgentCard.builder().id("fraud-risk-verification-report").name("电诈风险核验辅助报告")
