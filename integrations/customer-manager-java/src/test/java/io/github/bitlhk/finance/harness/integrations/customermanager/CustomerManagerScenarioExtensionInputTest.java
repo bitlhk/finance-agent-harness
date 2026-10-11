@@ -31,4 +31,15 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals("手机银行",values.get("channel"));
         assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
+
+    @Test void pendingProductFlowContinuesForParametersButYieldsToExplicitPreparation() {
+        assertTrue(CustomerManagerScenarioExtension.shouldUseProductFlow(
+                CustomerManagerDialogue.Action.PREPARE,true,"手机银行"));
+        assertTrue(CustomerManagerScenarioExtension.shouldUseProductFlow(
+                CustomerManagerDialogue.Action.PRODUCT_REVIEW,false,"为周明远筛选产品"));
+        assertEquals(false,CustomerManagerScenarioExtension.shouldUseProductFlow(
+                CustomerManagerDialogue.Action.PREPARE,true,"先不推荐产品，帮我准备周明远的回访"));
+        assertEquals(false,CustomerManagerScenarioExtension.shouldUseProductFlow(
+                CustomerManagerDialogue.Action.CANCEL_PRODUCT,true,"取消产品筛选"));
+    }
 }

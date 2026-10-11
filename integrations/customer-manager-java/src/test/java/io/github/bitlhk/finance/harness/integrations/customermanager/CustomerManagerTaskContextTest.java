@@ -49,6 +49,30 @@ class CustomerManagerTaskContextTest {
         assertTrue(find(firstCustomer,"riskAssessment.level").isMissingNode());
     }
 
+    @Test void labeledCorrectionsUpdateBothAmountsAndInvalidateAnImpossibleRemainder() {
+        JsonNode first=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "讨论100万元，12个月内可能用30万元");
+        JsonNode second=CustomerManagerTaskContext.update(first,
+                "讨论总额100万元改为120万元，流动需求维持40万元");
+        assertEquals(1200000,find(second,"visit.discussionAmount").path("value").asDouble());
+        assertEquals(400000,find(second,"visit.liquidityAmount").path("value").asDouble());
+        assertEquals(800000,find(second,"visit.remainingDiscussionAmount").path("value").asDouble());
+        JsonNode conflicting=CustomerManagerTaskContext.update(second,
+                "总额仍为120万元，流动需求改为150万元");
+        assertTrue(find(conflicting,"visit.remainingDiscussionAmount").isMissingNode());
+        assertEquals("CONFLICT",find(conflicting,"visit.amountConflict").at("/verification/status").asText());
+        assertTrue(conflicting.path("questions").get(0).asText().contains("金额冲突"));
+    }
+
+    @Test void liquidityTimingAndRemainingFundsHorizonStayIndependent() {
+        JsonNode first=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "12个月内可能使用30万元");
+        JsonNode clarified=CustomerManagerTaskContext.update(first,
+                "12个月仅指流动用款时点，剩余资金期限从未提供");
+        assertEquals(12,find(clarified,"visit.liquidityTimingMonths").path("value").asInt());
+        assertEquals("UNKNOWN",find(clarified,"visit.remainingHorizonMonths").at("/completeness/status").asText());
+    }
+
     private static JsonNode find(JsonNode context,String key) {
         for(JsonNode fact:context.path("facts"))if(key.equals(fact.path("key").asText()))return fact;
         return context.path("missing");
