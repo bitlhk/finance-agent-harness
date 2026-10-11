@@ -15,6 +15,12 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FraudVerificationTaskTest {
+    @Test void modelPromptRequiresExactLeafReferencesAndRejectsEmptyContainers(){
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("逐字选择输入 factIds"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("空数组、空对象"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("不得引用 signals"));
+    }
+
     @TempDir Path temp;
     HttpServer server;
     final java.util.concurrent.CountDownLatch slowEntered=new java.util.concurrent.CountDownLatch(1);
