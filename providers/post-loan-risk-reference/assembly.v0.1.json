@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "post-loan-risk-reference", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-post-loan-risk-reference:0.1.0-SNAPSHOT",
+  "connectionKind": "post-loan-risk-readonly.v1",
+  "supports": [{
+    "pack": {"id": "post-loan-risk-snapshot", "version": "0.1.0"},
+    "capabilityIds": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+    "operation": "QUERY"
+  }]
+}

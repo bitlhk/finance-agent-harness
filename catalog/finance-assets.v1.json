@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.12",
+  "catalogVersion": "0.2.13",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -98,6 +98,13 @@
       "version": "0.1.0",
       "displayName": "电诈风险核验辅助",
       "source": "repo://profiles/fraud-investigation.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "post-loan-risk-review",
+      "version": "0.1.0",
+      "displayName": "贷后风险核验辅助",
+      "source": "repo://profiles/post-loan-risk-review.md",
       "governanceRef": "finance-harness-core"
     },
     {
@@ -272,6 +279,17 @@
         "runtimeFamilies": ["openjiuwen"],
         "runtimeLanguages": ["java"]
       }
+    },
+    {
+      "id": "post-loan-risk-verification",
+      "version": "0.1.0",
+      "displayName": "贷后风险核验辅助",
+      "profile": "post-loan-risk-review",
+      "source": "repo://domain-packs/risk/post-loan-risk-verification",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "dependencies": [{"kind":"capability-pack","id":"post-loan-risk-snapshot","version":"0.1.0"}],
+      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
     },
     {
       "id": "transfer-anti-fraud",
@@ -632,6 +650,15 @@
       }
     },
     {
+      "id": "post-loan-risk-snapshot",
+      "version": "0.1.0",
+      "displayName": "贷后风险快照与确定性预警",
+      "source": "repo://capability-packs/post-loan-risk-snapshot",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+    },
+    {
       "id": "cashflow-readonly",
       "version": "0.1.0",
       "displayName": "摘要与分类趋势只读能力（候选）",
@@ -804,6 +831,15 @@
       }
     },
     {
+      "id": "post-loan-risk-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "贷后风险合成参考 Provider",
+      "source": "repo://providers/post-loan-risk-reference",
+      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles":["post-loan-risk-review"]}
+    },
+    {
       "id": "customer-crm-readonly",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "客户经理 CRM 只读 Provider",
@@ -929,7 +965,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-11.fraud-risk-verification-mvp-1",
+  "catalogRevision": "2026-10-11.post-loan-risk-verification-mvp-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

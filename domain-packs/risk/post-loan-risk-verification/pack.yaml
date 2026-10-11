@@ -1,0 +1,18 @@
+schemaVersion: finance-domain-pack.v1
+packId: post-loan-risk-verification
+version: 0.1.0
+profile: post-loan-risk-review
+capabilities: [postloan.risk-snapshot.query, postloan.risk-escalation.evaluate]
+capabilityPackRefs:
+  - {id: post-loan-risk-snapshot, version: 0.1.0}
+skills:
+  - directory: post-loan-risk-verification
+    entry: skills/post-loan-risk-verification/SKILL.md
+scope:
+  - 授权合成企业风险快照与确定性预警
+  - 模型辅助解释、人工复核和不可变历史回放
+outOfScope:
+  - 监管五级分类、授信审批、额度调整或自动处置
+  - 真实客户、真实资金和外部写操作
+sourceReferences:
+  - employee-agent/post-loan-risk-control-assistant@1.2.1
