@@ -1,9 +1,12 @@
 package io.github.bitlhk.finance.harness.core.spi;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.github.bitlhk.finance.harness.core.observation.ObservationRun;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /** Optional managed-Host scenario extension. Builder owns lifecycle and identity; extensions own domain actions. */
 public interface ManagedScenarioExtensionV01 {
@@ -19,7 +22,17 @@ public interface ManagedScenarioExtensionV01 {
     }
 
     record Context(Path artifactRoot, Path privateStateRoot, String buildId,
-                   String instanceId, String ownerRef, ModelConnection model) {}
+                   String instanceId, String ownerRef, ModelConnection model,
+                   Supplier<ObservationRun> currentObservation) {
+        public Context {
+            Objects.requireNonNull(currentObservation);
+        }
+
+        public Context(Path artifactRoot, Path privateStateRoot, String buildId,
+                       String instanceId, String ownerRef, ModelConnection model) {
+            this(artifactRoot, privateStateRoot, buildId, instanceId, ownerRef, model, () -> null);
+        }
+    }
 
     interface Session extends AutoCloseable {
         @FunctionalInterface interface EventSink {

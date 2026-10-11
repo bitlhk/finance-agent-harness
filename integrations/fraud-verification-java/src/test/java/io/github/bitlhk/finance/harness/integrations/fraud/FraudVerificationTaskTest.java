@@ -2,6 +2,7 @@ package io.github.bitlhk.finance.harness.integrations.fraud;
 
 import com.sun.net.httpserver.HttpServer;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.observation.*;
 import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
 import io.github.bitlhk.finance.harness.providers.fraud.FraudMiningProvider;
 import org.junit.jupiter.api.*;
@@ -56,6 +57,33 @@ class FraudVerificationTaskTest {
             var replay=task.replay("owner",report.path("reportId").asText(),initial);
             assertEquals(0,replay.path("replayEvidence").path("businessProviderCalls").asInt());assertEquals(0,replay.path("replayEvidence").path("modelGenerationCalls").asInt());
         }
+    }
+    @Test void verificationUsesTheHostRequestObservationScope()throws Exception{
+        var events=new ArrayList<ObservationEventV01>();
+        var run=new ObservationRun("request","boot","instance",events::add);
+        var source=new FraudMiningProvider(new FraudMiningProvider.Config(
+                URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var provider=new io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider(
+                source,FraudMiningProvider.PROVIDER_ID,()->run);
+        var methodFile=temp.resolve("observed.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","需人工核验");summary.putArray("factRefs").add("/verificationStatus");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","查询已完成");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("observed-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+        }
+        var capability=events.stream().filter(event->"capability".equals(event.component())&&"query".equals(event.operation())).toList();
+        assertEquals(2,capability.size());
+        assertEquals(ObservationEventV01.Phase.START,capability.getFirst().phase());
+        assertEquals(ObservationEventV01.Phase.END,capability.getLast().phase());
+        assertEquals(ObservationEventV01.Outcome.RETURNED,capability.getLast().outcome());
+        assertEquals(FraudMiningProvider.RISK_EVIDENCE_QUERY,capability.getLast().links().get("capabilityId"));
     }
     @Test void authorityRevisionChangeRejectsReadAndLateCommit()throws Exception{
         var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));

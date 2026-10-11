@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.integrations.fraud;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
+import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
 import io.github.bitlhk.finance.harness.providers.fraud.FraudMiningProvider;
 import java.nio.file.*;
@@ -24,7 +25,7 @@ final class FraudVerificationTask implements AutoCloseable {
     private record Selection(long generation,String alias,String subjectRef,String purpose,String mappingRevision) {}
 
     private final String owner;
-    private final FraudMiningProvider provider;
+    private final FinanceProvider provider;
     private final Supplier<FraudSubjectMapping> mappings;
     private final ExplanationGenerator generator;
     private final InstalledPreparationMethod method;
@@ -36,7 +37,7 @@ final class FraudVerificationTask implements AutoCloseable {
     private String activeRun;
     private boolean closed;
 
-    FraudVerificationTask(String owner,FraudMiningProvider provider,Supplier<FraudSubjectMapping> mappings,
+    FraudVerificationTask(String owner,FinanceProvider provider,Supplier<FraudSubjectMapping> mappings,
             ExplanationGenerator generator,InstalledPreparationMethod method,Path records,Map<String,String> assets) throws Exception {
         this.owner=Objects.requireNonNull(owner);this.provider=Objects.requireNonNull(provider);
         this.mappings=Objects.requireNonNull(mappings);this.generator=Objects.requireNonNull(generator);
