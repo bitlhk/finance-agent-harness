@@ -235,14 +235,16 @@ public final class ServicePreparation implements AutoCloseable {
                     modelStage.set("MODEL_STREAM");
                     ObjectNode generated = generator.generateStreaming(method, s.goal(), List.copyOf(ids), generationContext.deepCopy(), delta -> {
                         modelStage.set("STREAM_DELTA_VALIDATION");
-                        validateDelta(delta, ids, generationContext, s.goal());
+                        ReportDelta normalized=normalizeDeltaFactRefs(delta,ids);
+                        validateDelta(normalized, ids, generationContext, s.goal());
                         firstDeltaAt.compareAndSet(null,Instant.now().toString());provisionalDeltas.incrementAndGet();
                         modelStage.set("MODEL_STREAM");
-                        try { listener.reportDelta(delta); }
+                        try { listener.reportDelta(normalized); }
                         catch (RuntimeException failure) { throw failure; }
                         catch (Exception failure) { throw new ListenerFailure(failure); }
                     });
                     modelStage.set("FINAL_OUTPUT_VALIDATION");
+                    normalizeGeneratedFactRefs(generated,ids);
                     validateGenerated(generated, ids, generationContext, s.goal());
                     report.set("modelSuggestion", generated.deepCopy());
                     report.put("explanationStatus","READY");
@@ -261,6 +263,8 @@ public final class ServicePreparation implements AutoCloseable {
                     String reason=modelFailureReason(failure),stage=modelFailureStage(failure,modelStage.get());
                     modelDiagnostics.put("status","FAILED");modelDiagnostics.put("stage",stage);
                     modelDiagnostics.put("failureReasonCode",reason);modelDiagnostics.put("completedAt",Instant.now().toString());
+                    String validationDetail=modelValidationDetail(failure,reason);
+                    if(validationDetail!=null)modelDiagnostics.put("validationDetail",validationDetail);
                     modelDiagnostics.put("provisionalDeltaCount",provisionalDeltas.get());
                     modelDiagnostics.put("discardedProvisionalDeltaCount",provisionalDeltas.get());
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
@@ -662,7 +666,7 @@ public final class ServicePreparation implements AutoCloseable {
                         ||!value.path("factRefs").isArray()||value.path("factRefs").isEmpty())
                     throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
                 Set<String> refs=new HashSet<>();value.path("factRefs").forEach(refsNode->refs.add(refsNode.asText()));
-                if(!ids.containsAll(refs))throw new IllegalArgumentException("UNKNOWN_FACT_REF");
+                if(!ids.containsAll(refs))throw unknownFactRef(refs,ids);
             }
         }
         for(String section:List.of("pendingItems","reviewChecklist")) {
@@ -683,7 +687,7 @@ public final class ServicePreparation implements AutoCloseable {
         boolean evidenced=Set.of("communicationFocus","preparationAdvice").contains(delta.section());
         if (evidenced && (delta.factRefs().isEmpty() || !ids.containsAll(delta.factRefs()))
                 || !evidenced && !delta.factRefs().isEmpty())
-            throw new IllegalArgumentException("UNKNOWN_FACT_REF");
+            throw unknownFactRef(new LinkedHashSet<>(delta.factRefs()),ids);
         String allowed=facts.toString()+" "+goal;
         var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
@@ -698,12 +702,53 @@ public final class ServicePreparation implements AutoCloseable {
     }
     static void validateTemporalSemantics(String text,JsonNode facts) {
         String compact=text.replaceAll("\\s+","");
-        if(!compact.contains("即将到期")&&!compact.contains("临近到期")&&!compact.contains("快到期"))return;
         JsonNode maturities=facts.path("temporalAssessment").path("maturities");
         boolean future=false;
         for(JsonNode item:maturities)
             if("NOT_PAST_DUE".equals(item.path("effectiveStatus").asText()))future=true;
-        if(!future&&!maturities.isEmpty())throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT");
+        if(future||maturities.isEmpty())return;
+        for(String marker:List.of("即将到期","临近到期","快到期")) {
+            for(int at=compact.indexOf(marker);at>=0;at=compact.indexOf(marker,at+marker.length()))
+                if(!negatedTemporalMention(compact,at))throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT:"+marker);
+        }
+    }
+    private static boolean negatedTemporalMention(String text,int markerAt) {
+        int boundary=-1;
+        for(char value:new char[]{'。','；',';','！','!','？','?','，',','})boundary=Math.max(boundary,text.lastIndexOf(value,markerAt-1));
+        String prefix=text.substring(boundary+1,markerAt);
+        for(String denial:List.of("不得表述为","不能表述为","不可表述为","不应表述为","不要表述为","避免表述为",
+                "不得描述为","不能描述为","不可描述为","不得称为","不能称为","不可称为","不要说成",
+                "不是","并非","并不是","不属于","不应","不可","不能","不得","禁止","严禁"))
+            if(prefix.endsWith(denial))return true;
+        return false;
+    }
+    private static ReportDelta normalizeDeltaFactRefs(ReportDelta delta,List<String> ids) {
+        return new ReportDelta(delta.section(),delta.text(),normalizeFactRefs(delta.factRefs(),ids));
+    }
+    private static void normalizeGeneratedFactRefs(ObjectNode generated,List<String> ids) {
+        for(String section:List.of("communicationFocus","preparationAdvice"))
+            for(JsonNode value:generated.path(section))if(value instanceof ObjectNode item&&item.path("factRefs").isArray())
+                item.set("factRefs",HarnessJson.mapper().valueToTree(normalizeFactRefs(jsonStrings(item.path("factRefs")),ids)));
+    }
+    static List<String> normalizeFactRefs(List<String> refs,List<String> ids) {
+        var normalized=new LinkedHashSet<String>();
+        for(String ref:refs) {
+            if(ids.contains(ref)){normalized.add(ref);continue;}
+            if(!safeAggregateRef(ref)){normalized.add(ref);continue;}
+            String prefix=ref+"/";
+            List<String> leaves=ids.stream().filter(value->value.startsWith(prefix)).sorted().toList();
+            if(leaves.isEmpty())normalized.add(ref);else normalized.addAll(leaves);
+        }
+        return List.copyOf(normalized);
+    }
+    private static boolean safeAggregateRef(String ref) {
+        return ref.matches("/taskContext/facts/[0-9]+")
+                ||ref.matches("/profiles/[0-9]+/detail/(portfolioSummary|riskAssessment)")
+                ||ref.matches("/temporalAssessment/maturities/[0-9]+");
+    }
+    private static IllegalArgumentException unknownFactRef(Set<String> refs,List<String> ids) {
+        List<String> unknown=refs.stream().filter(ref->!ids.contains(ref)).sorted().limit(8).toList();
+        return new IllegalArgumentException("UNKNOWN_FACT_REF:"+String.join(",",unknown)+";allowed="+ids.size());
     }
     private static ObjectNode deterministicFallback(JsonNode facts) {
         ObjectNode fallback=HarnessJson.mapper().createObjectNode();
@@ -783,6 +828,15 @@ public final class ServicePreparation implements AutoCloseable {
                 "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID").contains(reason))return "FINAL_OUTPUT_VALIDATION";
         if("STREAM_DELIVERY_FAILED".equals(reason))return "STREAM_DELIVERY";
         return current==null?"UNKNOWN":current;
+    }
+    private static String modelValidationDetail(Throwable failure,String reason) {
+        if(!Set.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT","TEMPORAL_STATUS_CONFLICT")
+                .contains(reason))return null;
+        for(Throwable current=failure;current!=null;current=current.getCause()) {
+            String message=current.getMessage();
+            if(message!=null&&message.contains(reason))return message.length()>600?message.substring(0,600):message;
+        }
+        return reason;
     }
     @Override public synchronized void close() { closed=true;generation++;selected=null;activeRun=null;access.close(); }
 }
