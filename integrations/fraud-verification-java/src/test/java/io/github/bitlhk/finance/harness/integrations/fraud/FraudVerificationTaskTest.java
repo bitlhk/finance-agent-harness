@@ -18,7 +18,61 @@ class FraudVerificationTaskTest {
     @Test void modelPromptRequiresExactLeafReferencesAndRejectsEmptyContainers(){
         assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("逐字选择输入 factIds"));
         assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("空数组、空对象"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("/sourceSignalCount"));
         assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("不得引用 signals"));
+    }
+
+    @Test void modelFactProjectionRemovesEmptyContainersButKeepsDeterministicSignalCount(){
+        var facts=HarnessJson.mapper().createObjectNode();
+        facts.putArray("signals");facts.put("sourceSignalCount",0);
+        facts.putObject("emptyObject");facts.putObject("scope").putArray("reasons");
+        facts.withObject("scope").put("complete",true);
+        var projected=FraudVerificationTask.modelFacts(facts);
+        assertFalse(projected.has("signals"));assertFalse(projected.has("emptyObject"));
+        assertFalse(projected.path("scope").has("reasons"));assertTrue(projected.path("scope").path("complete").asBoolean());
+        assertEquals(0,projected.path("sourceSignalCount").asInt());
+    }
+
+    @Test void completeNoMatchUsesScalarSignalCountAndStillRejectsEmptyContainerReference()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("no-match.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("未命中对象","SYN-CINO-CLEAR-001")),
+                (m,p,refs,facts)->{
+                    assertFalse(facts.has("signals"));assertEquals(0,facts.path("sourceSignalCount").asInt());
+                    assertTrue(refs.contains("/sourceSignalCount"));assertFalse(refs.contains("/signals"));
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","完整查询范围内未命中已知记录。");summary.putArray("factRefs").add("/queryComplete");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源信号数量为0。");evidence.putArray("factRefs").add("/signals");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("no-match-reports"),Map.of())){
+            long generation=task.select("owner","未命中对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals(0,report.path("facts").path("sourceSignalCount").asInt());
+            assertTrue(report.path("facts").path("signals").isArray());
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertEquals("PARTIAL",report.path("status").asText());
+        }
+    }
+
+    @Test void completeNoMatchAcceptsDeterministicSignalCountReference()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("no-match-valid.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("未命中对象","SYN-CINO-CLEAR-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","授权对象在已知记录源中完成查询，未命中已知记录。");summary.putArray("factRefs").add("/subjectRef").add("/queryComplete");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源信号数量为0，不构成安全结论。");evidence.putArray("factRefs").add("/sourceSignalCount");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("no-match-valid-reports"),Map.of())){
+            long generation=task.select("owner","未命中对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("READY",report.path("explanationStatus").asText());
+            assertEquals("READY_FOR_REVIEW",report.path("status").asText());
+        }
     }
 
     @TempDir Path temp;
