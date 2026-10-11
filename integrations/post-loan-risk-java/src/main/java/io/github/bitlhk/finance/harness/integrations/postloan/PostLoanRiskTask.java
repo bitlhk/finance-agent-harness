@@ -109,7 +109,8 @@ final class PostLoanRiskTask implements AutoCloseable {
                     report.set("modelExplanation",explanation);report.put("explanationStatus","READY");report.put("status","READY_FOR_REVIEW");
                 }catch(Exception failure){
                     if(failure instanceof SecurityException)throw failure;
-                    report.put("explanationStatus","FAILED");report.put("status","PARTIAL");report.put("failureCode","REPORT_MODEL_FAILED");
+                    report.put("explanationStatus","FAILED");report.put("status","PARTIAL");
+                    report.put("failureCode",failureCode(failure));report.put("failureStage",failureStage(failure));
                     report.putArray("missingEvidence").add("核验解释未完整生成；确定性风险事实与查询完整性已保留");
                 }
             }
@@ -117,6 +118,23 @@ final class PostLoanRiskTask implements AutoCloseable {
         }catch(SecurityException stale){
             synchronized(this){ObjectNode discarded=report.deepCopy();discarded.remove(List.of("facts","providerResult","modelExplanation"));discarded.put("status","DISCARDED");persist(discarded);}throw stale;
         }
+    }
+    private static String failureCode(Exception failure){
+        return switch(String.valueOf(failure.getMessage())){
+            case "MODEL_REPORT_EMPTY","MODEL_REPORT_INVALID"->"REPORT_MODEL_PARSE_FAILED";
+            case "INVALID_EXPLANATION","INVALID_EXPLANATION_ITEM"->"REPORT_MODEL_SCHEMA_REJECTED";
+            case "UNKNOWN_FACT_REF"->"REPORT_MODEL_FACT_REF_REJECTED";
+            case "UNSAFE_EXPLANATION"->"REPORT_MODEL_SAFETY_REJECTED";
+            default->"REPORT_MODEL_FAILED";
+        };
+    }
+    private static String failureStage(Exception failure){
+        return switch(failureCode(failure)){
+            case "REPORT_MODEL_PARSE_FAILED"->"MODEL_RESPONSE_PARSE";
+            case "REPORT_MODEL_SCHEMA_REJECTED"->"MODEL_RESPONSE_SCHEMA";
+            case "REPORT_MODEL_FACT_REF_REJECTED","REPORT_MODEL_SAFETY_REJECTED"->"MODEL_RESPONSE_VALIDATION";
+            default->"MODEL_GENERATION";
+        };
     }
     private static void validate(ObjectNode value,List<String> allowed,JsonNode facts){
         Set<String> fields=Set.of("summary","evidenceInterpretation","pendingItems","reviewChecklist");

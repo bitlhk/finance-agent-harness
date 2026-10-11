@@ -34,8 +34,17 @@ class PostLoanRiskTaskTest{
   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远建设","91370000726200000X")),
     (m,p,r,f)->{var out=valid("YELLOW");out.path("summary").path(0).path("factRefs").forEach(n->{});((com.fasterxml.jackson.databind.node.ArrayNode)out.path("summary").path(0).path("factRefs")).removeAll().add("/unknown");return out;},method,temp.resolve("refs"),Map.of())){
    var report=task.verify("owner",task.select("owner","鸿远建设","核验"),PostLoanRiskTask.Listener.NONE);
-   assertEquals("PARTIAL",report.path("status").asText());assertTrue(report.has("facts"));assertEquals("REPORT_MODEL_FAILED",report.path("failureCode").asText());
+   assertEquals("PARTIAL",report.path("status").asText());assertTrue(report.has("facts"));assertEquals("REPORT_MODEL_FACT_REF_REJECTED",report.path("failureCode").asText());assertEquals("MODEL_RESPONSE_VALIDATION",report.path("failureStage").asText());
+   }
   }
+ @Test void latestCompleteStreamingSnapshotWinsOverEarlierDeltas()throws Exception{
+  String complete="""
+    {"summary":[{"text":"企业主体与快照来源一致。","factRefs":["/subjectRef"]}],
+     "evidenceInterpretation":[{"text":"逾期35天。","factRefs":["/domains/overdueDays"]}],
+     "pendingItems":["核实最新快照"],"reviewChecklist":["人工复核"]}
+    """;
+  var parsed=OpenJiuwenPostLoanReportGenerator.parseRenderedChunks(List.of("{\"summary\":",complete));
+  assertEquals("企业主体与快照来源一致。",parsed.at("/summary/0/text").asText());
  }
  @Test void authorityChangeDuringGenerationDiscardsLateResult()throws Exception{
   var file=temp.resolve("LATE.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
