@@ -3,7 +3,7 @@ name: transfer-risk-explanation
 description: >-
   面向手机银行客户的转账前风险解释。读取有权查询的银行反诈回执，
   说明已知风险、当前未命中或系统不可用，不替代银行交易决定或用户确认。
-version: 0.1.1-draft.1
+version: 0.1.1-rc.1
 license: Apache-2.0
 allowed-tools: fraud_transfer_risk_assess
 metadata:

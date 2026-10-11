@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.13",
+  "catalogVersion": "0.2.14",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -259,14 +259,14 @@
     },
     {
       "id": "transfer-anti-fraud",
-      "version": "0.1.1-draft.1",
-      "displayName": "面客转账前风险解释（待审核草稿）",
+      "version": "0.1.1-rc.1",
+      "displayName": "面客转账前风险解释（发布候选）",
       "profile": "customer-self-service",
       "source": "repo://domain-packs/anti-fraud-customer",
       "governanceRef": "finance-harness-core",
       "requiresCapabilities": ["fraud.transfer-risk.assess"],
-      "dependencies": [{"kind": "capability-pack", "id": "risk-review-basics", "version": "0.1.0"}],
-      "compatibility": {"profiles": ["customer-self-service"]}
+      "dependencies": [{"kind": "capability-pack", "id": "fraud-risk-readonly", "version": "0.1.0-rc.1"}],
+      "compatibility": {"profiles": ["customer-self-service", "local-read-only", "local-simulator-task"]}
     },
     {
       "id": "cashflow-customer-self-service",
@@ -317,6 +317,19 @@
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "fraud-risk-readonly",
+      "version": "0.1.0-rc.1",
+      "displayName": "转账涉诈风险只读能力（发布候选）",
+      "source": "repo://capability-packs/fraud-risk-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["fraud.transfer-risk.assess"],
+      "compatibility": {
+        "profiles": ["customer-self-service", "local-read-only", "local-simulator-task"],
+        "runtimeFamilies": ["openjiuwen", "agentscope"],
+        "runtimeLanguages": ["java"]
+      }
+    },
     {
       "id": "curated-synthetic-wealth",
       "version": "1.1.0",
@@ -756,7 +769,9 @@
       "compatibility": {
         "profiles": [
           "internal-control",
-          "customer-self-service"
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
         ]
       }
     },
@@ -896,7 +911,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-10.antifraud-main-synchronized-candidate-3",
+  "catalogRevision": "2026-10-11.antifraud-component-admission-rc-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

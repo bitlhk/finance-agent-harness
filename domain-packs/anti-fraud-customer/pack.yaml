@@ -1,12 +1,12 @@
 schemaVersion: finance-domain-pack.v1
 packId: transfer-anti-fraud
-version: 0.1.1-draft.1
+version: 0.1.1-rc.1
 profile: customer-self-service
 capabilities:
   - fraud.transfer-risk.assess
 capabilityPackRefs:
-  - id: risk-review-basics
-    version: 0.1.0
+  - id: fraud-risk-readonly
+    version: 0.1.0-rc.1
 skills:
   - directory: transfer-risk-explanation
     entry: skills/transfer-risk-explanation/SKILL.md

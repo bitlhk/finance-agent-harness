@@ -1,4 +1,4 @@
-"""Draft asset regression; installation and inference require separate evidence."""
+"""Candidate asset regression; installation and inference require separate evidence."""
 
 import hashlib
 import json
@@ -20,13 +20,13 @@ class AntifraudDomainAssetTest(unittest.TestCase):
 
     def test_installable_customer_skill_with_query_only_tools(self):
         self.assertEqual(self.pack["packId"], "transfer-anti-fraud")
-        self.assertEqual(self.pack["version"], "0.1.1-draft.1")
+        self.assertEqual(self.pack["version"], "0.1.1-rc.1")
         self.assertEqual(self.pack["profile"], "customer-self-service")
         self.assertEqual(self.skill["metadata"]["profile"], self.pack["profile"])
         self.assertEqual(self.skill["version"], self.pack["version"])
         self.assertEqual(self.skill["allowed-tools"].split(), ["fraud_transfer_risk_assess"])
         self.assertEqual(self.pack["capabilities"], ["fraud.transfer-risk.assess"])
-        self.assertEqual(self.pack["capabilityPackRefs"], [{"id": "risk-review-basics", "version": "0.1.0"}])
+        self.assertEqual(self.pack["capabilityPackRefs"], [{"id": "fraud-risk-readonly", "version": "0.1.0-rc.1"}])
         self.assertEqual(self.pack["skills"][0]["directory"], self.skill["name"])
 
     def test_derivation_records_fixed_revision_and_existing_sources(self):
@@ -48,7 +48,7 @@ class AntifraudDomainAssetTest(unittest.TestCase):
         catalog = json.loads((ROOT / "catalog/finance-assets.v1.json").read_text(encoding="utf-8"))
         assets = [item for item in catalog["domainPacks"] if item["id"] == "transfer-anti-fraud"]
         self.assertEqual(len(assets), 2)
-        self.assertEqual({item["version"] for item in assets}, {"0.1.0", "0.1.1-draft.1"})
+        self.assertEqual({item["version"] for item in assets}, {"0.1.0", "0.1.1-rc.1"})
         for asset in assets:
             pack = yaml.safe_load((ROOT / asset["source"].removeprefix("repo://") / "pack.yaml").read_text(encoding="utf-8"))
             self.assertEqual(asset["version"], pack["version"])

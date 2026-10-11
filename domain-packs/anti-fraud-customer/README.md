@@ -1,8 +1,8 @@
-# 面客转账前风险解释（待审核草稿）
+# 面客转账前风险解释（发布候选）
 
-`transfer-anti-fraud@0.1.1-draft.1`，Profile 为 `customer-self-service`。
-本资产是方法草稿，尚未由 Harness 维护者评审合入或发布。Catalog 中的独立版本
-登记只供关联 PR 核对；Builder 的正式固定发布门禁不因本目录存在而解除。
+`transfer-anti-fraud@0.1.1-rc.1`，Profile 为 `customer-self-service`。
+本资产是发布候选，尚未由 Harness 维护者评审合入或发布。`rc.1` 明确候选语义；
+Catalog 登记与装配声明允许通用发现和静态准入，不解除 Builder 的正式固定发布门禁。
 
 原 `domain-packs/anti-fraud` 的 `0.1.0` 保持不变。
 派生基础为固定提交 `884947047fca4bf6563c0068f7cf11656ae964d3` 的原面客包及
@@ -17,8 +17,11 @@ Euphoria_Yan 于 2026-10-10 接受六项内容边界：明确账户、回执三�
 ## 安装与权限
 
 原生 Domain Installer 将 `skills/transfer-risk-explanation/SKILL.md` 安装到同一 ReActAgent。
-方法仅声明 `fraud_transfer_risk_assess`。复用的 `risk-review-basics` 能力包仍包含余额查询；
+方法仅声明 `fraud_transfer_risk_assess`，依赖独立 `fraud-risk-readonly@0.1.0-rc.1`，
+由反诈 Provider 完整覆盖；不再依赖混合余额与反诈能力的旧包。
 真正可调用范围由 Profile、宿主授权与 Provider 校验共同限定，方法文本不会授予权限。
+Catalog 另允许 `local-read-only` 与 `local-simulator-task` 使用这份客户解释方法，
+方便“创建 Agent”的受控宿主选择；方法仍仅查询风险，不因此获得 TASK 或确认权限。
 转账工具来自另一 Capability Pack，确认权属于可信 Host，均不由本专业方法授权。
 
 ## 验证边界

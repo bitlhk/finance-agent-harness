@@ -38,8 +38,10 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 
 ## 尚未证明的范围
 
-新增[面客反诈专业方法草稿](../domain-packs/anti-fraud-customer/README.md)
-以 `transfer-anti-fraud@0.1.1-draft.1` 与旧 0.1.0 并存；派生来源固定，六项内容边界
+新增[面客反诈专业方法候选](../domain-packs/anti-fraud-customer/README.md)
+以 `transfer-anti-fraud@0.1.1-rc.1` 与旧 0.1.0 并存；依赖独立只读
+`fraud-risk-readonly@0.1.0-rc.1`，Pack 与 fraud-mining Provider 均有通用装配声明。
+旧混合 risk-review-basics 保持不变，不由反诈 Provider 声称完整覆盖。派生来源固定，六项内容边界
 已由业务 Owner 接受。它仍需维护者审核与固定提交发布。安装回归不证明真实模型遵循、
 客户效果或生产授权；金融合同、Provider 与可信 Host 的交易/确认权不变。
 

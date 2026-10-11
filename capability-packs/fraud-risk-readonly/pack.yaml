@@ -1,0 +1,27 @@
+schemaVersion: finance-capability-pack.v1
+packId: fraud-risk-readonly
+version: 0.1.0-rc.1
+systemPrompt: |
+  仅查询当前主体有权查看的已知涉诈风险。使用 fraud_transfer_risk_assess 获取银行反诈回执。
+  只解释工具返回的事实、状态、来源与缺口；未命中不等于安全或获准转账。
+  系统不可用时说明无法判断，不编造风险信号，不查询余额，不执行或确认转账。
+capabilities:
+  - capabilityId: fraud.transfer-risk.assess
+    toolName: fraud_transfer_risk_assess
+    name: 转账涉诈风险查询
+    description: 查询银行反诈系统对账户或客户的已知涉诈风险结论与证据。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        accountRef:
+          type: string
+          description: 经宿主授权的待评估账户引用。
+        customerRef:
+          type: string
+          description: 经宿主授权的客户引用；账户引用缺失时使用。
+      anyOf:
+        - required: [accountRef]
+        - required: [customerRef]
+    requiredScopes: [fraud-risk:read]

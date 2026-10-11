@@ -1,5 +1,12 @@
 # fraud-mining Provider
 
+## Builder 组件准入
+
+`assembly.v0.1.json` 只声明支持 `fraud-risk-readonly@0.1.0-rc.1` 的 QUERY，
+不声称支持余额查询或整个 `risk-review-basics`。
+连接声明 `synthetic-bank-http.v1` 对应当前受控 HTTP 宿主连接，不代表生产接入验收。
+Provider 身份和 Maven 坐标仍为实际实现的 `0.1.0-SNAPSHOT`，交付须额外固定源码提交及摘要。
+
 该模块把外部反诈服务映射成 Finance Harness 的只读能力
 `fraud.transfer-risk.assess`。它属于南向 Provider，不属于 Harness Core。
 
