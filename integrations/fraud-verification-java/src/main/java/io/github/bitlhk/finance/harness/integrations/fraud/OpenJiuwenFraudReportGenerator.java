@@ -20,13 +20,15 @@ final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.Expl
         String prompt="你只能依据输入中的 installedMethod、purpose、factIds 和 facts 生成只读核验辅助报告。"
                 +"只输出一个 JSON 对象，字段严格为 summary、evidenceInterpretation、pendingItems、reviewChecklist。"
                 +"summary 与 evidenceInterpretation 是对象数组，每项只有 text 和 factRefs；factRefs 必须来自输入 factIds 且非空。"
-                +"pendingItems 与 reviewChecklist 是字符串数组。不得补造事实、身份、账户或交易结果。"
+                +"summary 最多2项，evidenceInterpretation 最多2项，pendingItems 最多3项，reviewChecklist 最多4项；"
+                +"每项 text 或字符串不超过120个中文字符，避免逐字段复述。pendingItems 与 reviewChecklist 是字符串数组。"
+                +"不得补造事实、身份、账户或交易结果。"
                 +"未命中只表示在记录的完整查询范围内未命中已知记录，不得描述为安全、低风险或允许转账。"
                 +"命中不等于认定对象实施诈骗；查询不完整时必须明确不能形成完整未命中结论。"
                 +"分数只能称为来源信号，不得称为诈骗概率。报告仅供有权人员复核，不得建议自动放行或阻断。";
         var config=ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role","system","content",prompt)))
                 .maxIterations(1).build().configureModelClient(required(provider),required(key),required(base),required(model),true);
-        config.getModelConfigObj().setTemperature(0.1);config.getModelConfigObj().setMaxTokens(700);
+        config.getModelConfigObj().setTemperature(0.1);config.getModelConfigObj().setMaxTokens(1200);
         if(model.toLowerCase(Locale.ROOT).contains("deepseek"))config.getModelConfigObj().setExtraField("thinking",Map.of("type","disabled"));
         agent.configure(config);if(!Runner.start())throw new IllegalStateException("RUNTIME_START_FAILED");
     }
