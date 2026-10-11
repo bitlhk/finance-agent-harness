@@ -49,6 +49,23 @@ class CustomerManagerTaskContextTest {
         assertTrue(find(firstCustomer,"riskAssessment.level").isMissingNode());
     }
 
+    @Test void testLabelsAndVersionMarkersDoNotBecomeRiskFacts() {
+        JsonNode context=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
+                "DOT-R41 合成测试新任务：讨论100万元，其中30万元保留流动性");
+        assertTrue(find(context,"riskAssessment.level").isMissingNode());
+        assertEquals(700000,find(context,"visit.remainingDiscussionAmount").path("value").asDouble());
+    }
+
+    @Test void explicitRiskStatementsStillRemainUnverifiedUserStatements() {
+        for(String query:java.util.List.of("风险等级R4","风险测评结果为C3","客户口述 R2")) {
+            JsonNode context=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),query);
+            JsonNode risk=find(context,"riskAssessment.level");
+            assertFalse(risk.isMissingNode(),query);
+            assertEquals("USER_STATEMENT",risk.at("/source/kind").asText(),query);
+            assertEquals("UNVERIFIED",risk.at("/verification/status").asText(),query);
+        }
+    }
+
     @Test void labeledCorrectionsUpdateBothAmountsAndInvalidateAnImpossibleRemainder() {
         JsonNode first=CustomerManagerTaskContext.update(CustomerManagerTaskContext.empty(),
                 "讨论100万元，12个月内可能用30万元");

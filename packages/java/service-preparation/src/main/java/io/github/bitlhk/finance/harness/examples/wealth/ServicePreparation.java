@@ -679,6 +679,7 @@ public final class ServicePreparation implements AutoCloseable {
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
         validateProductSemantics(generated.toString(),facts);
         validateTemporalSemantics(generated.toString(),facts);
+        validateProvenanceSemantics(generated.toString(),facts);
     }
     private static void validateDelta(ReportDelta delta, List<String> ids, JsonNode facts, String goal) {
         if (!Set.of("communicationFocus","preparationAdvice","pendingItems","reviewChecklist").contains(delta.section())
@@ -693,6 +694,7 @@ public final class ServicePreparation implements AutoCloseable {
         while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
         validateProductSemantics(delta.text(),facts);
         validateTemporalSemantics(delta.text(),facts);
+        validateProvenanceSemantics(delta.text(),facts);
     }
     static void validateProductSemantics(String text, JsonNode facts) {
         if(facts.path("productReview").path("eligibleProducts").isEmpty())return;
@@ -711,6 +713,33 @@ public final class ServicePreparation implements AutoCloseable {
             for(int at=compact.indexOf(marker);at>=0;at=compact.indexOf(marker,at+marker.length()))
                 if(!negatedTemporalMention(compact,at))throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT:"+marker);
         }
+    }
+    static void validateProvenanceSemantics(String text,JsonNode facts) {
+        String compact=text.replaceAll("\\s+","");
+        for(JsonNode fact:facts.path("taskContext").path("facts")) {
+            if(!"DETERMINISTIC_DERIVATION".equals(fact.path("source").path("kind").asText()))continue;
+            for(String rendered:renderedNumbers(fact.path("value"))) {
+                for(String clause:compact.split("[。；;！!？?，,]")) {
+                    if(!clause.contains(rendered)||!mentionsDirectStatement(clause))continue;
+                    if(!mentionsDerivation(clause))throw new IllegalArgumentException("FACT_PROVENANCE_CONFLICT:"+fact.path("key").asText());
+                }
+            }
+        }
+    }
+    private static List<String> renderedNumbers(JsonNode value) {
+        if(!value.isNumber())return List.of();
+        double number=value.asDouble();var values=new LinkedHashSet<String>();
+        if(number==Math.rint(number))values.add(Long.toString((long)number));else values.add(Double.toString(number));
+        if(number%10000==0)values.add(Long.toString((long)(number/10000))+"万");
+        return List.copyOf(values);
+    }
+    private static boolean mentionsDirectStatement(String clause) {
+        return clause.contains("客户口述")||clause.contains("客户原话")||clause.contains("客户直接提供")
+                ||clause.contains("客户直接说明")||clause.contains("均为口述")||clause.contains("均由客户提供");
+    }
+    private static boolean mentionsDerivation(String clause) {
+        return clause.contains("推导")||clause.contains("计算")||clause.contains("相减")||clause.contains("据此得出")
+                ||clause.contains("由口述得出")||clause.contains("基于口述得出");
     }
     private static boolean negatedTemporalMention(String text,int markerAt) {
         int boundary=-1;
