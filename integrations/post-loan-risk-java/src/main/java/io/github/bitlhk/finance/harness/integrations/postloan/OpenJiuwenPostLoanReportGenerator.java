@@ -39,22 +39,46 @@ final class OpenJiuwenPostLoanReportGenerator implements PostLoanRiskTask.Explan
         try{
             String input=HarnessJson.mapper().writeValueAsString(Map.of("installedMethod",Map.of("id",method.id(),"version",method.version(),"digest",method.digest(),"lockDigest",method.lockDigest(),"content",method.content()),"purpose",purpose,"factIds",refs,"facts",facts));
             var chunks=Runner.runAgentStreaming(agent,Map.of("query",input),session,null,List.of(StreamMode.OUTPUT));
-            var received=new StringBuilder();
+            var rendered=new ArrayList<String>();
             while(chunks.hasNext()){
                 Object chunk=chunks.next();
                 if(!(chunk instanceof com.openjiuwen.core.session.stream.OutputSchema output)
                         ||!"llm_output".equals(output.getType()))continue;
                 String content=render(chunk);
                 if(content.isBlank())continue;
-                if(content.startsWith(received.toString())){received.setLength(0);received.append(content);}
-                else received.append(content);
+                rendered.add(content);
             }
-            String text=received.toString().trim();
+            return parseRenderedChunks(rendered);
+        }finally{Runner.release(session);}
+    }
+    static ObjectNode parseRenderedChunks(List<String> chunks)throws Exception{
+        if(chunks.isEmpty())throw new IllegalArgumentException("MODEL_REPORT_EMPTY");
+        // Some OpenJiuwen providers emit deltas and then a complete final snapshot.
+        // Prefer the latest independently valid snapshot so earlier deltas cannot be
+        // concatenated in front of it and corrupt an otherwise valid response.
+        for(int i=chunks.size()-1;i>=0;i--){
+            ObjectNode parsed=tryParse(chunks.get(i));
+            if(parsed!=null)return parsed;
+        }
+        var received=new StringBuilder();
+        for(String content:chunks){
+            String current=received.toString();
+            if(content.startsWith(current)){received.setLength(0);received.append(content);}
+            else if(current.startsWith(content))continue;
+            else received.append(content);
+        }
+        ObjectNode parsed=tryParse(received.toString());
+        if(parsed==null)throw new IllegalArgumentException("MODEL_REPORT_INVALID");
+        return parsed;
+    }
+    private static ObjectNode tryParse(String value){
+        try{
+            String text=value.trim();
             if(text.startsWith("```json"))text=text.substring(7);else if(text.startsWith("```"))text=text.substring(3);
             if(text.endsWith("```"))text=text.substring(0,text.length()-3);
-            JsonNode value=HarnessJson.mapper().readTree(text.trim());if(!value.isObject())throw new IllegalArgumentException("MODEL_REPORT_INVALID");
-            return (ObjectNode)value;
-        }finally{Runner.release(session);}
+            JsonNode parsed=HarnessJson.mapper().readTree(text.trim());
+            return parsed instanceof ObjectNode object?object:null;
+        }catch(Exception ignored){return null;}
     }
     private static String render(Object value){
         if(value instanceof com.openjiuwen.core.session.stream.OutputSchema output)return render(output.getPayload());
