@@ -23,6 +23,8 @@ final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.Expl
                 +"summary 最多2项，evidenceInterpretation 最多2项，pendingItems 最多3项，reviewChecklist 最多4项；"
                 +"每项 text 或字符串不超过120个中文字符，避免逐字段复述。pendingItems 与 reviewChecklist 是字符串数组。"
                 +"不得补造事实、身份、账户或交易结果。"
+                +"核验对象是获得授权的合成对象，sourceSystemMeaning描述的是被查询的已知涉诈记录源；"
+                +"不得把核验对象称为已知涉诈记录、涉诈来源记录或已知风险对象。摘要应表述为对授权对象在已知涉诈记录源中查询。"
                 +"未命中只表示在记录的完整查询范围内未命中已知记录，不得描述为安全、低风险或允许转账。"
                 +"命中不等于认定对象实施诈骗；查询不完整时必须明确不能形成完整未命中结论。"
                 +"分数只能称为来源信号，不得称为诈骗概率。报告仅供有权人员复核，不得建议自动放行或阻断。";

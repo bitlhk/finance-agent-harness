@@ -1,6 +1,7 @@
 package io.github.bitlhk.finance.harness.examples.wealth;
 
 import com.sun.net.httpserver.HttpServer;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
 import io.github.bitlhk.finance.harness.integrations.employeeagent.EmployeeAgentWealthSession;
@@ -171,6 +172,19 @@ class ServicePreparationTest {
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不是即将到期，而是已过期待核实",facts));
         assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics(
                 "不得把旧状态表述为即将到期，但该产品即将到期",facts));
+    }
+    @Test void derivedAmountsCannotBeFlattenedIntoDirectCustomerStatements() throws Exception {
+        ObjectNode facts=HarnessJson.mapper().createObjectNode();
+        var context=facts.putObject("taskContext");var values=context.putArray("facts");
+        var total=values.addObject();total.put("key","visit.discussionAmount");total.put("value",1200000);
+        total.putObject("source").put("kind","USER_STATEMENT");total.putObject("verification").put("status","UNVERIFIED");
+        var remaining=values.addObject();remaining.put("key","visit.remainingDiscussionAmount");remaining.put("value",800000);
+        remaining.putObject("source").put("kind","DETERMINISTIC_DERIVATION");
+        remaining.putObject("verification").put("status","DERIVED_FROM_UNVERIFIED_INPUT");
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateProvenanceSemantics(
+                "120万元和80万元均为客户口述未核验。",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateProvenanceSemantics(
+                "120万元为客户口述；80万元依据口述金额计算得出，尚未独立核验。",facts));
     }
     @Test void approvedAggregateFactRefsExpandToLeavesButUnknownParentsRemainRejected() {
         var ids=List.of(

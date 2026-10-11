@@ -106,6 +106,24 @@ class FraudVerificationTaskTest {
             assertTrue(report.path("facts").path("knownRiskMatch").asBoolean());
         }
     }
+    @Test void knownRecordSourceCannotBePresentedAsTheSubjectsIdentity()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("subject-source.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","核验对象为合成来源中的已知涉诈记录。");summary.putArray("factRefs").add("/subjectRef");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成。");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("subject-source-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertTrue(report.path("facts").path("knownRiskMatch").asBoolean());
+        }
+    }
     @Test void authorityRevisionChangeRejectsReadAndLateCommit()throws Exception{
         var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
         var revision=new java.util.concurrent.atomic.AtomicReference<>("rev-1");

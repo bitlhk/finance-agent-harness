@@ -12,7 +12,9 @@ final class CustomerManagerTaskContext {
     private static final Pattern AGE=Pattern.compile("(\\d{1,3})\\s*岁");
     private static final Pattern MONEY=Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(万|元)");
     private static final Pattern MONTHS=Pattern.compile("(\\d+)\\s*(年|个月|月)");
-    private static final Pattern RISK=Pattern.compile("(?:口述|测评)?\\s*(C[1-5]|R[1-5])",Pattern.CASE_INSENSITIVE);
+    private static final Pattern RISK=Pattern.compile(
+            "(?<![A-Za-z0-9])(?:口述\\s*|(?:风险(?:测评)?(?:等级|结果)?|测评(?:等级|结果)?|风险承受能力)"
+            + "\\s*(?:为|是|：|:)?\\s*)([CR][1-5])(?![A-Za-z0-9])",Pattern.CASE_INSENSITIVE);
     private static final Pattern TOTAL_CORRECTION=Pattern.compile("(?:讨论总额|总额)[^，。；]{0,16}?(?:改(?:成|为)?|更正为)\\s*(\\d+(?:\\.\\d+)?)\\s*(万|元)");
     private static final Pattern TOTAL_VALUE=Pattern.compile("(?:讨论总额|总额)(?:仍|维持)?(?:为)?\\s*(\\d+(?:\\.\\d+)?)\\s*(万|元)");
     private static final Pattern LIQUID_CORRECTION=Pattern.compile("(?:流动需求|流动用款|流动资金)[^，。；]{0,16}?(?:改(?:成|为)?|更正为)\\s*(\\d+(?:\\.\\d+)?)\\s*(万|元)");

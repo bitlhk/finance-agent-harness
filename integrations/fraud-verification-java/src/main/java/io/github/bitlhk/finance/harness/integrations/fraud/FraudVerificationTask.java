@@ -119,6 +119,7 @@ final class FraudVerificationTask implements AutoCloseable {
             if(!item.isObject()||!item.path("text").isTextual()||!item.path("factRefs").isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
             item.path("factRefs").forEach(ref->{if(!allowed.contains(ref.asText())||facts.at(ref.asText()).isMissingNode())throw new IllegalArgumentException("UNKNOWN_FACT_REF");});
             String text=item.path("text").asText();if(text.contains("允许转账")||text.contains("安全对象")||unsafeProbabilityClaim(text))throw new IllegalArgumentException("UNSAFE_EXPLANATION");
+            if(confusesSubjectWithKnownRecord(text))throw new IllegalArgumentException("FRAUD_SUBJECT_SOURCE_CONFLATED");
         }
         for(String field:List.of("pendingItems","reviewChecklist"))if(!value.path(field).isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
     }
@@ -132,6 +133,11 @@ final class FraudVerificationTask implements AutoCloseable {
             from+="诈骗概率".length();
         }
         return false;
+    }
+    private static boolean confusesSubjectWithKnownRecord(String text){
+        String compact=text.replaceAll("\\s+","");
+        return compact.matches(".*(?:核验对象|该对象|对象)(?:为|是|属于)(?:合成来源中的)?(?:已知)?涉诈(?:来源)?记录.*")
+                ||compact.matches(".*(?:核验对象|该对象|对象)(?:为|是|属于)(?:已知)?风险记录.*");
     }
     synchronized ObjectNode review(String caller,String id,int revision,String opinion)throws Exception{
         ObjectNode report=read(caller,id);if(revision!=report.path("reportRevision").asInt())throw new IllegalStateException("REPORT_VERSION_CONFLICT");
