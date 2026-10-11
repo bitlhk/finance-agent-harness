@@ -41,7 +41,8 @@ class FraudVerificationTaskTest {
         var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
         return new FraudVerificationTask("owner",provider,mapping,(m,p,refs,facts)->{
             var value=HarnessJson.mapper().createObjectNode();
-            var summary=value.putArray("summary").addObject();summary.put("text","命中来源中的已知记录，需人工核验，不代表诈骗认定。");summary.putArray("factRefs").add("/verificationStatus");
+            assertTrue(refs.contains("/purpose"));assertEquals(p,facts.path("purpose").asText());
+            var summary=value.putArray("summary").addObject();summary.put("text","按本次核验目的发现来源中的已知记录，需人工复核。");summary.putArray("factRefs").add("/purpose").add("/verificationStatus");
             var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成并保留记录标签。");evidence.putArray("factRefs").add("/queryComplete");
             value.putArray("pendingItems").add("核对对象与来源记录");value.putArray("reviewChecklist").add("不得据此自动放行或阻断");return value;
         },method,temp.resolve("reports"),Map.of("provider","test"));
@@ -51,6 +52,7 @@ class FraudVerificationTaskTest {
             long generation=task.select("owner","合成核验对象甲","核验已知涉诈记录");
             var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
             assertEquals("KNOWN_RISK_MATCH",report.path("verificationStatus").asText());assertTrue(report.path("queryComplete").asBoolean());
+            assertEquals("核验已知涉诈记录",report.path("facts").path("purpose").asText());
             int initial=report.path("reportRevision").asInt();var reviewed=task.review("owner",report.path("reportId").asText(),initial,"已核对，需继续人工调查");
             assertEquals(initial+1,reviewed.path("reportRevision").asInt());assertEquals("PENDING",task.readVersion("owner",report.path("reportId").asText(),initial).path("reviewStatus").asText());
             assertEquals(List.of(initial,initial+1),task.versions("owner",report.path("reportId").asText()));
