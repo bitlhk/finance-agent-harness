@@ -43,7 +43,7 @@ class FraudVerificationTaskTest {
             var value=HarnessJson.mapper().createObjectNode();
             assertTrue(refs.contains("/purpose"));assertEquals(p,facts.path("purpose").asText());
             var summary=value.putArray("summary").addObject();summary.put("text","按本次核验目的发现来源中的已知记录，需人工复核。");summary.putArray("factRefs").add("/purpose").add("/verificationStatus");
-            var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成并保留记录标签。");evidence.putArray("factRefs").add("/queryComplete");
+            var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源分数未校准为诈骗概率，仅作人工核验线索。");evidence.putArray("factRefs").add("/queryComplete");
             value.putArray("pendingItems").add("核对对象与来源记录");value.putArray("reviewChecklist").add("不得据此自动放行或阻断");return value;
         },method,temp.resolve("reports"),Map.of("provider","test"));
     }
@@ -86,6 +86,25 @@ class FraudVerificationTaskTest {
         assertEquals(ObservationEventV01.Phase.END,capability.getLast().phase());
         assertEquals(ObservationEventV01.Outcome.RETURNED,capability.getLast().outcome());
         assertEquals(FraudMiningProvider.RISK_EVIDENCE_QUERY,capability.getLast().links().get("capabilityId"));
+    }
+    @Test void positiveFraudProbabilityClaimIsRejectedWithoutDroppingFacts()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("unsafe.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","该对象诈骗概率为76%。");summary.putArray("factRefs").add("/signals/0/modelScore");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成。");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("unsafe-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertEquals("PARTIAL",report.path("status").asText());
+            assertTrue(report.path("facts").path("knownRiskMatch").asBoolean());
+        }
     }
     @Test void authorityRevisionChangeRejectsReadAndLateCommit()throws Exception{
         var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
