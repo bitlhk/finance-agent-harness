@@ -51,13 +51,15 @@ class FraudMiningProviderTest {
                     writeJson(exchange, 200, """
                             {"code":200,"data":{"items":[{"id":1,"cino":"other","label":0,
                             "match_status":"not_matched","created_at":"2026-09-01T00:00:00"}],
-                            "total":2,"page":1,"page_size":1}}""");
+                            "total":2,"page":1,"page_size":1,"source_version":"frozen-v1",
+                            "snapshot_consistency":"FROZEN_SYNTHETIC_DATASET"}}""");
                 } else {
                     writeJson(exchange, 200, """
                             {"code":200,"data":{"items":[{"id":2,"cino":"late-match","label":1,
                             "match_status":"matched","match_confidence":0.88,"prediction_result":"fraud",
                             "prediction_score":0.7,"created_at":"2026-09-02T00:00:00"}],
-                            "total":2,"page":2,"page_size":1}}""");
+                            "total":2,"page":2,"page_size":1,"source_version":"frozen-v1",
+                            "snapshot_consistency":"FROZEN_SYNTHETIC_DATASET"}}""");
                 }
                 return;
             }
@@ -92,6 +94,14 @@ class FraudMiningProviderTest {
                 writeJson(exchange, 200, query.contains("page=1&") ? """
                         {"code":200,"data":{"items":[{"id":11,"cino":"other","label":0}],"total":2,"page":1,"page_size":1}}""" : """
                         {"code":200,"data":{"items":[{"id":12,"cino":"other","label":0}],"total":3,"page":2,"page_size":1}}""");
+                return;
+            }
+            if (query != null && query.contains("keyword=changing-version")) {
+                writeJson(exchange, 200, query.contains("page=1&") ? """
+                        {"code":200,"data":{"items":[{"id":13,"cino":"other","label":0}],"total":2,
+                        "page":1,"page_size":1,"source_version":"v1","snapshot_consistency":"SNAPSHOT"}}""" : """
+                        {"code":200,"data":{"items":[{"id":14,"cino":"other","label":0}],"total":2,
+                        "page":2,"page_size":1,"source_version":"v2","snapshot_consistency":"SNAPSHOT"}}""");
                 return;
             }
             if (query != null && query.contains("keyword=missing-evidence-metadata")) {
@@ -158,6 +168,8 @@ class FraudMiningProviderTest {
         assertEquals(List.of("MANUAL_EVIDENCE_REVIEW"), result.nextActions());
         assertFalse(result.content().contains("允许"));
         assertFalse(result.content().contains("阻断转账"));
+        assertEquals("frozen-v1", result.data().get("sourceVersion"));
+        assertTrue(result.data().get("queryScope").toString().contains("FROZEN_SYNTHETIC_DATASET"));
     }
 
     @Test
@@ -217,6 +229,15 @@ class FraudMiningProviderTest {
         assertEquals("VERIFICATION_INCOMPLETE", result.data().get("verificationStatus"));
         assertEquals(false, result.data().get("queryComplete"));
         assertTrue(result.data().get("queryScope").toString().contains("SOURCE_TOTAL_CHANGED"));
+    }
+
+    @Test
+    void sourceVersionChangeIsReportedAsIncomplete() {
+        provider = boundedProvider(1, 4, 10);
+        CapabilityResultV1 result = provider.query(evidenceRequest("changing-version", true));
+        assertEquals("VERIFICATION_INCOMPLETE", result.data().get("verificationStatus"));
+        assertEquals(false, result.data().get("queryComplete"));
+        assertTrue(result.data().get("queryScope").toString().contains("SOURCE_VERSION_CHANGED"));
     }
 
     @Test

@@ -207,6 +207,8 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         int scanned = 0;
         int pagesRead = 0;
         boolean complete = false;
+        String sourceVersion = null;
+        String snapshotConsistency = null;
         Instant newestEvidence = Instant.EPOCH;
         long deadline = System.nanoTime() + config.timeout().toNanos();
 
@@ -232,6 +234,19 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             if (expectedTotal == null) expectedTotal = total;
             else if (expectedTotal != total) {
                 completenessReasons.add("SOURCE_TOTAL_CHANGED");
+                break;
+            }
+            String pageSourceVersion = text(data, "source_version", "sourceVersion", "UNKNOWN");
+            String pageSnapshotConsistency = text(
+                    data, "snapshot_consistency", "snapshotConsistency", "NOT_GUARANTEED_BY_SOURCE");
+            if (sourceVersion == null) sourceVersion = pageSourceVersion;
+            else if (!sourceVersion.equals(pageSourceVersion)) {
+                completenessReasons.add("SOURCE_VERSION_CHANGED");
+                break;
+            }
+            if (snapshotConsistency == null) snapshotConsistency = pageSnapshotConsistency;
+            else if (!snapshotConsistency.equals(pageSnapshotConsistency)) {
+                completenessReasons.add("SOURCE_SNAPSHOT_CONSISTENCY_CHANGED");
                 break;
             }
             JsonNode items = data.path("items");
@@ -283,7 +298,8 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         queryScope.put("maxRecords", config.maxRecords());
         queryScope.put("complete", complete);
         queryScope.put("completenessReasons", List.copyOf(completenessReasons));
-        queryScope.put("snapshotConsistency", "NOT_GUARANTEED_BY_SOURCE");
+        queryScope.put("snapshotConsistency", snapshotConsistency == null
+                ? "NOT_GUARANTEED_BY_SOURCE" : snapshotConsistency);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("subjectType", FRAUD_SOURCE_CINO);
@@ -293,7 +309,7 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         data.put("queryComplete", complete);
         data.put("queryScope", Map.copyOf(queryScope));
         data.put("signals", List.copyOf(signals));
-        data.put("sourceVersion", "UNKNOWN");
+        data.put("sourceVersion", sourceVersion == null ? "UNKNOWN" : sourceVersion);
         data.put("sourceSystemMeaning", "KNOWN_FRAUD_RECORD_SOURCE");
         String content = switch (verificationStatus) {
             case "KNOWN_RISK_MATCH" -> complete
@@ -323,6 +339,12 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         if (root.path("code").asInt(500) != 200 || !root.path("data").isObject())
             throw new IllegalStateException("fraud service response does not match its contract");
         return root.path("data");
+    }
+
+    private static String text(JsonNode node, String snakeCase, String camelCase, String fallback) {
+        String value = node.path(snakeCase).asText("").trim();
+        if (value.isEmpty()) value = node.path(camelCase).asText("").trim();
+        return value.isEmpty() ? fallback : value;
     }
 
     private static CapabilityResultV1 failure(
