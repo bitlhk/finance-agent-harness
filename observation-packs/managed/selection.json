@@ -83,6 +83,14 @@
         "fraud.risk-evidence.query"
       ],
       "source": "repo://capability-packs/fraud-risk-evidence-query/observation.v0.1.json"
+    },
+    {
+      "id": "post-loan-risk-snapshot",
+      "capabilityIds": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "source": "repo://capability-packs/post-loan-risk-snapshot/observation.v0.1.json"
     }
   ]
 }
