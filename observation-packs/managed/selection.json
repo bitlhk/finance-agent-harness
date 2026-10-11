@@ -76,6 +76,13 @@
         "enterprise.application-contract.verify"
       ],
       "source": "repo://capability-packs/enterprise-application-contract-verification/observation.v0.1.json"
+    },
+    {
+      "id": "fraud-risk-evidence-query",
+      "capabilityIds": [
+        "fraud.risk-evidence.query"
+      ],
+      "source": "repo://capability-packs/fraud-risk-evidence-query/observation.v0.1.json"
     }
   ]
 }
