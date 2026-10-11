@@ -39,7 +39,10 @@ final class OpenJiuwenFraudReportGenerator implements FraudVerificationTask.Expl
             var chunks=Runner.runAgentStreaming(agent,Map.of("query",input),session,null,List.of(StreamMode.OUTPUT));
             var received=new StringBuilder();
             while(chunks.hasNext()){
-                String content=render(chunks.next());
+                Object chunk=chunks.next();
+                if(!(chunk instanceof com.openjiuwen.core.session.stream.OutputSchema output)
+                        ||!"llm_output".equals(output.getType()))continue;
+                String content=render(chunk);
                 if(content.isBlank())continue;
                 if(content.startsWith(received.toString())){received.setLength(0);received.append(content);}
                 else received.append(content);
