@@ -1,0 +1,128 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {readFileSync,mkdirSync} from 'node:fs';
+const bundle=await build({entryPoints:['browser/execution-history.js'],bundle:true,write:false,format:'esm'});
+const {executionHistory,timelineGroups,waterfallLayout,snapshotCalls,latestSnapshotRefs,recordedBusinessResults,executedCapabilityIds,executionNames,beijingDateTime,beijingDayRange,defaultHistorySpan,readableSnapshot,snapshotState,snapshotReason}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
+const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const span=(id,component,parent,start=0,extra={})=>({spanId:id,component,parentSpanId:parent,startNanos:start,durationNanos:1000000,outcome:'RETURNED',operation:'test',links:{},...extra});
+const spans=[span('root','host',null,0,{operation:'request',outcome:'COMPLETED'}),span('m1','model','root',1,{dispatch:'NOT_SENT'}),span('t1','runtime-tool','root',3,{durationNanos:90000000}),span('c1','capability','t1',4,{links:{businessStatus:'FAILED_FINAL'}}),span('http','provider-http','c1',5),span('orphan','authorization-http',null,6),span('m2','model','root',7)];
+const refs=[{callId:'call2',spanId:'m2',part:'request',state:'BODY_NOT_VERIFIED',storage:'QUEUED'},{callId:'call2',spanId:'m2',part:'response',state:'BODY_NOT_VERIFIED',storage:'QUEUED'},{callId:'unknown',spanId:'missing',part:'request',state:'FILTERED'}];
+refs[0].storageResult={state:'WRITE_FAILED',reason:'BODY_STORAGE_QUOTA'};
+const record={requestId:'r1',buildId:'agent-id',createdAt:'2026-09-14T10:00:00Z',status:'COMPLETED',complete:true,spans,snapshots:refs,gaps:[],events:Array.from({length:121},(_,sequence)=>({sequence,links:{nested:{inner:{values:['long-id-'+sequence]}}}})),display:{state:'UNAVAILABLE'}};
+const groups=timelineGroups(spans);
+assert.deepEqual(groups.groups.get('t1').map(s=>s.spanId),['c1','http']);
+assert.deepEqual(groups.other.map(s=>s.spanId),['orphan']);
+const waterfall=waterfallLayout(record);
+assert.equal(waterfall.maximum,90000003);
+assert.deepEqual(waterfall.rows.map(value=>value.spanId),['root','m1','t1','c1','http','orphan','m2']);
+assert.equal(waterfall.rows.find(value=>value.spanId==='t1').endNanos,90000003);
+assert.equal(waterfall.scopes.length,1);
+const crossClock=waterfallLayout({...record,processBootId:'boot-a',spans:[spans[0],{...spans[1],processBootId:'boot-b'}]});
+assert.equal(crossClock.scopes.length,2);assert.equal(crossClock.maximum,null);
+const malformed=[span('cycle-model','model','cycle-child'),span('cycle-child','capability','cycle-model'),span('duplicate','runtime-tool',null),span('duplicate','model',null),span('self','model','self')];
+const malformedTree=timelineGroups(malformed);
+assert.equal(malformedTree.main.length,0);assert.equal(malformedTree.invalid.size,5);assert.equal(malformedTree.other.length,5);
+assert.deepEqual(snapshotCalls(record).map(c=>c.spanId),['m1','m2','missing']);
+assert(readableSnapshot({part:'response',body:JSON.stringify({content:'<script>answer</script>',model:'test'})},esc).includes('&lt;script&gt;answer'));
+assert(readableSnapshot({body:JSON.stringify({messages:[{role:'tool',tool_call_id:'link',content:'result'}],tools:[{function:{name:'generic',parameters:{type:'object'}}}]})},esc).includes('工具结果'));
+assert.equal(snapshotState('BODY_NOT_VERIFIED'),'待读取核验');
+assert.equal(snapshotReason('BODY_QUEUE_REJECTED'),'正文写入队列拒绝接收');
+let calls=[],pending=null;
+async function api(path){calls.push(path);if(pending?.match(path))return new Promise((resolve,reject)=>{pending.resolve=resolve;pending.reject=reject;});
+ if(path.includes('/snapshots/'))return {requestId:'r1',spanId:'m2',callId:'call2',part:path.endsWith('response')?'response':'request',state:'CAPTURED',body:'{"content":"verified answer","model":"test"}',changes:[]};
+ if(path.includes('?'))return {records:[structuredClone(record)],nextCursor:path.includes('cursor=')?null:'page2',scanned:2,coverage:{status:'COMPLETE',consistency:'LIVE_KEYSET'}};
+ return structuredClone({...record,requestId:path.endsWith('/r2')?'r2':'r1'});
+}
+const view=executionHistory({api,esc,icon:()=>'',render:()=>{}});
+const click=dataset=>view.click({target:{closest:()=>({dataset})}});
+await view.refresh();assert(calls.at(-1).includes('limit=20'));assert(view.html().includes('执行时名称未记录'));
+await click({historyPage:'next'});assert(calls.at(-1).includes('cursor=page2'));
+await click({historyId:'r1'});assert(!view.html().includes('id="history-filters"'));assert(view.html().includes('history-detail'));assert(view.html().includes('90.0 ms'));assert(view.html().includes('history-bar'));assert(view.html().includes('history-step-evidence'));assert(view.html().includes('FAILED_FINAL'));
+click({historySpanSelect:'t1'});assert(view.html().includes('runtime-tool / test'));
+click({historyBack:''});assert(view.html().includes('第 2 页'));
+await click({historyId:'r1'});click({historyTab:'model'});
+const key=JSON.stringify(['m2','call2']);click({historyCall:key});
+assert(view.html().includes('正文存储配额不足'));assert(!view.html().includes('[object Object]'));
+await click({snapshotRead:''});assert(view.html().includes('verified answer'));assert(view.html().includes('BODY_NOT_VERIFIED'));assert(view.html().includes('本次正文查看结果'));
+await click({historyRefresh:''});assert(view.html().includes('verified answer'));assert(view.html().includes('aria-selected="true">模型交互'));
+pending={match:path=>path.includes('/snapshots/')};const reading=click({snapshotRead:''});click({historyPart:'response'});
+pending.resolve({state:'CAPTURED',body:'STALE_CONTENT'});await reading;pending=null;assert(!view.html().includes('STALE_CONTENT'));
+pending={match:path=>path.includes('/snapshots/')};const denied=click({snapshotRead:''});const error=Error('hidden');error.status=403;error.data={error:{code:'SNAPSHOT_VIEW_NOT_GRANTED'}};pending.reject(error);await denied;pending=null;
+assert(view.html().includes('未获正文查看授权'));assert(view.html().includes('BODY_NOT_VERIFIED'));
+click({historyPart:'request'});assert(!view.html().includes('verified answer'));
+await click({historyRefresh:''});assert(view.html().includes('未获正文查看授权'));
+click({historyTab:'technical'});assert(!view.html().includes('>120<'));click({historyEvents:'next'});assert(view.html().includes('第 2 页'));
+pending={match:path=>path.endsWith('/r1')};const opening=click({historyId:'r1'});click({historyBack:''});pending.resolve(record);await opening;pending=null;assert(view.html().includes('id="history-filters"'));
+console.log('Execution history state/structure checks passed');
+const duplicated={snapshots:[refs[0],{...refs[0],storage:'UNAVAILABLE',storageReason:'BODY_QUEUE_REJECTED'}]};
+assert.equal(latestSnapshotRefs(duplicated).length,1);assert.equal(snapshotCalls(duplicated)[0].refs[0].storage,'UNAVAILABLE');
+assert.deepEqual(recordedBusinessResults({...record,businessResults:[]}),[]);
+assert.deepEqual(recordedBusinessResults({...record,events:[{phase:'START',component:'capability',links:{businessStatus:'SUCCESS'}}]}),[]);
+assert.deepEqual(recordedBusinessResults({...record,events:[{phase:'END',component:'capability',links:{capabilityId:'evidence',businessStatus:'FAILED'}}]}),[{capabilityId:'evidence',businessStatus:'FAILED'}]);
+const naming={...record,capabilities:['installed-a','installed-b','installed-c'],requestType:'CONVERSATION_TURN',
+ display:{capabilities:[{capabilityId:'actual-a',title:'余额查询'},{capabilityId:'actual-b',title:'收支分析'}]},
+ spans:[span('actual-1','capability',null,1,{links:{capabilityId:'actual-a'}}),span('actual-2','capability',null,2,{links:{capabilityId:'actual-b'}}),span('actual-3','capability',null,3,{links:{capabilityId:'unknown-c'}})]};
+assert.deepEqual(executedCapabilityIds(naming),['actual-a','actual-b','unknown-c']);
+assert.equal(executionNames(naming,true),'余额查询 / 收支分析 · 另 1 项');
+assert(!executionNames(naming).includes('installed-a'));
+assert.equal(executionNames({...naming,spans:[],businessResults:[]}),'对话请求');
+assert.equal(executionNames({...naming,spans:[],businessResults:[],requestType:null}),'请求记录');
+assert.equal(beijingDateTime('2026-09-14T16:00:00Z'),'2026-09-15 00:00:00');
+assert.deepEqual(beijingDayRange('2026-09-15'),{createdFrom:'2026-09-14T16:00:00.000Z',createdBefore:'2026-09-15T16:00:00.000Z'});
+assert.equal(defaultHistorySpan(record).spanId,'c1');
+let revoke=false;
+const cacheView=executionHistory({esc,icon:()=>'',render:()=>{},api:async path=>{
+ if(path.includes('/snapshots/')){if(revoke){const err=Error('denied');err.status=403;err.data={error:{code:'SNAPSHOT_VIEW_NOT_GRANTED'}};throw err;}return {state:'CAPTURED',body:'CACHED-'+path};}
+ if(path.includes('?'))return {records:[],truncated:true,nextCursor:null};
+ return structuredClone({...record,requestId:path.split('/').at(-1)});
+}});
+const action=dataset=>cacheView.click({target:{closest:()=>({dataset})}});
+for(const [id,callKey] of [['r1',key],['r1',JSON.stringify(['missing','unknown'])],['r2',key]]){await action({historyId:id});action({historyTab:'model'});action({historyCall:callKey});await action({snapshotRead:''});assert(cacheView.html().includes('CACHED-'));}
+revoke=true;await action({snapshotRead:''});
+await action({historyId:'r1'});action({historyTab:'model'});action({historyCall:key});assert(!cacheView.html().includes('CACHED-'));assert(cacheView.html().includes('未获正文查看授权'));
+action({historyCall:JSON.stringify(['missing','unknown'])});assert(!cacheView.html().includes('CACHED-'));
+action({historyBack:''});await cacheView.refresh();assert(cacheView.html().includes('未提供下一页游标'));
+console.log('Global authorization cache purge, last-reference, END-only business results and cursor-less truncation negatives passed');
+if(process.argv.includes('--unit-only'))process.exit(0);
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const browserBundle=await build({entryPoints:['browser/execution-history.js'],bundle:true,write:false,format:'iife',globalName:'History'});
+const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
+const output=process.env.TEST_OUTPUT||'/tmp/finance-history-redesign-tests';mkdirSync(output,{recursive:true});
+try{
+ const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setContent('<html lang="zh-CN"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main id="app"></main></body></html>');
+ await page.addStyleTag({content:'*{box-sizing:border-box}body{margin:0;padding:16px;font-family:Arial,sans-serif}.page-title-row{display:flex;justify-content:space-between;gap:12px}h1{font-size:22px}.primary-button{background:#b32032;color:white;border:0;border-radius:4px;padding:10px}'+readFileSync('browser/execution-history.css','utf8')});
+ await page.addScriptTag({content:browserBundle.outputFiles[0].text});
+ await page.evaluate(async record=>{
+  const app=document.querySelector('#app');window.requests=[];
+  const api=async path=>{requests.push(path);if(path.includes('/snapshots/'))return {state:'CAPTURED',part:'response',requestId:'r1',callId:'call2',spanId:'m2',body:JSON.stringify({content:'Readable <script>not HTML</script>',model:'recorded-model',tool_calls:[{id:'tool-result',function:{name:'recorded_tool',arguments:'{"value":1}'}}]}),changes:[]};if(path.includes('?'))return {records:[record],nextCursor:path.includes('cursor=')?null:'second',scanned:5,coverage:{status:'COMPLETE'}};return structuredClone(record);};
+  const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+  window.view=History.executionHistory({api,esc,icon:()=>'',render:()=>{app.innerHTML=view.html();}});
+  app.addEventListener('click',view.click);app.addEventListener('submit',view.submit);await view.refresh();
+ },record);
+ for(const width of [1440,1024,390,320]){
+  await page.setViewportSize({width,height:900});await page.evaluate(()=>{view.click({target:{closest:()=>({dataset:{historyBack:''}})}});});
+  await page.locator('input[name="date"]').fill('2026-09-15');await page.locator('#history-filters .primary-button').click();
+  assert(await page.evaluate(()=>requests.at(-1).includes('createdFrom=2026-09-14T16%3A00%3A00.000Z')&&requests.at(-1).includes('createdBefore=2026-09-15T16%3A00%3A00.000Z')));
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.locator('[data-history-page="next"]').click();await page.locator('[data-history-id="r1"]').click();
+  await page.locator('[data-history-tab="model"]').click();
+  await page.locator('[data-history-call]').nth(1).click();await page.locator('[data-history-part="response"]').click();await page.locator('[data-snapshot-read]').click();
+  await page.getByText('Readable <script>not HTML</script>',{exact:true}).waitFor();
+  assert(await page.locator('#app script').count()===0);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:output+'/'+width+'-model.png',fullPage:true});
+  await page.locator('[data-history-tab="technical"]').click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:output+'/'+width+'-technical.png',fullPage:true});
+  await page.locator('[data-history-tab="process"]').click();
+  assert.equal(await page.locator('.history-water-row').count(),7);
+  assert(await page.locator('.history-bar').count()>=6);
+  await page.locator('[data-history-span-select="t1"]').click();
+  await page.getByText('runtime-tool / test',{exact:true}).waitFor();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:output+'/'+width+'-process.png',fullPage:true});
+  await page.locator('[data-history-back]').click();assert((await page.locator('.history-pagination').innerText()).includes('第 2 页'));
+  await page.locator('[data-history-page="previous"]').click();await page.screenshot({path:output+'/'+width+'-list.png',fullPage:true});
+ }
+ assert.deepEqual(errors,[]);console.log('Browser pagination/detail/model/escaping checks passed at 1440/1024/390/320; '+output);
+}finally{await browser.close();}

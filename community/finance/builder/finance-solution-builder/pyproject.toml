@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finance-solution-builder"
+version = "0.2.0"
+description = "Deterministic Finance Harness solution assembler"
+requires-python = ">=3.11.4,<3.14"
+dependencies = [
+  "finance-builder-base>=0.1.0,<0.2",
+  "jsonschema>=4.23,<5",
+  "rfc3339-validator>=0.1.4,<0.2",
+  "PyYAML>=6,<7",
+  "ag-ui-protocol==0.1.22",
+  "websockets>=14,<16",
+]
+
+[tool.uv.sources]
+finance-builder-base = { workspace = true }
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<10"]
+
+[project.scripts]
+finance-solution-builder = "finance_solution_builder.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+finance_solution_builder = ["directory.v1.json", "template-modules.v1.json", "unified-catalog.v1.json", "developer-kit-readme.md"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

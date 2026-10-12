@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "capability-pack", "id": "account-balance-readonly", "version": "0.1.0",
+    "source": "repo://capability-packs/account-balance-readonly",
+    "digest": "sha256:4db0ba8415ed048c2e452f929f58036dd2de2c224f8bed5da3151b53e87dd407"
+  },
+  "scope": {"capabilityIds": ["account.balance.query"]},
+  "methodCases": [{"name": "业务事实核验 1", "query": "请查询我的账户余额", "expectedTerms": []}],
+  "caseRefs": [{
+    "source": "repo://capability-packs/retail-banking-basics/smoke-cases.yaml",
+    "digest": "sha256:78093181f59651333dd01831c60ac881cd3c016dc99a60abe3ef9efa0f6c9939",
+    "format": "finance-capability-smoke.v1"
+  }],
+  "commands": [{
+    "name": "余额Provider：正常、指定账户、错主体、会话失效、撤权（关联smoke原文件含TASK，不自动执行或转换）",
+    "command": "mvn -B -ntp -pl providers/non-ai-banking -am '-Dtest=NonAiBankingProviderTest#sessionSubjectMismatchDoesNotReadAnyCustomerAccounts+selectedAccountUsesDedicatedEndpointAndNeverFallsBackToAnotherAccount+accountQueryCreatesSessionPropagatesTraceAndPreservesNullData+hostSessionRejectsIdentityExpiryAndSessionChangesBeforeBusinessRead+revokedSourceSessionNeverTriggersLoginRetry' -Dsurefire.failIfNoSpecifiedTests=false test",
+    "sourceCommit": "75aec9c92058088550e479bfa6af7ac7d065354e", "workingDirectory": "repo://"
+  }]
+}

@@ -1,0 +1,37 @@
+{
+  "builder": "283e6d52c813394d99a5e3806287ace9af798629",
+  "candidates": {
+    "mobile": {
+      "lockSha256": "eef82f84fb09f77cf8bd193172a2a0598bc8d0621e514c36c832ba5d652878e8",
+      "checks": 26,
+      "filesChecked": 144,
+      "buildMillis": 32778
+    },
+    "desktop": {
+      "lockSha256": "b0534fcc9ef99eabfc279dad0cf7adbcb7c299d85994eb5c36ead52ae77bc1c4",
+      "checks": 25,
+      "filesChecked": 144,
+      "buildMillis": 30555
+    },
+    "atm": {
+      "lockSha256": "1dd023ddef71a8995d88fe6308c26257f7ca0a3cd09e89178123e8b13c6fddc3",
+      "checks": 25,
+      "filesChecked": 144,
+      "buildMillis": 33718
+    },
+    "teal": {
+      "lockSha256": "b8465c410c7a4d6894c8f0fb44bdd050d48b6c6eb754152018a9a58de3ad42cc",
+      "checks": 25,
+      "filesChecked": 144,
+      "buildMillis": 30896
+    },
+    "wealth-only": {
+      "lockSha256": "4329815bf5d783dce75859ad9e193009679b2d8e9a1d2b381b91887f90b06fc4",
+      "checks": 17,
+      "filesChecked": 143,
+      "buildMillis": 30512
+    }
+  },
+  "controlledChecks": 118,
+  "status": "PASS"
+}

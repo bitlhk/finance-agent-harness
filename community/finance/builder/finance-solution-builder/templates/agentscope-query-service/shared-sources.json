@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "finance-template-shared-sources.v0.1",
+  "sourceTemplate": "local-readonly-service",
+  "javaPackage": "io/github/bitlhk/finance/builder/local",
+  "main": [
+    "LocalAgentHost.java",
+    "BankAccess.java",
+    "ModelConnections.java",
+    "TerminalSession.java",
+    "ExecutionArchive.java",
+    "ModelSnapshots.java",
+    "SnapshotContentFilter.java",
+    "SnapshotStorage.java",
+    "HostObservationAdmission.java",
+    "CollectorQualification.java",
+    "ComponentAdmission.java",
+    "DisplayProjection.java",
+    "DisplayFields.java",
+    "BusinessDisplays.java",
+    "BalanceDisplay.java",
+    "CashflowDisplay.java",
+    "WealthDisplay.java",
+    "AgUiTransport.java",
+    "HostTaskScope.java",
+    "HostTaskState.java",
+    "HostPrivateFiles.java",
+    "StructuredDisplay.java"
+  ],
+  "test": [
+    "TerminalSessionTest.java",
+    "ExecutionArchiveTest.java",
+    "ManifestArchiveTest.java",
+    "ModelSnapshotsTest.java",
+    "SnapshotStorageTest.java",
+    "SnapshotStructureTest.java",
+    "DisplayProjectionTest.java",
+    "HostTaskStateTest.java"
+  ],
+  "files": [
+    "run.py",
+    "src/main/resources/logback.xml"
+  ],
+  "excludedRuntimeSources": [
+    "NativeConversation.java",
+    "NativeRuntime.java",
+    "ObservationAdmission.java",
+    "ReadOnlyProviders.java",
+    "ReadOnlyPlanExporter.java",
+    "PythonFinanceBridge.java"
+  ]
+}

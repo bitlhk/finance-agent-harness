@@ -10,17 +10,18 @@
         <relativePath>../../../pom.xml</relativePath>
     </parent>
     <artifactId>finance-example-openjiuwen-enterprise-credit-audit</artifactId>
-    <name>Finance Example - OpenJiuwen Enterprise Credit Material Audit</name>
+    <name>Finance Example - OpenJiuwen Enterprise Credit Audit</name>
+    <description>Declarative enterprise-credit-audit solution assembled by the controlled Builder host.</description>
     <dependencies>
-        <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-openjiuwen-java</artifactId><version>${project.version}</version></dependency>
-        <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-enterprise-credit-material-audit</artifactId><version>${project.version}</version></dependency>
         <dependency>
-            <groupId>com.openjiuwen</groupId><artifactId>agent-core-java</artifactId><version>${openjiuwen.core.version}</version>
-            <exclusions><exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId></exclusion></exclusions>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>finance-harness-openjiuwen-java</artifactId>
+            <version>${project.version}</version>
         </dependency>
-        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>finance-provider-smart-audit</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
-    <build><plugins><plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.6.3</version>
-        <configuration><mainClass>io.github.bitlhk.finance.harness.examples.creditaudit.EnterpriseCreditAuditApplication</mainClass></configuration>
-    </plugin></plugins></build>
 </project>

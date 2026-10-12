@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schemaVersion", "package", "skill", "bindings", "requirements", "cases", "validation", "files"],
+  "properties": {"schemaVersion": {"const": "finance-business-component-package.v0.1"}}
+}

@@ -1,0 +1,31 @@
+- capabilityId: wealth.previsit-context.query
+  name: 查询财富经理访前上下文
+  type: TOOL
+  parentCapabilityId: agent.wealth_aggregate
+  domains: [wealth_aggregate]
+  description: >-
+    通过 Finance Harness 获取当前财富经理有权使用的客户事实、持仓、风险测评、
+    到期事项和制度摘要，为访前诊断提供已核验事实。
+  utterances:
+    - 查询客户访前上下文
+    - 准备财富客户访前资料
+  searchIntents:
+    - "财富经理访前诊断"
+    - "wealth.previsit-context.query"
+  keywords: [访前准备, 客户事实, 风险测评, 到期事项]
+  negativeBoundary: [越权查询, 产品推荐, 交易执行]
+  inputSchema:
+    type: object
+    additionalProperties: false
+    required: [customerRef]
+    properties:
+      customerRef:
+        type: string
+        minLength: 1
+  riskLevel: R1
+  timeoutMs: 20000
+  idempotency: SUPPORTED
+  version: "0.1.0"
+  status: ACTIVE
+  principalRequired: true
+  requiredPermissions: [wealth:read]

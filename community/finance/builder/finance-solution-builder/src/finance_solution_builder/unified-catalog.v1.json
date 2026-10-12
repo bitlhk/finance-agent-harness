@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "finance-unified-catalog-presentation.v1",
+  "version": "0.1.1",
+  "packs": {
+    "account-balance-readonly": {"componentId": "account.balance.query", "moduleId": "agent.account", "label": "余额查询"},
+    "wealth-facts-description": {"componentId": "wealth.facts.describe", "moduleId": "agent.wealth_aggregate", "label": "财富事实描述"},
+    "wealth-customer-context": {"componentId": "wealth-customer-context", "moduleId": "agent.wealth_aggregate", "label": "财富客户上下文查询", "scope": "查询宿主当前已授权客户的财富上下文、数据状态、缺失项与来源证据；不作产品推荐或收益承诺。"},
+    "cashflow-readonly": {"componentId": "finance.cashflow.readonly", "moduleId": "agent.finance_assistant", "label": "收支分析"},
+    "internal-transfer": {"componentId": "internal-transfer", "moduleId": "agent.transfer", "label": "行内转账"},
+    "channel-preferences": {"componentId": "channel-preferences", "moduleId": "agent.channel_settings", "label": "渠道展示偏好", "scope": "模拟银行样例：更新语言、大字、屏幕阅读器及无障碍展示偏好；银行预检并经宿主明确确认后提交，不含转账或其他渠道业务设置。"},
+    "smart-audit-personal-loan-audit": {"componentId": "smart-audit-personal-loan-audit", "moduleId": "smart-audit.personal-loan", "label": "个人贷款审核", "scope": "固定规则下的个人贷款材料核验与人工复核辅助；不产生审批决定。"},
+    "smart-audit-enterprise-credit-audit": {"componentId": "smart-audit-enterprise-credit-audit", "moduleId": "smart-audit.enterprise-credit", "label": "企业授信审核", "scope": "企业授信材料核验与人工复核辅助；不产生授信决定。"}
+  },
+  "ungroupedModule": {"id": "agent.ungrouped", "label": "未分组", "icon": "blocks", "componentIds": [], "scope": "已通过声明准入，业务分组待配置", "source": "builder://unified-catalog.v1.json", "sourceStatus": "PRESENTATION_METADATA", "directory": "ungrouped", "sourceOperations": [], "operationsEvidence": null},
+  "customTemplate": {"id": "customer-custom", "label": "自定义客户 Agent", "icon": "blocks", "audienceId": "CUSTOMER", "status": "PARTIAL", "scope": "客户本人 · 模拟银行；操作以所选能力包声明为准", "defaultModuleIds": [], "featuredModuleIds": []}
+}

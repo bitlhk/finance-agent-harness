@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "openjiuwen-python-template.v1",
+  "moduleEntrypoint": "candidate_service:main",
+  "artifactName": "candidate.pyz",
+  "pythonRequires": ">=3.11",
+  "openjiuwenVersion": "0.1.16",
+  "runtimeServiceVersion": "0.1.0",
+  "healthPath": "/health",
+  "invocationPath": "/a2a",
+  "harnessTransport": "canonical-json-http.v1"
+}

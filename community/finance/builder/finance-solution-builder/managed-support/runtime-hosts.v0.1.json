@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "finance-managed-runtime-support.v0.1",
+  "runtimes": [
+    {
+      "id": "agentscope-java-2.0.3",
+      "label": "AgentScope Java",
+      "description": "Java \u00b7 2.0.3 \u00b7 \u67e5\u8be2\u4e0e\u529e\u7406",
+      "architectureLabel": "\u539f\u751f Java Agent",
+      "family": "agentscope",
+      "language": "java",
+      "version": "2.0.3",
+      "status": "AVAILABLE",
+      "enabled": true,
+      "selectionSchemaVersion": "0.10",
+      "backendId": "agentscope-java",
+      "invocationProtocol": "finance-chat",
+      "artifactKind": "directory-manifest",
+      "runtime": {
+        "family": "agentscope",
+        "language": "java",
+        "templateRef": "maven://io.agentscope:agentscope-core:2.0.3",
+        "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-agentscope-java:0.1.0-SNAPSHOT"
+      },
+      "supportProfileSource": "builder-template://agentscope-query-service/agentscope-support.v0.1.json",
+      "hosts": [
+        {
+          "id": "agentscope-query-service",
+          "templateSource": "builder-template://agentscope-query-service",
+          "supportFile": "host-support.v0.1.json",
+          "profileRef": {"id": "local-read-only", "version": "0.1.0", "source": "repo://profiles/local-read-only.md"},
+          "presentations": ["MOBILE_WEB", "DESKTOP_WEB"],
+          "applicationTemplateIds": ["banking-readonly-web-v1"],
+          "connectionKind": "synthetic-bank-http.v1"
+        },
+        {
+          "id": "agentscope-task-service",
+          "templateSource": "builder-template://agentscope-query-service",
+          "supportFile": "task-host-support.v0.1.json",
+          "profileRef": {"id": "local-simulator-task", "version": "0.1.0", "source": "repo://profiles/local-simulator-task.md"},
+          "presentations": ["MOBILE_WEB", "DESKTOP_WEB"],
+          "applicationTemplateIds": ["banking-readonly-web-v1"],
+          "connectionKind": "synthetic-bank-http.v1"
+        }
+      ]
+    }
+  ]
+}

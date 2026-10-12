@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "smart-audit-demo-materials.v1",
+  "scenario": "personal-loan-audit",
+  "materials": [
+    {"category": "身份证", "declaredFormat": "TEXT", "content": "合成测试材料：张三，出生日期 1990-01-15，证件有效期至 2035-01-15。"},
+    {"category": "户口本", "declaredFormat": "TEXT", "content": "合成测试材料：张三本人页，姓名和出生日期与身份证一致。"},
+    {"category": "结婚证", "declaredFormat": "TEXT", "content": "合成测试材料：张三与李四，登记信息与申请表家庭信息一致。"},
+    {"category": "贷款申请表", "declaredFormat": "TEXT", "content": "合成测试申请：个人经营贷款，申请金额 500000 元，期限 120 个月，用途为流动资金，拟抵押房产已列明。"},
+    {"category": "收入证明", "declaredFormat": "TEXT", "content": "合成测试收入证明：申请人近 12 个月税前月收入 28000 元，单位持续经营。"},
+    {"category": "流水明细", "declaredFormat": "TEXT", "content": "合成测试流水：近 12 个月每月工资入账 26000 至 29000 元，收入连续，无异常大额资金流入。"},
+    {"category": "个人所得税完税证明", "declaredFormat": "TEXT", "content": "合成测试个税证明：2025 年累计应税收入 336000 元，纳税状态正常。"},
+    {"category": "社会保险参保证明", "declaredFormat": "TEXT", "content": "合成测试社保证明：连续参保 60 个月，缴费基数 28000 元。"},
+    {"category": "不动产权证书", "declaredFormat": "TEXT", "content": "合成测试不动产权证书：张三单独所有，住宅建筑面积 98 平方米，权属清晰。"},
+    {"category": "不动产信息查询结果", "declaredFormat": "TEXT", "content": "合成测试不动产查询：未发现查封、冻结或其他优先权利限制。"},
+    {"category": "贷款结清证明", "declaredFormat": "TEXT", "content": "合成测试结清证明：原按揭贷款已于 2025-10-31 结清，无未偿余额。"}
+  ]
+}

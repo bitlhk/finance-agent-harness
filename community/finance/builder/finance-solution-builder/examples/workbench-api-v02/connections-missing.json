@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "finance-workbench-api.v0.2",
+  "connections": [
+    {
+      "id": "configured-model",
+      "kind": "MODEL",
+      "secretRef": "host-secret://model/local",
+      "configurationStatus": "MISSING",
+      "missingFields": [
+        "FH_MODEL_URL",
+        "FH_MODEL_NAME",
+        "FH_MODEL_KEY"
+      ],
+      "invalidFields": [],
+      "connectivityStatus": "NOT_CHECKED",
+      "authorizationStatus": "RUNTIME_CHECK_REQUIRED",
+      "modelName": null,
+      "executionMode": "CONFIGURED_MODEL"
+    },
+    {
+      "id": "local-simulator",
+      "kind": "BANK",
+      "secretRef": "host-secret://bank/local",
+      "configurationStatus": "MISSING",
+      "missingFields": [
+        "FH_BANK_URL",
+        "FH_BANK_LOGIN",
+        "FH_BANK_SECRET",
+        "FH_ACCESS_POLICY"
+      ],
+      "invalidFields": [],
+      "connectivityStatus": "NOT_CHECKED",
+      "authorizationStatus": "RUNTIME_CHECK_REQUIRED"
+    }
+  ],
+  "networkRequests": 0,
+  "inspectionMode": "LOCAL_CONFIGURATION_ONLY"
+}

@@ -1,0 +1,40 @@
+schemaVersion: finance-domain-pack.v1
+packId: smart-audit-enterprise-credit-audit
+version: 0.1.0
+profile: internal-control
+capabilities:
+  - smartaudit.enterprise.financial-report.query
+  - smartaudit.enterprise.financial-summary.query
+  - smartaudit.enterprise.transaction-analysis.query
+  - smartaudit.enterprise.transaction-report.query
+  - smartaudit.enterprise.due-diligence.query
+capabilityPackRefs:
+  - id: smart-audit-enterprise-credit-audit
+    version: 0.1.0
+skills:
+  - directory: financial-report
+    entry: skills/financial-report/SKILL.md
+  - directory: financial-summary
+    entry: skills/financial-summary/SKILL.md
+  - directory: transaction-analysis
+    entry: skills/transaction-analysis/SKILL.md
+  - directory: transaction-report
+    entry: skills/transaction-report/SKILL.md
+  - directory: due-diligence
+    entry: skills/due-diligence/SKILL.md
+scope:
+  - 企业财报单表的分类合规、逻辑自洽、勾稽关系和异常风险审核
+  - 盈利、偿债、运营和发展四板块财务概述
+  - 客户资料与流水的资料归集、事实核验、异常与人工复核关注点
+  - 流水透视、异常事实与人工复核关注点
+  - 企业授信尽调报告、资料缺口和原有章节顺序
+outOfScope:
+  - 外部 Skill 服务、HTTP、MCP、Python、脚本或独立进程调用
+  - 贷款或授信审批、写回、资金操作、确认或任何 TASK
+  - 将单项任务材料自动作为另一项任务的权威结论
+sourceReferences:
+  - smart-audit-source@b397bfc07dbf9b7a02d7a84322f1891eab2ddbcf
+evaluationPackRef:
+  id: smart-audit-enterprise-credit
+  version: 1.0.0
+  source: git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-enterprise-credit

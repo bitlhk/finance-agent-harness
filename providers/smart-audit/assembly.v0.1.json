@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "smart-audit-model-provider", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-smart-audit:0.1.0-SNAPSHOT",
+  "connectionKind": "in-process-smart-audit.v1",
+  "supports": [
+    {
+      "pack": {"id": "smart-audit-personal-loan-audit", "version": "0.1.0"},
+      "capabilityIds": [
+        "smartaudit.personal.borrower-qualification.query",
+        "smartaudit.personal.income-verification.query",
+        "smartaudit.personal.asset-liability.query",
+        "smartaudit.personal.repayment-capacity.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {"id": "smart-audit-enterprise-credit-audit", "version": "0.1.0"},
+      "capabilityIds": [
+        "smartaudit.enterprise.financial-report.query",
+        "smartaudit.enterprise.financial-summary.query",
+        "smartaudit.enterprise.transaction-analysis.query",
+        "smartaudit.enterprise.transaction-report.query",
+        "smartaudit.enterprise.due-diligence.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.dev/schemas/finance-component-development-support.v0.1.schema.json",
+  "title": "Optional component development support, not execution evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "subject", "scope", "methodCases", "caseRefs", "commands"],
+  "properties": {
+    "schemaVersion": {"const": "finance-component-development-support.v0.1"},
+    "subject": {"$ref": "#/$defs/subject"},
+    "scope": {"$ref": "#/$defs/scope"},
+    "methodCases": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/case"}},
+    "caseRefs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/caseRef"}},
+    "commands": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/command"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 200},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source": {"type": "string", "pattern": "^repo://[A-Za-z0-9_-][A-Za-z0-9_./-]*$"},
+    "subject": {
+      "description": "Immutable asset reference. Pack digest uses the existing sorted relative-path/NUL/content/NUL tree SHA-256; metadata is outside that tree.",
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "id", "version", "source", "digest"],
+      "properties": {
+        "kind": {"enum": ["capability-pack", "domain-pack", "provider", "runtime-integration", "profile", "component"]},
+        "id": {"$ref": "#/$defs/text"}, "version": {"$ref": "#/$defs/text"},
+        "source": {"$ref": "#/$defs/source"}, "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "scope": {
+      "description": "Conjunctive constraints. Omitted environment fields are generic; unresolved required fields never match.",
+      "type": "object", "additionalProperties": false,
+      "required": ["capabilityIds"],
+      "properties": {
+        "capabilityIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "runtimeId": {"$ref": "#/$defs/text"}, "integratorId": {"$ref": "#/$defs/text"},
+        "profileId": {"$ref": "#/$defs/text"}, "hostId": {"$ref": "#/$defs/text"},
+        "testDataId": {"$ref": "#/$defs/text"}
+      }
+    },
+    "case": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "query", "expectedTerms"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 80},
+        "query": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "expectedTerms": {"type": "array", "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 120, "pattern": "\\S"}}
+      }
+    },
+    "caseRef": {
+      "description": "Raw file SHA-256 and explicit original format; no implicit conversion to methodCases.",
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "digest", "format"],
+      "properties": {"source": {"$ref": "#/$defs/source"}, "digest": {"$ref": "#/$defs/digest"}, "format": {"$ref": "#/$defs/text"}}
+    },
+    "command": {
+      "description": "Display only. Never executed by a consumer of this declaration.",
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "command", "sourceCommit", "workingDirectory"],
+      "properties": {
+        "name": {"$ref": "#/$defs/text"},
+        "command": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "sourceCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "workingDirectory": {"type": "string", "pattern": "^repo://([A-Za-z0-9_-][A-Za-z0-9_./-]*)?$"}
+      }
+    }
+  }
+}

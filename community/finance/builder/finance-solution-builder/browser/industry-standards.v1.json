@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "finance-studio-industry-references.v1",
+  "title": "业界标准",
+  "boundary": "以下为设计参考，不代表产品认证或整体符合性声明。26 个业务模块来自项目目录，不由这些标准规定，也不与标准条目一一对应。",
+  "references": [
+    {
+      "id": "bian-service-landscape",
+      "title": "BIAN Service Landscape",
+      "version": "14.0",
+      "category": "行业架构参考",
+      "purpose": "参考银行服务域的分类与组织方式，辅助讨论业务边界。",
+      "boundary": "不规定本项目的 26 个模块，也不直接定义 Harness 能力或安装组合。",
+      "verification": "已核实官方版本与分类用途；未开展逐域映射",
+      "verifiedAt": "2026-09-10",
+      "url": "https://bian.org/deliverables/service-landscape/"
+    },
+    {
+      "id": "iso20022-business-model",
+      "title": "ISO 20022 Business Model",
+      "version": "在线业务模型（未固定仓库快照）",
+      "category": "业务语义参考",
+      "purpose": "参考业务概念、关系及数据字典的表达方法，辅助金融数据映射。",
+      "boundary": "具体字段仍需核对来源合同与业务口径；本页不声明字段符合性或报文认证。",
+      "verification": "已核实官方模型说明；未逐字段核验",
+      "verifiedAt": "2026-09-10",
+      "url": "https://www.iso20022.org/iso20022-repository/business-model"
+    },
+    {
+      "id": "gbt27926-1",
+      "title": "GB/T 27926.1-2021",
+      "version": "2021；对应 ISO 20022-1:2013",
+      "category": "推荐性国家标准",
+      "purpose": "金融服务 金融业通用报文方案 第1部分：元模型；作为国内采用国际建模方法的依据。",
+      "boundary": "仅核实官方条目与等同采标关系，未核验全文条款；不据此声称本项目符合标准。",
+      "verification": "条目与采标关系已核实；全文条款未核实",
+      "verifiedAt": "2026-09-10",
+      "url": "https://std.samr.gov.cn/gb/search/gbDetailed?id=C8394B1AA0EF4558E05397BE0A0A8876"
+    },
+    {
+      "id": "wcag",
+      "title": "WCAG",
+      "version": "2.2",
+      "category": "Web 可访问性参考",
+      "purpose": "参考页面重排、键盘操作、焦点及触控目标等通用 Web 要求。",
+      "boundary": "不是 ATM 硬件或银行专用标准；局部 UI 检查不等于整站符合 WCAG。",
+      "verification": "已核实官方规范；本产品整体符合性未评估",
+      "verifiedAt": "2026-09-10",
+      "url": "https://www.w3.org/TR/WCAG22/"
+    }
+  ]
+}

@@ -1,0 +1,324 @@
+[
+  {
+    "runtime": "java",
+    "combination": 7,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "4fbb44a9b9c5226e94c76ef819ce2b7c7eaa43d528833cb58d501d549f822377",
+    "filesVerified": 167,
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "candidate": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-7/candidate"
+  },
+  {
+    "runtime": "python",
+    "combination": 7,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "ad49307ecdb8b4eef02c0446e7939ed117d77c0d96acbcf796b409c78c6536dd",
+    "filesVerified": 348,
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "candidate": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-7/candidate"
+  },
+  {
+    "runtime": "java",
+    "combination": 1,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "a735432ea7115c71dbda95fcc3a0fc066876aac1457de16af287aee3a2af3f2d",
+    "filesVerified": 161,
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-1.tar.gz",
+    "archiveSha256": "4c1b4f08b133be17ae8255cbed6a5365b0bcc9a18b286f96a6aff263e01c0033",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 1,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "a6b5497f3f54d3b9f54c8b55f48b58c22d3796a622b008b009fbb22168a39086",
+    "filesVerified": 342,
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-1.tar.gz",
+    "archiveSha256": "69369ddb94fd4385fa40d28f986bc7a58fa0226fa253614c6f50312ca9c7a7a0",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "java",
+    "combination": 2,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "685b222f69ed44c81904a9da786fd59a11edb904c7da2be64d70bc44075da10a",
+    "filesVerified": 163,
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-2.tar.gz",
+    "archiveSha256": "87cd5dcab5b97af28637645e2df58bd395d0dafc879af3fa2f9731860c3bed8c",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 2,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "365d4a3d20466c3ece91a9b1edbfce1fdc7c8cb17154c710a1913048ea4981d4",
+    "filesVerified": 344,
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-2.tar.gz",
+    "archiveSha256": "23bce15164ad3af327143eae1914f0863e414662787f5d93e8e3b66021400298",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "java",
+    "combination": 3,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "914b675ae376dd52c5eeb30f42de26496cb000060c78689fd5b9a6594ba61425",
+    "filesVerified": 164,
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-3.tar.gz",
+    "archiveSha256": "267ce788d958842a48475d29dc5aebfb8cd6f91a981e4c7ab8b6994869e875d2",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 3,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "37627cbd1bd4714ebb54c98edacb0dbc82da8bbf66ad735df210e12e040e0859",
+    "filesVerified": 345,
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-3.tar.gz",
+    "archiveSha256": "a1a24bd6a978f6b3bdc8c2d1c2332885e3d4fb25063a0358a44488f1219e0266",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "java",
+    "combination": 4,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "46beb9d93b8a179b85682327e8f8d3f67dbafd9960d8b2cdccf7788daa8aec9d",
+    "filesVerified": 163,
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-4.tar.gz",
+    "archiveSha256": "5f052e0b996154aa4c0aad4cddcfa6f92a37895043cea92c2e9891e51d474e52",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 4,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "80274eec9b4b302b03bb82b2f74863ab8b7a00a6f2a4d6bd6ec0454ef5c699a1",
+    "filesVerified": 344,
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-4.tar.gz",
+    "archiveSha256": "213a65c686b681daaf0e295a9b7cb951d1be6668c2fb83e0f4968bd55a6a948f",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "java",
+    "combination": 5,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "7a9d17b1dd9c21d6ea0a01f55ae97fdcc0197b7ce711d87a1c8369a33b06ca83",
+    "filesVerified": 164,
+    "capabilities": [
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-5.tar.gz",
+    "archiveSha256": "c440d859fd03d77415aa6be3ff35441b3a317d5eb3d802e2b39bec30b41197b0",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 5,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "f27ed3b279b4a33087ca75d9286efe618c7d5351dbeef0aa7a3d86fcbc61d564",
+    "filesVerified": 345,
+    "capabilities": [
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-5.tar.gz",
+    "archiveSha256": "fbe266004647ba1c97f8ca1a4010a44a6734660bb9dde4cd9ee3a5edd86fed9d",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "java",
+    "combination": 6,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "36e26fd497065cdbd990e82d092332db2b750f115ae13c17bf501155bd3e6dc0",
+    "filesVerified": 166,
+    "capabilities": [
+      "wealth.facts.describe",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/java-6.tar.gz",
+    "archiveSha256": "c0624d52b450ba4a7fd2c7f16310a96c933d428dd6841a996b3a7f9547c0d72e",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  },
+  {
+    "runtime": "python",
+    "combination": 6,
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c1c24f2ec22ec8b9f906502c07def807ddadc099",
+        "worktreeDirty": false
+      }
+    },
+    "lockSha256": "53c71c03f0cbff52d7a0ca1c2d2ca2edc238e7888de6361f99620bbc622f3c0d",
+    "filesVerified": 347,
+    "capabilities": [
+      "wealth.facts.describe",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "archive": "/home/ubuntu/outputs/python-model-snapshots-v01/matrix-final/python-6.tar.gz",
+    "archiveSha256": "25d1d233e0ef53afe2d71f97d1b87918c341e0334b958dd862c73dc8ec03fd41",
+    "environment": "RECREATE_WITH_PREPARE_PYTHON"
+  }
+]

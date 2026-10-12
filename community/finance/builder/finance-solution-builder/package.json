@@ -1,0 +1,18 @@
+{
+  "name": "finance-studio-browser-transport",
+  "private": true,
+  "scripts": {
+    "build:ui": "node browser/build-ui.mjs",
+    "build:transport": "esbuild browser/ag-ui.js --bundle --minify --format=iife --global-name=FinanceAgUi --outfile=examples/local-workbench/ag-ui.js"
+  },
+  "dependencies": {
+    "@ag-ui/client": "0.0.59",
+    "dompurify": "3.4.15",
+    "elkjs": "0.10.0",
+    "lucide": "0.468.0",
+    "marked": "18.0.11"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

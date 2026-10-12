@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "finance-workbench-api.v0.2",
+  "buildId": "agent-interface-example",
+  "buildStatus": "SUCCEEDED",
+  "selection": {
+    "extension_type": "finance-workbench.selection",
+    "schema_version": "0.2",
+    "runtimeId": "openjiuwen-java-0.1.15",
+    "applicationTemplateId": "banking-readonly-web-v1",
+    "modelConnectionId": "configured-model",
+    "bankConnectionId": "local-simulator",
+    "capabilityIds": [
+      "account.balance.query",
+      "wealth.facts.describe"
+    ]
+  },
+  "selectionOrigin": "V02_REQUEST",
+  "stages": [
+    {
+      "id": "harness_contracts",
+      "status": "SUCCEEDED",
+      "elapsedMillis": 100,
+      "error": null
+    },
+    {
+      "id": "harness_tests_install",
+      "status": "SUCCEEDED",
+      "elapsedMillis": 100,
+      "error": null
+    },
+    {
+      "id": "candidate_package",
+      "status": "SUCCEEDED",
+      "elapsedMillis": 100,
+      "error": null
+    }
+  ],
+  "error": {
+    "code": "INSTANCE_START_FAILED",
+    "retryable": false
+  },
+  "artifact": {
+    "artifactId": "sha256:81beff161548ee32b0d502a194c444817a98439bb8fb7fa218529cf869da50c7",
+    "lockSha256": "81beff161548ee32b0d502a194c444817a98439bb8fb7fa218529cf869da50c7",
+    "verification": "MANIFEST_MATCHED_FILES_RECHECKED_AT_START"
+  },
+  "instance": {
+    "instanceId": null,
+    "status": "FAILED",
+    "artifactId": "sha256:81beff161548ee32b0d502a194c444817a98439bb8fb7fa218529cf869da50c7",
+    "sessionId": null
+  },
+  "sources": {},
+  "createdAtEpochSeconds": 1788692400,
+  "capabilities": {
+    "selected": [
+      "account.balance.query",
+      "wealth.facts.describe"
+    ],
+    "installationEvidence": "RETURNED_BY_SESSION_CREATION"
+  },
+  "links": {
+    "self": "/api/v1/builds/agent-interface-example",
+    "artifact": "/api/jobs/agent-interface-example/artifact",
+    "agentPage": null
+  },
+  "verification": {
+    "realModel": "NOT_ASSERTED_BY_BUILD",
+    "realBankAuthorization": "NOT_RUN",
+    "agUi": "NOT_IMPLEMENTED",
+    "humanOnboarding": "NOT_RUN"
+  }
+}

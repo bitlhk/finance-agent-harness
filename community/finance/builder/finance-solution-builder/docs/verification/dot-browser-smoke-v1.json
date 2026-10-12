@@ -1,0 +1,443 @@
+{
+  "schemaVersion": "finance-dot-browser-regression.v1",
+  "mode": "smoke",
+  "origin": "https://finance-harness.demo.linggan.top/",
+  "cases": [
+    {
+      "caseId": "BROWSER-001",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "account.balance.query"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-002",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "wealth.facts.describe"
+      ],
+      "expectedCapabilityIds": [
+        "wealth.facts.describe"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-003",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "wealth-customer-context"
+      ],
+      "expectedCapabilityIds": [
+        "wealth.customer-context.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-004",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "finance.cashflow.readonly"
+      ],
+      "expectedCapabilityIds": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-005",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "internal-transfer"
+      ],
+      "expectedCapabilityIds": [
+        "transfer.internal.create"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-006",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "channel-preferences"
+      ],
+      "expectedCapabilityIds": [
+        "channel.preferences.update"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-007",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "account.balance.query",
+        "wealth.facts.describe",
+        "wealth-customer-context",
+        "finance.cashflow.readonly",
+        "internal-transfer",
+        "channel-preferences"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query",
+        "channel.preferences.update",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "transfer.internal.create",
+        "wealth.customer-context.query",
+        "wealth.facts.describe"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-008",
+      "runtimeId": "openjiuwen-java-0.1.15",
+      "componentIds": [
+        "account.balance.query",
+        "wealth.facts.describe",
+        "wealth-customer-context",
+        "finance.cashflow.readonly"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "wealth.customer-context.query",
+        "wealth.facts.describe"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-009",
+      "runtimeId": "openjiuwen-python-0.1.18",
+      "componentIds": [
+        "account.balance.query"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-010",
+      "runtimeId": "openjiuwen-python-0.1.18",
+      "componentIds": [
+        "wealth.facts.describe"
+      ],
+      "expectedCapabilityIds": [
+        "wealth.facts.describe"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-011",
+      "runtimeId": "openjiuwen-python-0.1.18",
+      "componentIds": [
+        "finance.cashflow.readonly"
+      ],
+      "expectedCapabilityIds": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-012",
+      "runtimeId": "openjiuwen-python-0.1.18",
+      "componentIds": [
+        "account.balance.query",
+        "wealth.facts.describe",
+        "finance.cashflow.readonly"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "wealth.facts.describe"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-013",
+      "runtimeId": "agentscope-java-2.0.3",
+      "componentIds": [
+        "account.balance.query"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-014",
+      "runtimeId": "agentscope-java-2.0.3",
+      "componentIds": [
+        "finance.cashflow.readonly"
+      ],
+      "expectedCapabilityIds": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-015",
+      "runtimeId": "agentscope-java-2.0.3",
+      "componentIds": [
+        "internal-transfer"
+      ],
+      "expectedCapabilityIds": [
+        "transfer.internal.create"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "caseId": "BROWSER-016",
+      "runtimeId": "agentscope-java-2.0.3",
+      "componentIds": [
+        "account.balance.query",
+        "finance.cashflow.readonly",
+        "internal-transfer"
+      ],
+      "expectedCapabilityIds": [
+        "account.balance.query",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "transfer.internal.create"
+      ],
+      "steps": [
+        "preflight",
+        "assemble",
+        "build",
+        "launch",
+        "query_each_selected_card",
+        "task_preview_cancel_only",
+        "inspect_record_twice_without_execution",
+        "stop",
+        "delete_created_agent",
+        "reload_and_verify_absence"
+      ],
+      "status": "NOT_RUN"
+    }
+  ],
+  "maxConcurrentAgents": 1,
+  "automaticRetries": 0,
+  "allowBusinessCommit": false,
+  "deleteOnlyAgentsCreatedByThisRun": true,
+  "stopBatchOnCleanupFailure": true,
+  "operatorInputs": [
+    "releaseCommit",
+    "modelRef",
+    "approvedSyntheticIdentity",
+    "businessMonth",
+    "approvedSyntheticTransferPreviewArguments",
+    "approvedPreferencePreviewValue"
+  ],
+  "resultFields": [
+    "caseId",
+    "status",
+    "buildId",
+    "selectedCapabilities",
+    "installedTools",
+    "requestIds",
+    "recordIds",
+    "observedToolCalls",
+    "businessOutcome",
+    "screenshots",
+    "replayAddedCalls",
+    "stopStatus",
+    "deleteStatus",
+    "cleanupRemainingIds",
+    "failureStage",
+    "failureReason"
+  ],
+  "limitations": [
+    "Manifest is not executed evidence.",
+    "Full means all declared card subsets, not all model inputs.",
+    "TASK commit is excluded unless separately approved.",
+    "Unavailable browser observability is NOT_OBSERVED, never zero."
+  ]
+}

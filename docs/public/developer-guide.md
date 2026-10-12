@@ -88,6 +88,12 @@ Builder 与套件工程支撑的虚线表示“装配与验证集成”；实际
 
 当前只读工作台支持 **OpenJiuwen Java 0.1.15 与 Python 0.1.18（通过 Java 金融桥）**，详见第 13 章。EA 数据 Provider 表示 Java Agent 可读取受管 EA 数据，不等于 EA TypeScript 宿主已接入 Java Harness。其他 Runtime、其他银行系统需要开发和单独验收，不能把可扩展位置当产品承诺。
 
+### 6.2 已迁入的智能信贷审核场景
+
+“信贷授信”板块包含两个彼此隔离的任务场景：**个人贷款审核辅助**（4 项 QUERY 能力）与**企业授信审核辅助**（5 项 QUERY 能力）。两者仅接收 OCR 转写后的 TEXT/JSON 材料，输出规则核验、证据、资料缺口和人工复核事项；不发起审批、不生成授信额度、不写回银行系统，也不提供 TASK。
+
+它们的 Profile 是 `internal-control`，由受管 Host 固定员工身份、材料主体、会话、用途和 scope；模型与浏览器都不能自行改选能力、规则版本或权限。个人贷款场景还把固定规则基线作为候选工程资产并在运行前核验。迁入清单、代码位置、验收和新场景复用流程见[智能审核场景迁入指南](smart-audit-scenario-migration.md)。
+
 ### 2.2 从开发内容到可运行 Agent
 
 ![开发交付图：开发者交内容与实现，Packager形成组件，Builder构建应用，Host调用Assembler安装](diagrams/development.svg)

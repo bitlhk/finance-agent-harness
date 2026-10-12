@@ -1,0 +1,35 @@
+schemaVersion: finance-capability-pack.v1
+packId: cashflow-readonly
+version: 0.1.0
+systemPrompt: |
+  Use the installed cashflow tools only for authorized account cashflow facts.
+  An absolute YYYY-MM period is required. Ask when missing; never substitute a demo month.
+  Summary covers at most 100 source accounts and its BOOKED filter is not verified. Analysis preserves UNCLASSIFIED entries.
+  Disclose conflicting totals and missing classification; never repair them by guessing.
+  Credit-card statement balances are not additional cashflow. Do not combine currencies or infer missing facts.
+  These tools cannot transfer funds, create budgets or establish fraud/suitability conclusions.
+capabilities:
+  - capabilityId: finance.transaction-summary.query
+    toolName: finance_transaction_summary
+    name: Account statement cashflow summary
+    description: Read authorized account income, expense and net cashflow for one absolute month; disclose source limits.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        period: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+      required: [period]
+    requiredScopes: [cashflow:read]
+  - capabilityId: finance.spending-analysis.query
+    toolName: finance_spending_analysis
+    name: Classified spending and trend
+    description: Read classified account cashflow and six-month trend ending at an absolute month; not a fraud decision.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        period: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+      required: [period]
+    requiredScopes: [cashflow:read]

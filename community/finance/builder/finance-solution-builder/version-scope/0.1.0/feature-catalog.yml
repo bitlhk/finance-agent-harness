@@ -1,0 +1,67 @@
+schema: speckit-feature-catalog/v1
+parent_requirement: https://gitcode.com/Euphoria_Yan/agent-store-builder-dev-wo-fork/issues/28
+mvp:
+  - FEAT-001
+  - FEAT-002
+  - FEAT-003
+  - FEAT-004
+  - FEAT-005
+  - FEAT-006
+features:
+  - id: FEAT-001
+    title: Base Solution Build Protocol
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-001.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies: []
+    delivery_order: 1
+  - id: FEAT-002
+    title: Developer Build Contract 与 Backend SPI
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-002.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies:
+      - FEAT-001
+    delivery_order: 2
+  - id: FEAT-003
+    title: OpenJiuwen Java + Finance Harness Backend
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-003.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies:
+      - FEAT-001
+      - FEAT-002
+    delivery_order: 3
+  - id: FEAT-004
+    title: 场景 Dryrun 与 Evaluation 契约
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-004.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies:
+      - FEAT-001
+    delivery_order: 2
+  - id: FEAT-005
+    title: Finance Solution Builder WebUI
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-005.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies:
+      - FEAT-001
+      - FEAT-004
+    delivery_order: 3
+  - id: FEAT-006
+    title: 手机银行反诈端到端参考场景
+    record: community/finance/builder/finance-solution-builder/version-scope/0.1.0/FEAT-006.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies:
+      - FEAT-003
+      - FEAT-004
+      - FEAT-005
+    delivery_order: 4

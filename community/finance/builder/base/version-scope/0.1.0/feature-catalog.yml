@@ -1,0 +1,13 @@
+schema: speckit-feature-catalog/v1
+parent_requirement: https://gitcode.com/Euphoria_Yan/agent-store-builder-dev-wo-fork/issues/13
+classification: architecture-evolution
+target_release: 0.1.0
+features:
+  - id: FEAT-001
+    title: 建立并验证 Builder 公共基座
+    record: community/finance/builder/base/version-scope/0.1.0/FEAT-001.md
+    status: accepted
+    priority: P0
+    mvp: true
+    dependencies: []
+    delivery_order: 1

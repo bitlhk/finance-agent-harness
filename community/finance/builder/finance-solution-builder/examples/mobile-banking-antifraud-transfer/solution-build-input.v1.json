@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "finance-agent-solution-build.v1",
+  "solutionId": "mobile-banking-antifraud-transfer-demo",
+  "displayName": "手机银行反诈转账助手",
+  "runtime": {
+    "family": "openjiuwen",
+    "language": "java",
+    "templateRef": "git+https://github.com/wuxiaojingjing/mobile-banking-3.0.git@f89c9fb2215dc4ebca169f676f96fac2d18b0e8c#agents/domain-runtime",
+    "integrationRef": "repo://integrations/openjiuwen-java"
+  },
+  "profileRef": {
+    "id": "customer-self-service",
+    "version": "0.1.0",
+    "source": "repo://domain-packs/anti-fraud"
+  },
+  "domainPackRefs": [
+    {
+      "id": "transfer-anti-fraud",
+      "version": "0.1.0",
+      "source": "repo://domain-packs/anti-fraud"
+    }
+  ],
+  "providerRefs": [
+    {
+      "id": "non-ai-banking-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "source": "repo://providers/non-ai-banking"
+    },
+    {
+      "id": "fraud-mining-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "source": "repo://providers/fraud-mining"
+    }
+  ],
+  "modelRef": "env://FINANCE_AGENT_MODEL",
+  "evaluationPackRef": {
+    "id": "anti-fraud-transfer",
+    "version": "planned",
+    "source": "repo://evaluation-packs/anti-fraud-transfer"
+  }
+}

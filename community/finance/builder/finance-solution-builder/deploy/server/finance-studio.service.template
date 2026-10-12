@@ -1,0 +1,33 @@
+[Unit]
+Description=Finance Studio authenticated single-server demo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=finance-studio
+Group=finance-studio
+WorkingDirectory=/opt/finance-studio/builder/community/finance/builder/finance-solution-builder
+Environment=HOME=/var/lib/finance-studio
+EnvironmentFile=/etc/finance-studio/model.env
+EnvironmentFile=/etc/finance-studio/runtime.env
+ExecStart=/opt/finance-studio/builder/community/finance/builder/finance-solution-builder/.venv/bin/python engineering/start_local_stack.py --harness-repo /opt/finance-studio/harness --simulator-jar /opt/finance-studio/non-ai-banking.jar --simulator-sha256 ${FH_SIMULATOR_SHA256} --bank-port 18149 --ui-port 18148 --workspace /var/lib/finance-studio/simulator --data-dir /var/lib/finance-studio/builds --public-origin https://@@DOMAIN@@ --proxy-token-file /etc/finance-studio/proxy-token --max-instances 2
+UMask=0077
+StateDirectory=finance-studio
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=60s
+KillMode=control-group
+MemoryMax=4G
+CPUQuota=200%
+Nice=5
+TasksMax=512
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/finance-studio /opt/finance-studio/harness
+
+[Install]
+WantedBy=multi-user.target

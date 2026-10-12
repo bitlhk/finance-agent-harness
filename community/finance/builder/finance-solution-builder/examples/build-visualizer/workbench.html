@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Finance Agent Builder Workbench</title>
+  <style>
+    :root {
+      --navy: #fcfcfa;
+      --navy-soft: #28282a;
+      --paper: #f6f6f4;
+      --card: #fff;
+      --ink: #262625;
+      --muted: #7d7d7c;
+      --line: #e6e6e5;
+      --green: #b8202b;
+      --mint: #faeff0;
+      --success: #397755;
+      --success-soft: #eef7f1;
+      --amber: #a96930;
+      --amber-soft: #faf4ef;
+      --shadow: 0 16px 48px rgba(28, 35, 29, .065);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      overflow: hidden;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+    button { font: inherit; }
+    code, pre { font-family: "Cascadia Code", Consolas, monospace; }
+
+    .app { height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      overflow: hidden;
+      padding: 22px 17px;
+      color: #eef8f4;
+      background: var(--navy);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: var(--navy);
+      background: #c4e6d9;
+      font-size: 19px;
+      font-weight: 900;
+    }
+    .brand b { display: block; font-size: 17px; }
+    .brand span, .side-head { color: #82b6a6; font: 10px ui-monospace; letter-spacing: 1.6px; }
+    .brand span { display: block; margin-top: 3px; }
+    .new-build {
+      padding: 11px 13px;
+      border: 1px solid #4e7b70;
+      border-radius: 10px;
+      color: #e9f5f1;
+      background: #193b47;
+      text-align: left;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .side-head { display: flex; justify-content: space-between; align-items: center; }
+    .build-list { display: grid; gap: 8px; overflow: auto; }
+    .build-item {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      color: #dbeae5;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .build-item.active { border-color: #5b8d7c; background: #23434f; }
+    .build-item b { display: block; font-size: 12px; }
+    .build-item span { display: block; margin-top: 5px; color: #91adaa; font-size: 9px; }
+    .build-item .state { display: flex; align-items: center; gap: 6px; color: #8fc7b5; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #71c4a5; }
+    .side-foot {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, .1);
+      color: #9fb6b3;
+      font-size: 10px;
+      line-height: 1.65;
+    }
+    .side-foot b { color: #dceae6; }
+
+    main {
+      min-width: 0;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 11px;
+      padding: 16px 18px;
+      overflow: hidden;
+    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+    .eyebrow { color: var(--green); font: 800 9px ui-monospace; letter-spacing: 2px; }
+    .title h1 { margin: 4px 0 2px; font-size: 25px; }
+    .title p { margin: 0; color: var(--muted); font-size: 11px; }
+    .restart {
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: var(--ink);
+      background: var(--card);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .storyline {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .story-step {
+      position: relative;
+      min-height: 64px;
+      padding: 9px 8px 8px 36px;
+      border: 1px solid #e2e6e1;
+      border-radius: 9px;
+      color: var(--ink);
+      background: #f7f7f3;
+      text-align: left;
+      cursor: pointer;
+    }
+    .story-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      top: 21px;
+      right: -10px;
+      color: #759387;
+      font-weight: 900;
+    }
+    .story-step i {
+      position: absolute;
+      top: 9px;
+      left: 8px;
+      width: 21px;
+      height: 21px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #657b76;
+      background: #e1e9e5;
+      font: 800 9px ui-monospace;
+      font-style: normal;
+    }
+    .story-step b { display: block; font-size: 10px; }
+    .story-step span { display: block; margin-top: 4px; color: var(--muted); font-size: 8.5px; line-height: 1.35; }
+    .story-step.current { border-color: var(--green); background: #edf6f2; box-shadow: 0 0 0 3px rgba(67, 134, 111, .1); }
+    .story-step.current i, .story-step.complete i { color: white; background: var(--green); }
+    .story-step.complete { border-color: #afd0c3; background: #f1f7f4; }
+    .story-step.locked { opacity: .45; cursor: not-allowed; }
+
+    .journey {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .stage-scroll { overflow: auto; padding: 20px 24px 24px; }
+    .stage-page { max-width: 1340px; margin: 0 auto; }
+    .stage-heading { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: start; }
+    .step-number {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      color: var(--green);
+      background: var(--mint);
+      font: 900 18px ui-monospace;
+    }
+    .stage-heading h2 { margin: 2px 0 5px; font-size: 22px; }
+    .stage-heading p { max-width: 850px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .phase-chip { padding: 7px 10px; border: 1px solid #bfd9cf; border-radius: 999px; color: var(--green); background: #edf6f2; font: 800 9px ui-monospace; }
+    .stage-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .guide-item { padding: 12px 15px; border-left: 4px solid var(--green); border-radius: 0 9px 9px 0; background: #f0f6f3; }
+    .guide-item.check { border-left-color: var(--amber); background: var(--amber-soft); }
+    .guide-item small { display: block; color: var(--green); font: 800 8px ui-monospace; letter-spacing: .7px; }
+    .guide-item.check small { color: #9c681f; }
+    .guide-item b { display: block; margin-top: 5px; font-size: 11px; line-height: 1.55; }
+    .section-title { margin: 22px 0 10px; font-size: 14px; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .info-card, .asset-card, .check-card, .gate-card {
+      padding: 14px;
+      border: 1px solid #dfe4df;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .info-card small, .asset-card small, .check-card small, .gate-card small, .example small {
+      display: block;
+      color: var(--green);
+      font: 800 8px ui-monospace;
+      letter-spacing: .5px;
+    }
+    .info-card b, .asset-card b, .check-card b, .gate-card b { display: block; margin-top: 5px; font-size: 12px; }
+    .info-card p, .asset-card p, .check-card p, .gate-card p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .example { margin-top: 10px; padding: 11px 12px; border-radius: 9px; background: var(--navy-soft); color: #dcebe6; }
+    .example pre { margin: 6px 0 0; white-space: pre-wrap; color: #dcebe6; font-size: 10px; line-height: 1.55; }
+
+    .asset-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .asset-group { padding: 14px; border: 1px solid #d7e0da; border-radius: 13px; background: #f7faf8; }
+    .asset-group.scene { border-color: #e4c58f; background: #fffaf0; }
+    .asset-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .asset-group-head b { display: block; font-size: 14px; }
+    .asset-group-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .asset-group-head span { flex: none; padding: 4px 8px; border-radius: 999px; color: var(--green); background: var(--mint); font-size: 9px; font-weight: 800; }
+    .asset-group.scene .asset-group-head span { color: #9b671e; background: #ffedca; }
+    .asset-grid { display: grid; gap: 9px; }
+    .asset-card { position: relative; padding-left: 50px; text-align: left; cursor: pointer; }
+    .asset-card:hover, .asset-card.selected { border-color: var(--green); box-shadow: 0 7px 20px rgba(42, 86, 71, .08); }
+    .asset-index {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--green);
+      background: var(--mint);
+      font: 800 9px ui-monospace;
+    }
+    .asset-meta { display: flex; gap: 7px; align-items: center; margin-top: 9px; }
+    .asset-meta code { overflow: hidden; color: #456c60; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+    .kind { padding: 3px 6px; border-radius: 999px; color: #667773; background: #eef0ed; font-size: 8px; white-space: nowrap; }
+    .kind.scene { color: #9b671e; background: #fff1d8; }
+    .asset-detail { display: grid; grid-template-columns: .7fr 1.3fr; gap: 12px; margin-top: 14px; }
+    .asset-detail .example { margin: 0; }
+    .detail-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .detail-item { padding: 10px 11px; border: 1px solid #dfe5e0; border-radius: 8px; background: #fafbf8; }
+    .detail-item small { display: block; color: var(--green); font: 800 8px ui-monospace; }
+    .detail-item span { display: block; margin-top: 4px; color: var(--ink); font-size: 10px; line-height: 1.5; }
+
+    .assembly-board {
+      position: relative;
+      height: 360px;
+      margin-top: 12px;
+      border: 1px solid #d8e0da;
+      border-radius: 13px;
+      background: linear-gradient(180deg, #f7faf8, #eef4f1);
+      overflow: hidden;
+    }
+    .assembly-summary { margin: 12px 0; padding: 14px 16px; border: 1px solid #bdd7cc; border-radius: 11px; background: #edf6f2; font-size: 13px; font-weight: 700; line-height: 1.65; }
+    .assembly-legend { position: absolute; z-index: 2; left: 16px; padding: 5px 9px; border-radius: 999px; color: #537068; background: rgba(255,255,255,.88); font-size: 9px; font-weight: 800; }
+    .assembly-legend.build { top: 12px; }
+    .assembly-legend.run { bottom: 12px; }
+    .assembly-board svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .wire { fill: none; stroke: #7ba692; stroke-width: 2.2; stroke-dasharray: 7 6; marker-end: url(#arrow); animation: dash 1.2s linear infinite; }
+    .wire.bank { stroke: #c49446; }
+    .packet { fill: #2f7d62; filter: drop-shadow(0 0 5px rgba(47, 125, 98, .45)); }
+    .packet.bank { fill: #c18125; }
+    @keyframes dash { to { stroke-dashoffset: -26; } }
+    .assembly-node {
+      position: absolute;
+      width: 180px;
+      min-height: 72px;
+      padding: 12px;
+      border: 1px solid #ccdad3;
+      border-radius: 11px;
+      color: var(--ink);
+      background: white;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(29, 65, 51, .06);
+    }
+    .assembly-node:hover, .assembly-node.selected { border-color: var(--green); box-shadow: 0 0 0 3px rgba(67, 134, 111, .1); }
+    .assembly-node small { color: var(--green); font: 800 8px ui-monospace; }
+    .assembly-node b { display: block; margin-top: 4px; font-size: 12px; }
+    .assembly-node span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+    .n-solution { left: 4%; top: 32px; }
+    .n-builder { left: 39%; top: 134px; color: white; background: var(--navy-soft); }
+    .n-builder small, .n-builder span { color: #9fd0bd; }
+    .n-candidate { right: 4%; top: 32px; }
+    .n-runtime { left: 4%; bottom: 30px; }
+    .n-harness { right: 27%; bottom: 30px; }
+    .n-provider { right: 4%; bottom: 30px; }
+    .interface-panel { display: grid; grid-template-columns: .52fr 1.48fr; gap: 12px; margin-top: 12px; align-items: start; }
+    .interface-list { display: grid; gap: 7px; }
+    .interface-button { padding: 10px 12px; border: 1px solid #dce3de; border-radius: 8px; background: white; text-align: left; cursor: pointer; }
+    .interface-button.selected { border-color: var(--green); background: #edf6f2; }
+    .interface-button b { display: block; font-size: 10px; }
+    .interface-button span { display: block; margin-top: 3px; color: var(--muted); font-size: 8.5px; }
+    .interface-detail { padding: 16px; border: 1px solid #dce3de; border-radius: 11px; background: #fff; }
+    .interface-detail > small { display: block; color: var(--green); font: 800 9px ui-monospace; letter-spacing: .7px; }
+    .interface-detail h4 { margin: 5px 0 7px; font-size: 16px; }
+    .interface-detail > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .explain-box { padding: 10px 11px; border-radius: 8px; background: #f3f7f5; }
+    .explain-box b { display: block; color: var(--green); font-size: 9px; }
+    .explain-box span { display: block; margin-top: 4px; color: var(--ink); font-size: 10px; line-height: 1.55; }
+    .field-title { margin: 15px 0 7px; font-size: 11px; }
+    .field-table { overflow: hidden; border: 1px solid #dfe5e0; border-radius: 9px; }
+    .field-row { display: grid; grid-template-columns: 135px minmax(0, 1fr) minmax(120px, .72fr); gap: 10px; padding: 8px 10px; border-bottom: 1px solid #e7ebe7; align-items: start; }
+    .field-row:last-child { border-bottom: 0; }
+    .field-row code { color: #356f5d; font-size: 9px; overflow-wrap: anywhere; }
+    .field-row span { color: var(--ink); font-size: 9px; line-height: 1.5; }
+    .field-row em { color: var(--muted); font-size: 8.5px; font-style: normal; line-height: 1.5; overflow-wrap: anywhere; }
+    .interface-detail .example { margin-top: 12px; }
+    .interface-detail .example pre { max-height: 300px; overflow: auto; }
+    .plain-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 12px 0 16px; }
+    .plain-step { position: relative; padding: 11px; border: 1px solid #dce3de; border-radius: 9px; background: white; }
+    .plain-step:not(:last-child)::after { content: "→"; position: absolute; top: 25px; right: -8px; color: var(--green); font-weight: 900; }
+    .plain-step i { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: white; background: var(--green); font: 800 9px ui-monospace; font-style: normal; }
+    .plain-step b { display: block; margin-top: 7px; font-size: 10px; }
+    .plain-step span { display: block; margin-top: 4px; color: var(--muted); font-size: 8.5px; line-height: 1.45; }
+
+    .execution-list { display: grid; gap: 8px; }
+    .check-card { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+    .check-icon { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--green); font-size: 11px; font-weight: 900; }
+    .check-time { color: #71817e; font: 9px ui-monospace; }
+    details.records { margin-top: 12px; border: 1px solid #dce3de; border-radius: 10px; background: #fafbf8; }
+    details.records summary { padding: 12px 14px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .record-body { max-height: 230px; overflow: auto; padding: 0 14px 14px; }
+    .record-row { display: grid; grid-template-columns: 48px 90px minmax(0, 1fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid #e6e9e5; font-size: 9px; }
+    .record-row time { color: #83908e; font-family: ui-monospace; }
+    .record-row strong { color: var(--green); }
+
+    .delivery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .metric { padding: 11px; border: 1px solid #e0e5df; border-radius: 9px; background: white; }
+    .metric b { display: block; font-size: 16px; }
+    .metric span { color: var(--muted); font-size: 8.5px; }
+    .pending { border-color: #e3bd7c; background: var(--amber-soft); }
+    .pending small { color: #a56d20; }
+    .case-list { display: grid; gap: 7px; margin-top: 10px; }
+    .case { display: grid; grid-template-columns: 80px 1fr auto; gap: 10px; padding: 9px 10px; border: 1px solid #e0e5df; border-radius: 8px; background: white; font-size: 9px; }
+    .case code { color: #567269; }
+    .case em { color: #9a6d2e; font-style: normal; }
+    .control-loop { margin-top: 14px; padding: 16px; border: 1px solid #ceddd5; border-radius: 13px; background: linear-gradient(180deg, #f7fbf9, #edf5f1); }
+    .control-loop-head { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+    .control-loop-head h3 { margin: 0; font-size: 16px; }
+    .control-loop-head p { max-width: 870px; margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .loop-status { flex: none; padding: 6px 9px; border: 1px solid #e1bd7d; border-radius: 999px; color: #96631d; background: #fff6e5; font: 800 8px ui-monospace; }
+    .loop-board { position: relative; height: 360px; margin-top: 12px; overflow: hidden; border: 1px solid #d6e1db; border-radius: 12px; background: rgba(255,255,255,.72); }
+    .loop-board svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .loop-track { fill: none; stroke: #77a491; stroke-width: 2.4; stroke-dasharray: 8 7; animation: dash 1.2s linear infinite; }
+    .loop-glow { fill: none; stroke: rgba(67,134,111,.12); stroke-width: 13; }
+    .loop-packet { fill: #2f7d62; filter: drop-shadow(0 0 6px rgba(47,125,98,.55)); }
+    .loop-node { position: absolute; z-index: 2; width: 180px; min-height: 70px; padding: 11px 12px; border: 1px solid #cadbd3; border-radius: 11px; background: white; box-shadow: 0 8px 20px rgba(29,65,51,.07); }
+    .loop-node small { display: block; color: var(--green); font: 800 8px ui-monospace; }
+    .loop-node b { display: block; margin-top: 4px; font-size: 11px; }
+    .loop-node span { display: block; margin-top: 4px; color: var(--muted); font-size: 8.5px; line-height: 1.45; }
+    .loop-node.orchestrator { left: calc(50% - 90px); top: 18px; color: white; background: var(--navy-soft); }
+    .loop-node.orchestrator small, .loop-node.orchestrator span { color: #a7d2c2; }
+    .loop-node.developer { left: 4%; top: 116px; }
+    .loop-node.candidate { left: 17%; bottom: 22px; }
+    .loop-node.evaluator { right: 17%; bottom: 22px; border-color: #dfba76; background: #fffaf0; }
+    .loop-node.report { right: 4%; top: 116px; }
+    .loop-center { position: absolute; z-index: 1; left: 36%; top: 143px; width: 28%; padding: 13px; border-radius: 10px; color: #456159; background: #edf3f0; text-align: center; }
+    .loop-center b { display: block; color: var(--ink); font-size: 10px; }
+    .loop-center span { display: block; margin-top: 5px; font-size: 8.5px; line-height: 1.5; }
+    .loop-explain { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 11px; }
+    .loop-explain > div { padding: 12px 13px; border: 1px solid #dce4df; border-radius: 9px; background: white; }
+    .loop-explain b { display: block; font-size: 10px; }
+    .loop-explain p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+    .iteration-current { margin-top: 12px; padding: 12px 14px; border: 1px solid #e2c68e; border-radius: 10px; background: #fff9ed; }
+    .iteration-current b { display: block; color: #8e5e1f; font-size: 11px; }
+    .iteration-current p { margin: 5px 0 0; color: #675942; font-size: 9px; line-height: 1.55; }
+
+    .business-eval { margin-top: 14px; padding: 17px; border: 1px solid #dfba76; border-radius: 13px; background: linear-gradient(135deg, #fffaf0, #fffdf8); }
+    .business-eval small { display: block; color: #9c681f; font: 800 8px ui-monospace; letter-spacing: .7px; }
+    .business-eval h3 { margin: 6px 0 5px; font-size: 16px; }
+    .business-eval > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .eval-responsibilities { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 11px; }
+    .eval-responsibilities div { padding: 11px 12px; border: 1px solid #e4dccf; border-radius: 9px; background: rgba(255,255,255,.82); }
+    .eval-responsibilities b { display: block; font-size: 10px; }
+    .eval-responsibilities span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .gate-card { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+    .gate-card + .gate-card { margin-top: 8px; }
+    .gate-icon { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--green); font-size: 10px; font-weight: 900; }
+    .gate-card.wait .gate-icon, .gate-card.block .gate-icon { background: var(--amber); }
+    .bundle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .bundle div { padding: 12px; border: 1px solid #dce3de; border-radius: 9px; background: #fafbf8; }
+    .bundle b { display: block; font-size: 10px; }
+    .bundle code { display: block; margin-top: 5px; color: #557068; font-size: 8.5px; }
+
+    .journey-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); background: #faf9f4; }
+    .journey-footer .hint { color: var(--muted); font-size: 10px; }
+    .nav-actions { display: flex; gap: 8px; }
+    .nav-actions button { padding: 10px 15px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: white; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .nav-actions button:disabled { opacity: .38; cursor: not-allowed; }
+    .nav-actions .primary { border-color: var(--green); color: white; background: var(--green); box-shadow: 0 7px 18px rgba(67, 134, 111, .18); }
+
+    /* Keep the guided explainer and operational Finance Studio in one visual system. */
+    .app { grid-template-columns: 224px minmax(0, 1fr); }
+    aside {
+      padding: 28px 20px 24px;
+      color: var(--ink);
+      border-right: 1px solid var(--line);
+    }
+    .logo { color: #fff; background: var(--green); }
+    .brand span, .side-head { color: #8e8e8d; letter-spacing: 1.2px; }
+    .new-build {
+      color: var(--green);
+      border-color: #e2d6d6;
+      background: #fff;
+    }
+    .new-build:hover { border-color: var(--green); background: var(--mint); }
+    .build-item { color: #626260; border-color: var(--line); }
+    .build-item:hover { color: var(--ink); background: #f1f1f0; }
+    .build-item.active { color: var(--green); border-color: #d5aaa9; background: var(--mint); }
+    .build-item b { font-size: 13px; }
+    .build-item span { color: #8a8a88; font-size: 10px; }
+    .build-item .state { color: var(--success); }
+    .dot { background: var(--success); }
+    .side-foot { color: #949493; border-top-color: var(--line); font-size: 11px; }
+    .side-foot b { color: #616160; }
+
+    main { padding: 20px 28px 24px; }
+    .title h1 { font-size: 30px; font-weight: 600; }
+    .title p, .restart { font-size: 12px; }
+    .restart { border-radius: 8px; }
+    .storyline { border-radius: 14px; box-shadow: 0 8px 30px rgba(28, 35, 29, .04); }
+    .story-step { min-height: 72px; background: #fafaf9; }
+    .story-step i { color: #888887; background: #eeeeed; }
+    .story-step b { font-size: 12px; }
+    .story-step span { font-size: 10px; line-height: 1.4; }
+    .story-step.current { border-color: var(--green); background: var(--mint); box-shadow: 0 0 0 3px rgba(184, 32, 43, .08); }
+    .story-step.current i { color: #fff; background: var(--green); }
+    .story-step.complete { border-color: #cce0d3; background: var(--success-soft); }
+    .story-step.complete i { color: #fff; background: var(--success); }
+
+    .journey { border-radius: 16px; }
+    .stage-page { max-width: 1500px; }
+    .step-number { color: #fff; background: var(--green); }
+    .stage-heading h2 { font-size: 24px; font-weight: 600; }
+    .stage-heading p { max-width: 930px; font-size: 13px; line-height: 1.7; }
+    .guide-item { padding: 13px 16px; background: var(--mint); }
+    .guide-item b { font-size: 12px; line-height: 1.6; }
+    .section-title { margin: 24px 0 12px; font-size: 16px; }
+    .info-card, .asset-card, .check-card, .gate-card { border-radius: 12px; }
+    .info-card b, .asset-card b, .check-card b, .gate-card b { font-size: 13px; }
+    .info-card p, .asset-card p, .check-card p, .gate-card p { font-size: 11px; line-height: 1.6; }
+    .example { padding: 12px 14px; color: #f5f5f5; }
+    .example small {
+      margin: -12px -14px 11px;
+      padding: 9px 14px;
+      border-radius: 9px 9px 0 0;
+      color: #262625;
+      background: #d9d9d7;
+      font-size: 10px;
+      letter-spacing: .35px;
+    }
+    .example pre { margin-top: 0; color: #f5f5f5; line-height: 1.6; }
+
+    .asset-group { border-color: #dededd; background: #fafaf9; }
+    .asset-group.scene { border-color: #d5aaa9; background: #fff7f8; }
+    .asset-group.scene .asset-group-head span { color: var(--green); background: #f7e2e4; }
+    .kind.scene { color: var(--green); background: #f9eeee; }
+    .wire, .loop-track { stroke: #c45b63; }
+    .packet, .loop-packet { fill: var(--green); }
+    .assembly-node:hover, .assembly-node.selected { box-shadow: 0 0 0 3px rgba(184, 32, 43, .08); }
+    .n-builder small, .n-builder span, .loop-node.orchestrator small, .loop-node.orchestrator span { color: #efb9bd; }
+    .interface-button.selected { background: var(--mint); }
+    .explain-box { background: #f5f5f4; }
+    .loop-glow { stroke: rgba(184, 32, 43, .1); }
+    .journey-footer { background: #fcfcfa; }
+    .nav-actions .primary { box-shadow: 0 7px 18px rgba(184, 32, 43, .16); }
+    .stage-scroll { scrollbar-color: #c8c8c5 transparent; scrollbar-width: thin; }
+
+    .load, .error { height: 100%; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+    @media (prefers-reduced-motion: reduce) { .wire, .loop-track { animation: none; } .packet, .loop-packet { display: none; } }
+    @media (max-width: 1280px) {
+      .app { grid-template-columns: 220px minmax(0, 1fr); }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .assembly-node { width: 155px; }
+      .asset-groups { grid-template-columns: 1fr; }
+      .loop-node { width: 155px; }
+      .loop-node.orchestrator { left: calc(50% - 78px); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="logo">金</div><div><b>Agent Builder</b><span>FINANCE WORKBENCH</span></div></div>
+    <button class="new-build" id="newBuild">＋ 新建 Agent 构建</button>
+    <div class="side-head"><span>构建任务</span><span id="taskCount">2</span></div>
+    <div class="build-list" id="buildList"></div>
+    <div class="side-foot"><b>一步一步完成构建</b><br>每次只处理一个阶段；完成条件、组件示例和接口证据都在当前页面说明。</div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div class="title"><div class="eyebrow">AGENT CONSTRUCTOR · GUIDED BUILD</div><h1 id="title">Agent 构造工作台</h1><p id="subtitle">正在读取本轮 Solution</p></div>
+      <button class="restart" id="restart">↺ 从第一步开始</button>
+    </header>
+    <nav class="storyline" id="storyline" aria-label="Agent 构建 Storyline"></nav>
+    <section class="journey">
+      <div class="stage-scroll" id="stageScroll"><div class="load">正在加载构建任务…</div></div>
+      <footer class="journey-footer">
+        <span class="hint" id="footerHint">第 1 / 6 步</span>
+        <div class="nav-actions"><button id="previous">← 上一步</button><button class="primary" id="advance">完成本步并继续 →</button></div>
+      </footer>
+    </section>
+  </main>
+</div>
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+  const steps = [
+    {key: 'goal', title: '明确构建目标', sub: '给谁解决什么业务问题？', action: '确认目标使用者、业务任务、允许使用的能力和期望输出。'},
+    {key: 'assets', title: '选择并锁定组件', sub: '本轮具体使用哪些组件？', action: '区分可复用的共享组件与随场景变化的组件，并确认本轮使用的版本。'},
+    {key: 'assemble', title: '装配 Candidate', sub: '组件怎样接成一个 Agent？', action: '查看 Builder 怎样安装组件、生成接线代码；点击连接可核对接口和数据字段。'},
+    {key: 'runtime', title: '构建并启动', sub: '怎样构建、运行并持续修正？', action: '启动 Candidate，查看工程门禁；业务评测未达标时，查看 Orchestrator 选择了哪些受控调整。'},
+    {key: 'evaluation', title: '执行真实业务 Evaluation', sub: '接入银行系统后是否达标？', action: '在授权测试环境运行真实业务用例，确认准确率、P95 时延、失败用例和问题归因。'},
+    {key: 'delivery', title: '形成交付裁决', sub: '证据是否足够交付？', action: '同时核对工程门禁和真实业务门禁；全部通过后下载 Candidate、Lock 和 Report。'}
+  ];
+  let data = null;
+  let currentDemo = 'wealth-manager-previsit-v1.1';
+  let activeStep = 0;
+  let maxVisited = 0;
+  let selectedAsset = 0;
+  let selectedInterface = 'solution';
+
+  function demoButtons() {
+    const demos = data?.availableDemos || [];
+    $('taskCount').textContent = demos.length;
+    $('buildList').innerHTML = demos.map(demo => `
+      <button class="build-item ${demo.id === currentDemo ? 'active' : ''}" data-demo="${esc(demo.id)}">
+        <b>${esc(demo.label)}</b><span>${esc(demo.audience)}</span>
+        <span class="state"><i class="dot"></i>${demo.id === currentDemo ? '当前构建' : '可装配'}</span>
+      </button>`).join('');
+    document.querySelectorAll('[data-demo]').forEach(button => button.onclick = () => load(button.dataset.demo));
+  }
+
+  function renderStoryline() {
+    $('storyline').innerHTML = steps.map((step, index) => {
+      const state = index === activeStep ? 'current' : index < activeStep || index < maxVisited ? 'complete' : index > maxVisited ? 'locked' : '';
+      const icon = state === 'complete' ? '✓' : String(index + 1).padStart(2, '0');
+      return `<button class="story-step ${state}" data-step="${index}" ${state === 'locked' ? 'disabled' : ''}><i>${icon}</i><b>${step.title}</b><span>${step.sub}</span></button>`;
+    }).join('');
+    document.querySelectorAll('[data-step]').forEach(button => button.onclick = () => showStep(Number(button.dataset.step)));
+  }
+
+  function heading(index, summary, question, chip = 'READY') {
+    return `<div class="stage-heading"><div class="step-number">0${index + 1}</div><div><h2>${steps[index].title}</h2><p>${summary}</p></div><span class="phase-chip">${chip}</span></div><div class="stage-guide"><div class="guide-item"><small>这一页要做什么</small><b>${steps[index].action}</b></div><div class="guide-item check"><small>完成本步前确认</small><b>${question}</b></div></div>`;
+  }
+
+  function goalPage() {
+    const story = data.story;
+    const solution = data.solution;
+    return `${heading(0, '先把业务需求整理成可校验的 Solution 输入，后面的选组件、装配和验收都以它为依据。', '要给谁构造什么 Agent，完成什么任务？')}
+      <h3 class="section-title">本轮构建目标</h3>
+      <div class="cards">
+        <div class="info-card"><small>业务需求</small><b>${esc(story.scenario)}</b><p>${esc(story.purpose)}</p></div>
+        <div class="info-card"><small>目标使用者</small><b>${esc(story.audience)}</b><p>Profile 会约束身份、交互方式和可使用的金融能力。</p></div>
+        <div class="info-card"><small>期望 Agent</small><b>${esc(solution.displayName)}</b><p>构建编号：${esc(data.demoId)}</p></div>
+      </div>
+      <h3 class="section-title">Solution 输入示例</h3>
+      <div class="example"><small>solution-build-input.v1.json</small><pre>{
+  "displayName": "${esc(solution.displayName)}",
+  "audience": "${esc(story.audience)}",
+  "capability": "${esc(story.capabilityId)}",
+  "evaluationPack": "${esc(solution.evaluationPackRef?.id)}@${esc(solution.evaluationPackRef?.version)}"
+}</pre></div>`;
+  }
+
+  function assets() {
+    const solution = data.solution;
+    return [
+      {name: 'OpenJiuwen Java Runtime', group: 'shared', kind: '共享组件', what: '承载 Agent 的对话、服务入口和生命周期。', parts: 'Agent Runtime、服务入口、工程模板', interface: 'AgentApp / A2A 服务入口', example: data.lock.runtimeTemplate?.id, source: solution.runtime?.templateRef},
+      {name: 'Profile', group: 'scene', kind: '场景组件', what: '定义谁在使用 Agent，以及身份相关的交互边界。', parts: '使用者身份、可用能力、交互约束', interface: 'profileRef', example: `${solution.profileRef?.id}@${solution.profileRef?.version}`, source: solution.profileRef?.source},
+      {name: 'Domain Pack', group: 'scene', kind: '场景组件', what: '提供财富业务方法、SOP、知识与可用能力集合。', parts: '业务方法、SOP、知识、Skill', interface: 'domainPackRefs[]', example: `${solution.domainPackRefs?.[0]?.id}@${solution.domainPackRefs?.[0]?.version}`, source: solution.domainPackRefs?.[0]?.source},
+      {name: '金融能力合同', group: 'shared', kind: '共享合同', what: '规定 Agent 请求金融能力时的输入、结果、状态和证据格式。', parts: '能力编号、请求字段、结果状态、证据引用', interface: 'CapabilityRequestV1 ↔ CapabilityResultV1', example: data.story.capabilityId, source: 'Finance Harness capability contract'},
+      {name: 'Provider Adapter', group: 'scene', kind: '场景组件', what: '由银行项目团队实现，把统一请求转换成本行 CRM、持仓或产品接口。', parts: '能力映射、系统调用、结果转换', interface: 'Provider SPI', example: `${solution.providerRefs?.[0]?.id}@${solution.providerRefs?.[0]?.version}`, source: solution.providerRefs?.[0]?.source},
+      {name: 'Runtime Integration', group: 'shared', kind: '共享组件', what: '把 Harness 能力注册到 OpenJiuwen Java Agent。', parts: '依赖声明、Bean 注册、Host Wiring', interface: 'runtime.integrationRef', example: data.lock.runtimeIntegration?.id, source: solution.runtime?.integrationRef},
+      {name: 'Evaluation Pack', group: 'scene', kind: '场景组件', what: '定义这个场景的测试任务、指标、门槛和 Bad Case 归因规则。', parts: '测试集、指标、门槛、归因规则', interface: 'evaluationPackRef', example: `${solution.evaluationPackRef?.id}@${solution.evaluationPackRef?.version}`, source: solution.evaluationPackRef?.source}
+    ];
+  }
+
+  function assetPage() {
+    const items = assets();
+    const selected = items[selectedAsset] || items[0];
+    const shared = items.map((item, index) => ({item, index})).filter(entry => entry.item.group === 'shared');
+    const scene = items.map((item, index) => ({item, index})).filter(entry => entry.item.group === 'scene');
+    const group = (title, summary, entries, kind) => `<section class="asset-group ${kind}"><div class="asset-group-head"><div><b>${title}</b><p>${summary}</p></div><span>${entries.length} 项</span></div><div class="asset-grid">${entries.map(({item, index}) => `<button class="asset-card ${index === selectedAsset ? 'selected' : ''}" data-asset-index="${index}"><i class="asset-index">${String(index + 1).padStart(2, '0')}</i><small>${esc(item.kind)}</small><b>${esc(item.name)}</b><p><strong>是什么：</strong>${esc(item.what)}</p><div class="asset-meta"><code>示例：${esc(item.example)}</code></div></button>`).join('')}</div></section>`;
+    return `${heading(1, 'Builder 从资产仓解析本轮需要的 Runtime、专业包、合同、适配器和评测标准，并把精确版本写入 solution-lock.json。', '哪些组件可以复用，哪些组件随场景变化？')}
+      <h3 class="section-title">本轮需要装入的 7 类组件</h3>
+      <div class="asset-groups">${group('共享组件', '多个金融场景可以直接复用；切换业务场景时通常不需要重新开发。', shared, 'shared')}${group('场景组件', '由本轮业务目标决定；不同使用者、业务方法、银行系统和验收标准会选择不同版本。', scene, 'scene')}</div>
+      <div class="asset-detail"><div class="info-card"><small>当前查看 · ${esc(selected.kind)}</small><b>${esc(selected.name)}</b><p>${esc(selected.what)}</p><p><strong>本轮示例：</strong>${esc(selected.example)}</p></div><div class="detail-list"><div class="detail-item"><small>由什么组成</small><span>${esc(selected.parts)}</span></div><div class="detail-item"><small>怎样接入</small><span>${esc(selected.interface)}</span></div><div class="detail-item"><small>锁定的版本 / 来源</small><span>${esc(selected.source)}</span></div><div class="detail-item"><small>为什么归在这里</small><span>${selected.group === 'shared' ? '它提供所有场景共同依赖的底座或合同。' : '它会随业务对象、流程或银行接入方式发生变化。'}</span></div></div></div>`;
+  }
+
+  function interfaceExamples() {
+    const solution = data.solution;
+    const jarPath = data.report.candidateArtifact?.path || 'agents/domain-runtime/target/domain-runtime.jar';
+    const field = (name, meaning, example) => ({name, meaning, example});
+    return {
+      solution: {
+        title: 'Solution 把清单交给 Builder',
+        summary: 'Solution 是本轮 Agent 的构建清单。它把业务目标、运行底座、专业包、银行适配器、模型和验收标准放在同一个文件中。',
+        why: 'Builder 必须先知道目标和全部引用，才能判断组件能否组合，并在以后重建同一个 Agent。',
+        how: '构造者提交 solution-build-input.v1.json；Builder 先按 Schema 校验，再读取其中的组件引用。',
+        access: '输入方式：本地 JSON 或 YAML 文件；由 Builder CLI 读取。',
+        fields: [
+          field('schemaVersion', '这份构建清单遵循哪一版格式。', 'finance-agent-solution-build.v1'),
+          field('solutionId', '本轮 Solution 的稳定机器标识，用于输出目录和追溯。', solution.solutionId),
+          field('displayName', '用户看到的 Agent 名称。', solution.displayName),
+          field('runtime', '要使用的 OpenJiuwen 语言、模板和 Harness 接线。', 'openjiuwen / java'),
+          field('profileRef', '目标使用者及其交互、身份边界。', `${solution.profileRef?.id}@${solution.profileRef?.version}`),
+          field('domainPackRefs', '需要安装的业务方法、SOP、知识和 Skill。', `${solution.domainPackRefs?.[0]?.id}@${solution.domainPackRefs?.[0]?.version}`),
+          field('providerRefs', '要绑定的银行系统适配器。', `${solution.providerRefs?.[0]?.id}@${solution.providerRefs?.[0]?.version}`),
+          field('evaluationPackRef', '本场景使用的测试集、指标和门槛。', `${solution.evaluationPackRef?.id}@${solution.evaluationPackRef?.version}`)
+        ],
+        sample: JSON.stringify({schemaVersion: solution.schemaVersion, solutionId: solution.solutionId, displayName: solution.displayName, runtime: {family: solution.runtime?.family, language: solution.runtime?.language}, profileRef: solution.profileRef, domainPackRefs: solution.domainPackRefs, providerRefs: solution.providerRefs, evaluationPackRef: solution.evaluationPackRef}, null, 2)
+      },
+      builder: {
+        title: 'Builder 校验并锁定版本',
+        summary: 'Builder 逐项确认引用存在、组合受支持，并把真正取得的提交号和内容摘要写入 solution-lock.json。',
+        why: '同一个分支或版本名的内容以后可能变化。锁定提交号和 SHA-256 摘要后，团队才能复现本轮 Agent，也能判断资产是否被替换。',
+        how: 'validate 检查清单格式；resolve 找到或下载资产；digest 计算内容摘要；lock 把最终结果写入文件。',
+        access: '这是 Builder 内部的确定性步骤，不调用模型；输出文件会同时复制进 Candidate。',
+        fields: [
+          field('schemaVersion', '锁文件格式版本。', 'finance-solution-lock.v1'),
+          field('solutionId', '这份 Lock 属于哪一个 Solution。', solution.solutionId),
+          field('resolvedAt', '本轮解析资产的时间。', data.lock.resolvedAt),
+          field('financeHarness.revision', '本轮使用的 Harness Git 提交。', data.lock.financeHarness?.revision),
+          field('runtimeTemplate', 'OpenJiuwen 模板的来源、提交号、状态和摘要。', data.lock.runtimeTemplate?.revision),
+          field('runtimeIntegration', 'Harness 接线组件的来源、状态和摘要。', data.lock.runtimeIntegration?.digest),
+          field('assets[]', 'Profile、Domain Pack、Provider、Evaluation Pack 的锁定记录。', `${data.lock.assets?.length || 0} 项`),
+          field('digest', '资产内容的 SHA-256 指纹；相同摘要表示内容未变。', data.lock.assets?.[0]?.digest)
+        ],
+        sample: JSON.stringify({schemaVersion: data.lock.schemaVersion, solutionId: data.lock.solutionId, resolvedAt: data.lock.resolvedAt, financeHarness: data.lock.financeHarness, runtimeTemplate: data.lock.runtimeTemplate, assets: data.lock.assets?.slice(0, 1)}, null, 2)
+      },
+      host: {
+        title: 'Builder 把组件装入 OpenJiuwen 工程',
+        summary: '组件能够组装，是因为模板预留了模块和安装位置，Harness 提供统一 Java 合同，Domain Pack 和 Provider 也遵循约定目录及接口。',
+        why: '只有把运行底座、专业方法和银行接线放进同一个工程，最终 JAR 才同时具备对话、金融能力调用和业务处理能力。',
+        how: '复制锁定的 OpenJiuwen 多模块模板；替换 Solution 参数；安装 Harness/Provider Maven 模块；复制 Domain Pack Skills；写入 Host Wiring；运行 Maven 编译。',
+        access: '装配方式：文件系统写入 + Maven 模块依赖；没有通过提示词复制代码。',
+        fields: [
+          field('pom.xml', 'Maven 工程入口，声明需要编译的模块和 Java 依赖。', 'OpenJiuwen + Harness + Provider'),
+          field('agents/domain-runtime', '最终启动的 OpenJiuwen Spring Boot Runtime 模块。', 'domain-runtime'),
+          field('assets/skills', '从 Domain Pack 安装的财富业务 Skill。', 'wealth-employee-assisted'),
+          field('Host Wiring', '把 Harness Provider 注册给 Agent 使用的 Java 接线代码。', 'employee-agent-java'),
+          field('solution.normalized.json', '经过校验和标准化的完整构建输入。', solution.solutionId),
+          field('solution-lock.json', '本轮实际安装的组件版本和摘要。', '随 Candidate 一起交付'),
+          field('.env.example', '部署时需要注入的模型、银行地址和运行身份变量。', '不包含真实密钥')
+        ],
+        sample: `candidate/\n├─ pom.xml                         # Maven 多模块工程\n├─ agents/domain-runtime/          # OpenJiuwen Agent 服务\n├─ agents/wealth-aggregate/\n│  └─ assets/skills/               # 财富 Domain Pack\n├─ framework/finance-harness-*/    # 金融合同与 Provider 接线\n├─ solution.normalized.json\n├─ solution-lock.json\n└─ .env.example`
+      },
+      runtime: {
+        title: 'Candidate 启动并提供服务',
+        summary: 'Candidate JAR 是已经编译好的 Java Agent 服务，包含 OpenJiuwen Runtime、Host Wiring 和本轮安装的资产。',
+        why: '编译成功只能证明代码能生成；真实启动和健康检查才能证明依赖、Spring 配置和服务进程可以工作。',
+        how: 'Builder 找到 Candidate JAR，分配临时端口，注入本地验证环境变量，用 java -jar 启动，然后轮询健康检查；验证结束后停止进程。',
+        access: '本轮工程检查访问 GET /actuator/health；Agent 业务服务地址由部署配置决定。健康接口不能代替业务验收。',
+        fields: [
+          field('jarPath', 'Builder 编译出的可执行 JAR 路径。', jarPath),
+          field('java -jar', '使用本机 Java 运行时启动 Spring Boot Candidate。', 'java -jar <jarPath>'),
+          field('SERVER_PORT', '本次启动监听的端口，由 Builder 临时分配。', '<free-port>'),
+          field('/actuator/health', '只检查进程与 Spring 上下文是否就绪。', '{"status":"UP"}'),
+          field('Agent service', 'OpenJiuwen 提供的对话/Agent 服务入口。', '地址由部署配置发布'),
+          field('environment', '模型引用、银行服务地址、Runtime 身份和 Token 配置。', '.env.example → 部署环境注入')
+        ],
+        sample: `SERVER_PORT=<free-port>\nTHREE_ENGINE_MODEL_MODE=stub\njava -jar ${jarPath}\n\nGET http://127.0.0.1:<free-port>/actuator/health\n→ HTTP 200  { "status": "UP" }`
+      },
+      harness: {
+        title: 'Agent 请求一项金融能力',
+        summary: 'Agent 用 CapabilityRequestV1 表达“我要查询客户访前上下文”，并附带当前身份、业务目的和必要参数。',
+        why: 'Agent 只依赖一套稳定的金融能力格式，不需要为每家银行分别学习 CRM、持仓或产品系统的接口。',
+        how: 'Candidate 的 Host Wiring 创建 Java CapabilityRequestV1 对象，并调用 FinanceProvider.query(request)。当前员工辅助 Provider 再通过鉴权 HTTP 请求访问 Employee Agent MCP。',
+        access: 'Agent 内部接口：FinanceProvider.query(CapabilityRequestV1)；银行侧访问由具体 Provider Adapter 负责。',
+        fields: [
+          field('schemaVersion', '请求格式版本。V1 表示第一版稳定合同，便于以后兼容升级。', 'capability-request.v1'),
+          field('capabilityId', '要调用的金融能力编号。', data.story.capabilityId),
+          field('operation', 'QUERY 表示只读查询；TASK 表示会产生业务动作。', 'QUERY'),
+          field('context', '请求者身份、渠道、用途、权限范围、requestId 和 traceId。', 'EMPLOYEE / wealth:read'),
+          field('parameters', '该能力需要的业务参数。', '{"customerRef":"authorized-ref"}'),
+          field('idempotencyKey', '任务型请求用于防止重复执行；查询时可以为空。', 'null'),
+          field('continuation', '需要后续确认或续办时携带的状态。', '{}')
+        ],
+        sample: JSON.stringify({schemaVersion: 'capability-request.v1', capabilityId: data.story.capabilityId, operation: 'QUERY', context: {requestId: 'req-demo-001', traceId: 'trace-demo-001', principalType: 'EMPLOYEE', channel: 'employee-agent', purpose: 'wealth-previsit', scopes: ['wealth:read']}, parameters: {customerRef: 'authorized-ref'}, continuation: {}}, null, 2)
+      },
+      provider: {
+        title: 'Harness 把请求交给银行适配器',
+        summary: 'Provider Adapter 是“翻译器”：一边接收 Harness 的统一金融请求，一边调用银行已有系统，再把结果翻译回统一格式。',
+        why: '不同银行的接口、认证和字段都不同。差异收进 Provider 后，Agent、Domain Pack 和金融合同可以继续复用。',
+        how: '当前 employee-agent-reference 校验员工身份和 customerRef，将能力编号映射为 prepare_wealth_previsit_context 工具，再调用 Employee Agent MCP。',
+        access: 'HTTP POST ${EA_BASE_URI}/api/internal/platform-tools/mcp；JSON-RPC 方法 tools/call；使用一次性 Bearer Token 和 Runtime 身份请求头。',
+        fields: [
+          field('CapabilityRequestV1', 'Harness 交给 Provider 的统一 Java 请求对象；V1 是合同版本。', data.story.capabilityId),
+          field('FinanceProvider', 'Provider 必须实现的 Java SPI，包括 query 和 executeTask。', 'query(request)'),
+          field('Provider SPI', 'SPI 是可插拔接口；银行替换实现，不需要修改 Agent 主流程。', 'employee-agent-reference'),
+          field('method', '发送给 Employee Agent MCP 的 JSON-RPC 方法。', 'tools/call'),
+          field('name', '本能力在 Employee Agent 中映射到的工具名。', 'prepare_wealth_previsit_context'),
+          field('arguments.customer_id', '由统一参数 customerRef 转换而来。', 'authorized-ref'),
+          field('Authorization / Runtime headers', '证明 Candidate 的运行身份和权限。', '部署环境动态注入')
+        ],
+        sample: JSON.stringify({jsonrpc: '2.0', id: 'req-demo-001', method: 'tools/call', params: {name: 'prepare_wealth_previsit_context', arguments: {customer_id: 'authorized-ref'}}}, null, 2)
+      },
+      result: {
+        title: '银行结果按统一格式返回 Agent',
+        summary: 'Provider 把银行返回内容转换为 CapabilityResultV1。Agent 看到的是稳定状态、业务数据、缺失项、后续动作和来源信息。',
+        why: '统一结果让 Agent 能用同一套逻辑处理成功、待确认、处理中和失败，也便于 Evaluation 核对来源和完整性。',
+        how: 'Provider 解析 Employee Agent MCP 响应，提取访前上下文和回执，再构造 CapabilityResultV1 返回给 Agent。',
+        access: 'Java 返回对象：CapabilityResultV1；由 Harness JSON 序列化时使用 capability-result.v1 格式。',
+        fields: [
+          field('schemaVersion', '结果格式版本。', 'capability-result.v1'),
+          field('requestId / traceId', '关联原始请求和整条调用链。', 'req-demo-001 / trace-demo-001'),
+          field('status', 'COMPLETED、NEED_USER、PROCESSING、FAILED 等标准状态。', 'COMPLETED'),
+          field('content', '给 Agent 或用户阅读的结果摘要。', '财富客户访前上下文已准备。'),
+          field('data', '结构化业务数据和 Host 侧证据。', 'previsitContext + hostEvidence'),
+          field('missingInputs', '银行数据不足时明确列出的缺失项。', '["riskPreference"]'),
+          field('nextActions', '建议 Agent 接下来询问或执行的动作。', '["拜访前确认风险偏好"]'),
+          field('sourceSystem / asOf', '结果来自哪个系统、数据截至什么时间。', 'employee-agent-platform-mcp')
+        ],
+        sample: JSON.stringify({schemaVersion: 'capability-result.v1', requestId: 'req-demo-001', traceId: 'trace-demo-001', status: 'COMPLETED', content: '财富客户访前上下文已准备。', data: {previsitContext: {customerSummary: '脱敏示例客户', portfolioOverview: '已汇总'}, hostCapability: 'prepare_wealth_previsit_context'}, missingInputs: ['riskPreference'], nextActions: ['拜访前确认风险偏好'], sourceSystem: 'employee-agent-platform-mcp', asOf: '2026-09-06T09:00:00Z'}, null, 2)
+      }
+    };
+  }
+
+  function assemblyPage() {
+    const story = data.story;
+    const examples = interfaceExamples();
+    const current = examples[selectedInterface] || examples.solution;
+    return `${heading(2, 'Builder 根据 Solution 清单找到组件，把它们安装进 OpenJiuwen Java 工程，最后生成一个可以启动的 Agent。Agent 启动后，再通过 Harness 和银行系统交换数据。', 'Builder 怎样把一张组件清单变成可以运行的 Agent？', 'INTERACTIVE')}
+      <div class="assembly-summary">一句话理解：Solution 说明“要装什么”；Builder 负责“检查、安装和接线”；Candidate 是装配完成后真正运行的 Agent。</div>
+      <div class="plain-flow"><div class="plain-step"><i>1</i><b>读取清单</b><span>Solution 写明目标 Agent 和组件引用。</span></div><div class="plain-step"><i>2</i><b>找到组件</b><span>Builder 从资产仓解析并锁定版本。</span></div><div class="plain-step"><i>3</i><b>安装与接线</b><span>把 Runtime、专业包和接口代码装进工程。</span></div><div class="plain-step"><i>4</i><b>生成 Agent</b><span>编译、启动并完成健康检查。</span></div><div class="plain-step"><i>5</i><b>连接银行系统</b><span>运行时经 Harness 和 Provider 获取数据。</span></div></div>
+      <div class="assembly-board">
+        <span class="assembly-legend build">上半部分：构建时，把组件装进 Agent</span>
+        <span class="assembly-legend run">下半部分：运行时，Agent 调用银行能力</span>
+        <svg viewBox="0 0 1000 360" preserveAspectRatio="none" aria-label="Candidate 动态装配连线">
+          <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7ba692"/></marker></defs>
+          <path id="p-solution" class="wire" d="M190,70 C330,70 330,155 430,170"/>
+          <path id="p-runtime" class="wire" d="M190,295 C320,295 330,205 430,190"/>
+          <path id="p-candidate" class="wire" d="M570,165 C690,135 720,75 815,70"/>
+          <path id="p-harness" class="wire" d="M570,195 C650,235 650,290 680,295"/>
+          <path id="p-provider" class="wire bank" d="M785,295 L815,295"/>
+          <circle class="packet" r="5"><animateMotion dur="3.2s" repeatCount="indefinite"><mpath href="#p-solution"/></animateMotion></circle>
+          <circle class="packet" r="5"><animateMotion dur="3.7s" begin=".7s" repeatCount="indefinite"><mpath href="#p-runtime"/></animateMotion></circle>
+          <circle class="packet" r="5"><animateMotion dur="3s" begin="1.1s" repeatCount="indefinite"><mpath href="#p-candidate"/></animateMotion></circle>
+          <circle class="packet bank" r="5"><animateMotion dur="2.6s" begin=".3s" repeatCount="indefinite"><mpath href="#p-harness"/></animateMotion></circle>
+          <circle class="packet bank" r="5"><animateMotion dur="2.3s" begin="1.2s" repeatCount="indefinite"><mpath href="#p-provider"/></animateMotion></circle>
+        </svg>
+        <button class="assembly-node n-solution ${selectedInterface === 'solution' ? 'selected' : ''}" data-interface="solution"><small>INPUT</small><b>Solution</b><span>目标与资产引用</span></button>
+        <button class="assembly-node n-builder ${selectedInterface === 'builder' ? 'selected' : ''}" data-interface="builder"><small>CONSTRUCTOR</small><b>Solution Builder</b><span>校验 · 锁定 · 安装 · 接线</span></button>
+        <button class="assembly-node n-candidate ${selectedInterface === 'runtime' ? 'selected' : ''}" data-interface="runtime"><small>OUTPUT</small><b>OpenJiuwen Candidate</b><span>可编译、可启动的 Agent</span></button>
+        <button class="assembly-node n-runtime ${selectedInterface === 'host' ? 'selected' : ''}" data-interface="host"><small>HOST</small><b>OpenJiuwen Java</b><span>Runtime 与工程模板</span></button>
+        <button class="assembly-node n-harness ${selectedInterface === 'harness' || selectedInterface === 'result' ? 'selected' : ''}" data-interface="harness"><small>FINANCE CONTRACT</small><b>Finance Harness</b><span>${esc(story.capabilityLabel)}</span></button>
+        <button class="assembly-node n-provider ${selectedInterface === 'provider' ? 'selected' : ''}" data-interface="provider"><small>BANK ADAPTER</small><b>${esc(story.providerLabel)}</b><span>${esc(story.systems)}</span></button>
+      </div>
+      <h3 class="section-title">点击一段连接，查看双方交接了什么</h3>
+      <div class="interface-panel"><div class="interface-list">${Object.entries(examples).map(([key, value]) => `<button class="interface-button ${key === selectedInterface ? 'selected' : ''}" data-interface="${key}"><b>${esc(value.title)}</b><span>${esc(value.summary)}</span></button>`).join('')}</div><section class="interface-detail"><small>当前连接详解</small><h4>${esc(current.title)}</h4><p>${esc(current.summary)}</p><div class="explain-grid"><div class="explain-box"><b>为什么需要这一步</b><span>${esc(current.why)}</span></div><div class="explain-box"><b>具体怎样执行</b><span>${esc(current.how)}</span></div><div class="explain-box" style="grid-column:1/-1"><b>通过什么接口或方式</b><span>${esc(current.access)}</span></div></div><h5 class="field-title">字段和结构逐项解释</h5><div class="field-table">${current.fields.map(item => `<div class="field-row"><code>${esc(item.name)}</code><span>${esc(item.meaning)}</span><em>本轮示例：${esc(item.example)}</em></div>`).join('')}</div><div class="example"><small>完整脱敏示例</small><pre>${esc(current.sample)}</pre></div></section></div>`;
+  }
+
+  function stageRows(group) {
+    return data.stages.filter(stage => stage.group.startsWith(group));
+  }
+
+  function optimizationLoop() {
+    return `<section class="control-loop">
+      <div class="control-loop-head"><div><h3>Builder 的自动构建与优化循环</h3><p>Orchestrator 管理每一轮动作和剩余次数。Developer 只调整被允许修改的结构或参数；Candidate 重新启动后，必须回到同一套真实业务 Evaluation 复验。</p></div><span class="loop-status">R0 · 等待真实业务评测</span></div>
+      <div class="loop-board">
+        <svg viewBox="0 0 1200 390" preserveAspectRatio="none" aria-hidden="true"><path class="loop-glow" d="M600 45 C300 45 120 115 120 200 C120 305 330 350 600 350 C870 350 1080 305 1080 200 C1080 115 900 45 600 45 Z"/><path id="builderOptimizationLoop" class="loop-track" d="M600 45 C300 45 120 115 120 200 C120 305 330 350 600 350 C870 350 1080 305 1080 200 C1080 115 900 45 600 45 Z"/><circle class="loop-packet" r="7"><animateMotion dur="8s" repeatCount="indefinite"><mpath href="#builderOptimizationLoop"/></animateMotion></circle></svg>
+        <div class="loop-node orchestrator"><small>01 · ORCHESTRATOR</small><b>决定本轮做什么</b><span>读取门禁、错误分析和剩余迭代次数。</span></div>
+        <div class="loop-node developer"><small>02 · DEVELOPER</small><b>调整结构或参数</b><span>结构：Pack、Skill、接线；参数：模型引用、超时和允许配置。</span></div>
+        <div class="loop-node candidate"><small>03 · CANDIDATE</small><b>重新构建并启动</b><span>产生新 Lock、新工程和新的可运行实例。</span></div>
+        <div class="loop-node evaluator"><small>04 · BUSINESS EVALUATION</small><b>执行真实业务验收</b><span>通过银行测试系统逐条执行同一 Eval Pack。</span></div>
+        <div class="loop-node report"><small>05 · EVALUATION REPORT</small><b>返回错例和归因</b><span>报告准确率、时延、Bad Case 与建议责任对象。</span></div>
+        <div class="loop-center"><b>循环何时停止</b><span>达到业务门槛 → 进入交付<br>未达标且还有次数 → 再构建一轮<br>次数用完 → 停止并保留未解决问题</span></div>
+      </div>
+      <div class="loop-explain"><div><b>Orchestrator 怎样决定修什么</b><p>输入是 EvaluationReport、失败用例和剩余次数。它先判断问题属于组件结构、参数配置还是外部环境，再把受控修正交给 Developer。</p></div><div><b>为什么必须用同一套业务用例复验</b><p>保持测试任务、业务金标和门槛不变，才能比较修改前后的效果，避免只对某一条失败用例做表面修补。</p></div></div>
+      <div class="iteration-current"><b>本轮真实状态：工程构建和启动已通过，自动优化循环停在真实业务 Evaluation 之前。</b><p>银行测试环境、部署身份与授权客户引用就绪后，Orchestrator 才能取得真实错误分析并决定下一轮调整。本页动画说明控制逻辑，不代表在线业务评测已经执行。</p></div>
+    </section>`;
+  }
+
+  function runtimePage() {
+    const stages = stageRows('C');
+    return `${heading(3, 'Builder 先完成本地构建、启动和健康检查。真实业务 Evaluation 返回错误分析后，Orchestrator 再决定是否让 Developer 调整结构或参数并重新构建。', 'Candidate 是否启动成功；未达标时修改对象是否明确，并且仍有迭代次数？', '10 / 10 ENGINEERING')}
+      ${optimizationLoop()}
+      <h3 class="section-title">真实工程验证</h3>
+      <div class="execution-list">${stages.map(stage => `<div class="check-card"><i class="check-icon">✓</i><div><small>${esc(stage.group)}</small><b>${esc(stage.title)}</b><p>${esc(stage.summary)}</p></div><span class="check-time">${Number(stage.durationMs).toLocaleString()} ms</span></div>`).join('')}</div>
+      <details class="records"><summary>展开完整 Builder 活动与证据</summary><div class="record-body">${data.stages.map((stage, index) => `<div class="record-row"><time>09:${String(10 + index).padStart(2, '0')}</time><strong>${index < 2 ? 'Orchestrator' : index < 8 ? 'Developer' : 'Evaluation'}</strong><span>${esc(stage.title)} · ${esc(stage.outcome)}</span></div>`).join('')}</div></details>`;
+  }
+
+  function evaluationPage() {
+    const preview = data.story.evaluationPreview;
+    return `${heading(4, '在银行授权测试环境中运行当前 Candidate，使它经 Harness 和 Provider 真实调用 CRM、持仓、产品等行内系统，再按业务金标计算准确率、P95 时延和 Bad Case。', '真实业务用例是否全部执行，准确率与时延是否达到业务方确认的门槛？', 'REAL BUSINESS · WAITING')}
+      <section class="business-eval"><small>当前 Candidate · 真实业务验收</small><h3>用授权客户和银行测试系统检验 Agent 是否真的可用</h3><p>Evaluation 按 Eval Pack 逐条发送业务任务。每条任务都会经过 Candidate → Finance Harness → Provider Adapter → 银行测试系统，并保留业务输出、来源证据、状态和耗时。</p><div class="metric-row"><div class="metric"><b>0/${esc(preview.sampleCount)}</b><span>已执行真实业务用例</span></div><div class="metric"><b>≥${esc(preview.accuracyThresholdPercent)}%</b><span>准确率门槛示例</span></div><div class="metric"><b>≤${esc(preview.p95LatencyThresholdMs / 1000)}s</b><span>P95 时延门槛示例</span></div></div><div class="eval-responsibilities"><div><b>业务方需要准备</b><span>授权测试环境、部署身份、测试客户引用、业务金标，以及最终确认的准确率与时延门槛。</span></div><div><b>Builder 自动完成</b><span>启动本轮 Candidate、逐条执行用例、采集接口证据、计算指标、归纳 Bad Case 并把错误分析交给 Orchestrator。</span></div></div></section>
+      <h3 class="section-title">每一条真实业务用例检查什么</h3>
+      <div class="case-list"><div class="case"><code>CASE-001</code><span>从行内系统取得的客户事实是否完整，并且每项事实都带有来源证据</span><em>待银行环境执行</em></div><div class="case"><code>CASE-002</code><span>行内数据缺失时，Agent 是否明确指出缺失项并给出下一步处理建议</span><em>待银行环境执行</em></div><div class="case"><code>CASE-003</code><span>最终形成的关键问题和面谈目标是否符合财富经理的业务标准</span><em>待银行环境执行</em></div></div>
+      <details class="records"><summary>查看已完成的开发侧 Eval Pack 回放（不计入真实业务验收）</summary><div class="record-body"><div class="record-row"><time>REPLAY</time><strong>Evaluation</strong><span>${esc(data.evaluationSummary.frozenCaseCount)} 个冻结 Case 已执行，用于证明评测契约能够运行。</span></div><div class="record-row"><time>RESULT</time><strong>Contract</strong><span>${esc(data.evaluationSummary.rightWins)}/${esc(data.evaluationSummary.frozenCaseCount)} 冻结对照结果；不计作当前 Candidate 在线效果。</span></div></div></details>`;
+  }
+
+  function deliveryPage() {
+    return `${heading(5, 'Orchestrator 汇总工程证据与真实业务 Evaluation 证据。工程可运行、银行接口可用、业务指标达标后，才生成最终交付包。', '工程门禁和真实业务门禁是否都已通过，当前 Agent 是否可以交付？', data.qualification.qualified ? 'QUALIFIED' : 'BLOCKED')}
+      <div class="delivery-grid"><div><h3 class="section-title">交付门禁</h3><div class="gate-card"><i class="gate-icon">✓</i><div><small>工程门禁</small><b>${esc(data.qualification.passedStages)}/${esc(data.qualification.totalStages)} 已通过</b><p>资产锁、编译、契约测试、资产测试、启动和健康检查均有证据。</p></div></div><div class="gate-card wait"><i class="gate-icon">…</i><div><small>在线业务门禁</small><b>等待银行测试环境</b><p>当前 Candidate 尚未产生真实准确率、P95 时延和 Bad Case 报告。</p></div></div><div class="gate-card block"><i class="gate-icon">!</i><div><small>交付裁决</small><b>暂不交付</b><p>补齐在线 Evaluation 并达到正式门槛后自动重新裁决。</p></div></div></div><div><h3 class="section-title">门禁通过后形成一个交付包</h3><div class="info-card"><small>DELIVERY BUNDLE</small><b>${esc(data.solution.displayName)}</b><p>交付包中的每一项都能回指本轮 Solution、资产版本和验证证据。</p><div class="bundle"><div><b>Agent Candidate</b><code>${esc(data.report.candidateArtifact?.path)}</code></div><div><b>资产版本锁</b><code>solution-lock.json</code></div><div><b>验证报告</b><code>build-report.json</code></div></div></div></div></div>
+      <details class="records"><summary>查看本轮全部证据引用</summary><div class="record-body"><div class="record-row"><time>INPUT</time><strong>Solution</strong><span>${esc(data.demoId)}</span></div><div class="record-row"><time>LOCK</time><strong>Assets</strong><span>${esc(data.lock.assets.length)} 项资产及摘要</span></div><div class="record-row"><time>OUTPUT</time><strong>Candidate</strong><span>${esc(data.report.candidateArtifact?.digest)}</span></div></div></details>`;
+  }
+
+  const renderers = [goalPage, assetPage, assemblyPage, runtimePage, evaluationPage, deliveryPage];
+
+  function bindPageInteractions() {
+    document.querySelectorAll('[data-asset-index]').forEach(button => button.onclick = () => { selectedAsset = Number(button.dataset.assetIndex); renderPage(true); });
+    document.querySelectorAll('[data-interface]').forEach(button => button.onclick = () => { selectedInterface = button.dataset.interface; renderPage(true); });
+  }
+
+  function renderPage(preserveScroll = false) {
+    const previousScroll = $('stageScroll').scrollTop;
+    renderStoryline();
+    $('stageScroll').innerHTML = `<div class="stage-page">${renderers[activeStep]()}</div>`;
+    $('stageScroll').scrollTop = preserveScroll ? previousScroll : 0;
+    $('footerHint').textContent = `第 ${activeStep + 1} / ${steps.length} 步 · ${steps[activeStep].title}`;
+    $('previous').disabled = activeStep === 0;
+    $('advance').disabled = activeStep === steps.length - 1;
+    $('advance').textContent = activeStep === 4 ? '记录验收待办并继续 →' : activeStep === steps.length - 1 ? '本轮暂不可交付' : '完成本步并继续 →';
+    bindPageInteractions();
+  }
+
+  function showStep(index) {
+    if (index < 0 || index >= steps.length || index > maxVisited) return;
+    activeStep = index;
+    renderPage();
+  }
+
+  function advance() {
+    if (activeStep >= steps.length - 1) return;
+    maxVisited = Math.max(maxVisited, activeStep + 1);
+    activeStep += 1;
+    renderPage();
+  }
+
+  function restart() {
+    activeStep = 0;
+    maxVisited = 0;
+    selectedAsset = 0;
+    selectedInterface = 'solution';
+    renderPage();
+  }
+
+  async function load(id = currentDemo) {
+    currentDemo = id;
+    $('stageScroll').innerHTML = '<div class="load">正在读取本轮 Solution 与构建记录…</div>';
+    try {
+      const response = await fetch(`/api/demo?id=${encodeURIComponent(id)}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      data = await response.json();
+      $('title').textContent = `构造 ${data.solution.displayName}`;
+      $('subtitle').textContent = `${data.story.scenario} · ${data.story.audience} · ${data.demoId}`;
+      demoButtons();
+      restart();
+    } catch (error) {
+      $('stageScroll').innerHTML = `<div class="error">构建记录暂不可用（${esc(error.message)}）。</div>`;
+    }
+  }
+
+  $('previous').onclick = () => showStep(activeStep - 1);
+  $('advance').onclick = advance;
+  $('restart').onclick = restart;
+  $('newBuild').onclick = restart;
+  load(new URLSearchParams(location.search).get('demo') || currentDemo);
+</script>
+</body>
+</html>

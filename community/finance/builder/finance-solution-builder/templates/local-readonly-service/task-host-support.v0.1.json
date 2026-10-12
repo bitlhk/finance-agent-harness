@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "finance-host-support.v0.1",
+  "runtime": {
+    "family": "openjiuwen",
+    "language": "java",
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+    "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+  },
+  "profile": "local-simulator-task",
+  "features": ["query.v1", "task.v1", "trusted-grants.v1", "trusted-confirmation.v1", "persistent-task.v1", "observation.v0.1"],
+  "operations": ["QUERY", "TASK"],
+  "connectionKinds": ["synthetic-bank-http.v1"],
+  "routingAssets": {
+    "descriptionPattern": "repo://routing/capability-descriptions/{packId}.v0.1.json",
+    "terminologyRefs": ["repo://routing/terminology/demo-bank-zh-cn.v0.1.json"]
+  }
+}

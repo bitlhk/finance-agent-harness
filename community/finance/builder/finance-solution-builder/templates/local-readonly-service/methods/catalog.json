@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "finance-host-methods.v0.1",
+  "methods": [
+    {"capabilityId": "account.balance.query", "file": "account-balance.md", "version": "0.1.1"},
+    {"capabilityId": "wealth.facts.describe", "file": "wealth-facts.md", "version": "0.1.1"}
+  ]
+}

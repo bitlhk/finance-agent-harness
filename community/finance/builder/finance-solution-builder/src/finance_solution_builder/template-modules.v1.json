@@ -1,0 +1,669 @@
+{
+  "schemaVersion": "finance-studio-template-modules.v1",
+  "version": "0.2.1",
+  "source": {
+    "repository": "wuxiaojingjing/mobile-banking-3.0",
+    "commit": "3b430100b38037884f7eec51b33a7625e4276cca",
+    "scope": "代码目录盘点；不代表已完成 Harness 接入或运行验收"
+  },
+  "businessDomains": [
+    {
+      "id": "customer-management",
+      "label": "客户经营",
+      "description": "围绕客户洞察、服务准备、权益和持有期服务开展持续经营。",
+      "icon": "user-round-check",
+      "order": 1
+    },
+    {
+      "id": "business-processing",
+      "label": "业务办理",
+      "description": "面向账户、支付、转账和产品服务提供查询与受控办理能力。",
+      "icon": "landmark",
+      "order": 2
+    },
+    {
+      "id": "credit-approval",
+      "label": "信贷授信",
+      "description": "面向信贷申请、材料核验、授信调查和辅助审核等任务。",
+      "icon": "file-check-2",
+      "order": 3
+    },
+    {
+      "id": "operations",
+      "label": "运营作业",
+      "description": "面向材料处理、业务审核、作业协同和质量反馈等内部运营任务。",
+      "icon": "clipboard-check",
+      "order": 4
+    },
+    {
+      "id": "risk-compliance",
+      "label": "风险合规",
+      "description": "面向风险识别、线索核验、合规检查和调查辅助等受控任务。",
+      "icon": "shield-check",
+      "order": 5
+    },
+    {
+      "id": "research-decision",
+      "label": "投研决策",
+      "description": "面向研究、分析、组合判断和决策支持等专业任务。",
+      "icon": "chart-pie",
+      "order": 6
+    }
+  ],
+  "channels": [
+    {
+      "id": "mobile-banking",
+      "label": "手机银行",
+      "kind": "CUSTOMER_CHANNEL"
+    }
+  ],
+  "taskBlueprints": [
+    {
+      "id": "account-cashflow-service",
+      "label": "账户与收支服务",
+      "businessDomainId": "business-processing",
+      "relatedBusinessDomainIds": ["customer-management"],
+      "moduleIds": ["agent.account", "agent.finance_assistant"],
+      "packIds": ["account-balance-readonly", "cashflow-readonly"],
+      "channelIds": ["mobile-banking"],
+      "legacyTemplateId": "mobile-banking",
+      "status": "PARTIAL",
+      "kind": "BUSINESS_TASK"
+    },
+    {
+      "id": "wealth-holding-service",
+      "label": "财富持有期服务",
+      "businessDomainId": "customer-management",
+      "relatedBusinessDomainIds": [],
+      "moduleIds": ["agent.wealth_aggregate"],
+      "packIds": ["wealth-facts-description", "wealth-customer-context"],
+      "channelIds": ["mobile-banking"],
+      "legacyTemplateId": "mobile-banking",
+      "status": "PARTIAL",
+      "kind": "BUSINESS_TASK"
+    },
+    {
+      "id": "transfer-service",
+      "label": "转账办理服务",
+      "businessDomainId": "business-processing",
+      "relatedBusinessDomainIds": [],
+      "moduleIds": ["agent.transfer"],
+      "packIds": ["internal-transfer"],
+      "channelIds": ["mobile-banking"],
+      "legacyTemplateId": "mobile-banking",
+      "status": "PARTIAL",
+      "kind": "BUSINESS_TASK"
+    },
+    {
+      "id": "channel-preference-service",
+      "label": "渠道展示设置",
+      "businessDomainId": "business-processing",
+      "relatedBusinessDomainIds": [],
+      "moduleIds": ["agent.channel_settings"],
+      "packIds": ["channel-preferences"],
+      "channelIds": ["mobile-banking"],
+      "legacyTemplateId": "mobile-banking",
+      "status": "PARTIAL",
+      "kind": "APPLICATION_CONFIGURATION",
+      "tags": ["应用配置", "无障碍"]
+    },
+    {
+      "id": "personal-loan-audit-assistance",
+      "label": "个人贷款审核辅助",
+      "businessDomainId": "credit-approval",
+      "relatedBusinessDomainIds": ["operations"],
+      "moduleIds": ["smart-audit.personal-loan"],
+      "packIds": ["smart-audit-personal-loan-audit"],
+      "channelIds": [],
+      "legacyTemplateId": "loan-review",
+      "status": "PARTIAL",
+      "kind": "BUSINESS_TASK"
+    },
+    {
+      "id": "enterprise-credit-audit-assistance",
+      "label": "企业授信审核辅助",
+      "businessDomainId": "credit-approval",
+      "relatedBusinessDomainIds": ["operations"],
+      "moduleIds": ["smart-audit.enterprise-credit"],
+      "packIds": ["smart-audit-enterprise-credit-audit"],
+      "channelIds": [],
+      "legacyTemplateId": "loan-review",
+      "status": "PARTIAL",
+      "kind": "BUSINESS_TASK"
+    }
+  ],
+  "moduleDomainAssignments": [
+    {"moduleId": "agent.personal_info", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.security_service", "businessDomainId": "risk-compliance", "relatedBusinessDomainIds": ["business-processing"]},
+    {"moduleId": "agent.channel_settings", "businessDomainId": "business-processing", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.advisory_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.finance_assistant", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.branch_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": ["operations"]},
+    {"moduleId": "agent.vip_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.account", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.transfer", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["risk-compliance"]},
+    {"moduleId": "agent.payment", "businessDomainId": "business-processing", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.deposit_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.payroll_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["operations"]},
+    {"moduleId": "agent.e_cny", "businessDomainId": "business-processing", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.creditcard", "businessDomainId": "business-processing", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.loan_service", "businessDomainId": "credit-approval", "relatedBusinessDomainIds": ["business-processing"]},
+    {"moduleId": "agent.wealth_aggregate", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.wealth_product", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.fund_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.bond_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.precious_metal", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.fx_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.insurance_service", "businessDomainId": "business-processing", "relatedBusinessDomainIds": ["customer-management"]},
+    {"moduleId": "agent.life_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.livelihood_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": []},
+    {"moduleId": "agent.benefits_ops", "businessDomainId": "customer-management", "relatedBusinessDomainIds": ["operations"]},
+    {"moduleId": "agent.enterprise_service", "businessDomainId": "customer-management", "relatedBusinessDomainIds": ["business-processing"]},
+    {"moduleId": "smart-audit.personal-loan", "businessDomainId": "credit-approval", "relatedBusinessDomainIds": ["operations"]},
+    {"moduleId": "smart-audit.enterprise-credit", "businessDomainId": "credit-approval", "relatedBusinessDomainIds": ["operations"]}
+  ],
+  "runtimes": [
+    {
+      "id": "openjiuwen-java-0.1.15",
+      "label": "OpenJiuwen Java",
+      "description": "Java · 0.1.15 · 查询与办理",
+      "architectureLabel": "原生 Java Agent",
+      "family": "openjiuwen",
+      "language": "java",
+      "version": "0.1.15",
+      "status": "AVAILABLE"
+    },
+    {
+      "id": "openjiuwen-python-0.1.18",
+      "label": "OpenJiuwen Python",
+      "description": "Python · 0.1.18 · 只读查询",
+      "architectureLabel": "Python Agent · Harness 执行桥",
+      "family": "openjiuwen",
+      "language": "python",
+      "version": "0.1.18",
+      "status": "AVAILABLE",
+      "capabilityIds": ["account.balance.query", "wealth.facts.describe", "finance.transaction-summary.query", "finance.spending-analysis.query"],
+      "reason": "已验证余额、财富和收支只读能力；Python Agent 通过 Harness 执行桥调用金融能力"
+    }
+  ],
+  "templates": [
+    {
+      "id": "mobile-banking",
+      "label": "手机银行",
+      "icon": "smartphone",
+      "audienceId": "CUSTOMER",
+      "applicationTemplateId": "banking-readonly-web-v1",
+      "profileId": "local-read-only",
+      "status": "PARTIAL",
+      "scope": "客户本人 · 模拟银行只读",
+      "moduleIds": [
+        "agent.personal_info",
+        "agent.security_service",
+        "agent.channel_settings",
+        "agent.advisory_service",
+        "agent.finance_assistant",
+        "agent.branch_service",
+        "agent.vip_service",
+        "agent.account",
+        "agent.transfer",
+        "agent.payment",
+        "agent.deposit_service",
+        "agent.payroll_service",
+        "agent.e_cny",
+        "agent.creditcard",
+        "agent.loan_service",
+        "agent.wealth_aggregate",
+        "agent.wealth_product",
+        "agent.fund_service",
+        "agent.bond_service",
+        "agent.precious_metal",
+        "agent.fx_service",
+        "agent.insurance_service",
+        "agent.life_service",
+        "agent.livelihood_service",
+        "agent.benefits_ops",
+        "agent.enterprise_service"
+      ],
+      "defaultModuleIds": [
+        "agent.account",
+        "agent.wealth_aggregate"
+      ],
+      "featuredModuleIds": [
+        "agent.account",
+        "agent.wealth_aggregate",
+        "agent.finance_assistant",
+        "agent.transfer",
+        "agent.creditcard",
+        "agent.wealth_product",
+        "agent.fund_service",
+        "agent.loan_service",
+        "agent.insurance_service"
+      ],
+      "runtimeIds": [
+        "openjiuwen-java-0.1.15",
+        "openjiuwen-python-0.1.18"
+      ],
+      "bankConnectionIds": [
+        "local-simulator"
+      ]
+    },
+    {
+      "id": "wealth-assistant",
+      "label": "财富助手",
+      "icon": "wallet",
+      "audienceId": "EMPLOYEE",
+      "status": "NOT_INTEGRATED",
+      "scope": "业务模块、可信身份与宿主接线待接入",
+      "moduleIds": [],
+      "defaultModuleIds": [],
+      "featuredModuleIds": [],
+      "runtimeIds": [],
+      "bankConnectionIds": []
+    },
+    {
+      "id": "insurance-coach",
+      "label": "保险教练",
+      "icon": "book-open",
+      "audienceId": "EMPLOYEE",
+      "status": "NOT_INTEGRATED",
+      "scope": "业务模块、可信身份与宿主接线待接入",
+      "moduleIds": [],
+      "defaultModuleIds": [],
+      "featuredModuleIds": [],
+      "runtimeIds": [],
+      "bankConnectionIds": []
+    },
+    {
+      "id": "group-insurance-review",
+      "label": "团险审核",
+      "icon": "file-check-2",
+      "audienceId": "EMPLOYEE",
+      "status": "NOT_INTEGRATED",
+      "scope": "业务模块、可信身份与宿主接线待接入",
+      "moduleIds": [],
+      "defaultModuleIds": [],
+      "featuredModuleIds": [],
+      "runtimeIds": [],
+      "bankConnectionIds": []
+    },
+    {
+      "id": "loan-review",
+      "label": "贷款审核",
+      "icon": "shield-check",
+      "audienceId": "EMPLOYEE",
+      "applicationTemplateId": "banking-readonly-web-v1",
+      "status": "PARTIAL",
+      "scope": "内部审核材料核验与人工复核辅助；不产生审批或授信决定",
+      "moduleIds": ["smart-audit.personal-loan", "smart-audit.enterprise-credit"],
+      "defaultModuleIds": [],
+      "featuredModuleIds": ["smart-audit.personal-loan", "smart-audit.enterprise-credit"],
+      "runtimeIds": ["openjiuwen-java-0.1.15"],
+      "bankConnectionIds": ["local-simulator"]
+    },
+    {
+      "id": "investment-research",
+      "label": "投研助手",
+      "icon": "chart-pie",
+      "audienceId": "EMPLOYEE",
+      "status": "NOT_INTEGRATED",
+      "scope": "业务模块、可信身份与宿主接线待接入",
+      "moduleIds": [],
+      "defaultModuleIds": [],
+      "featuredModuleIds": [],
+      "runtimeIds": [],
+      "bankConnectionIds": []
+    }
+  ],
+  "modules": [
+    {
+      "id": "agent.personal_info",
+      "label": "个人信息管理",
+      "directory": "personal-info",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/personal-info/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "user-round-check",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.security_service",
+      "label": "安全服务",
+      "directory": "security-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/security-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "shield-check",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.channel_settings",
+      "label": "渠道设置",
+      "directory": "channel-settings",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/channel-settings/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "sliders-horizontal",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.advisory_service",
+      "label": "咨询服务",
+      "directory": "advisory-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/advisory-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "messages-square",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.finance_assistant",
+      "label": "收支分析",
+      "aliases": ["金融助手"],
+      "directory": "finance-assistant",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/finance-assistant/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": ["finance.cashflow.readonly"],
+      "scope": "月度收支汇总与分类分析；来源口径分别保留，不含预算、办理或投资推荐",
+      "icon": "chart-column-increasing",
+      "sourceOperations": ["账单与交易摘要", "查询财务概况"],
+      "operationsEvidence": "https://github.com/wuxiaojingjing/mobile-banking-3.0/tree/db38c7f454b25f109a607308dbeb4f01de75e9d2/agents/finance-assistant/assets/tools"
+    },
+    {
+      "id": "agent.branch_service",
+      "label": "网点服务",
+      "directory": "branch-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/branch-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "landmark",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.vip_service",
+      "label": "客户专享",
+      "directory": "vip-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/vip-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "briefcase-business",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.account",
+      "label": "账户服务",
+      "aliases": ["账户助手"],
+      "directory": "account",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/account/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [
+        "account.balance.query"
+      ],
+      "scope": "当前接入：余额查询",
+      "icon": "wallet",
+      "sourceOperations": [
+        "余额查询",
+        "交易明细"
+      ],
+      "operationsEvidence": "agents/account/assets/tools/account.yaml"
+    },
+    {
+      "id": "agent.transfer",
+      "label": "转账服务",
+      "aliases": ["转账助手"],
+      "directory": "transfer",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/transfer/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "arrow-left-right",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.payment",
+      "label": "支付管理",
+      "directory": "payment",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/payment/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "credit-card",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.deposit_service",
+      "label": "存款服务",
+      "directory": "deposit-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/deposit-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "wallet",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.payroll_service",
+      "label": "薪资服务",
+      "directory": "payroll-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/payroll-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "briefcase-business",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.e_cny",
+      "label": "数字人民币",
+      "directory": "e-cny",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/e-cny/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "smartphone",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.creditcard",
+      "label": "信用卡服务",
+      "aliases": ["信用卡助手"],
+      "directory": "creditcard",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/creditcard/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "credit-card",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.loan_service",
+      "label": "贷款服务",
+      "directory": "loan-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/loan-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "shield-check",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.wealth_aggregate",
+      "label": "财富聚合服务",
+      "directory": "wealth-aggregate",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/wealth-aggregate/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [
+        "wealth.facts.describe"
+      ],
+      "scope": "当前接入：财富概览",
+      "icon": "chart-pie",
+      "sourceOperations": [
+        "财富总览",
+        "财富聚合查询"
+      ],
+      "operationsEvidence": "agents/wealth-aggregate/assets/tools/wealth.yaml"
+    },
+    {
+      "id": "agent.wealth_product",
+      "label": "理财服务",
+      "directory": "wealth-product",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/wealth-product/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "wallet",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.fund_service",
+      "label": "基金服务",
+      "directory": "fund-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/fund-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "chart-column-increasing",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.bond_service",
+      "label": "债券服务",
+      "directory": "bond-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/bond-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "file-check-2",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.precious_metal",
+      "label": "贵金属服务",
+      "directory": "precious-metal",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/precious-metal/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "wallet",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.fx_service",
+      "label": "外汇服务",
+      "directory": "fx-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/fx-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "arrow-left-right",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.insurance_service",
+      "label": "保险服务",
+      "directory": "insurance-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/insurance-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "shield-check",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.life_service",
+      "label": "生活服务",
+      "directory": "life-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/life-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "house",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.livelihood_service",
+      "label": "民生服务",
+      "directory": "livelihood-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/livelihood-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "house",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.benefits_ops",
+      "label": "权益运营",
+      "directory": "benefits-ops",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/benefits-ops/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "briefcase-business",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "agent.enterprise_service",
+      "label": "企业服务",
+      "directory": "enterprise-service",
+      "source": "https://github.com/wuxiaojingjing/mobile-banking-3.0/blob/3b430100b38037884f7eec51b33a7625e4276cca/agents/enterprise-service/agent.yaml#L1",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": [],
+      "scope": "原 Demo 模块，待接入",
+      "icon": "briefcase-business",
+      "sourceOperations": [],
+      "operationsEvidence": null
+    },
+    {
+      "id": "smart-audit.personal-loan",
+      "label": "个人贷款审核",
+      "directory": "smart-audit/personal-loan-audit",
+      "source": "repo://domain-packs/smart-audit/personal-loan-audit",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": ["smart-audit-personal-loan-audit"],
+      "scope": "个人贷款材料核验与人工复核辅助；不产生审批决定",
+      "icon": "file-check-2",
+      "sourceOperations": ["主体资格", "收入核验", "资产负债", "偿债能力"],
+      "operationsEvidence": "capability-packs/smart-audit-personal-loan-audit/pack.yaml"
+    },
+    {
+      "id": "smart-audit.enterprise-credit",
+      "label": "企业授信审核",
+      "directory": "smart-audit/enterprise-credit-audit",
+      "source": "repo://domain-packs/smart-audit/enterprise-credit-audit",
+      "sourceStatus": "MANIFEST_PRESENT",
+      "componentIds": ["smart-audit-enterprise-credit-audit"],
+      "scope": "企业授信材料核验与人工复核辅助；不产生授信决定",
+      "icon": "file-check-2",
+      "sourceOperations": ["财报审核", "财务概述", "流水分析", "流水报告", "尽调报告"],
+      "operationsEvidence": "capability-packs/smart-audit-enterprise-credit-audit/pack.yaml"
+    }
+  ]
+}

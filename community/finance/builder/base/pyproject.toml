@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finance-builder-base"
+version = "0.1.0"
+description = "Shared contracts and execution building blocks for finance Agent Builders."
+requires-python = ">=3.11.4,<3.14"
+dependencies = ["pydantic>=2.10,<3"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["finance_builder_base*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 禁用 cacheprovider：不在项目目录生成 .pytest_cache（本仓库各文档示例本就统一带 -p no:cacheprovider）。
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

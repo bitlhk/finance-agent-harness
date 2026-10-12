@@ -1,0 +1,1 @@
+"""Asset governance tests."""

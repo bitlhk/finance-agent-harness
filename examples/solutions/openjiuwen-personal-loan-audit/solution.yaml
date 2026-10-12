@@ -1,0 +1,34 @@
+schemaVersion: finance-agent-solution-build.v1
+solutionId: openjiuwen-personal-loan-audit
+displayName: OpenJiuwen 个人贷款审核
+runtime:
+  family: openjiuwen
+  language: java
+  templateRef: maven://com.openjiuwen:agent-core-java:0.1.15
+  integrationRef: maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT
+profileRef:
+  id: internal-control
+  version: 0.1.0
+  source: repo://profiles
+domainPackRefs:
+  - id: smart-audit-personal-loan-audit
+    version: 0.1.0
+    source: repo://domain-packs/smart-audit/personal-loan-audit
+capabilityPackRefs:
+  - id: smart-audit-personal-loan-audit
+    version: 0.1.0
+    source: repo://capability-packs/smart-audit-personal-loan-audit
+providerRefs:
+  - id: smart-audit-model-provider
+    version: 0.1.0-SNAPSHOT
+    source: repo://providers/smart-audit
+capabilityBindings:
+  smartaudit.personal.borrower-qualification.query: smart-audit-model-provider
+  smartaudit.personal.income-verification.query: smart-audit-model-provider
+  smartaudit.personal.asset-liability.query: smart-audit-model-provider
+  smartaudit.personal.repayment-capacity.query: smart-audit-model-provider
+modelRef: env://FINANCE_AGENT_MODEL
+evaluationPackRef:
+  id: smart-audit-personal-loan
+  version: 1.0.0
+  source: git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-personal-loan

@@ -1,0 +1,22 @@
+schemaVersion: finance-capability-pack.v1
+packId: account-balance-readonly
+version: 0.1.0
+systemPrompt: |
+  Query account balances only through account_balance_query. Report the source, currency and time.
+  Missing information is not zero. Do not infer wealth totals from account balances.
+  This installation has no payment, transfer or other business mutation capability.
+capabilities:
+  - capabilityId: account.balance.query
+    toolName: account_balance_query
+    name: Account balance
+    description: Read the current authorized customer's accounts and available balances from the bank.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        accountId:
+          type: string
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$'
+    requiredScopes:
+      - account:read

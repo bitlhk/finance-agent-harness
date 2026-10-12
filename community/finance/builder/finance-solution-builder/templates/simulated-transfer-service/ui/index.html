@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>模拟转账 · Finance Harness</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a href="/"><svg class="icon" aria-hidden="true"><use href="icons.svg#landmark"></use></svg> FINANCE HARNESS</a><span>隔离模拟银行</span><button id="logout" hidden>退出</button></header>
+<main><section id="login"><h1>模拟转账</h1><form id="login-form"><label>模拟银行账号<input name="loginName" autocomplete="username" required></label><label>登录密码<input name="loginSecret" type="password" autocomplete="current-password" required></label><button type="submit">登录</button></form></section>
+<div id="workspace" hidden><div class="heading"><h1>模拟转账</h1><span id="identity"></span><button id="refresh">刷新原任务</button></div>
+<div class="columns"><section><h2>准备交易</h2><form id="step-form"><label>身份验证动态码<input name="verificationCode" inputmode="numeric" autocomplete="one-time-code" required></label><button type="submit">验证身份</button></form>
+<form id="transfer-form"><label>付款账户<select name="fromAccountId" required></select></label><label>已保存收款人<select name="beneficiaryId" required></select></label><label>金额 · CNY<input name="amount" type="number" step="0.01" min="0.01" max="100" required></label><label>用途<input name="purpose" maxlength="100"></label><button type="submit">预检并准备</button></form>
+<details><summary>运行制品与安装证据</summary><pre id="installation"></pre></details></section>
+<section><h2>原任务记录</h2><div id="tasks"></div><h2>助手对话</h2><div id="messages" aria-live="polite"></div><form id="chat-form"><label>新消息<textarea name="query" rows="2" maxlength="4000" required></textarea></label><button type="submit">发送</button></form></section></div></div>
+<p id="status" role="status"></p><dialog id="confirmation"><form method="dialog"><h2>确认这笔模拟转账？</h2><dl id="summary"></dl><p id="expiry"></p><div class="actions"><button value="cancel" class="secondary">返回核对</button><button type="button" id="approve">确认授权并提交</button></div></form></dialog></main><script src="markdown.js"></script><script src="app.js"></script></body></html>

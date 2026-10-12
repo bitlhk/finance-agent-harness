@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "assets": {
+    "app.js": "5c211bb6bcb238ed8c311b31cd6fc35c2b4b01719033f1c89d1c5fcac0a38d2d",
+    "terminal.css": "77647e360d706a2be449f813f54abc5329deec6552b8c09764558ba09b5216bf",
+    "icons.svg": "1369841ef424379529f4434b74d58e668ebee98016e989b3287e0a9dd14ee608"
+  },
+  "builder": "283e6d52c813394d99a5e3806287ace9af798629",
+  "protectedWorkbench": 401,
+  "publicGuide": 200
+}

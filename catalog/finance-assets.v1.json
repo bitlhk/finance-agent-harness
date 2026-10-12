@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.13",
+  "catalogVersion": "0.2.14",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -45,9 +45,15 @@
       "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-customer-manager-java:0.1.0-SNAPSHOT",
       "governanceRef": "finance-harness-integration",
       "compatibility": {
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"],
-        "profiles": ["employee-assisted"]
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "employee-assisted"
+        ]
       }
     },
     {
@@ -58,9 +64,15 @@
       "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-fraud-verification-java:0.1.0-SNAPSHOT",
       "governanceRef": "finance-harness-integration",
       "compatibility": {
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"],
-        "profiles": ["fraud-investigation"]
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "fraud-investigation"
+        ]
       }
     }
   ],
@@ -137,11 +149,21 @@
       "profile": "employee-assisted",
       "source": "repo://domain-packs/wealth/service-preparation",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["wealth.previsit-context.query"],
-      "dependencies": [
-        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"}
+      "requiresCapabilities": [
+        "wealth.previsit-context.query"
       ],
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-manager-previsit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "wealth-shared-facts",
@@ -268,16 +290,26 @@
       "profile": "fraud-investigation",
       "source": "repo://domain-packs/risk/fraud-verification-assistance",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["fraud.risk-evidence.query"],
-      "dependencies": [{
-        "kind": "capability-pack",
-        "id": "fraud-risk-evidence-query",
-        "version": "0.1.0"
-      }],
+      "requiresCapabilities": [
+        "fraud.risk-evidence.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "fraud-risk-evidence-query",
+          "version": "0.1.0"
+        }
+      ],
       "compatibility": {
-        "profiles": ["fraud-investigation"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "fraud-investigation"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -287,9 +319,28 @@
       "profile": "post-loan-risk-review",
       "source": "repo://domain-packs/risk/post-loan-risk-verification",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
-      "dependencies": [{"kind":"capability-pack","id":"post-loan-risk-snapshot","version":"0.1.0"}],
-      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+      "requiresCapabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "post-loan-risk-snapshot",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     },
     {
       "id": "transfer-anti-fraud",
@@ -352,13 +403,92 @@
         "enterprise.application-contract.verify"
       ],
       "dependencies": [
-        {"kind": "capability-pack", "id": "enterprise-financial-statement-verification", "version": "0.1.0"},
-        {"kind": "capability-pack", "id": "enterprise-application-contract-verification", "version": "0.1.0"}
+        {
+          "kind": "capability-pack",
+          "id": "enterprise-financial-statement-verification",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "enterprise-application-contract-verification",
+          "version": "0.1.0"
+        }
       ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-personal-loan-audit",
+      "version": "0.1.0",
+      "displayName": "个人贷款审核辅助",
+      "profile": "internal-control",
+      "source": "repo://domain-packs/smart-audit/personal-loan-audit",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "smartaudit.personal.borrower-qualification.query",
+        "smartaudit.personal.income-verification.query",
+        "smartaudit.personal.asset-liability.query",
+        "smartaudit.personal.repayment-capacity.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "smart-audit-personal-loan-audit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-enterprise-credit-audit",
+      "version": "0.1.0",
+      "displayName": "企业授信审核辅助",
+      "profile": "internal-control",
+      "source": "repo://domain-packs/smart-audit/enterprise-credit-audit",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "smartaudit.enterprise.financial-report.query",
+        "smartaudit.enterprise.financial-summary.query",
+        "smartaudit.enterprise.transaction-analysis.query",
+        "smartaudit.enterprise.transaction-report.query",
+        "smartaudit.enterprise.due-diligence.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "smart-audit-enterprise-credit-audit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
@@ -376,9 +506,16 @@
         "eval.synthetic.wealth-assistant-product-info.query"
       ],
       "compatibility": {
-        "profiles": ["local-read-only"],
-        "runtimeFamilies": ["openjiuwen", "agentscope"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen",
+          "agentscope"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -525,8 +662,14 @@
       "displayName": "财富产品候选依据（待运行接线验收）",
       "source": "repo://capability-packs/wealth-allocation-context",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["wealth.allocation-context.query"],
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "capabilities": [
+        "wealth.allocation-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "wealth-customer-context",
@@ -642,11 +785,19 @@
       "displayName": "已知涉诈记录核验",
       "source": "repo://capability-packs/fraud-risk-evidence-query",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["fraud.risk-evidence.query"],
+      "capabilities": [
+        "fraud.risk-evidence.query"
+      ],
       "compatibility": {
-        "profiles": ["fraud-investigation"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "fraud-investigation"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -655,8 +806,21 @@
       "displayName": "贷后风险快照与确定性预警",
       "source": "repo://capability-packs/post-loan-risk-snapshot",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
-      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+      "capabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     },
     {
       "id": "cashflow-readonly",
@@ -714,11 +878,19 @@
       "displayName": "企业财报勾稽核验",
       "source": "repo://capability-packs/enterprise-financial-statement-verification",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["enterprise.financial-statement.verify"],
+      "capabilities": [
+        "enterprise.financial-statement.verify"
+      ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -727,11 +899,68 @@
       "displayName": "申请与用途合同一致性核验",
       "source": "repo://capability-packs/enterprise-application-contract-verification",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["enterprise.application-contract.verify"],
+      "capabilities": [
+        "enterprise.application-contract.verify"
+      ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-personal-loan-audit",
+      "version": "0.1.0",
+      "displayName": "个人贷款审核能力",
+      "source": "repo://capability-packs/smart-audit-personal-loan-audit",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "smartaudit.personal.borrower-qualification.query",
+        "smartaudit.personal.income-verification.query",
+        "smartaudit.personal.asset-liability.query",
+        "smartaudit.personal.repayment-capacity.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-enterprise-credit-audit",
+      "version": "0.1.0",
+      "displayName": "企业授信审核能力",
+      "source": "repo://capability-packs/smart-audit-enterprise-credit-audit",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "smartaudit.enterprise.financial-report.query",
+        "smartaudit.enterprise.financial-summary.query",
+        "smartaudit.enterprise.transaction-analysis.query",
+        "smartaudit.enterprise.transaction-report.query",
+        "smartaudit.enterprise.due-diligence.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
@@ -835,9 +1064,16 @@
       "version": "0.1.0-SNAPSHOT",
       "displayName": "贷后风险合成参考 Provider",
       "source": "repo://providers/post-loan-risk-reference",
-      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "capabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles":["post-loan-risk-review"]}
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ]
+      }
     },
     {
       "id": "customer-crm-readonly",
@@ -898,9 +1134,44 @@
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-model-provider",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "智能审核模型 Provider",
+      "source": "repo://providers/smart-audit",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "smartaudit.personal.borrower-qualification.query",
+        "smartaudit.personal.income-verification.query",
+        "smartaudit.personal.asset-liability.query",
+        "smartaudit.personal.repayment-capacity.query",
+        "smartaudit.enterprise.financial-report.query",
+        "smartaudit.enterprise.financial-summary.query",
+        "smartaudit.enterprise.transaction-analysis.query",
+        "smartaudit.enterprise.transaction-report.query",
+        "smartaudit.enterprise.due-diligence.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
@@ -962,7 +1233,35 @@
       "displayName": "企业信贷材料核验受控案例（非业务审批评测）",
       "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles": ["internal-control"]}
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-personal-loan",
+      "version": "1.0.0",
+      "displayName": "个人贷款审核辅助评测包",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-personal-loan",
+      "governanceRef": "finance-skill-eval",
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
+    },
+    {
+      "id": "smart-audit-enterprise-credit",
+      "version": "1.0.0",
+      "displayName": "企业授信审核辅助评测包",
+      "source": "git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-enterprise-credit",
+      "governanceRef": "finance-skill-eval",
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
     }
   ],
   "catalogRevision": "2026-10-11.post-loan-risk-verification-mvp-1",

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "smart-audit-demo-materials.v1",
+  "scenario": "enterprise-credit-audit",
+  "materials": [
+    {
+      "category": "资产负债表",
+      "declaredFormat": "JSON",
+      "content": "{\"assetTotal\":1000000,\"liabilityTotal\":600000,\"equityTotal\":400000,\"period\":\"2026-06-30\",\"currency\":\"CNY\"}"
+    }
+  ]
+}

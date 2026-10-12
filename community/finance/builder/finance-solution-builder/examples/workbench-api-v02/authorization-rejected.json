@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-workbench-api.v0.2",
+  "buildId": "agent-interface-example",
+  "instanceId": "example-instance",
+  "sessionId": "example-session",
+  "runId": "run-example",
+  "error": {
+    "code": "AUTHORIZATION_REJECTED",
+    "retryable": false
+  },
+  "clearConversation": true
+}

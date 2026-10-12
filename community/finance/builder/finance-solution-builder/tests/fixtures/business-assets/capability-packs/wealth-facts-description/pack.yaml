@@ -1,0 +1,15 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-facts-description
+version: 0.1.0
+capabilities:
+  - capabilityId: wealth.facts.describe
+    toolName: wealth_facts_describe
+    name: 财富事实描述
+    description: 描述当前获授权客户的财富事实。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties: {}
+    requiredScopes:
+      - wealth:facts:read

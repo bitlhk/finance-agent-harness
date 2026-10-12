@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "finance-studio-directory.v1",
+  "version": "0.1.2",
+  "audiences": [
+    {"id": "CUSTOMER", "label": "面客服务", "enabled": true, "buildEnabled": true},
+    {"id": "EMPLOYEE", "label": "对内业务", "enabled": true, "buildEnabled": false, "reason": "员工身份、授权与宿主接线待接入"},
+    {"id": "ENGINEERING", "label": "研发工程", "enabled": false, "buildEnabled": false, "reason": "后续开放"}
+  ],
+  "domains": [{"id": "ACCOUNT", "label": "账户"}, {"id": "WEALTH", "label": "财富"}, {"id": "CASHFLOW", "label": "收支"}],
+  "components": [
+    {"id": "finance.cashflow.readonly", "version": "0.1.0", "kind": "COMPONENT", "label": "收支分析组合", "description": "按月份查看收支汇总及分类，保留来源口径与信息缺口", "scope": "摘要与分类范围分开；不编造可比趋势，不含预算或转账", "domain": "CASHFLOW", "audienceIds": ["CUSTOMER"], "capabilityIds": ["finance.transaction-summary.query", "finance.spending-analysis.query"], "icon": "chart-column"},
+    {"id": "account.balance.query", "version": "0.1.0", "kind": "COMPONENT", "label": "余额查询", "description": "核对获授权账户的可用余额与币种", "scope": "当前模拟客户的账户查询，不含转账或支付", "domain": "ACCOUNT", "audienceIds": ["CUSTOMER", "EMPLOYEE"], "capabilityIds": ["account.balance.query"], "icon": "landmark", "plannedCapabilities": [{"id": "account.transaction.query", "label": "交易明细查询", "status": "NOT_INTEGRATED"}]},
+    {"id": "wealth.facts.describe", "version": "0.1.0", "kind": "COMPONENT", "label": "财富事实描述", "description": "说明已知资产范围、风险测评与信息缺口", "scope": "描述已返回事实，不作正式推荐或适当性决策", "domain": "WEALTH", "audienceIds": ["CUSTOMER", "EMPLOYEE"], "capabilityIds": ["wealth.facts.describe"], "icon": "file-check-2"}
+  ],
+  "templates": [
+    {"id": "customer-wealth-readonly", "version": "0.1.0", "kind": "TEMPLATE", "label": "财富查询助手", "description": "核对财富事实，并查询账户余额", "scope": "客户自助只读参考方案", "domain": "WEALTH", "audienceIds": ["CUSTOMER"], "componentIds": ["wealth.facts.describe", "account.balance.query"], "icon": "messages-square"},
+    {"id": "customer-account-readonly", "version": "0.1.0", "kind": "TEMPLATE", "label": "账户查询助手", "description": "仅查询账户余额，保留来源与币种", "scope": "不安装财富描述或办理工具", "domain": "ACCOUNT", "audienceIds": ["CUSTOMER"], "componentIds": ["account.balance.query"], "icon": "landmark"}
+  ]
+}

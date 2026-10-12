@@ -1,0 +1,98 @@
+schemaVersion: finance-capability-pack.v1
+packId: smart-audit-personal-loan-audit
+version: 0.1.0
+systemPrompt: >-
+  Only call the fixed personal-loan audit query selected by the host. Every request
+  must contain one or more OCR-transcribed text or JSON materials with category,
+  content and declaredFormat. Do not choose capabilities, identity, subject, session,
+  scopes, rule versions or model settings; do not generate, change or upload rules.
+  Results are human-review material, never a loan approval or a business action.
+capabilities:
+  - capabilityId: smartaudit.personal.borrower-qualification.query
+    toolName: smart_audit_borrower_qualification_query
+    name: 借款人主体资格核实
+    description: 基于锁定规则和身份类材料形成主体资格审核建议。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:personal:borrower-qualification:read"]
+  - capabilityId: smartaudit.personal.income-verification.query
+    toolName: smart_audit_income_verification_query
+    name: 收入水平交叉验证
+    description: 基于锁定规则交叉核验收入、流水、个税及社保材料。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:personal:income:read"]
+  - capabilityId: smartaudit.personal.asset-liability.query
+    toolName: smart_audit_asset_liability_query
+    name: 资产与负债状况核实
+    description: 基于锁定规则审核权属、权利限制和历史负债消除情况。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:personal:asset-liability:read"]
+  - capabilityId: smartaudit.personal.repayment-capacity.query
+    toolName: smart_audit_repayment_capacity_query
+    name: 个人偿债能力计算
+    description: 基于锁定规则计算稳定收入、月供和偿债比率的审核建议。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:personal:repayment-capacity:read"]

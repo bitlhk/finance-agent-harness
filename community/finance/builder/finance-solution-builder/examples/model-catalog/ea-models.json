@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "finance-model-catalog.v1",
+  "source": {
+    "kind": "EA_METADATA_SNAPSHOT",
+    "observedAt": "2026-09-06T12:35:40Z",
+    "commit": "5706428bfd9b3d1708fa3e9e710a212a48aa229b",
+    "liveInferenceVerified": false
+  },
+  "models": [
+    {
+      "modelRef": "model-ea-001",
+      "displayName": "glm-5.2",
+      "provider": "OpenAI",
+      "modelName": "glm-5.2",
+      "eaCatalogId": "glm-5.2",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-002",
+      "displayName": "deepseek-v4-flash",
+      "provider": "OpenAI",
+      "modelName": "deepseek-v4-flash",
+      "eaCatalogId": "deepseek-v4-flash",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-003",
+      "displayName": "DeepSeek-V4-Pro",
+      "provider": "OpenAI",
+      "modelName": "deepseek-v4-pro",
+      "eaCatalogId": "DeepSeek-V4-Pro",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-004",
+      "displayName": "MiniMax M3",
+      "provider": "OpenAI",
+      "modelName": "MiniMax-M3",
+      "eaCatalogId": "MiniMax M3",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-005",
+      "displayName": "Doubao Seed 2.1 Pro",
+      "provider": "OpenAI",
+      "modelName": "doubao-seed-2.1-pro",
+      "eaCatalogId": "Doubao Seed 2.1 Pro",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-006",
+      "displayName": "HY3",
+      "provider": "OpenAI",
+      "modelName": "hy3",
+      "eaCatalogId": "HY3",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-007",
+      "displayName": "openpangu-2.0-flash",
+      "provider": "OpenAI",
+      "modelName": "openpangu-2.0-flash",
+      "eaCatalogId": "openpangu-2.0-flash",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-008",
+      "displayName": "Nemotron Nano",
+      "provider": "OpenRouter",
+      "modelName": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "eaCatalogId": "Nemotron Nano",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-009",
+      "displayName": "Gemma 4 26B A4B",
+      "provider": "OpenRouter",
+      "modelName": "google/gemma-4-26b-a4b-it:free",
+      "eaCatalogId": "Gemma 4 26B A4B",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-010",
+      "displayName": "Laguna S 2.1",
+      "provider": "OpenRouter",
+      "modelName": "poolside/laguna-s-2.1:free",
+      "eaCatalogId": "Laguna S 2.1",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-011",
+      "displayName": "GLM-4.5-Air",
+      "provider": "OpenRouter",
+      "modelName": "z-ai/glm-4.5-air",
+      "eaCatalogId": "GLM-4.5-Air",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-012",
+      "displayName": "GPT-5.6 Luna",
+      "provider": "OpenRouter",
+      "modelName": "openai/gpt-5.6-luna",
+      "eaCatalogId": "GPT-5.6 Luna",
+      "eaConfigured": true
+    },
+    {
+      "modelRef": "model-ea-013",
+      "displayName": "GLM-5.3-Flash",
+      "provider": "OpenAI",
+      "modelName": "glm-5.3-flash",
+      "eaCatalogId": "GLM-5.3-Flash",
+      "eaConfigured": true
+    }
+  ]
+}

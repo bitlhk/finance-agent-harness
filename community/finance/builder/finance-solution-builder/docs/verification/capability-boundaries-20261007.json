@@ -1,0 +1,604 @@
+{
+  "schemaVersion": "finance-boundaries-engineering-acceptance.v1",
+  "status": "PASS_CONTROLLED_ENGINEERING",
+  "productionDeployed": false,
+  "merged": false,
+  "scope": "Existing declared runtimes; two new OpenJiuwen Java readonly packs. Not live bank/model acceptance.",
+  "builderTests": {
+    "tests": "1811",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "5",
+    "time": "323.796"
+  },
+  "builderTestEvidence": {
+    "file": "/tmp/finance-boundaries-acceptance/builder-final-tests.xml",
+    "sha256": "f06feaa18da8f68dee57fd8790c295aebf8935c8415989e628130c0e2eaab668"
+  },
+  "harnessTests": {
+    "tests": 388,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 8
+  },
+  "newQueriesBuild": {
+    "schemaVersion": "local-agent-build.v0.1",
+    "buildId": "account-history-extension",
+    "status": "BUILT",
+    "sources": {
+      "harness": {
+        "commit": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+        "worktreeDirty": false
+      }
+    },
+    "stages": [
+      {
+        "name": "harness_contracts",
+        "status": "PASS",
+        "log": "logs/harness_contracts.log",
+        "exitCode": 0,
+        "elapsedMillis": 364,
+        "logSha256": "078c6014f5f588a08b945c0cbee8fc6bb0093ec59e9ff3ea19428b4d327b91c7"
+      },
+      {
+        "name": "harness_tests_install",
+        "status": "PASS",
+        "log": "logs/harness_tests_install.log",
+        "exitCode": 0,
+        "elapsedMillis": 55634,
+        "logSha256": "f50efb734d90e002a665aeae89b2035dcfe54f82c92668836e316499ac50b1b5"
+      },
+      {
+        "name": "candidate_package",
+        "status": "PASS",
+        "log": "logs/candidate_package.log",
+        "exitCode": 0,
+        "elapsedMillis": 8836,
+        "logSha256": "c8f9bdd9b1e142b5013ef7778c19d80881650b68bb016f841801d76ec4b62d88"
+      },
+      {
+        "name": "component_installation",
+        "status": "PASS",
+        "log": "logs/component_installation.log",
+        "exitCode": 0,
+        "elapsedMillis": 1319,
+        "logSha256": "dcb255e7aea943e2b829ea87451e4f224962e727de6aa493eb8fadbb5630f69b"
+      }
+    ],
+    "realModel": "NOT_RUN",
+    "fullSimulator": "NOT_RUN",
+    "humanOnboarding": "PENDING",
+    "lockSha256": "09a3b7d53eafcaadb22ef513ec9750641e1dd7c244a6ef7c650e169d3f94aac4",
+    "elapsedMillis": 66428
+  },
+  "newQueriesChat": {
+    "file": "/tmp/finance-boundaries-acceptance/new-queries-compat/account-history/history-chat-evidence.json",
+    "sha256": "37167818b9c61676121a7ceb2a49e9db16896c19ee3ea08b15da5f65de8be9a6"
+  },
+  "agentScopeHost": {
+    "status": "PASS",
+    "checks": 19,
+    "hostQualificationSha256": "fa1c9fab9ae01f9b6d77b99bcc72d79f8d3b276f227ce1ff3034fe867d3b9012",
+    "nativeQualification": "sha256:6e7eaabf88562d0253f11844e98924e0e54f0281f258e60fd70da542cae5b872",
+    "modelHttp": 12,
+    "bankHttp": 376,
+    "realModelUsed": false,
+    "qualifiedCandidate": "/tmp/finance-boundaries-acceptance/agentscope-host-compat/host-checks/qualified-candidate"
+  },
+  "agentScopeHostEvidence": {
+    "file": "/tmp/finance-boundaries-acceptance/agentscope-host-compat/host-checks/summary.json",
+    "sha256": "a76a5451e2231d7ebe514a951d550e51963f181c78561ad2f7380ec502df84b3"
+  },
+  "agentScopeMatrix": {
+    "schemaVersion": "finance-runtime-capability-matrix.v0.1",
+    "builder": "cb0672817c6f5f5a58371f780f960b4d16465787",
+    "harness": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+    "runtimes": [
+      {
+        "runtimeId": "agentscope-java-2.0.3",
+        "components": [
+          "internal-transfer",
+          "finance.cashflow.readonly",
+          "account.balance.query"
+        ],
+        "resolved": [
+          [
+            "internal-transfer"
+          ],
+          [
+            "finance.cashflow.readonly"
+          ],
+          [
+            "account.balance.query"
+          ],
+          [
+            "internal-transfer",
+            "finance.cashflow.readonly"
+          ],
+          [
+            "internal-transfer",
+            "account.balance.query"
+          ],
+          [
+            "finance.cashflow.readonly",
+            "account.balance.query"
+          ],
+          [
+            "internal-transfer",
+            "finance.cashflow.readonly",
+            "account.balance.query"
+          ]
+        ],
+        "rejected": [
+          {
+            "component": "wealth-customer-context",
+            "reason": "RUNTIME_NOT_SUPPORTED"
+          },
+          {
+            "component": "wealth.facts.describe",
+            "reason": "RUNTIME_NOT_SUPPORTED"
+          },
+          {
+            "component": "account-statement-readonly",
+            "reason": "RUNTIME_NOT_SUPPORTED"
+          },
+          {
+            "component": "account-transactions-readonly",
+            "reason": "RUNTIME_NOT_SUPPORTED"
+          },
+          {
+            "component": "channel-preferences",
+            "reason": "RUNTIME_NOT_SUPPORTED"
+          }
+        ],
+        "builds": [
+          {
+            "jobId": "agent-6639430fdd5c4efb",
+            "components": [
+              "internal-transfer"
+            ],
+            "status": "BUILT"
+          },
+          {
+            "jobId": "agent-a2fecdc1189c4222",
+            "components": [
+              "finance.cashflow.readonly"
+            ],
+            "status": "BUILT"
+          },
+          {
+            "jobId": "agent-0a9478f72a3d4ba0",
+            "components": [
+              "account.balance.query"
+            ],
+            "status": "BUILT"
+          },
+          {
+            "jobId": "agent-1b4778af3b3c433d",
+            "components": [
+              "internal-transfer",
+              "finance.cashflow.readonly",
+              "account.balance.query"
+            ],
+            "status": "BUILT"
+          }
+        ]
+      }
+    ],
+    "status": "PASS"
+  },
+  "builds": [
+    {
+      "runtime": "openjiuwen-python-0.1.18",
+      "capabilities": [
+        "account.balance.query",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "wealth.facts.describe"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "01e1627b0b13516daf40d4c2dd119d24f0fa8564bad7ac7d281ceea683481fbd",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-25b5b8ea097745ed/build-report.json",
+        "sha256": "da93f797d3ffee845ffb7c56de1cc7ec3e8894c9ee09b76725ef893b3f277c32"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "ec3ea557b6592b0e3ef86d08b7019516b6de0a74bb724320191c61baf312c48a",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-40aec0f11d06464b/build-report.json",
+        "sha256": "06e1b11adbd95345b4c5811c4e3599b89b6d62df2e32d229ea3e7608fb3cc40e"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "channel.preferences.update"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "117ee6ceca77ab40213338da5f249d63b32657e1589d99626380056c6ca05955",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-598c7dfe48fe4941/build-report.json",
+        "sha256": "dbc5fc56c1106e0f80721ebcfc722f651bc85c60138f284085a1045ab25ee5a6"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "account.transaction.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "6b9ec6f36e9db3758cba0f93b8faf4a0a986485543f91bb2beead4826af91645",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-637ab432716d469b/build-report.json",
+        "sha256": "147993d5bdc2d51d9e53422514018f6c04e525688a81c6a74aa78b31660c1db1"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "account.statement.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "0a86f7e32b8a093bf53a2244cf9e6cf7e63fc43996fc9f671918f6637cbcbe42",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-66259c3020464b58/build-report.json",
+        "sha256": "951a83c013ad22257e859474f74e368539ffc81fec33012bb7f3b7a223416be0"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "transfer.internal.create"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "2179c9c6d75bab2e02ecb0cd66ef51d6a1c2424a49027acdb7637559197b2e14",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-69691ed0837c4af0/build-report.json",
+        "sha256": "6291fc1fd14ff5b09db0b86884f8f5a7b13d73d8641fdf61d66a6110102fdc77"
+      }
+    },
+    {
+      "runtime": "openjiuwen-python-0.1.18",
+      "capabilities": [
+        "account.balance.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "76f046b03b3f4ec99c5d5cd7b978014604b36a4b136d8f800bfb233c36fb5e68",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-7de8dcdbb4fa4b6c/build-report.json",
+        "sha256": "98d221cd7e2e513c1f21b4f078f7602c12ecac2003326c1cf3624b7352fe74b7"
+      }
+    },
+    {
+      "runtime": "openjiuwen-python-0.1.18",
+      "capabilities": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "fa0a07ab51de5308fa2089e79970f6c6f2573eb726b5d59a0c40dd8991b542c3",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-86b0bcbe412b4d9e/build-report.json",
+        "sha256": "104b947d2cf00f3bc47b074c82bc46e124d9f1400e48efc0654a710bc2eb7f7b"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "wealth.facts.describe"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "31cf83e4bcb7621c96b26fab277aeb854c4128a9b58da21aa00a7568ddb69793",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-8a141b5ee1c84b9a/build-report.json",
+        "sha256": "4dde50f1f0538bc0353e5916a50db71d48eb831e7a57dce50c37e91abe1f14fb"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "account.balance.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "2357311516ff5ecead910e5077c97f17e1754944a84b64ed89ec5df8f80ab9ae",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-c1be83fb9a564418/build-report.json",
+        "sha256": "a3bb5f18708805b3202dc2b4a0b1a71cb085d987cef6e35d6779d51fd069cf77"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "account.balance.query",
+        "account.statement.query",
+        "account.transaction.query",
+        "channel.preferences.update",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "transfer.internal.create",
+        "wealth.customer-context.query",
+        "wealth.facts.describe"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "fd1d85b3d3dc630da31bf11d8fa58478bb8eacf8aba61baaa3ab4920a8dbde15",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-c58db93274794edc/build-report.json",
+        "sha256": "bae6d6bbb13fc48406e7b7ecd81c6bced506f06bc8d5b2b4265f7818e91a6209"
+      }
+    },
+    {
+      "runtime": "openjiuwen-python-0.1.18",
+      "capabilities": [
+        "wealth.facts.describe"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "a296e9d2f5c303f70ead0cf637143a08a7fa543fb4936474ba239d950a5fa848",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-daddf07e96444a63/build-report.json",
+        "sha256": "52c36849e2b6902f13f97be60af102c9aa642143030f14bfc5a3b3c538ecefa5"
+      }
+    },
+    {
+      "runtime": "openjiuwen-java-0.1.15",
+      "capabilities": [
+        "wealth.customer-context.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "723140b48f93958ebc4bfa7001c387d1d10040de",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "ce03e29eca086442bade3c34bb818815742f2db7aed754d95b813e33a85e72c0",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/runtime-builds-final/workbench/agent-f533c5ca8c154f26/build-report.json",
+        "sha256": "44a271f5b6698a951d628e7ead096160702bf674b8cc99b7c0060dcda3b7d12f"
+      }
+    },
+    {
+      "runtime": "agentscope-java-2.0.3",
+      "capabilities": [
+        "account.balance.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "14bde12c2957afe8ae8f961722cda3559179977ccdc40b4982cd43f511aaf5ea",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/agentscope-matrix-qualified/workbench/agent-0a9478f72a3d4ba0/build-report.json",
+        "sha256": "f0c4c29efcef7ca273874da7abe9bae4981d8c9b533c3b01f54ccad04e17660b"
+      }
+    },
+    {
+      "runtime": "agentscope-java-2.0.3",
+      "capabilities": [
+        "account.balance.query",
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query",
+        "transfer.internal.create"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "eaf6b810a0ec74ba94993ab0caea1496711b37286f542f5f12ef2d0d0e65ade4",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/agentscope-matrix-qualified/workbench/agent-1b4778af3b3c433d/build-report.json",
+        "sha256": "18bc568287878755e21229e3fc54de7fcdbb14fdb6cc7dae383ff4baacf56cfa"
+      }
+    },
+    {
+      "runtime": "agentscope-java-2.0.3",
+      "capabilities": [
+        "transfer.internal.create"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "311cb3b0a3da57620a20eb7584d039d3c364dc3a6ecd03c00a9919111aaf5f25",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/agentscope-matrix-qualified/workbench/agent-6639430fdd5c4efb/build-report.json",
+        "sha256": "c891e9f3e64f3fe44c06f7012211dcb3b371f9252536f6290f2e194dca95898f"
+      }
+    },
+    {
+      "runtime": "agentscope-java-2.0.3",
+      "capabilities": [
+        "finance.spending-analysis.query",
+        "finance.transaction-summary.query"
+      ],
+      "status": "BUILT",
+      "sources": {
+        "harness": {
+          "commit": "9554417161812e18339f84dfae4ea6a0bdbcfcbd",
+          "worktreeDirty": false
+        },
+        "builder": {
+          "commit": "cb0672817c6f5f5a58371f780f960b4d16465787",
+          "worktreeDirty": false
+        }
+      },
+      "lockSha256": "0168b9920ccd01863fff975934cdc0b69553e77096473368a432ae91f2800802",
+      "evidence": {
+        "file": "/tmp/finance-boundaries-acceptance/agentscope-matrix-qualified/workbench/agent-a2fecdc1189c4222/build-report.json",
+        "sha256": "4bcffadc8ac6244c32b2398019f3a1d44a932780a5e0e54feb91a94d442e25de"
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "/tmp/finance-boundaries-acceptance/history-desktop-final.png",
+      "sha256": "d01ad99583efc7036e6c777bf03ed7a4ef0a7bfbe1bc7fba7b7262633a887e89"
+    },
+    {
+      "file": "/tmp/finance-boundaries-acceptance/history-mobile-final.png",
+      "sha256": "4a886d20e068f20c7a9634905626830abb957b84f72bb1c1cc88b014139cff74"
+    }
+  ],
+  "limits": [
+    "5 Builder and 8 Harness skips remain; live prerequisites not supplied.",
+    "13 Java/Python builds use Harness 723140b; final 9554417 changes only AgentScope and its test.",
+    "Final 9554417 full reactor and new Java chat were rerun; AgentScope matrix uses 9554417.",
+    "New capability module grouping remains agent.ungrouped.",
+    "Screenshots are controlled projection renderings, not independent full-site acceptance."
+  ]
+}

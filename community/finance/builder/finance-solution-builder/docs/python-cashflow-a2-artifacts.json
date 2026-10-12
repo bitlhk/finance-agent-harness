@@ -1,0 +1,559 @@
+[
+  {
+    "path": "matrix-v2/java-1",
+    "buildId": "agent-a2-java-1",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "lockSha256": "eef83ddc1aa20158971d5c14854b70b0be8f02fc2622d95665358fabf9c1405c",
+    "verifiedFiles": 161,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-1",
+    "buildId": "agent-a2-python-1",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "lockSha256": "d65ffa5fb9b19fa7134e6793794d40bce11d17701a09e72ee1463283a72f1cfb",
+    "verifiedFiles": 341,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-2",
+    "buildId": "agent-a2-java-2",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "lockSha256": "b45bdb57f49d5915f36fbb9fc770ddf36531342dbc67f473c10486452feaf6fa",
+    "verifiedFiles": 163,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-2",
+    "buildId": "agent-a2-python-2",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "lockSha256": "9ca92c40c9c91cc8fc7e80bb1f9df28d46f975c801a39ad15ec6520786e03c38",
+    "verifiedFiles": 343,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-3",
+    "buildId": "agent-a2-java-3",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "lockSha256": "04955f8fa1578f52345471beacd0a4a06c3df86608645e9617b49aa3db7194e9",
+    "verifiedFiles": 164,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-3",
+    "buildId": "agent-a2-python-3",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "lockSha256": "04d620fca4fa2c71959bbb43660406763be2a588f9d90565bc4c4407497b8a01",
+    "verifiedFiles": 344,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-4",
+    "buildId": "agent-a2-java-4",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "ffddc62894fd21ec00bfe16b5fd07006d7241c7a07cdd5fa2277f7ae4f2fccd8",
+    "verifiedFiles": 163,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-4",
+    "buildId": "agent-a2-python-4",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "1300b2cabb7f2190462aab21d71d41663904633ce0a1ae77e607eaa13ed3f802",
+    "verifiedFiles": 343,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-5",
+    "buildId": "agent-a2-java-5",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "2c58ff2d19df1e8ee4931cc72c1f375448086598dba444f25057f54800b36b70",
+    "verifiedFiles": 164,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-5",
+    "buildId": "agent-a2-python-5",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "ac748af557d9f86f0effccda91e5a7b0b59fa485ee1b14960c4d1fac15a7ef59",
+    "verifiedFiles": 344,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-6",
+    "buildId": "agent-a2-java-6",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "6c620ca70453dba9cc592f09b2d0a1c699d1cb2c58f08cc4f596e92632d87b70",
+    "verifiedFiles": 166,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-6",
+    "buildId": "agent-a2-python-6",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "77f004bed8a3672be15855480834f13fc119c9e71b4b5aaae78b2145936190bf",
+    "verifiedFiles": 346,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/java-7",
+    "buildId": "agent-a2-java-7",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "d51749d74d9ea89eda4fa2e1baca87aeb45259eb25ae31dd016abc4a9957ba1e",
+    "verifiedFiles": 167,
+    "methodSelection": null
+  },
+  {
+    "path": "matrix-v2/python-7",
+    "buildId": "agent-a2-python-7",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query",
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "a6d4df1ab1c4a15c9e2c2357e425a87d24f7a1c78ff58296bdcd304662391c23",
+    "verifiedFiles": 347,
+    "methodSelection": null
+  },
+  {
+    "path": "reviewer/method-1.0.0-java",
+    "buildId": "agent-method-1-0-0-java",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "5b4cc6dec58d3314dbd07b77b4e57f3412b0bdfb73a62430a8200b5b82fd2233",
+    "verifiedFiles": 164,
+    "methodSelection": {
+      "assetId": "method-2c0f9c57ee02419f",
+      "version": "1.0.0",
+      "releaseDigest": "sha256:f4c04d22b5ea436a76ebb83f94a6c81e4a7f4d2be0c459f6a9bc08226ae69137",
+      "capabilityIds": [
+        "finance.transaction-summary.query"
+      ],
+      "installationDigest": "sha256:98375ae0d22ca983c16e048e2c0ab492401bd7c42c6dbaa53abac6c20351f2e3"
+    }
+  },
+  {
+    "path": "reviewer/method-1.0.0-python",
+    "buildId": "agent-method-1-0-0-python",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "a4ee20be5613e949f65d412a3497dad6955fba57c6b12fae9bb2b7675dd42b19",
+    "verifiedFiles": 344,
+    "methodSelection": {
+      "assetId": "method-2c0f9c57ee02419f",
+      "version": "1.0.0",
+      "releaseDigest": "sha256:f4c04d22b5ea436a76ebb83f94a6c81e4a7f4d2be0c459f6a9bc08226ae69137",
+      "capabilityIds": [
+        "finance.transaction-summary.query"
+      ],
+      "installationDigest": "sha256:98375ae0d22ca983c16e048e2c0ab492401bd7c42c6dbaa53abac6c20351f2e3"
+    }
+  },
+  {
+    "path": "reviewer/method-1.1.0-java",
+    "buildId": "agent-method-1-1-0-java",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "6020d8f8fa451d3aa81e2f64006330860f8da6c65c4e6cda330d5b8d5798a216",
+    "verifiedFiles": 164,
+    "methodSelection": {
+      "assetId": "method-2c0f9c57ee02419f",
+      "version": "1.1.0",
+      "releaseDigest": "sha256:142d43fdbfebe5e1b9ba3109acddb6c9205aa2fa5b3fde2e94608562a419166a",
+      "capabilityIds": [
+        "finance.transaction-summary.query"
+      ],
+      "installationDigest": "sha256:47c9cc2f90aa8a20b07a7dfea7e3fe1c7836600f91bbe299566af4758aa7e540"
+    }
+  },
+  {
+    "path": "reviewer/method-1.1.0-python",
+    "buildId": "agent-method-1-1-0-python",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "9402bf2133df66742cadf32d288ca995ff19ec2f",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "dfd6cb75ff7525b4d1f48994a658aa013fc79d943653d31b9c748945a96aa4a6",
+    "verifiedFiles": 344,
+    "methodSelection": {
+      "assetId": "method-2c0f9c57ee02419f",
+      "version": "1.1.0",
+      "releaseDigest": "sha256:142d43fdbfebe5e1b9ba3109acddb6c9205aa2fa5b3fde2e94608562a419166a",
+      "capabilityIds": [
+        "finance.transaction-summary.query"
+      ],
+      "installationDigest": "sha256:47c9cc2f90aa8a20b07a7dfea7e3fe1c7836600f91bbe299566af4758aa7e540"
+    }
+  },
+  {
+    "path": "reviewer/workbench/agent-59ccd9d282e540cd",
+    "buildId": "agent-59ccd9d282e540cd",
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "c3229c46cc6509d728567696e0f0848da31a417c",
+        "worktreeDirty": false
+      }
+    },
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "python",
+      "templateRef": "repo://templates/python-readonly-service",
+      "integrationRef": "pypi://openjiuwen:0.1.18"
+    },
+    "capabilities": [
+      "finance.spending-analysis.query",
+      "finance.transaction-summary.query"
+    ],
+    "lockSha256": "b4c31ba334b72ff3041c4a0017538eeb215fd6730ede1f3875f83778bf2df7ff",
+    "verifiedFiles": 355,
+    "methodSelection": {
+      "assetId": "method-2c0f9c57ee02419f",
+      "version": "1.1.0",
+      "releaseDigest": "sha256:142d43fdbfebe5e1b9ba3109acddb6c9205aa2fa5b3fde2e94608562a419166a",
+      "capabilityIds": [
+        "finance.transaction-summary.query"
+      ],
+      "installationDigest": "sha256:47c9cc2f90aa8a20b07a7dfea7e3fe1c7836600f91bbe299566af4758aa7e540"
+    }
+  }
+]

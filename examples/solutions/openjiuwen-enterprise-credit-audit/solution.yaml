@@ -1,6 +1,6 @@
 schemaVersion: finance-agent-solution-build.v1
-solutionId: openjiuwen-enterprise-credit-material-audit
-displayName: 企业信贷材料核验辅助
+solutionId: openjiuwen-enterprise-credit-audit
+displayName: OpenJiuwen 企业授信审核
 runtime:
   family: openjiuwen
   language: java
@@ -11,25 +11,25 @@ profileRef:
   version: 0.1.0
   source: repo://profiles
 domainPackRefs:
-  - id: enterprise-credit-material-review
+  - id: smart-audit-enterprise-credit-audit
     version: 0.1.0
-    source: repo://domain-packs/credit/enterprise-material-review
+    source: repo://domain-packs/smart-audit/enterprise-credit-audit
 capabilityPackRefs:
-  - id: enterprise-financial-statement-verification
+  - id: smart-audit-enterprise-credit-audit
     version: 0.1.0
-    source: repo://capability-packs/enterprise-financial-statement-verification
-  - id: enterprise-application-contract-verification
-    version: 0.1.0
-    source: repo://capability-packs/enterprise-application-contract-verification
+    source: repo://capability-packs/smart-audit-enterprise-credit-audit
 providerRefs:
-  - id: enterprise-credit-material-audit
+  - id: smart-audit-model-provider
     version: 0.1.0-SNAPSHOT
-    source: repo://providers/enterprise-credit-material-audit
+    source: repo://providers/smart-audit
 capabilityBindings:
-  enterprise.financial-statement.verify: enterprise-credit-material-audit
-  enterprise.application-contract.verify: enterprise-credit-material-audit
+  smartaudit.enterprise.financial-report.query: smart-audit-model-provider
+  smartaudit.enterprise.financial-summary.query: smart-audit-model-provider
+  smartaudit.enterprise.transaction-analysis.query: smart-audit-model-provider
+  smartaudit.enterprise.transaction-report.query: smart-audit-model-provider
+  smartaudit.enterprise.due-diligence.query: smart-audit-model-provider
 modelRef: env://FINANCE_AGENT_MODEL
 evaluationPackRef:
-  id: enterprise-credit-material-audit-controlled
-  version: 0.1.0
-  source: repo://conformance/fixtures/enterprise-credit-material-audit/v0.1
+  id: smart-audit-enterprise-credit
+  version: 1.0.0
+  source: git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-enterprise-credit

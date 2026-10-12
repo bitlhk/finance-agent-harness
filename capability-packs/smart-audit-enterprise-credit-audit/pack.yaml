@@ -1,0 +1,120 @@
+schemaVersion: finance-capability-pack.v1
+packId: smart-audit-enterprise-credit-audit
+version: 0.1.0
+systemPrompt: >-
+  Only call the fixed enterprise-credit audit query selected by the host. Every request
+  must contain one or more OCR-transcribed text or JSON materials with category,
+  content and declaredFormat. Do not choose capabilities, identity, subject, session,
+  scopes or model settings. Results are human-review material, never a credit approval,
+  a write-back or a business action.
+capabilities:
+  - capabilityId: smartaudit.enterprise.financial-report.query
+    toolName: smart_audit_financial_report_query
+    name: 企业财报审核
+    description: 审核资产负债表的分类合规、逻辑、勾稽关系和异常风险。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:enterprise:financial-report:read"]
+  - capabilityId: smartaudit.enterprise.financial-summary.query
+    toolName: smart_audit_financial_summary_query
+    name: 企业财务概述
+    description: 生成盈利、偿债、运营和发展四板块的财务分析概述。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:enterprise:financial-summary:read"]
+  - capabilityId: smartaudit.enterprise.transaction-analysis.query
+    toolName: smart_audit_transaction_analysis_query
+    name: 企业流水分析
+    description: 归集客户资料与流水事实，输出异常、资料缺口和人工复核关注点。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:enterprise:transaction:read"]
+  - capabilityId: smartaudit.enterprise.transaction-report.query
+    toolName: smart_audit_transaction_report_query
+    name: 企业流水报告
+    description: 形成流水透视、异常事实与待核验事项报告，供人工复核。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:enterprise:transaction-report:read"]
+  - capabilityId: smartaudit.enterprise.due-diligence.query
+    toolName: smart_audit_due_diligence_query
+    name: 企业授信尽调报告
+    description: 按锁定尽调结构生成报告、资料缺口和人工复核材料。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [materials]
+      properties:
+        materials:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, content, declaredFormat]
+            properties:
+              category: { type: string }
+              content: { type: string }
+              declaredFormat: { enum: [TEXT, JSON] }
+    requiredScopes: ["smart-audit:enterprise:due-diligence:read"]

@@ -30,6 +30,7 @@
         <module>providers/fraud-mining</module>
         <module>providers/post-loan-risk-reference</module>
         <module>providers/enterprise-credit-material-audit</module>
+        <module>providers/smart-audit</module>
         <module>providers/employee-agent</module>
         <module>providers/customer-crm</module>
         <module>integrations/employee-agent-java</module>
@@ -37,6 +38,7 @@
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
         <module>examples/solutions/openjiuwen-risk-review</module>
         <module>examples/solutions/openjiuwen-enterprise-credit-audit</module>
+        <module>examples/solutions/openjiuwen-personal-loan-audit</module>
         <module>examples/solutions/wealth-facts-kit</module>
     </modules>
 

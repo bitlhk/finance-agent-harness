@@ -1,0 +1,1278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openjiuwen.dev/finance/candidate-backend.v1.schema.json",
+  "title": "Finance Solution Builder Candidate Backend v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/CandidateDescriptor"
+    },
+    {
+      "$ref": "#/$defs/CandidateArtifactVerification"
+    },
+    {
+      "$ref": "#/$defs/BackendCapability"
+    },
+    {
+      "$ref": "#/$defs/PreflightRequest"
+    },
+    {
+      "$ref": "#/$defs/PreflightResult"
+    },
+    {
+      "$ref": "#/$defs/AssemblyRequest"
+    },
+    {
+      "$ref": "#/$defs/AssemblyResult"
+    },
+    {
+      "$ref": "#/$defs/BuildRequest"
+    },
+    {
+      "$ref": "#/$defs/BuildResult"
+    },
+    {
+      "$ref": "#/$defs/StartRequest"
+    },
+    {
+      "$ref": "#/$defs/StartResult"
+    },
+    {
+      "$ref": "#/$defs/HealthRequest"
+    },
+    {
+      "$ref": "#/$defs/HealthResult"
+    },
+    {
+      "$ref": "#/$defs/InvocationRequest"
+    },
+    {
+      "$ref": "#/$defs/InvocationResult"
+    },
+    {
+      "$ref": "#/$defs/EvidenceRequest"
+    },
+    {
+      "$ref": "#/$defs/EvidenceResult"
+    },
+    {
+      "$ref": "#/$defs/StopRequest"
+    },
+    {
+      "$ref": "#/$defs/StopResult"
+    }
+  ],
+  "$defs": {
+    "AssemblyRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CandidateTarget"
+        },
+        "lockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Lockdigest",
+          "type": "string"
+        },
+        "workspace": {
+          "$ref": "#/$defs/CandidateResourceRef"
+        },
+        "assetRefs": {
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Assetrefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "target",
+        "lockDigest",
+        "workspace",
+        "assetRefs"
+      ],
+      "title": "AssemblyRequest",
+      "type": "object"
+    },
+    "AssemblyResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "assemblyRefs": {
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Assemblyrefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "outcome",
+        "candidateId",
+        "assemblyRefs"
+      ],
+      "title": "AssemblyResult",
+      "type": "object"
+    },
+    "BackendCapability": {
+      "properties": {
+        "backend": {
+          "$ref": "#/$defs/BackendIdentity"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "runtimeFamilies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Runtimefamilies",
+          "type": "array"
+        },
+        "artifactKinds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Artifactkinds",
+          "type": "array"
+        },
+        "invocationProtocols": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invocationprotocols",
+          "type": "array"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/LifecycleOperation"
+          },
+          "title": "Operations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "backend",
+        "languages",
+        "runtimeFamilies",
+        "artifactKinds",
+        "invocationProtocols",
+        "operations"
+      ],
+      "title": "BackendCapability",
+      "type": "object"
+    },
+    "BackendIdentity": {
+      "properties": {
+        "backendId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Backendid",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backendId",
+        "version"
+      ],
+      "title": "BackendIdentity",
+      "type": "object"
+    },
+    "BuildRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "lockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Lockdigest",
+          "type": "string"
+        },
+        "assemblyRefs": {
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Assemblyrefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "candidateId",
+        "lockDigest",
+        "assemblyRefs"
+      ],
+      "title": "BuildRequest",
+      "type": "object"
+    },
+    "BuildResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "descriptor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateDescriptor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "BuildResult",
+      "type": "object"
+    },
+    "CandidateArtifact": {
+      "properties": {
+        "artifactId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Artifactid",
+          "type": "string"
+        },
+        "artifactKind": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Artifactkind",
+          "type": "string"
+        },
+        "resource": {
+          "$ref": "#/$defs/CandidateResourceRef"
+        }
+      },
+      "required": [
+        "artifactId",
+        "artifactKind",
+        "resource"
+      ],
+      "title": "CandidateArtifact",
+      "type": "object"
+    },
+    "CandidateArtifactVerification": {
+      "description": "Public-safe proof that the delivery artifact matches one descriptor.",
+      "properties": {
+        "descriptorDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Descriptordigest",
+          "type": "string"
+        },
+        "artifactDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Artifactdigest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "descriptorDigest",
+        "artifactDigest"
+      ],
+      "title": "CandidateArtifactVerification",
+      "type": "object"
+    },
+    "CandidateCheck": {
+      "properties": {
+        "checkId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Checkid",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "checkId",
+        "status",
+        "summary"
+      ],
+      "title": "CandidateCheck",
+      "type": "object"
+    },
+    "CandidateDescriptor": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "backend": {
+          "$ref": "#/$defs/BackendIdentity"
+        },
+        "language": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Language",
+          "type": "string"
+        },
+        "runtime": {
+          "$ref": "#/$defs/RuntimeIdentity"
+        },
+        "artifact": {
+          "$ref": "#/$defs/CandidateArtifact"
+        },
+        "entrypoint": {
+          "$ref": "#/$defs/CandidateEntrypoint"
+        },
+        "invocation": {
+          "$ref": "#/$defs/ProtocolBinding"
+        },
+        "health": {
+          "$ref": "#/$defs/ProtocolBinding"
+        },
+        "lockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Lockdigest",
+          "type": "string"
+        },
+        "installedAssetIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Installedassetids",
+          "type": "array"
+        },
+        "installedCapabilityIds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Installedcapabilityids",
+          "type": "array"
+        },
+        "installedToolIds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Installedtoolids",
+          "type": "array"
+        },
+        "providerBindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CapabilityProviderBinding"
+          },
+          "title": "Providerbindings",
+          "type": "array"
+        },
+        "provenanceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Provenancerefs",
+          "type": "array"
+        },
+        "extensions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TypedExtension"
+          },
+          "title": "Extensions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "candidateId",
+        "backend",
+        "language",
+        "runtime",
+        "artifact",
+        "entrypoint",
+        "invocation",
+        "health",
+        "lockDigest",
+        "installedAssetIds"
+      ],
+      "title": "CandidateDescriptor",
+      "type": "object"
+    },
+    "CandidateEntrypoint": {
+      "properties": {
+        "mode": {
+          "enum": [
+            "managed-artifact",
+            "external-service"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "resource": {
+          "$ref": "#/$defs/CandidateResourceRef"
+        }
+      },
+      "required": [
+        "mode",
+        "resource"
+      ],
+      "title": "CandidateEntrypoint",
+      "type": "object"
+    },
+    "CandidateResourceRef": {
+      "description": "ResourceRef using the Candidate wire naming convention.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ResourceKind"
+        },
+        "locator": {
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mediaType": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mediatype"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "kind",
+        "locator"
+      ],
+      "title": "CandidateResourceRef",
+      "type": "object"
+    },
+    "CandidateTarget": {
+      "properties": {
+        "language": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Language",
+          "type": "string"
+        },
+        "runtimeFamily": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Runtimefamily",
+          "type": "string"
+        },
+        "runtimeVersion": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Runtimeversion",
+          "type": "string"
+        },
+        "artifactKind": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Artifactkind",
+          "type": "string"
+        },
+        "invocationProtocol": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Invocationprotocol",
+          "type": "string"
+        },
+        "requiredOperations": {
+          "items": {
+            "$ref": "#/$defs/LifecycleOperation"
+          },
+          "title": "Requiredoperations",
+          "type": "array"
+        },
+        "requiredAssetIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requiredassetids",
+          "type": "array"
+        },
+        "requiredCapabilityIds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Requiredcapabilityids",
+          "type": "array"
+        },
+        "requiredProviderOperationTypes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Requiredprovideroperationtypes",
+          "type": "array"
+        },
+        "profileId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Profileid",
+          "type": "string"
+        },
+        "hostWiringIds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Hostwiringids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "language",
+        "runtimeFamily",
+        "runtimeVersion",
+        "artifactKind",
+        "invocationProtocol",
+        "requiredOperations",
+        "requiredAssetIds",
+        "profileId"
+      ],
+      "title": "CandidateTarget",
+      "type": "object"
+    },
+    "CapabilityProviderBinding": {
+      "properties": {
+        "capabilityId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Capabilityid",
+          "type": "string"
+        },
+        "providerId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Providerid",
+          "type": "string"
+        },
+        "operationTypes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Operationtypes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capabilityId",
+        "providerId"
+      ],
+      "title": "CapabilityProviderBinding",
+      "type": "object"
+    },
+    "CheckStatus": {
+      "enum": [
+        "passed",
+        "failed",
+        "skipped",
+        "blocked"
+      ],
+      "title": "CheckStatus",
+      "type": "string"
+    },
+    "ErrorDetail": {
+      "additionalProperties": false,
+      "description": "Public-safe, actionable error description.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_.-]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ErrorDetail",
+      "type": "object"
+    },
+    "EvidenceRequest": {
+      "properties": {
+        "handle": {
+          "$ref": "#/$defs/RunHandle"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "title": "EvidenceRequest",
+      "type": "object"
+    },
+    "EvidenceResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "EvidenceResult",
+      "type": "object"
+    },
+    "HealthRequest": {
+      "properties": {
+        "handle": {
+          "$ref": "#/$defs/RunHandle"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "title": "HealthRequest",
+      "type": "object"
+    },
+    "HealthResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "ready": {
+          "title": "Ready",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "outcome",
+        "ready"
+      ],
+      "title": "HealthResult",
+      "type": "object"
+    },
+    "InvocationRequest": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "requestId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Requestid",
+          "type": "string"
+        },
+        "handle": {
+          "$ref": "#/$defs/RunHandle"
+        },
+        "protocol": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "payloadRef": {
+          "$ref": "#/$defs/CandidateResourceRef"
+        }
+      },
+      "required": [
+        "requestId",
+        "handle",
+        "protocol",
+        "payloadRef"
+      ],
+      "title": "InvocationRequest",
+      "type": "object"
+    },
+    "InvocationResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "requestId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Requestid",
+          "type": "string"
+        },
+        "responseRef": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateResourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "outcome",
+        "requestId"
+      ],
+      "title": "InvocationResult",
+      "type": "object"
+    },
+    "LifecycleOperation": {
+      "enum": [
+        "preflight",
+        "assemble",
+        "build",
+        "start",
+        "health",
+        "invoke",
+        "collect-evidence",
+        "stop"
+      ],
+      "title": "LifecycleOperation",
+      "type": "string"
+    },
+    "LifecycleResult": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/LifecycleOperation"
+        },
+        "status": {
+          "$ref": "#/$defs/LifecycleStatus"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidateid"
+        },
+        "durationMs": {
+          "minimum": 0,
+          "title": "Durationms",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "operation",
+        "status",
+        "taskId",
+        "durationMs",
+        "summary"
+      ],
+      "title": "LifecycleResult",
+      "type": "object"
+    },
+    "LifecycleStatus": {
+      "enum": [
+        "passed",
+        "failed",
+        "blocked",
+        "skipped",
+        "cancelled"
+      ],
+      "title": "LifecycleStatus",
+      "type": "string"
+    },
+    "PreflightRequest": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CandidateTarget"
+        },
+        "resolvedAssetIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolvedassetids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "target",
+        "resolvedAssetIds"
+      ],
+      "title": "PreflightRequest",
+      "type": "object"
+    },
+    "PreflightResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "backend": {
+          "$ref": "#/$defs/BackendIdentity"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/CandidateCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "outcome",
+        "backend",
+        "checks"
+      ],
+      "title": "PreflightResult",
+      "type": "object"
+    },
+    "ProtocolBinding": {
+      "properties": {
+        "protocol": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "mediaType": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mediatype"
+        }
+      },
+      "required": [
+        "protocol",
+        "path"
+      ],
+      "title": "ProtocolBinding",
+      "type": "object"
+    },
+    "ResourceKind": {
+      "enum": [
+        "workspace-path",
+        "http",
+        "a2a-file"
+      ],
+      "title": "ResourceKind",
+      "type": "string"
+    },
+    "RunHandle": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "backend": {
+          "$ref": "#/$defs/BackendIdentity"
+        },
+        "descriptorDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Descriptordigest",
+          "type": "string"
+        },
+        "lockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Lockdigest",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/RunState"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/RuntimeEndpoint"
+          },
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "startedAt": {
+          "format": "date-time",
+          "title": "Startedat",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CandidateResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "candidateId",
+        "backend",
+        "descriptorDigest",
+        "lockDigest",
+        "state",
+        "endpoints"
+      ],
+      "title": "RunHandle",
+      "type": "object"
+    },
+    "RunState": {
+      "enum": [
+        "starting",
+        "running",
+        "stopped"
+      ],
+      "title": "RunState",
+      "type": "string"
+    },
+    "RuntimeEndpoint": {
+      "properties": {
+        "name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "protocol": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "uri": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "protocol",
+        "uri"
+      ],
+      "title": "RuntimeEndpoint",
+      "type": "object"
+    },
+    "RuntimeIdentity": {
+      "properties": {
+        "family": {
+          "maxLength": 100,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Family",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "version"
+      ],
+      "title": "RuntimeIdentity",
+      "type": "object"
+    },
+    "StartRequest": {
+      "properties": {
+        "descriptor": {
+          "$ref": "#/$defs/CandidateDescriptor"
+        },
+        "artifactVerification": {
+          "$ref": "#/$defs/CandidateArtifactVerification"
+        }
+      },
+      "required": [
+        "descriptor",
+        "artifactVerification"
+      ],
+      "title": "StartRequest",
+      "type": "object"
+    },
+    "StartResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "handle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunHandle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "StartResult",
+      "type": "object"
+    },
+    "StopRequest": {
+      "properties": {
+        "handle": {
+          "$ref": "#/$defs/RunHandle"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "title": "StopRequest",
+      "type": "object"
+    },
+    "StopResult": {
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/LifecycleResult"
+        },
+        "stopped": {
+          "title": "Stopped",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "outcome",
+        "stopped"
+      ],
+      "title": "StopResult",
+      "type": "object"
+    },
+    "TypedExtension": {
+      "properties": {
+        "extensionType": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Extensiontype",
+          "type": "string"
+        },
+        "schemaVersion": {
+          "default": "1.0",
+          "pattern": "^\\d+\\.\\d+$",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "extensionType"
+      ],
+      "title": "TypedExtension",
+      "type": "object"
+    }
+  }
+}

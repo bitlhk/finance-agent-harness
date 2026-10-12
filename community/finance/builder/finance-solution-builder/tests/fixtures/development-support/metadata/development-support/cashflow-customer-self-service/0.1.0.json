@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "domain-pack", "id": "cashflow-customer-self-service", "version": "0.1.3",
+    "source": "repo://domain-packs/cashflow/customer-self-service",
+    "digest": "sha256:c09fc4c25f547a1ef8d0a29657954cfeba9c3916f363b72e12d451e41634eb88"
+  },
+  "scope": {"capabilityIds": ["finance.spending-analysis.query", "finance.transaction-summary.query"]},
+  "methodCases": [
+    {"name": "业务事实核验 1", "query": "请查询 2026-08 收支汇总", "expectedTerms": []},
+    {"name": "业务事实核验 2", "query": "请查询 2026-08 收支分类", "expectedTerms": []}
+  ],
+  "caseRefs": [],
+  "commands": [{
+    "name": "收支与其他领域合同检查（不代表此组件业务通过）",
+    "command": "python3 engineering/verify_contracts.py",
+    "sourceCommit": "2436d8e0d5e0a4e9de89b25a6079b1851b6a7e9e", "workingDirectory": "repo://"
+  }]
+}

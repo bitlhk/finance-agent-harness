@@ -1,0 +1,12 @@
+{
+  "extension_type": "finance-workbench.selection",
+  "schema_version": "0.2",
+  "runtimeId": "openjiuwen-java-0.1.15",
+  "applicationTemplateId": "banking-readonly-web-v1",
+  "modelConnectionId": "configured-model",
+  "bankConnectionId": "local-simulator",
+  "capabilityIds": [
+    "account.balance.query",
+    "wealth.facts.describe"
+  ]
+}

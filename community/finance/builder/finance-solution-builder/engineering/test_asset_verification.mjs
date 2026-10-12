@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {verificationRows,runtimeVerificationText} from '../browser/asset-verification.js';
+assert.equal(verificationRows({})[0][1],'未记录');
+assert.equal(verificationRows({verification:{createdAt:NaN}})[0][1],'未记录');
+const rows=verificationRows({verification:{createdAt:0,runtime:{family:'openjiuwen',language:'java'},model:'CONTROLLED_TEST',source:'CONTROLLED_HTTP',comparisonKind:'DEFAULT_VS_DRAFT_LOADING_AND_EXECUTION_NOT_QUALITY'}});
+assert.equal(rows[0][1],'1970-01-01 08:00:00（北京时间）');
+assert.equal(rows[1][1],'openjiuwen · java（报告声明，实际版本证据未完整记录）');
+assert(rows[2][1].includes('受控测试模型'));
+assert(rows[3][1].includes('不包含专业回答质量'));
+assert.equal(runtimeVerificationText({validation:{status:'PASS'},verification:{validation:{status:'EVIDENCE_INCOMPLETE',reason:'缺少实际安装证据'}}}),'缺少实际安装证据');
+assert.match(runtimeVerificationText({validation:{status:'PASS'}}),/未取得可重新核验/);
+assert.equal(runtimeVerificationText({validation:{status:'PASS'},verification:{validation:{status:'RUNTIME_CHECK_PASSED',reason:'同内容运行检查通过，环境证据有缺项'}}}),'同内容运行检查通过，环境证据有缺项');
+assert.equal(verificationRows({verification:{actualRuntime:{family:'openjiuwen',language:'java',version:'0.1.15'}}})[1][1],'openjiuwen · java · 0.1.15');
+console.log('10 verification summary checks passed');

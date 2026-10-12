@@ -5,6 +5,7 @@
 | [当前架构](current-architecture.md) | 组件职责、开发交付、实际运行接线 | 当前入口；明确固定实现版本 |
 | [公共执行与 Runtime 接入准则](adr/0021-runtime-neutral-execution-v01.md) | 组件归属、最小提取、旧检查点兼容与跨 Runtime 验收 | 候选设计；不代表新增 TASK 支持已上线 |
 | [公开开发指导](public/developer-guide.md) | 从使用、修改方法到接口开发与验证 | V1.2；唯一公开教程正文 |
+| [智能审核场景迁入指南](public/smart-audit-scenario-migration.md) | 个人贷款、企业授信审核场景的迁入清单与验证流程 | 当前候选实现；不代表生产审批验收 |
 | [完整开发指导](developer-guide.md) | 内部设计和更多源码上下文 | 内部资料；含历史片段，不能直接匿名发布 |
 | [最初 V1 架构](finance-agent-harness-architecture-v1.md) | 保留 9 月 1 日设计决策 | 历史，不代表当前 Builder/Runtime 支持范围 |
 | `integration-acceptance/` 与 ADR | 某一阶段的约束、版本、验收 | 按文档日期和提交解读，不外推“全量可用” |

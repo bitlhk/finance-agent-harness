@@ -1,0 +1,37 @@
+schemaVersion: finance-domain-pack.v1
+packId: smart-audit-personal-loan-audit
+version: 0.1.0
+profile: internal-control
+capabilities:
+  - smartaudit.personal.borrower-qualification.query
+  - smartaudit.personal.income-verification.query
+  - smartaudit.personal.asset-liability.query
+  - smartaudit.personal.repayment-capacity.query
+capabilityPackRefs:
+  - id: smart-audit-personal-loan-audit
+    version: 0.1.0
+skills:
+  - directory: borrower-qualification
+    entry: skills/borrower-qualification/SKILL.md
+  - directory: income-verification
+    entry: skills/income-verification/SKILL.md
+  - directory: asset-liability
+    entry: skills/asset-liability/SKILL.md
+  - directory: repayment-capacity
+    entry: skills/repayment-capacity/SKILL.md
+scope:
+  - 个人借款人主体资格、年龄、婚姻及跨凭证一致性审核
+  - 收入证明、流水、个税及社保的交叉验证
+  - 抵押物权属、权利限制和历史负债消除核实
+  - 稳定收入、月均还款额和偿债比率的审核建议
+outOfScope:
+  - 规则生成、上传、发布、替换或版本切换
+  - OCR、图像、文件坐标、HTTP、MCP、Python 或外部 Skill 服务调用
+  - 贷款审批、授信写回、资金操作或任何 TASK
+sourceReferences:
+  - smart-audit-source@b397bfc07dbf9b7a02d7a84322f1891eab2ddbcf
+  - smart-audit-demo/pre-generated-personal-rules@48d90a6fc3a6e571fd2200b505ae32f512b3897e357e35a53106dcea3a8ed9be
+evaluationPackRef:
+  id: smart-audit-personal-loan
+  version: 1.0.0
+  source: git+https://github.com/bitlhk/finance-skill-eval.git#packs/finance/smart-audit-personal-loan

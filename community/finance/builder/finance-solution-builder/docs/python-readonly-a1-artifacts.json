@@ -1,0 +1,138 @@
+[
+  {
+    "runtime": "python",
+    "candidate": "agent-a1-balance",
+    "lockSha256": "d5b5f5416b4bab930b76ed5b14d5694fb2bda8d0df6ca9d0ddd112771a741baf",
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "python",
+    "candidate": "agent-a1-combo",
+    "lockSha256": "3717c1801f2909e9a0404b9ae4746a5ccb134d0471cbc40808d89760f4ade241",
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "python",
+    "candidate": "agent-a1-wealth",
+    "lockSha256": "0cabf4005795f65e7ae446628696fadbbde576841a31aa071729ffde86de97a9",
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "python",
+    "candidate": "agent-b36ee1bd34bb4b45",
+    "lockSha256": "b76c1d9ebabdf96360b82d235d0bbc57b29080efe640c4e711033e0ef20c86bc",
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "bbf49d00338f6e0534ca3cf1fb374465a80da26e",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "java",
+    "candidate": "balance",
+    "lockSha256": "f377d0181357b4e210eeeebed1870921c13f4feb640080f367ba5d30ccc02b3e",
+    "capabilities": [
+      "account.balance.query"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "java",
+    "candidate": "combo",
+    "lockSha256": "44786d9106d2f7065f9dad7473c2153894c2c75692f4729c2c75d8cbf47ed5c8",
+    "capabilities": [
+      "wealth.facts.describe",
+      "account.balance.query"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  },
+  {
+    "runtime": "java",
+    "candidate": "wealth",
+    "lockSha256": "a984b3bafa98f020377ab87bb17b6a12f85f0c35843f074f9ce9ce710ae0547f",
+    "capabilities": [
+      "wealth.facts.describe"
+    ],
+    "sources": {
+      "harness": {
+        "commit": "0289de7cabe2e4c0e41da61a9ea768ed32df4c7a",
+        "worktreeDirty": false
+      },
+      "builder": {
+        "commit": "e0b6975385417b59ef5814c49fd13badc83344f5",
+        "worktreeDirty": false
+      }
+    },
+    "status": "BUILT"
+  }
+]

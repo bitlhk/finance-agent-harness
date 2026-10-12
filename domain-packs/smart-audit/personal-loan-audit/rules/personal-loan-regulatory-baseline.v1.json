@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "personal-loan-regulatory-baseline.v1",
+  "baselineId": "nfra-personal-loan-management-measures-2024-public-baseline",
+  "version": "nfra-2024-order-3",
+  "regulation": {
+    "title": "个人贷款管理办法",
+    "issuer": "国家金融监督管理总局",
+    "order": "国家金融监督管理总局令〔2024〕3号",
+    "documentId": "1151064",
+    "effectiveDate": "2024-07-01",
+    "sourceUrl": "https://www.nfra.gov.cn/cn/view/pages/ItemDetail.html?docId=1151064&generaltype=1&itemId=4214"
+  },
+  "repealedReferences": [
+    {
+      "title": "个人贷款管理暂行办法",
+      "issuer": "中国银行业监督管理委员会",
+      "order": "中国银行业监督管理委员会令2010年第2号",
+      "status": "REPEALED",
+      "repealedBy": "国家金融监督管理总局令〔2024〕3号第五十二条"
+    }
+  ],
+  "regulatedRequirements": [
+    {
+      "requirementId": "PERSONAL_LOAN_FULL_LIFECYCLE_MANAGEMENT",
+      "article": "第五条",
+      "requirement": "贷款人应建立个人贷款全流程管理机制，并制定每一贷款品种的操作规程。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_REPAYMENT_CAPACITY_CONTROL",
+      "article": "第十条",
+      "requirement": "贷款人应建立合理的收入偿债比例控制机制，并结合收入、负债、支出、用途和担保确定金额与期限。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_APPLICATION_CONDITIONS",
+      "article": "第十二条",
+      "requirement": "申请条件包括完全民事行为能力、明确合法用途、合理金额期限币种、还款意愿和能力及良好信用状况。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_WRITTEN_APPLICATION_AND_EVIDENCE",
+      "article": "第十三条",
+      "requirement": "贷款人应要求借款人以书面形式提出申请并提供证明其符合条件的资料。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_DUE_DILIGENCE",
+      "article": "第十四条",
+      "requirement": "贷款人应调查核实申请内容和相关情况的真实性、准确性和完整性，并形成调查评价意见。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_INVESTIGATION_SCOPE",
+      "article": "第十五条",
+      "requirement": "贷款调查应覆盖借款人基本情况、收入情况、用途、还款来源、担保和信用状况等法定调查范围。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_SEPARATION_OF_DUTIES",
+      "article": "第二十一条",
+      "requirement": "贷款人应实行审贷分离和授权审批，确保审批按照授权独立进行。"
+    },
+    {
+      "requirementId": "PERSONAL_LOAN_INTERNAL_PROCEDURES",
+      "article": "第五十条",
+      "requirement": "贷款人应依照本办法制定个人贷款业务管理细则及操作规程。"
+    }
+  ],
+  "bankSpecificParameters": [
+    {
+      "parameterId": "BORROWER_AGE_AND_TERM_LIMITS",
+      "configurationStatus": "REQUIRED_CONFIGURATION",
+      "maySupportPositiveOutcome": false,
+      "reason": "年龄、期限及抵押物期限限制须以已批准且在有效期内的行内政策为准。"
+    },
+    {
+      "parameterId": "INCOME_VERIFICATION_PERIOD_AND_VARIANCE",
+      "configurationStatus": "REQUIRED_CONFIGURATION",
+      "maySupportPositiveOutcome": false,
+      "reason": "收入认定期间、偏差容忍度和稳定收入口径须以已批准且在有效期内的行内政策为准。"
+    },
+    {
+      "parameterId": "REPAYMENT_CAPACITY_RATIO_AND_STRESS_TEST",
+      "configurationStatus": "REQUIRED_CONFIGURATION",
+      "maySupportPositiveOutcome": false,
+      "reason": "偿债比例、压力测试和例外处理阈值须以已批准且在有效期内的行内政策为准。"
+    },
+    {
+      "parameterId": "COLLATERAL_AND_LOAN_AMOUNT_LIMITS",
+      "configurationStatus": "REQUIRED_CONFIGURATION",
+      "maySupportPositiveOutcome": false,
+      "reason": "抵押物估值、成数及单户额度限制须以适用产品的已批准行内政策为准。"
+    }
+  ]
+}

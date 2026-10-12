@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "finance-selection-support.v0.1",
+  "selectionVersion": "0.8",
+  "runtimeIds": ["openjiuwen-java-0.1.15"],
+  "presentations": ["MOBILE_WEB", "DESKTOP_WEB", "ATM_WEB"],
+  "privateMethods": false
+}

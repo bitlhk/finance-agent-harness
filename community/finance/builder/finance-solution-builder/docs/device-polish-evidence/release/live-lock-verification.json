@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "buildId": "agent-66c10fcd29794cc2",
+  "builder": {
+    "commit": "283e6d52c813394d99a5e3806287ace9af798629",
+    "worktreeDirty": false
+  },
+  "lockSha256": "e45579bb5d7a2b64aa5a69e6be3817aed1c24f007c7899f485533c4d862f7fcd",
+  "filesChecked": 145,
+  "oldRecordsPreserved": 8,
+  "oldLocksPreserved": 7,
+  "currentRecords": 9,
+  "currentLocks": 8,
+  "capabilities": [
+    "wealth.facts.describe",
+    "account.balance.query"
+  ],
+  "harnessJars": {
+    "target/dependency/finance-harness-core-0.1.0-SNAPSHOT.jar": "0d7839d5459b6b947233a460ca03ce4e865cb8cf9dc9cb0576baaac5ef1fed12",
+    "target/dependency/finance-harness-openjiuwen-java-0.1.0-SNAPSHOT.jar": "3f640f4526c25f43b16977d6241293044b80d05d1cfa25678e5589fb7252d058",
+    "target/dependency/finance-harness-wealth-0.1.0-SNAPSHOT.jar": "8451579c78ffdbb6f0f885e05646b5272c6be5218cc1913c4456a7476d7c5322",
+    "target/dependency/finance-provider-non-ai-banking-0.1.0-SNAPSHOT.jar": "14a9a12d26f66c786ec00b93f2597a937d906cee986846b4f264cac9def24066"
+  }
+}

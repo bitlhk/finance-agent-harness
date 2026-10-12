@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitlhk.github.io/finance-agent-harness/schema/capability-pack.v1.schema.json",
+  "title": "Finance Capability Pack V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packId",
+    "version",
+    "systemPrompt",
+    "capabilities"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-capability-pack.v1"
+    },
+    "packId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "systemPrompt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    }
+  },
+  "$defs": {
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "toolName",
+        "name",
+        "description",
+        "operation",
+        "inputSchema",
+        "requiredScopes"
+      ],
+      "properties": {
+        "capabilityId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$"
+        },
+        "toolName": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "operation": {
+          "enum": ["QUERY", "TASK"]
+        },
+        "inputSchema": {
+          "type": "object"
+        },
+        "requiredScopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

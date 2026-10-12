@@ -1,0 +1,60 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "extension_type": {
+      "const": "finance-workbench.selection",
+      "title": "Extension Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "runtimeId": {
+      "const": "openjiuwen-java-0.1.15",
+      "title": "Runtimeid",
+      "type": "string"
+    },
+    "applicationTemplateId": {
+      "const": "banking-readonly-web-v1",
+      "title": "Applicationtemplateid",
+      "type": "string"
+    },
+    "modelConnectionId": {
+      "const": "configured-model",
+      "title": "Modelconnectionid",
+      "type": "string"
+    },
+    "bankConnectionId": {
+      "const": "local-simulator",
+      "title": "Bankconnectionid",
+      "type": "string"
+    },
+    "capabilityIds": {
+      "items": {
+        "enum": [
+          "wealth.facts.describe",
+          "account.balance.query"
+        ],
+        "type": "string"
+      },
+      "maxItems": 2,
+      "minItems": 1,
+      "title": "Capabilityids",
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "extension_type",
+    "schema_version",
+    "runtimeId",
+    "applicationTemplateId",
+    "modelConnectionId",
+    "bankConnectionId",
+    "capabilityIds"
+  ],
+  "title": "Selection",
+  "type": "object"
+}

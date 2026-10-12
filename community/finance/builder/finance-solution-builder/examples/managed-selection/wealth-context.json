@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "finance-managed-selection.v0.1",
+  "solutionId": "managed-wealth-context",
+  "packBindings": [
+    {
+      "pack": {"id": "wealth-customer-context", "version": "0.1.0"},
+      "provider": {"id": "non-ai-banking-reference", "version": "0.1.0-SNAPSHOT"}
+    }
+  ]
+}

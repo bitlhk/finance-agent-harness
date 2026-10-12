@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "finance-host-support.v0.1",
+  "runtime": {
+    "family": "openjiuwen",
+    "language": "java",
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+    "integrationRef": "repo://integrations/openjiuwen-java"
+  },
+  "profile": "internal-control",
+  "features": ["query.v1", "trusted-grants.v1", "observation.v0.1"],
+  "operations": ["QUERY"],
+  "connectionKinds": ["in-process-smart-audit.v1"],
+  "routingAssets": {
+    "descriptionPattern": "repo://routing/capability-descriptions/{packId}.v0.1.json",
+    "terminologyRefs": []
+  }
+}

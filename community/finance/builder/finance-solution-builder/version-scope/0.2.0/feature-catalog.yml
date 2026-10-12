@@ -1,0 +1,88 @@
+schema: speckit-feature-catalog/v1
+parent_requirement: https://gitcode.com/Euphoria_Yan/agent-store-builder-dev-wo-fork/issues/31
+classification: architecture-evolution
+target_release: 0.2.0
+architecture:
+  l0_status: unchanged
+  l1_status: accepted
+features:
+  - id: FEAT-001
+    title: 语言无关的 Candidate Backend 与描述
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-001.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 1
+    dependencies: []
+  - id: FEAT-002
+    title: OpenJiuwen Java Backend 迁移与行为保持
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-002.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 2
+    dependencies: [FEAT-001]
+  - id: FEAT-003
+    title: 构造 Agent 的受控执行契约
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-003.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 3
+    dependencies: [FEAT-001]
+  - id: FEAT-004
+    title: OpenCode 构造 Agent 适配
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-004.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 4
+    dependencies: [FEAT-003]
+  - id: FEAT-005
+    title: Sandbox Candidate Evaluation 与数据隔离
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-005.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 5
+    dependencies: [FEAT-001, FEAT-002]
+  - id: FEAT-006
+    title: 受预算约束的 Candidate 自优化闭环
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-006.md
+    decision: accepted
+    priority: P0
+    mvp: true
+    delivery_order: 6
+    dependencies: [FEAT-002, FEAT-004, FEAT-005]
+  - id: FEAT-007
+    title: Harness 资产修订提案与治理元数据
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-007.md
+    decision: accepted
+    priority: P1
+    mvp: true
+    delivery_order: 7
+    dependencies: [FEAT-005, FEAT-006]
+  - id: FEAT-008
+    title: 自优化过程工作台
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-008.md
+    decision: accepted
+    priority: P1
+    mvp: true
+    delivery_order: 8
+    dependencies: [FEAT-002, FEAT-005, FEAT-006, FEAT-007]
+  - id: FEAT-009
+    title: Codex 构造 Agent 适配
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-009.md
+    decision: accepted
+    priority: P1
+    mvp: false
+    delivery_order: 9
+    dependencies: [FEAT-003, FEAT-006]
+  - id: FEAT-010
+    title: OpenJiuwen Python Candidate Backend
+    record: community/finance/builder/finance-solution-builder/version-scope/0.2.0/FEAT-010.md
+    decision: accepted
+    priority: P1
+    mvp: false
+    delivery_order: 10
+    dependencies: [FEAT-001, FEAT-005]

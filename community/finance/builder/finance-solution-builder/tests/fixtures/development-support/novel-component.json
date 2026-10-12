@@ -1,0 +1,9 @@
+{
+  "componentId": "fixture.statement-review",
+  "subject": {
+    "kind": "domain-pack", "id": "fixture-statement-method", "version": "0.3.0",
+    "source": "repo://domain-packs/fixture-statement-method"
+  },
+  "content": "# Synthetic statement review\nDescribe only authorized returned facts; report missing data.",
+  "methodCases": [{"name":"Unfamiliar component case","query":"Review the fixture statement","expectedTerms":["EVALUATOR_ONLY_SECRET"]}]
+}

@@ -1,0 +1,1 @@
+"""Candidate Backend contract tests."""

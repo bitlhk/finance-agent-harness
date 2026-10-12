@@ -1,0 +1,959 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openjiuwen.dev/finance/construction-agent-backend.v1.schema.json",
+  "title": "Finance Solution Builder Construction Agent Backend v1",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ConstructionTaskRequest"
+    },
+    {
+      "$ref": "#/$defs/ConstructionTaskHandle"
+    },
+    {
+      "$ref": "#/$defs/ResumeRequest"
+    },
+    {
+      "$ref": "#/$defs/EventBatchRequest"
+    },
+    {
+      "$ref": "#/$defs/ConstructionEventBatch"
+    },
+    {
+      "$ref": "#/$defs/ApprovalDecision"
+    },
+    {
+      "$ref": "#/$defs/CancelRequest"
+    },
+    {
+      "$ref": "#/$defs/ResultRequest"
+    },
+    {
+      "$ref": "#/$defs/ConstructionResult"
+    },
+    {
+      "$ref": "#/$defs/ConstructionBackendCapability"
+    }
+  ],
+  "$defs": {
+    "ApprovalChoice": {
+      "enum": [
+        "approve",
+        "reject"
+      ],
+      "title": "ApprovalChoice",
+      "type": "string"
+    },
+    "ApprovalDecision": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "approvalId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Approvalid",
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/$defs/ApprovalChoice"
+        }
+      },
+      "required": [
+        "taskId",
+        "approvalId",
+        "decision"
+      ],
+      "title": "ApprovalDecision",
+      "type": "object"
+    },
+    "ApprovalKind": {
+      "enum": [
+        "external-side-effect",
+        "scope-expansion"
+      ],
+      "title": "ApprovalKind",
+      "type": "string"
+    },
+    "ApprovalRequest": {
+      "properties": {
+        "approvalId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Approvalid",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ApprovalKind"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "requestedPaths": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Requestedpaths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "approvalId",
+        "kind",
+        "summary"
+      ],
+      "title": "ApprovalRequest",
+      "type": "object"
+    },
+    "BudgetUsage": {
+      "properties": {
+        "durationMs": {
+          "minimum": 0,
+          "title": "Durationms",
+          "type": "integer"
+        },
+        "iterations": {
+          "minimum": 0,
+          "title": "Iterations",
+          "type": "integer"
+        },
+        "toolCalls": {
+          "minimum": 0,
+          "title": "Toolcalls",
+          "type": "integer"
+        },
+        "costMicrounits": {
+          "minimum": 0,
+          "title": "Costmicrounits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "durationMs",
+        "iterations",
+        "toolCalls",
+        "costMicrounits"
+      ],
+      "title": "BudgetUsage",
+      "type": "object"
+    },
+    "CancelRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "reason"
+      ],
+      "title": "CancelRequest",
+      "type": "object"
+    },
+    "CheckStatus": {
+      "enum": [
+        "passed",
+        "failed",
+        "skipped",
+        "blocked"
+      ],
+      "title": "CheckStatus",
+      "type": "string"
+    },
+    "ConstructionBackendCapability": {
+      "properties": {
+        "backend": {
+          "$ref": "#/$defs/ConstructionBackendIdentity"
+        },
+        "schemaVersions": {
+          "default": [
+            "1.0"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Schemaversions",
+          "type": "array"
+        },
+        "eventTypes": {
+          "default": [
+            "started",
+            "progress",
+            "file-change",
+            "tool-result",
+            "approval-required",
+            "completed",
+            "failed",
+            "cancelled",
+            "timed-out"
+          ],
+          "items": {
+            "$ref": "#/$defs/ConstructionEventType"
+          },
+          "title": "Eventtypes",
+          "type": "array"
+        },
+        "supportsResume": {
+          "default": true,
+          "title": "Supportsresume",
+          "type": "boolean"
+        },
+        "supportsApproval": {
+          "default": true,
+          "title": "Supportsapproval",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "backend"
+      ],
+      "title": "ConstructionBackendCapability",
+      "type": "object"
+    },
+    "ConstructionBackendIdentity": {
+      "properties": {
+        "backendId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "title": "Backendid",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backendId",
+        "version"
+      ],
+      "title": "ConstructionBackendIdentity",
+      "type": "object"
+    },
+    "ConstructionBudget": {
+      "properties": {
+        "maxDurationMs": {
+          "minimum": 0,
+          "title": "Maxdurationms",
+          "type": "integer"
+        },
+        "maxIterations": {
+          "minimum": 0,
+          "title": "Maxiterations",
+          "type": "integer"
+        },
+        "maxToolCalls": {
+          "minimum": 0,
+          "title": "Maxtoolcalls",
+          "type": "integer"
+        },
+        "maxCostMicrounits": {
+          "minimum": 0,
+          "title": "Maxcostmicrounits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "maxDurationMs",
+        "maxIterations",
+        "maxToolCalls",
+        "maxCostMicrounits"
+      ],
+      "title": "ConstructionBudget",
+      "type": "object"
+    },
+    "ConstructionEvent": {
+      "properties": {
+        "eventId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Eventid",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "sequence": {
+          "exclusiveMinimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "eventType": {
+          "$ref": "#/$defs/ConstructionEventType"
+        },
+        "state": {
+          "$ref": "#/$defs/TaskState"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "changedPaths": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Changedpaths",
+          "type": "array"
+        },
+        "validation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValidationResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "approvalRequest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApprovalRequest"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConstructionResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eventId",
+        "taskId",
+        "sequence",
+        "eventType",
+        "state",
+        "summary"
+      ],
+      "title": "ConstructionEvent",
+      "type": "object"
+    },
+    "ConstructionEventBatch": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "afterSequence": {
+          "minimum": 0,
+          "title": "Aftersequence",
+          "type": "integer"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/ConstructionEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "nextSequence": {
+          "minimum": 0,
+          "title": "Nextsequence",
+          "type": "integer"
+        },
+        "terminal": {
+          "title": "Terminal",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "taskId",
+        "afterSequence",
+        "events",
+        "nextSequence",
+        "terminal"
+      ],
+      "title": "ConstructionEventBatch",
+      "type": "object"
+    },
+    "ConstructionEventType": {
+      "enum": [
+        "started",
+        "progress",
+        "file-change",
+        "tool-result",
+        "approval-required",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed-out"
+      ],
+      "title": "ConstructionEventType",
+      "type": "string"
+    },
+    "ConstructionResourceRef": {
+      "description": "Portable evidence or workspace reference using v1 wire naming.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ResourceKind"
+        },
+        "locator": {
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mediaType": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mediatype"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "kind",
+        "locator"
+      ],
+      "title": "ConstructionResourceRef",
+      "type": "object"
+    },
+    "ConstructionResult": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "parentLockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parentlockdigest",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/TaskState"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "changedPaths": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Changedpaths",
+          "type": "array"
+        },
+        "validationResults": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ValidationResult"
+          },
+          "title": "Validationresults",
+          "type": "array"
+        },
+        "budgetUsage": {
+          "$ref": "#/$defs/BudgetUsage"
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConstructionResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "taskId",
+        "candidateId",
+        "parentLockDigest",
+        "status",
+        "summary",
+        "budgetUsage"
+      ],
+      "title": "ConstructionResult",
+      "type": "object"
+    },
+    "ConstructionTaskHandle": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "parentLockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parentlockdigest",
+          "type": "string"
+        },
+        "backend": {
+          "$ref": "#/$defs/ConstructionBackendIdentity"
+        },
+        "state": {
+          "$ref": "#/$defs/TaskState"
+        },
+        "lastSequence": {
+          "minimum": 0,
+          "title": "Lastsequence",
+          "type": "integer"
+        },
+        "pendingApprovalId": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pendingapprovalid"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "candidateId",
+        "parentLockDigest",
+        "backend",
+        "state",
+        "lastSequence"
+      ],
+      "title": "ConstructionTaskHandle",
+      "type": "object"
+    },
+    "ConstructionTaskRequest": {
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Idempotencykey",
+          "type": "string"
+        },
+        "candidateId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Candidateid",
+          "type": "string"
+        },
+        "parentLockDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Parentlockdigest",
+          "type": "string"
+        },
+        "goal": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "findingRefs": {
+          "items": {
+            "$ref": "#/$defs/ConstructionResourceRef"
+          },
+          "minItems": 1,
+          "title": "Findingrefs",
+          "type": "array"
+        },
+        "workspaceBoundary": {
+          "$ref": "#/$defs/WorkspaceBoundary"
+        },
+        "validationCommands": {
+          "items": {
+            "$ref": "#/$defs/ValidationCommand"
+          },
+          "minItems": 1,
+          "title": "Validationcommands",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/ConstructionBudget"
+        },
+        "approvalKinds": {
+          "default": [
+            "external-side-effect"
+          ],
+          "items": {
+            "$ref": "#/$defs/ApprovalKind"
+          },
+          "minItems": 1,
+          "title": "Approvalkinds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "taskId",
+        "idempotencyKey",
+        "candidateId",
+        "parentLockDigest",
+        "goal",
+        "findingRefs",
+        "workspaceBoundary",
+        "validationCommands",
+        "budget"
+      ],
+      "title": "ConstructionTaskRequest",
+      "type": "object"
+    },
+    "ErrorDetail": {
+      "additionalProperties": false,
+      "description": "Public-safe, actionable error description.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_.-]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ErrorDetail",
+      "type": "object"
+    },
+    "EventBatchRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "afterSequence": {
+          "minimum": 0,
+          "title": "Aftersequence",
+          "type": "integer"
+        },
+        "maxEvents": {
+          "default": 100,
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Maxevents",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "taskId",
+        "afterSequence"
+      ],
+      "title": "EventBatchRequest",
+      "type": "object"
+    },
+    "ResourceKind": {
+      "enum": [
+        "workspace-path",
+        "http",
+        "a2a-file"
+      ],
+      "title": "ResourceKind",
+      "type": "string"
+    },
+    "ResultRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId"
+      ],
+      "title": "ResultRequest",
+      "type": "object"
+    },
+    "ResumeRequest": {
+      "properties": {
+        "taskId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Taskid",
+          "type": "string"
+        },
+        "acknowledgedSequence": {
+          "minimum": 0,
+          "title": "Acknowledgedsequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "taskId",
+        "acknowledgedSequence"
+      ],
+      "title": "ResumeRequest",
+      "type": "object"
+    },
+    "TaskState": {
+      "enum": [
+        "queued",
+        "running",
+        "waiting-approval",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed-out"
+      ],
+      "title": "TaskState",
+      "type": "string"
+    },
+    "ValidationCommand": {
+      "properties": {
+        "commandId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Commandid",
+          "type": "string"
+        },
+        "argv": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Argv",
+          "type": "array"
+        },
+        "cwd": {
+          "default": ".",
+          "title": "Cwd",
+          "type": "string"
+        },
+        "timeoutMs": {
+          "exclusiveMinimum": 0,
+          "title": "Timeoutms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "commandId",
+        "argv",
+        "timeoutMs"
+      ],
+      "title": "ValidationCommand",
+      "type": "object"
+    },
+    "ValidationResult": {
+      "properties": {
+        "commandId": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+          "title": "Commandid",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        },
+        "durationMs": {
+          "minimum": 0,
+          "title": "Durationms",
+          "type": "integer"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConstructionResourceRef"
+          },
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "commandId",
+        "status",
+        "durationMs",
+        "summary"
+      ],
+      "title": "ValidationResult",
+      "type": "object"
+    },
+    "WorkspaceBoundary": {
+      "properties": {
+        "workspace": {
+          "$ref": "#/$defs/ConstructionResourceRef"
+        },
+        "allowedWritePaths": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowedwritepaths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "workspace",
+        "allowedWritePaths"
+      ],
+      "title": "WorkspaceBoundary",
+      "type": "object"
+    }
+  }
+}

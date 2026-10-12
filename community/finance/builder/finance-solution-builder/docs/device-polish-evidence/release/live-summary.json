@@ -1,0 +1,40 @@
+{
+  "status": "PASS",
+  "source": "FULL_NON_AI_BANKING_SIMULATOR",
+  "model": "SERVER_CONFIGURED_LIVE",
+  "buildId": "agent-66c10fcd29794cc2",
+  "buildElapsedSeconds": 29.92,
+  "checks": [
+    "three_terminal_choices",
+    "build_enabled",
+    "page_created_real_job",
+    "build_success",
+    "live_balance_card",
+    "live_model_not_controlled",
+    "live_second_turn",
+    "configured_model_identity",
+    "bank_source_retained",
+    "exact_decimal_rows",
+    "zero_usd_not_missing",
+    "no_device_shell_in_real_agent",
+    "actual_asr_endpoint",
+    "asr_recognized_reference",
+    "asr_not_auto_sent",
+    "explicit_send_after_edit",
+    "live_authorized_snapshot",
+    "live_end_clears",
+    "no_browser_errors"
+  ],
+  "speech": {
+    "httpStatus": 200,
+    "text": "明天合肥天气怎么样？",
+    "provider": "XFYUN_IAT",
+    "status": "TRANSCRIBED",
+    "requiresUserSend": true,
+    "input": "OFFICIAL_WAV_BROWSER_FAKE_MICROPHONE",
+    "humanMicrophone": "NOT_RUN"
+  },
+  "actualModel": "deepseek-v4-flash",
+  "humanAcceptance": "NOT_RUN",
+  "professionalQualityEvaluation": "NOT_RUN"
+}
