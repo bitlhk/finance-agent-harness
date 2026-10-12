@@ -230,10 +230,10 @@ final class PostLoanRiskTask implements AutoCloseable {
         return false;
     }
     private static boolean negated(String before){
-        return before.matches("(?s).*(禁止|严禁|不得|不应|不能|无需|不建议|不可|未建议|不允许|不采纳|不认可)(由.{0,12})?$");
+        return before.matches("(?s).*(禁止|严禁|不得|不应|不能|无需|不建议|不可|未建议|不允许|不采纳|不认可|不构成|不等于|并非)(由.{0,12})?$");
     }
     private static boolean doubleNegative(String before){
-        return before.matches("(?s).*(不得不|不能不|并非无需|并非不应|不是不得)(由.{0,12})?$");
+        return before.matches("(?s).*(不得不|不能不|并非无需|并非不应|不是不得|并非不构成|并非不等于)(由.{0,12})?$");
     }
     private static boolean rejectedAttribution(String before,String after){
         boolean attributed=before.matches("(?s).*(声称|表示|(?:有人|客户经理|报告)?说|提出|提议|要求|认为|建议)[：:“”\"']?.{0,12}$");
