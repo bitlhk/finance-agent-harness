@@ -111,6 +111,7 @@ final class PostLoanRiskTask implements AutoCloseable {
                     if(failure instanceof SecurityException)throw failure;
                     report.put("explanationStatus","FAILED");report.put("status","PARTIAL");
                     report.put("failureCode",failureCode(failure));report.put("failureStage",failureStage(failure));
+                    if(failure instanceof ExplanationValidationException invalid)report.set("failureDetail",invalid.detail());
                     report.putArray("missingEvidence").add("核验解释未完整生成；确定性风险事实与查询完整性已保留");
                 }
             }
@@ -120,6 +121,7 @@ final class PostLoanRiskTask implements AutoCloseable {
         }
     }
     private static String failureCode(Exception failure){
+        if(failure instanceof ExplanationValidationException invalid)return invalid.code();
         return switch(String.valueOf(failure.getMessage())){
             case "MODEL_REPORT_EMPTY","MODEL_REPORT_INVALID"->"REPORT_MODEL_PARSE_FAILED";
             case "INVALID_EXPLANATION","INVALID_EXPLANATION_ITEM"->"REPORT_MODEL_SCHEMA_REJECTED";
@@ -132,19 +134,81 @@ final class PostLoanRiskTask implements AutoCloseable {
         return switch(failureCode(failure)){
             case "REPORT_MODEL_PARSE_FAILED"->"MODEL_RESPONSE_PARSE";
             case "REPORT_MODEL_SCHEMA_REJECTED"->"MODEL_RESPONSE_SCHEMA";
-            case "REPORT_MODEL_FACT_REF_REJECTED","REPORT_MODEL_SAFETY_REJECTED"->"MODEL_RESPONSE_VALIDATION";
+            case "REPORT_MODEL_FACT_REF_REJECTED","REPORT_MODEL_SAFETY_REJECTED","REPORT_MODEL_RULE_EVIDENCE_REJECTED"->"MODEL_RESPONSE_VALIDATION";
             default->"MODEL_GENERATION";
         };
     }
     private static void validate(ObjectNode value,List<String> allowed,JsonNode facts){
         Set<String> fields=Set.of("summary","evidenceInterpretation","pendingItems","reviewChecklist");
         var actual=new HashSet<String>();value.fieldNames().forEachRemaining(actual::add);if(!actual.equals(fields))throw new IllegalArgumentException("INVALID_EXPLANATION");
-        for(String field:List.of("summary","evidenceInterpretation"))for(JsonNode item:value.path(field)){
+        for(String field:List.of("summary","evidenceInterpretation")){int index=0;for(JsonNode item:value.path(field)){
             if(!item.isObject()||!item.path("text").isTextual()||!item.path("factRefs").isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
-            item.path("factRefs").forEach(ref->{if(!allowed.contains(ref.asText())||facts.at(ref.asText()).isMissingNode())throw new IllegalArgumentException("UNKNOWN_FACT_REF");});
-            String text=item.path("text").asText();if(text.contains("授信审批通过")||text.contains("自动调整授信")||text.contains("监管五级分类结论"))throw new IllegalArgumentException("UNSAFE_EXPLANATION");
+            for(JsonNode ref:item.path("factRefs"))if(!allowed.contains(ref.asText())||facts.at(ref.asText()).isMissingNode())
+                throw invalid("REPORT_MODEL_FACT_REF_REJECTED",field,index,"UNKNOWN_FACT_REF",item.path("text").asText());
+            String text=item.path("text").asText();
+            if(unsafeAuthorityClaim(text))throw invalid("REPORT_MODEL_SAFETY_REJECTED",field,index,"UNAUTHORIZED_AUTOMATION_CLAIM",text);
+            if(unsupportedCollateralConclusion(text,item.path("factRefs"),facts))
+                throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"COLLATERAL_RULE_EVIDENCE_REQUIRED",text);
+            index++;
         }
-        for(String field:List.of("pendingItems","reviewChecklist"))if(!value.path(field).isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
+        }
+        for(String field:List.of("pendingItems","reviewChecklist")){
+            if(!value.path(field).isArray())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
+            int index=0;for(JsonNode item:value.path(field)){
+                if(!item.isTextual())throw new IllegalArgumentException("INVALID_EXPLANATION_ITEM");
+                String text=item.asText();
+                if(unsafeAuthorityClaim(text))throw invalid("REPORT_MODEL_SAFETY_REJECTED",field,index,"UNAUTHORIZED_AUTOMATION_CLAIM",text);
+                if(unsupportedCollateralConclusion(text,HarnessJson.mapper().createArrayNode(),facts))
+                    throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"COLLATERAL_RULE_EVIDENCE_REQUIRED",text);
+                index++;
+            }
+        }
+    }
+    private static ExplanationValidationException invalid(String code,String section,int index,String rule,String text){
+        return new ExplanationValidationException(code,section,index,rule,text);
+    }
+    private static boolean unsupportedCollateralConclusion(String text,JsonNode refs,JsonNode facts){
+        if(!(text.contains("担保覆盖率不足")||text.contains("担保不足")||text.contains("覆盖不足")
+                ||text.contains("担保覆盖率充足")||text.contains("担保充足")||text.contains("覆盖充足")))return false;
+        JsonNode rule=facts.at("/deterministicWarning/collateralCoverageRule");
+        Set<String> actual=new HashSet<>();refs.forEach(ref->actual.add(ref.asText()));
+        Set<String> required=Set.of("/domains/collateralCoverageRatio","/deterministicWarning/collateralCoverageRule/ruleVersion",
+            "/deterministicWarning/collateralCoverageRule/applicableWhen","/deterministicWarning/collateralCoverageRule/threshold",
+            "/deterministicWarning/collateralCoverageRule/matched");
+        boolean insufficient=text.contains("不足");
+        return !actual.containsAll(required)||rule.isMissingNode()||!rule.path("matched").isBoolean()
+            ||insufficient!=rule.path("matched").asBoolean();
+    }
+    static boolean unsafeAuthorityClaim(String text){
+        for(String phrase:List.of("自动调整授信","自动调高授信","自动调低授信","自动提高授信","自动降低授信","自动变更授信",
+                "自动调整额度","自动调高额度","自动调低额度","自动提高额度","自动降低额度","自动变更额度",
+                "自动调整分类","自动变更分类","自动认定分类","授信审批通过","自动审批授信","自动通过授信审批","监管五级分类结论")){
+            int offset=0;
+            while((offset=text.indexOf(phrase,offset))>=0){
+                String before=text.substring(Math.max(0,offset-28),offset);
+                String after=text.substring(offset+phrase.length(),Math.min(text.length(),offset+phrase.length()+36));
+                if(doubleNegative(before)||(!negated(before)&&!rejectedAttribution(before,after)))return true;
+                offset+=phrase.length();
+            }
+        }
+        return false;
+    }
+    private static boolean negated(String before){
+        return before.matches("(?s).*(禁止|严禁|不得|不应|不能|无需|不建议|不可|未建议|不允许|不采纳|不认可)(由.{0,12})?$");
+    }
+    private static boolean doubleNegative(String before){
+        return before.matches("(?s).*(不得不|不能不|并非无需|并非不应|不是不得)(由.{0,12})?$");
+    }
+    private static boolean rejectedAttribution(String before,String after){
+        boolean attributed=before.matches("(?s).*(声称|表示|(?:有人|客户经理|报告)?说|提出|提议|要求|认为|建议)[：:“”\"']?.{0,12}$");
+        return attributed&&after.matches("(?s).{0,24}(不采纳|不认可|已否决|不得据此|仅为转述|不构成建议|不作为结论).*");
+    }
+    private static final class ExplanationValidationException extends IllegalArgumentException{
+        private final String code,section,rule,text;private final int index;
+        ExplanationValidationException(String code,String section,int index,String rule,String text){super(code);this.code=code;this.section=section;this.index=index;this.rule=rule;this.text=text;}
+        String code(){return code;}
+        ObjectNode detail(){ObjectNode value=HarnessJson.mapper().createObjectNode();value.put("code",code);value.put("section",section);
+            value.put("itemIndex",index);value.put("rule",rule);value.put("sentence",text.length()>180?text.substring(0,180):text);return value;}
     }
     synchronized ObjectNode review(String caller,String id,int revision,String opinion)throws Exception{
         ObjectNode report=read(caller,id);if(revision!=report.path("reportRevision").asInt())throw new IllegalStateException("REPORT_VERSION_CONFLICT");
