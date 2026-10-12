@@ -19,6 +19,48 @@ class PostLoanRiskTaskTest{
     var report=task.verify("owner",task.select("owner","鸿远建设","核验"),PostLoanRiskTask.Listener.NONE);assertEquals("PARTIAL",report.path("status").asText());assertEquals("YELLOW",report.path("facts").path("deterministicWarning").path("level").asText());
   }
  }
+ @Test void authorityLanguageUnderstandsNegationAttributionAndContradiction(){
+  for(String safe:List.of("禁止自动调整授信","不得由 Agent 自动调整授信","不应自动调整授信","无需自动调整授信",
+      "不得自动调低额度","有人建议自动调整授信，但本报告不采纳",
+      "客户经理说应自动调整授信，但本报告不采纳"))assertFalse(PostLoanRiskTask.unsafeAuthorityClaim(safe),safe);
+  for(String unsafe:List.of("建议自动调整授信","客户经理说应自动调整授信","不得不自动调整授信",
+      "建议系统自动调低额度","建议自动变更分类",
+      "不得自动调整授信，但建议系统自动调整授信"))assertTrue(PostLoanRiskTask.unsafeAuthorityClaim(unsafe),unsafe);
+ }
+ @Test void collateralConclusionRequiresMatchedVersionedRuleEvidence()throws Exception{
+  var file=temp.resolve("COLLATERAL.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("德信","91440100MA5C00000B")),
+    (m,p,r,f)->{var out=valid("ORANGE");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+      item.put("text","担保覆盖率不足，需人工复核。");item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("coverage"),Map.of())){
+   var report=task.verify("owner",task.select("owner","德信","核验"),PostLoanRiskTask.Listener.NONE);
+   assertEquals("PARTIAL",report.path("status").asText());assertEquals("REPORT_MODEL_RULE_EVIDENCE_REJECTED",report.path("failureCode").asText());
+   assertEquals("COLLATERAL_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
+   assertEquals(1.1,report.at("/facts/deterministicWarning/collateralCoverageRule/actual").asDouble());
+  }
+ }
+ @Test void collateralValueWithoutUnsupportedConclusionRemainsReviewable()throws Exception{
+  var file=temp.resolve("COLLATERAL-VALUE.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("德信","91440100MA5C00000B")),
+    (m,p,r,f)->{var out=valid("ORANGE");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+      item.put("text","担保覆盖率为1.1；当前缺少可据此判断充足或不足的适用依据。");item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("coverage-value"),Map.of())){
+   var report=task.verify("owner",task.select("owner","德信","核验"),PostLoanRiskTask.Listener.NONE);
+   assertEquals("READY_FOR_REVIEW",report.path("status").asText());
+  }
+ }
+ @Test void frozenR47OutputPassesNegationThenFailsMissingCollateralBasis()throws Exception{
+  var file=temp.resolve("R47.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("德信","91440100MA5C00000B")),
+    (m,p,r,f)->{var out=valid("ORANGE");
+      ((com.fasterxml.jackson.databind.node.ArrayNode)out.path("reviewChecklist")).removeAll().add("确认预警等级仅供内部演示，且不触发自动处置，禁止自动调整授信或分类。");
+      var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+      item.put("text","贷款余额10亿，经营现金流为负，担保覆盖率1.1，存在资产冻结，需评估担保覆盖率不足的风险影响。");
+      item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("r47"),Map.of())){
+   var report=task.verify("owner",task.select("owner","德信","核验"),PostLoanRiskTask.Listener.NONE);
+   assertEquals("PARTIAL",report.path("status").asText());
+   assertEquals("REPORT_MODEL_RULE_EVIDENCE_REJECTED",report.path("failureCode").asText());
+   assertEquals("COLLATERAL_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
+  }
+ }
  @Test void rejectsUnauthorizedSubjectAndRevalidatesAuthorityOnRead()throws Exception{
   var file=temp.resolve("AUTH.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
   var mapping=new java.util.concurrent.atomic.AtomicReference<>(new PostLoanSubjectMapping("owner","r1",Map.of("鸿远建设","91370000726200000X")));

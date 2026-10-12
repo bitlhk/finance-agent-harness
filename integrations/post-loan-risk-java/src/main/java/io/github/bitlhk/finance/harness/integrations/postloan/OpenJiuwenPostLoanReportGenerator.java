@@ -26,6 +26,7 @@ final class OpenJiuwenPostLoanReportGenerator implements PostLoanRiskTask.Explan
                 +"每项 text 或字符串不超过120个中文字符，避免逐字段复述。pendingItems 与 reviewChecklist 是字符串数组。"
                 +"不得补造事实、身份、账户或交易结果。"
                 +"预警等级和触发项来自确定性规则，只能解释不能修改。"
+                +"担保覆盖率可以按事实展示数值；只有输入同时提供已匹配的适用条件、规则版本、阈值和对应事实时，才能称为不足或充足，否则列为缺少判断依据。"
                 +"不得把内部预警称为监管五级分类、授信审批或额度调整结论。"
                 +"来源缺失或过期必须列为待核实事项。报告仅供有权人员复核，不得触发写回或自动处置。";
         var config=ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role","system","content",prompt)))

@@ -56,8 +56,13 @@ public final class PostLoanRiskReferenceProvider implements DescribedFinanceProv
         else if(overdue>=30||Set.of("次级","可疑","损失").contains(classification)||coverage<1||frozen){level="ORANGE";if(overdue>=30)triggers.add("OVERDUE_30_DAYS");if(Set.of("次级","可疑","损失").contains(classification))triggers.add("FIVE_LEVEL_ADVERSE");if(frozen)triggers.add("MAJOR_JUDICIAL_EVENT");}
         else if(overdue>0||"关注".equals(classification)){level="YELLOW";triggers.add(overdue>0?"MINOR_OVERDUE":"FIVE_LEVEL_ATTENTION");}
         else {level="GREEN";triggers.add("NO_MATERIAL_SIGNAL");}
+        Map<String,Object> collateralRule=Map.of("ruleId","COLLATERAL_COVERAGE_BELOW_1","ruleVersion","2.0",
+            "applicableWhen","担保覆盖率来源事实存在且口径可比","factPath","/domains/collateralCoverageRatio",
+            "operator","LT","threshold",1.0,"actual",coverage,"matched",coverage<1);
+        if(coverage<1)triggers.add("COLLATERAL_COVERAGE_BELOW_1");
         return Map.of("schemaVersion","postloan-risk-escalation.v1","subjectRef",snapshot.get("subjectRef"),"policyCode","POST_LOAN_RISK_ESCALATION",
             "ruleVersion","2.0","level",level,"triggers",List.copyOf(triggers),"requiresHumanEscalation",Set.of("ORANGE","RED").contains(level),
+            "collateralCoverageRule",collateralRule,
             "formalConclusionAllowed",false,"requiredActions",Set.of("ORANGE","RED").contains(level)?List.of("提交人工风险复核","不得由 Agent 自动调整授信或分类"):List.of("维持人工监测"));
     }
     private static Map<String,Object> enterprise(String name,String industry,String five,int overdue,int maxOverdue,double coverage,String rating,String previous,boolean frozen,int negative,long cashflow){
