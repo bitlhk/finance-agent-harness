@@ -175,9 +175,13 @@ final class PostLoanRiskTask implements AutoCloseable {
         Set<String> required=Set.of("/domains/collateralCoverageRatio","/deterministicWarning/collateralCoverageRule/ruleVersion",
             "/deterministicWarning/collateralCoverageRule/applicableWhen","/deterministicWarning/collateralCoverageRule/threshold",
             "/deterministicWarning/collateralCoverageRule/matched");
-        boolean insufficient=text.contains("不足");
+        boolean insufficient=collateralInsufficiencyAsserted(text);
         return !actual.containsAll(required)||rule.isMissingNode()||!rule.path("matched").isBoolean()
             ||insufficient!=rule.path("matched").asBoolean();
+    }
+    private static boolean collateralInsufficiencyAsserted(String text){
+        if(text.matches("(?s).*(不构成|不属于|未达到|不能认定为|不可认定为|不得表述为|并非)(该规则下的)?担保(覆盖率)?不足.*"))return false;
+        return text.contains("不足");
     }
     static boolean unsafeAuthorityClaim(String text){
         for(String phrase:List.of("自动调整授信","自动调高授信","自动调低授信","自动提高授信","自动降低授信","自动变更授信",
