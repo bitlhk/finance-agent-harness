@@ -47,18 +47,16 @@ class PostLoanRiskTaskTest{
    assertEquals("READY_FOR_REVIEW",report.path("status").asText());
   }
  }
- @Test void negatedCollateralConclusionStillRequiresCompleteRuleEvidence()throws Exception{
+ @Test void matchingNegatedCollateralConclusionIsCanonicalizedWithCompleteRuleEvidence()throws Exception{
   var file=temp.resolve("COLLATERAL-NEGATED.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远","91370000726200000X")),
     (m,p,r,f)->{var out=valid("YELLOW");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
-      item.put("text","担保覆盖率1.2高于阈值1.0，该不足规则未触发，不构成该规则下的担保不足。");
-      item.putArray("factRefs").add("/domains/collateralCoverageRatio")
-        .add("/deterministicWarning/collateralCoverageRule/ruleVersion")
-        .add("/deterministicWarning/collateralCoverageRule/applicableWhen")
-        .add("/deterministicWarning/collateralCoverageRule/threshold")
-        .add("/deterministicWarning/collateralCoverageRule/matched");return out;},method,temp.resolve("coverage-negated"),Map.of())){
+      item.put("text","担保覆盖率1.2高于阈值1.0，规则未匹配，不构成担保不足。");
+      item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("coverage-negated"),Map.of())){
    var report=task.verify("owner",task.select("owner","鸿远","核验"),PostLoanRiskTask.Listener.NONE);
    assertEquals("READY_FOR_REVIEW",report.path("status").asText());
+   assertTrue(report.at("/modelExplanation/evidenceInterpretation/0/text").asText().contains("规则2.0"));
+   assertEquals(5,report.at("/modelExplanation/evidenceInterpretation/0/factRefs").size());
   }
  }
  @Test void frozenR47OutputPassesNegationThenFailsMissingCollateralBasis()throws Exception{

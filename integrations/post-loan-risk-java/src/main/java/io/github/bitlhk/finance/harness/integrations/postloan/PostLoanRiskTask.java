@@ -105,6 +105,7 @@ final class PostLoanRiskTask implements AutoCloseable {
                 try{
                     synchronized(this){current(selection,run);}modelCalls.incrementAndGet();
                     ObjectNode explanation=generator.generate(method,selection.purpose(),List.copyOf(refs),modelFacts.deepCopy());
+                    canonicalizeMatchingCollateralStatements(explanation,modelFacts);
                     validate(explanation,refs,modelFacts);synchronized(this){current(selection,run);}
                     report.set("modelExplanation",explanation);report.put("explanationStatus","READY");report.put("status","READY_FOR_REVIEW");
                 }catch(Exception failure){
@@ -167,9 +168,39 @@ final class PostLoanRiskTask implements AutoCloseable {
     private static ExplanationValidationException invalid(String code,String section,int index,String rule,String text){
         return new ExplanationValidationException(code,section,index,rule,text);
     }
+    private static void canonicalizeMatchingCollateralStatements(ObjectNode explanation,JsonNode facts){
+        JsonNode rule=facts.at("/deterministicWarning/collateralCoverageRule");
+        JsonNode ratio=facts.at("/domains/collateralCoverageRatio");
+        boolean complete=ratio.isNumber()&&rule.path("actual").isNumber()&&rule.path("threshold").isNumber()
+            &&rule.path("matched").isBoolean()&&!rule.path("ruleVersion").asText().isBlank()
+            &&!rule.path("applicableWhen").asText().isBlank();
+        if(!complete)return;
+        for(String section:List.of("summary","evidenceInterpretation"))for(JsonNode raw:explanation.path(section)){
+            if(!(raw instanceof ObjectNode item))continue;String text=item.path("text").asText();
+            if(!collateralConclusion(text)||collateralInsufficiencyAsserted(text)!=rule.path("matched").asBoolean())continue;
+            String canonical="担保覆盖率"+ratio.asText()+"，依据规则"+rule.path("ruleVersion").asText()
+                +"（适用条件："+rule.path("applicableWhen").asText()+"，阈值"+rule.path("threshold").asText()+"）"
+                +(rule.path("matched").asBoolean()?"触发担保覆盖率不足预警，需人工复核。":"未触发担保覆盖率不足预警；未触发不等于担保充足。");
+            item.put("text",canonical);var refs=item.putArray("factRefs");
+            refs.add("/domains/collateralCoverageRatio");
+            refs.add("/deterministicWarning/collateralCoverageRule/ruleVersion");
+            refs.add("/deterministicWarning/collateralCoverageRule/applicableWhen");
+            refs.add("/deterministicWarning/collateralCoverageRule/threshold");
+            refs.add("/deterministicWarning/collateralCoverageRule/matched");
+        }
+        for(String section:List.of("pendingItems","reviewChecklist")){
+            var values=explanation.withArray(section);
+            for(int i=0;i<values.size();i++)if(collateralConclusion(values.path(i).asText()))
+                values.set(i,HarnessJson.mapper().getNodeFactory().textNode("复核担保覆盖率规则的版本、适用条件、阈值及对应事实。"));
+        }
+    }
+    private static boolean collateralConclusion(String text){
+        if(text.matches("(?s).*(缺少|无法|不能).{0,24}(判断|认定).{0,16}(不足|充足).*")
+                ||text.matches("(?s).*(缺少|无法|不能).{0,24}(不足|充足).{0,16}(判断|认定).*"))return false;
+        return text.contains("担保")&&(text.contains("不足")||text.contains("充足")||text.contains("规则未触发")||text.contains("未触发担保"));
+    }
     private static boolean unsupportedCollateralConclusion(String text,JsonNode refs,JsonNode facts){
-        if(!(text.contains("担保覆盖率不足")||text.contains("担保不足")||text.contains("覆盖不足")
-                ||text.contains("担保覆盖率充足")||text.contains("担保充足")||text.contains("覆盖充足")))return false;
+        if(!collateralConclusion(text))return false;
         JsonNode rule=facts.at("/deterministicWarning/collateralCoverageRule");
         Set<String> actual=new HashSet<>();refs.forEach(ref->actual.add(ref.asText()));
         Set<String> required=Set.of("/domains/collateralCoverageRatio","/deterministicWarning/collateralCoverageRule/ruleVersion",
@@ -180,7 +211,8 @@ final class PostLoanRiskTask implements AutoCloseable {
             ||insufficient!=rule.path("matched").asBoolean();
     }
     private static boolean collateralInsufficiencyAsserted(String text){
-        if(text.matches("(?s).*(不构成|不属于|未达到|不能认定为|不可认定为|不得表述为|并非)(该规则下的)?担保(覆盖率)?不足.*"))return false;
+        if(text.matches("(?s).*(不构成|不属于|未达到|不能认定为|不可认定为|不得表述为|并非)(该规则下的)?担保(覆盖率)?不足.*")
+                ||text.matches("(?s).*未触发.{0,12}担保(覆盖率)?不足.*"))return false;
         return text.contains("不足");
     }
     static boolean unsafeAuthorityClaim(String text){
