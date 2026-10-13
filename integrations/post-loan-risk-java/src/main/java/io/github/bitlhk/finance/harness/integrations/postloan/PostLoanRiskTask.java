@@ -211,9 +211,27 @@ final class PostLoanRiskTask implements AutoCloseable {
             ||insufficient!=rule.path("matched").asBoolean();
     }
     private static boolean collateralInsufficiencyAsserted(String text){
-        if(text.matches("(?s).*(不构成|不属于|未达到|不能认定为|不可认定为|不得表述为|并非)(该规则下的)?担保(覆盖率)?不足.*")
-                ||text.matches("(?s).*未触发.{0,12}担保(覆盖率)?不足.*"))return false;
-        return text.contains("不足");
+        int offset=0;
+        while((offset=text.indexOf("不足",offset))>=0){
+            int boundary=lastBoundary(text,offset);
+            String before=text.substring(boundary,offset);
+            String after=text.substring(offset,Math.min(text.length(),offset+24));
+            boolean doubleNegative=before.matches("(?s).*(并非|不是|并不等于).{0,8}(不构成|不属于|不能认定为|不可认定为)$");
+            boolean negated=!doubleNegative&&(before.matches("(?s).*(不构成|不属于|未达到|不能认定为|不可认定为|不得表述为|未触发).{0,28}$")
+                    ||after.matches("(?s)^不足(规则|预警)?.{0,16}(未触发|未匹配).*$"));
+            if(!negated)return true;
+            offset+=2;
+        }
+        return false;
+    }
+    private static int lastBoundary(String text,int end){
+        int boundary=0;
+        // ASCII periods may be decimal separators in thresholds such as 1.0.
+        for(String marker:List.of("，",",","；",";","。","！","!","？","?","但","然而","却")){
+            int index=text.lastIndexOf(marker,end-1);
+            if(index>=0)boundary=Math.max(boundary,index+marker.length());
+        }
+        return boundary;
     }
     static boolean unsafeAuthorityClaim(String text){
         for(String phrase:List.of("自动调整授信","自动调高授信","自动调低授信","自动提高授信","自动降低授信","自动变更授信",
