@@ -85,7 +85,10 @@ public final class ServicePreparation implements AutoCloseable {
         if (m == null) throw new SecurityException("CUSTOMER_MAPPING_MISSING");
         return m.customers().entrySet().stream().filter(e -> {
             try { access.authorize(e.getValue()); return true; }
-            catch (SecurityException denied) { return false; }
+            catch (SecurityException denied) {
+                if ("CRM_EMPLOYEE_SCOPE_EXPIRED".equals(denied.getMessage())) throw denied;
+                return false;
+            }
         }).map(Map.Entry::getKey).sorted().toList();
     }
     public synchronized long select(String caller, String alias, String goal) {
@@ -746,9 +749,11 @@ public final class ServicePreparation implements AutoCloseable {
         for(char value:new char[]{'。','；',';','！','!','？','?','，',','})boundary=Math.max(boundary,text.lastIndexOf(value,markerAt-1));
         String prefix=text.substring(boundary+1,markerAt);
         for(String denial:List.of("不得表述为","不能表述为","不可表述为","不应表述为","不要表述为","避免表述为",
+                "避免误述为","避免误写为","避免误称为","避免说成",
                 "不得描述为","不能描述为","不可描述为","不得称为","不能称为","不可称为","不要说成",
                 "不是","并非","并不是","不属于","不应","不可","不能","不得","禁止","严禁"))
             if(prefix.endsWith(denial))return true;
+        if(prefix.matches(".*避免(?:将.{0,24})?误(?:述|写|称)为$"))return true;
         return false;
     }
     private static ReportDelta normalizeDeltaFactRefs(ReportDelta delta,List<String> ids) {

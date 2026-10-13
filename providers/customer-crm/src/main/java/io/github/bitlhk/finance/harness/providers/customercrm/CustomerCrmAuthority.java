@@ -18,8 +18,9 @@ public record CustomerCrmAuthority(String ownerRef, String principalRef, String 
         }
     }
     public void requireCurrent(String expectedOwner, String customerRef, Instant now) {
-        if (!ownerRef.equals(expectedOwner) || !allowedCustomerRefs.contains(required(customerRef))
-                || !expiresAt.isAfter(now)) throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+        if (!ownerRef.equals(expectedOwner) || !allowedCustomerRefs.contains(required(customerRef)))
+            throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+        if (!expiresAt.isAfter(now)) throw new SecurityException("CRM_EMPLOYEE_SCOPE_EXPIRED");
     }
     public String authorityRef() { return "crm-scope:" + revision; }
     private static String required(String value) {
