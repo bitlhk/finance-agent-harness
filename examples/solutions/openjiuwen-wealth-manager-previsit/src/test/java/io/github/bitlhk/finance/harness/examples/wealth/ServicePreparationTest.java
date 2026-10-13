@@ -169,6 +169,8 @@ class ServicePreparationTest {
         assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics("该计划即将到期",facts));
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("该计划到期日已过，状态待核实",facts));
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不得表述为即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("确认核实口径，避免误述为即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("避免将该事项误写为快到期",facts));
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不是即将到期，而是已过期待核实",facts));
         assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics(
                 "不得把旧状态表述为即将到期，但该产品即将到期",facts));
