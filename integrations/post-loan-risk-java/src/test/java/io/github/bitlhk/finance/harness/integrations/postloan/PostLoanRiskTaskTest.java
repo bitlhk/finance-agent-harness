@@ -60,6 +60,27 @@ class PostLoanRiskTaskTest{
    assertEquals(5,report.at("/modelExplanation/evidenceInterpretation/0/factRefs").size());
   }
  }
+ @Test void frozenR50ThresholdNegationIsAcceptedButContradictoryAssertionIsRejected()throws Exception{
+  var file=temp.resolve("R50.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  for(String text:List.of(
+      "担保覆盖率1.2，未触发阈值1.0的不足规则，但matched=false不代表担保充足。",
+      "担保覆盖率1.2，不构成该规则下的担保不足，也不能据此认定担保充足。")){
+   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远","91370000726200000X")),
+     (m,p,r,f)->{var out=valid("YELLOW");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+       item.put("text",text);item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("safe-"+Math.abs(text.hashCode())),Map.of())){
+    var report=task.verify("owner",task.select("owner","鸿远","核验"),PostLoanRiskTask.Listener.NONE);
+    assertEquals("READY_FOR_REVIEW",report.path("status").asText(),text);
+   }
+  }
+  String contradiction="担保覆盖率1.2，未触发阈值1.0的不足规则，但仍认为担保不足。";
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远","91370000726200000X")),
+    (m,p,r,f)->{var out=valid("YELLOW");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+      item.put("text",contradiction);item.putArray("factRefs").add("/domains/collateralCoverageRatio");return out;},method,temp.resolve("contradiction"),Map.of())){
+   var report=task.verify("owner",task.select("owner","鸿远","核验"),PostLoanRiskTask.Listener.NONE);
+   assertEquals("PARTIAL",report.path("status").asText());
+   assertEquals("COLLATERAL_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
+  }
+ }
  @Test void frozenR47OutputPassesNegationThenFailsMissingCollateralBasis()throws Exception{
   var file=temp.resolve("R47.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("德信","91440100MA5C00000B")),
