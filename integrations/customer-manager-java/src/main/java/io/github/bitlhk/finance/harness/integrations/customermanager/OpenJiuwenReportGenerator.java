@@ -17,7 +17,7 @@ import java.util.*;
 final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenerator {
     static final int REPORT_MAX_TOKENS = 900;
     static final String FACT_REFERENCE_INSTRUCTION =
-            "factRefs只能逐字复制factIds或factReferenceCatalog.factRef中列出的叶字段路径；"
+            "factRefs只能逐字复制factReferenceCatalog中列出的叶字段路径；"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";
     private final ReActAgent agent;
 
@@ -25,7 +25,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
         agent = new ReActAgent(AgentCard.builder().id("service-preparation-report")
                 .name("客户经理服务准备报告").description("依据已安装方法和已核实事实生成待复核建议").build());
         var config = ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role", "system", "content",
-                "你只能依据输入中的installedMethod、goal、factIds和facts生成待经理复核的服务准备建议。"
+                "你只能依据输入中的installedMethod、goal、factReferenceCatalog和facts生成待经理复核的服务准备建议。"
                 + "每行只输出一个JSON对象，不要代码围栏或其他文字。字段严格为section、text、factRefs。"
                 + "section依次使用communicationFocus、preparationAdvice、pendingItems、reviewChecklist；"
                 + "前两类factRefs必须为输入中的非空引用数组，后两类factRefs必须为空数组。"
@@ -70,7 +70,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             String input=HarnessJson.mapper().writeValueAsString(Map.of(
                     "installedMethod", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(),
                             "lockDigest", method.lockDigest(), "content", method.content()),
-                    "goal", goal, "factIds", ids, "factReferenceCatalog", referenceCatalog(ids, context),
+                    "goal", goal, "factReferenceCatalog", referenceCatalog(ids, context),
                     "facts", context));
             var parser=new ReportLines(sink);
             var chunks=Runner.runAgentStreaming(agent,Map.of("query",input),sid,null,List.of(StreamMode.OUTPUT));
@@ -94,7 +94,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             if(id==null||id.isBlank())continue;
             JsonNode value=context.at(id);
             if(value.isMissingNode()||value.isContainerNode())continue;
-            var item=catalog.addObject();item.put("factRef",id);item.set("value",value.deepCopy());
+            catalog.add(id);
         }
         return catalog;
     }

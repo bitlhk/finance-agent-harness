@@ -204,6 +204,10 @@ class ServicePreparationTest {
                 ServicePreparation.normalizeFactRefs(List.of("/profiles/1/detail"),ids));
         assertEquals(List.of("/profiles/9/detail/riskAssessment"),
                 ServicePreparation.normalizeFactRefs(List.of("/profiles/9/detail/riskAssessment"),ids));
+        assertEquals(List.of("/factState/items/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/factState/items/0/value"),ids));
+        assertEquals(List.of("/taskContext/facts/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/taskContext/facts/0/value"),ids));
     }
     @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
         explainEmpty=true;var report=prepare();

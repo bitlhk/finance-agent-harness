@@ -28,8 +28,8 @@ class OpenJiuwenReportGeneratorTest {
                 "/factState/items/0/value",
                 "/missing"),facts);
         assertEquals(2,catalog.size());
-        assertEquals("/factState/items/0/value/availableCash",catalog.at("/0/factRef").asText());
-        assertEquals(360000,catalog.at("/0/value").asInt());
+        assertEquals("/factState/items/0/value/availableCash",catalog.at("/0").asText());
+        assertEquals("/factState/items/0/value/customerId",catalog.at("/1").asText());
         assertFalse(catalog.toString().contains("\"/factState/items/0/value\""));
         assertTrue(OpenJiuwenReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("不得引用父对象"));
     }
