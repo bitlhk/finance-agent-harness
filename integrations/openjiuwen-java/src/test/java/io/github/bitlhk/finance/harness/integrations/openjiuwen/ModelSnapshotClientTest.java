@@ -4,6 +4,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.openjiuwen.core.foundation.llm.schema.*;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -11,6 +13,32 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModelSnapshotClientTest {
+    @Test void terminationDiagnosticsAreRedactedAndDoNotInventHttpEvidence() {
+        var timeout=ModelSnapshotClient.streamTermination(new IllegalStateException("CUSTOMER_TEXT secret-token",new SocketTimeoutException("read timed out")),"ITERATOR_HAS_NEXT",1);
+        assertEquals("READ_TIMEOUT",timeout.get("terminationReason"));
+        var unspecifiedTimeout=ModelSnapshotClient.streamTermination(new java.util.concurrent.TimeoutException("secret"),"ITERATOR_HAS_NEXT",1);
+        assertEquals("TIMEOUT_SOURCE_UNSPECIFIED",unspecifiedTimeout.get("terminationReason"));
+        assertEquals(1,timeout.get("chunksObserved"));
+        assertEquals(false,timeout.get("httpStatusObserved"));
+        assertEquals(false,timeout.get("httpSendCountObserved"));
+        String rendered=timeout.toString();
+        assertFalse(rendered.contains("CUSTOMER_TEXT"));assertFalse(rendered.contains("secret-token"));
+
+        var reset=ModelSnapshotClient.streamTermination(new RuntimeException(new SocketException("Connection reset by peer")),"ITERATOR_NEXT",2);
+        assertEquals("SOCKET_RESET_OR_CLOSED",reset.get("terminationReason"));
+        var eof=ModelSnapshotClient.streamTermination(new RuntimeException(new java.io.EOFException("partial")),"ITERATOR_HAS_NEXT",1);
+        assertEquals("UNEXPECTED_EOF",eof.get("terminationReason"));
+        var cancelled=ModelSnapshotClient.streamTermination(new CancellationException("caller cancelled"),"STREAM_OPEN",0);
+        assertEquals("EXPLICIT_CANCELLATION",cancelled.get("terminationReason"));
+        var interrupted=ModelSnapshotClient.streamTermination(new RuntimeException(new InterruptedException("worker interrupted")),"ITERATOR_HAS_NEXT",1);
+        assertEquals("THREAD_INTERRUPTED",interrupted.get("terminationReason"));
+        assertEquals(true,interrupted.get("threadInterruptedObserved"));
+        var malformed=ModelSnapshotClient.streamTermination(new RuntimeException(
+                new com.fasterxml.jackson.core.JsonParseException(null,"PRIVATE_STREAM_BODY")),"ITERATOR_NEXT",1);
+        assertEquals("MALFORMED_STREAM_PAYLOAD",malformed.get("terminationReason"));
+        assertFalse(malformed.toString().contains("PRIVATE_STREAM_BODY"));
+        assertEquals("ITERATOR_EXHAUSTED",ModelSnapshotClient.streamTermination(null,"ITERATOR_HAS_NEXT",3).get("terminationReason"));
+    }
     @Test void concurrentScopesAreIsolatedAndResponseExcludesReasoning() throws Exception {
         var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", exchange -> {

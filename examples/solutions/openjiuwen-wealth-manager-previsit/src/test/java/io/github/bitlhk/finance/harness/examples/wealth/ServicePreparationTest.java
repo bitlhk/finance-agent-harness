@@ -17,6 +17,17 @@ import java.util.concurrent.atomic.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ServicePreparationTest {
+    @Test void modelTransportObservationIsRedactedAndKeepsUnknownEvidenceUnknown() {
+        var observed=ServicePreparation.modelTransportObservation(new IllegalStateException("PRIVATE_CUSTOMER_TEXT",new java.net.SocketTimeoutException("secret")));
+        assertEquals("READ_TIMEOUT",observed.path("terminationReason").asText());
+        assertFalse(observed.path("httpStatusObserved").asBoolean());
+        assertFalse(observed.path("httpSendCountObserved").asBoolean());
+        assertFalse(observed.toString().contains("PRIVATE_CUSTOMER_TEXT"));assertFalse(observed.toString().contains("secret"));
+        var unknown=ServicePreparation.modelTransportObservation(new IllegalStateException("unknown"));
+        assertEquals("UNKNOWN_RUNTIME_FAILURE",unknown.path("terminationReason").asText());
+        var unspecifiedTimeout=ServicePreparation.modelTransportObservation(new TimeoutException("synthetic failure"));
+        assertEquals("TIMEOUT_SOURCE_UNSPECIFIED",unspecifiedTimeout.path("terminationReason").asText());
+    }
     @Test void previewAllowsOnlyExplicitLoopbackOriginsAndUnambiguousSessionCookie() {
         var origins=ServicePreparationDemo.previewOrigins(18741,"http://localhost:49291");
         assertTrue(origins.contains("http://localhost:49291"));
