@@ -244,16 +244,32 @@ final class PostLoanRiskTask implements AutoCloseable {
             result.put("ruleVersion",policy.path("ruleVersion").asText());return result;
         }catch(Exception invalid){result.put("status","NOT_EVALUATED");result.put("reasonCode","DATA_AS_OF_INVALID");return result;}
     }
-    private static boolean unsupportedFreshnessConclusion(String text,JsonNode refs,JsonNode facts){
-        boolean claimsCurrent=List.of("数据时间有效","数据仍有效","数据有效","数据最新","最新数据","仍在有效期","时效有效","数据未过期")
-                .stream().anyMatch(text::contains);
-        boolean claimsStale=List.of("数据已过期","数据过期","时效失效").stream().anyMatch(text::contains);
+    static boolean unsupportedFreshnessConclusion(String text,JsonNode refs,JsonNode facts){
+        boolean claimsCurrent=hasAffirmedPhrase(text,List.of("数据时间有效","数据仍有效","数据有效","数据确实有效",
+                "数据最新","最新数据","仍在有效期","时效有效","数据未过期"));
+        boolean claimsStale=hasAffirmedPhrase(text,List.of("数据已过期","数据过期","时效失效"));
         if(!claimsCurrent&&!claimsStale)return false;
-        JsonNode assessment=facts.path("freshnessAssessment");String expected=claimsCurrent?"CURRENT":"STALE";
+        JsonNode assessment=facts.path("freshnessAssessment");
         Set<String> actual=new HashSet<>();refs.forEach(ref->actual.add(ref.asText()));
-        return !expected.equals(assessment.path("status").asText())
+        String status=assessment.path("status").asText();
+        return (claimsCurrent&&!"CURRENT".equals(status))||(claimsStale&&!"STALE".equals(status))
                 ||!actual.containsAll(Set.of("/freshnessAssessment/status","/freshnessAssessment/dataAsOf",
                     "/freshnessAssessment/evaluatedAt","/freshnessAssessment/ruleVersion","/freshnessAssessment/maxAgeDays"));
+    }
+    private static boolean hasAffirmedPhrase(String text,List<String> phrases){
+        for(String phrase:phrases){
+            int offset=0;
+            while((offset=text.indexOf(phrase,offset))>=0){
+                int boundary=lastBoundary(text,offset);
+                String before=text.substring(boundary,offset);
+                boolean doubleNegative=before.matches("(?s).*(不能不|并非不能|不是不能|不得不).{0,12}$");
+                boolean negated=!doubleNegative&&before.matches(
+                        "(?s).*(尚?不能|无法|不得|不应|不可|尚未|未能)(?:据此|直接|明确)?(?:说|声称|确定|认定|判断|说明|证明|保证)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
+                if(!negated)return true;
+                offset+=phrase.length();
+            }
+        }
+        return false;
     }
     private static int lastBoundary(String text,int end){
         int boundary=0;

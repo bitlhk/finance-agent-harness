@@ -232,9 +232,30 @@ public final class EnterpriseCreditAuditApplication {
             }
             boolean notVerified=results.stream().anyMatch(result->"NOT_VERIFIED".equals(result.data().get("authenticityStatus")));
             boolean allExplicitlyFailed=!results.isEmpty()&&results.stream().allMatch(result->"FAILED".equals(result.data().get("authenticityStatus")));
-            if(notVerified&&!allExplicitlyFailed&&List.of("未通过真实性验证","真实性验证失败","真实性核验失败","材料虚假","真实性不合格")
-                    .stream().anyMatch(response::contains))
+            if(notVerified&&!allExplicitlyFailed&&unsupportedAuthenticityClaim(response))
                 throw new IllegalArgumentException("MODEL_EXPLANATION_AUTHENTICITY_STATUS_CONFLICT");
+        }
+
+        private static boolean unsupportedAuthenticityClaim(String response) {
+            for(String phrase:List.of("未通过真实性验证","真实性验证失败","真实性核验失败","材料虚假","真实性不合格")){
+                int offset=0;
+                while((offset=response.indexOf(phrase,offset))>=0){
+                    int boundary=0;
+                    for(String marker:List.of("，",",","；",";","。","！","!","？","?","但","然而","却")){
+                        int index=response.lastIndexOf(marker,offset-1);
+                        if(index>=0)boundary=Math.max(boundary,index+marker.length());
+                    }
+                    String before=response.substring(boundary,offset);
+                    String after=response.substring(offset+phrase.length(),Math.min(response.length(),offset+phrase.length()+48));
+                    boolean negated=before.matches(
+                            "(?s).*(不能|不得|不应|不可|无法)(?:据此|直接|明确)?(?:说|声称|认定|判断|说明|证明)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
+                    boolean attributed=before.matches("(?s).*(引用|原话|声称|表示|(?:有人|外部人员|报告)?说)[：:“”\"']?.{0,20}$");
+                    boolean rejected=after.matches("(?s).{0,32}(不能采信|不采信|不认可|不得据此|仅为转述|不作为结论).*");
+                    if(!negated&&!(attributed&&rejected))return true;
+                    offset+=phrase.length();
+                }
+            }
+            return false;
         }
 
         private static Set<String> confirmedDimensions(List<CapabilityResultV1> results) {
