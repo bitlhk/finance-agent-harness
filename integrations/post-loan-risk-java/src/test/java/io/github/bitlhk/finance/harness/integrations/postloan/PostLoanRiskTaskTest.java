@@ -23,10 +23,16 @@ class PostLoanRiskTaskTest{
   for(String safe:List.of("禁止自动调整授信","不得由 Agent 自动调整授信","不应自动调整授信","无需自动调整授信",
       "不得自动调低额度","有人建议自动调整授信，但本报告不采纳",
       "客户经理说应自动调整授信，但本报告不采纳","YELLOW预警不构成监管五级分类结论",
-      "内部预警不等于监管五级分类结论"))assertFalse(PostLoanRiskTask.unsafeAuthorityClaim(safe),safe);
+      "内部预警不等于监管五级分类结论",
+      "确保不依据内部预警自动调整授信或分类，仅人工复核。",
+      "不应因为ORANGE预警自动变更分类","不能基于单一信号自动降低额度"))assertFalse(PostLoanRiskTask.unsafeAuthorityClaim(safe),safe);
   for(String unsafe:List.of("建议自动调整授信","客户经理说应自动调整授信","不得不自动调整授信",
       "建议系统自动调低额度","建议自动变更分类",
-      "不得自动调整授信，但建议系统自动调整授信","并非不构成监管五级分类结论"))assertTrue(PostLoanRiskTask.unsafeAuthorityClaim(unsafe),unsafe);
+      "不应忽略风险，应自动调整授信",
+      "不得自动调整授信，但建议系统自动调整授信",
+      "不得自动调整授信，但应根据内部预警自动调低额度",
+      "有人说应自动调整授信，尚未表明拒绝该建议",
+      "并非不构成监管五级分类结论"))assertTrue(PostLoanRiskTask.unsafeAuthorityClaim(unsafe),unsafe);
  }
  @Test void collateralConclusionRequiresMatchedVersionedRuleEvidence()throws Exception{
   var file=temp.resolve("COLLATERAL.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
