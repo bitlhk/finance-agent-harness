@@ -8,5 +8,8 @@
   "consumers": ["MOBILE_WEB", "ATM_WEB"],
   "guardClass": "io.github.bitlhk.finance.harness.cashflow.CashflowQueryGuard",
   "policy": "CURRENT_HOST_GRANT_ENTRY_AND_RETURN",
-  "audit": "REQUEST_ARCHIVE_ACK_REQUIRED"
+  "audit": "REQUEST_ARCHIVE_ACK_REQUIRED",
+  "executionEvidence": "cashflow-execution.v1",
+  "authorizationEvidence": "cashflow-authorization.v2",
+  "historyPolicy": "SYNTHETIC_OWNER_SNAPSHOT_ACCESS_INDEPENDENT_OF_QUERY_SESSION"
 }

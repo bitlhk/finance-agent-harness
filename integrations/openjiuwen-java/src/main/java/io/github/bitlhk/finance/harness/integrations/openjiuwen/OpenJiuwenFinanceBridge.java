@@ -104,6 +104,12 @@ public final class OpenJiuwenFinanceBridge {
                     needsUser ? OpenJiuwenExecutionV1.Status.NEED_USER : OpenJiuwenExecutionV1.Status.REJECTED,
                     invocation, result, data, evidence, code, needsUser ? result.content() : "", Map.of());
         } catch (SecurityException denied) {
+            // Finite safe codes only; never forward arbitrary exception text or add a business-module dependency.
+            if ("finance.transaction-summary.query".equals(invocation.capabilityId())
+                    && Set.of("AUTHORIZATION_EXPIRED", "AUTHORITY_UNAVAILABLE", "AUTHORIZATION_AUDIT_UNAVAILABLE").contains(Objects.toString(denied.getMessage(), "")))
+                return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
+                        "Authorization could not be established; inspect the safe reason.", Map.of(),
+                        List.of(localEvidence(invocation, startedAt, "UNOBSERVED")), denied.getMessage(), "", Map.of());
             return accessDenied(invocation, startedAt);
         } catch (RuntimeException exception) {
             return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
