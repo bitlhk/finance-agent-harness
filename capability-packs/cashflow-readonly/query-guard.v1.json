@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "cashflow-query-guard.v1",
+  "capabilityId": "finance.transaction-summary.query",
+  "providerId": "non-ai-banking-reference",
+  "contract": "contracts/json-schema/cashflow/cashflow-facts.v0.1.schema.json",
+  "method": {"id": "cashflow-customer-self-service", "version": "0.1.3"},
+  "runtime": {"family": "openjiuwen", "language": "java"},
+  "consumers": ["MOBILE_WEB", "ATM_WEB"],
+  "guardClass": "io.github.bitlhk.finance.harness.cashflow.CashflowQueryGuard",
+  "policy": "CURRENT_HOST_GRANT_ENTRY_AND_RETURN",
+  "audit": "REQUEST_ARCHIVE_ACK_REQUIRED"
+}
