@@ -39,6 +39,9 @@ class EnterpriseCreditMaterialAuditCasesTest {
             assertEquals(item.path("expected").asText(), result.data().get("status"), item.path("id").asText());
             assertEquals(Boolean.FALSE, result.data().get("approvalDecision"), item.path("id").asText());
             assertEquals(Boolean.TRUE, result.data().get("advisoryOnly"), item.path("id").asText());
+            assertEquals("NOT_VERIFIED", result.data().get("authenticityStatus"), item.path("id").asText());
+            assertEquals("NOT_PERFORMED_BY_THIS_CAPABILITY",
+                    ((Map<?, ?>) result.data().get("authenticityAssessment")).get("basis"), item.path("id").asText());
         }
     }
 

@@ -97,6 +97,7 @@ final class PostLoanRiskTask implements AutoCloseable {
                 CapabilityResultV1 warning=provider.query(warningRequest);synchronized(this){current(selection,run);}
                 if(warning.status()!=CapabilityResultV1.Status.COMPLETED)throw new IllegalStateException("DETERMINISTIC_POLICY_FAILED");
                 facts.set("deterministicWarning",HarnessJson.mapper().valueToTree(warning.data()));
+                facts.set("freshnessAssessment",freshnessAssessment(facts,Instant.now()));
                 report.set("facts",facts.deepCopy());report.put("verificationStatus",facts.path("queryComplete").asBoolean(false)?"SNAPSHOT_READY":"VERIFICATION_INCOMPLETE");
                 report.put("queryComplete",facts.path("queryComplete").asBoolean(false));report.put("evidenceAsOf",result.asOf().toString());
                 ObjectNode modelFacts=modelFacts(facts);List<String> refs=new ArrayList<>();collect(modelFacts,"",refs,300);
@@ -150,6 +151,8 @@ final class PostLoanRiskTask implements AutoCloseable {
             if(unsafeAuthorityClaim(text))throw invalid("REPORT_MODEL_SAFETY_REJECTED",field,index,"UNAUTHORIZED_AUTOMATION_CLAIM",text);
             if(unsupportedCollateralConclusion(text,item.path("factRefs"),facts))
                 throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"COLLATERAL_RULE_EVIDENCE_REQUIRED",text);
+            if(unsupportedFreshnessConclusion(text,item.path("factRefs"),facts))
+                throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"FRESHNESS_RULE_EVIDENCE_REQUIRED",text);
             index++;
         }
         }
@@ -161,6 +164,8 @@ final class PostLoanRiskTask implements AutoCloseable {
                 if(unsafeAuthorityClaim(text))throw invalid("REPORT_MODEL_SAFETY_REJECTED",field,index,"UNAUTHORIZED_AUTOMATION_CLAIM",text);
                 if(unsupportedCollateralConclusion(text,HarnessJson.mapper().createArrayNode(),facts))
                     throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"COLLATERAL_RULE_EVIDENCE_REQUIRED",text);
+                if(unsupportedFreshnessConclusion(text,HarnessJson.mapper().createArrayNode(),facts))
+                    throw invalid("REPORT_MODEL_RULE_EVIDENCE_REJECTED",field,index,"FRESHNESS_RULE_EVIDENCE_REQUIRED",text);
                 index++;
             }
         }
@@ -221,6 +226,48 @@ final class PostLoanRiskTask implements AutoCloseable {
                     ||after.matches("(?s)^不足(规则|预警)?.{0,16}(未触发|未匹配).*$"));
             if(!negated)return true;
             offset+=2;
+        }
+        return false;
+    }
+    static ObjectNode freshnessAssessment(JsonNode facts,Instant evaluatedAt){
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("dataAsOf",facts.path("dataAsOf").asText(""));result.put("evaluatedAt",evaluatedAt.toString());
+        JsonNode policy=facts.path("freshnessPolicy");
+        if(!policy.path("ruleVersion").isTextual()||!policy.path("maxAgeDays").canConvertToInt()){
+            result.put("status","NOT_EVALUATED");result.put("reasonCode","FRESHNESS_RULE_NOT_PROVIDED");
+            return result;
+        }
+        try{
+            Instant asOf=Instant.parse(facts.path("dataAsOf").asText());int maximum=policy.path("maxAgeDays").asInt();
+            long age=Math.max(0,java.time.temporal.ChronoUnit.DAYS.between(asOf,evaluatedAt));
+            result.put("status",age<=maximum?"CURRENT":"STALE");result.put("ageDays",age);result.put("maxAgeDays",maximum);
+            result.put("ruleVersion",policy.path("ruleVersion").asText());return result;
+        }catch(Exception invalid){result.put("status","NOT_EVALUATED");result.put("reasonCode","DATA_AS_OF_INVALID");return result;}
+    }
+    static boolean unsupportedFreshnessConclusion(String text,JsonNode refs,JsonNode facts){
+        boolean claimsCurrent=hasAffirmedPhrase(text,List.of("数据时间有效","数据仍有效","数据有效","数据确实有效",
+                "数据最新","最新数据","仍在有效期","时效有效","数据未过期"));
+        boolean claimsStale=hasAffirmedPhrase(text,List.of("数据已过期","数据过期","时效失效"));
+        if(!claimsCurrent&&!claimsStale)return false;
+        JsonNode assessment=facts.path("freshnessAssessment");
+        Set<String> actual=new HashSet<>();refs.forEach(ref->actual.add(ref.asText()));
+        String status=assessment.path("status").asText();
+        return (claimsCurrent&&!"CURRENT".equals(status))||(claimsStale&&!"STALE".equals(status))
+                ||!actual.containsAll(Set.of("/freshnessAssessment/status","/freshnessAssessment/dataAsOf",
+                    "/freshnessAssessment/evaluatedAt","/freshnessAssessment/ruleVersion","/freshnessAssessment/maxAgeDays"));
+    }
+    private static boolean hasAffirmedPhrase(String text,List<String> phrases){
+        for(String phrase:phrases){
+            int offset=0;
+            while((offset=text.indexOf(phrase,offset))>=0){
+                int boundary=lastBoundary(text,offset);
+                String before=text.substring(boundary,offset);
+                boolean doubleNegative=before.matches("(?s).*(不能不|并非不能|不是不能|不得不).{0,12}$");
+                boolean negated=!doubleNegative&&before.matches(
+                        "(?s).*(尚?不能|无法|不得|不应|不可|尚未|未能)(?:据此|直接|明确)?(?:说|声称|确定|认定|判断|说明|证明|保证)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
+                if(!negated)return true;
+                offset+=phrase.length();
+            }
         }
         return false;
     }

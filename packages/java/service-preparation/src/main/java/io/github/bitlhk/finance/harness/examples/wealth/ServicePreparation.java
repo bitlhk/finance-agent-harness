@@ -268,6 +268,7 @@ public final class ServicePreparation implements AutoCloseable {
                     modelDiagnostics.put("failureReasonCode",reason);modelDiagnostics.put("completedAt",Instant.now().toString());
                     String validationDetail=modelValidationDetail(failure,reason);
                     if(validationDetail!=null)modelDiagnostics.put("validationDetail",validationDetail);
+                    modelDiagnostics.set("transportObservation",modelTransportObservation(failure));
                     modelDiagnostics.put("provisionalDeltaCount",provisionalDeltas.get());
                     modelDiagnostics.put("discardedProvisionalDeltaCount",provisionalDeltas.get());
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
@@ -853,6 +854,46 @@ public final class ServicePreparation implements AutoCloseable {
                 "INVALID_REPORT_ITEM","INVALID_REPORT_OBJECT"))if(causedBy(failure,marker))return marker;
         if(failure instanceof ListenerFailure||causedBy(failure,"ListenerFailure"))return "STREAM_DELIVERY_FAILED";
         return "MODEL_PROVIDER_OR_RUNTIME_FAILED";
+    }
+    static ObjectNode modelTransportObservation(Throwable failure) {
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("schemaVersion","model-transport-observation.v0.1");
+        result.put("terminationReason",transportTerminationReason(failure));
+        result.put("threadInterruptedObserved",Thread.currentThread().isInterrupted()||hasCauseType(failure,"InterruptedException"));
+        result.put("cancellationSource",hasCauseType(failure,"CancellationException")?"EXCEPTION_CHAIN":
+                hasCauseType(failure,"InterruptedException")||Thread.currentThread().isInterrupted()?"THREAD_INTERRUPT_SIGNAL":"NOT_OBSERVED");
+        result.put("httpStatusObserved",false);result.put("upstreamRequestIdObserved",false);
+        result.put("httpSendCountObserved",false);result.put("downstreamDisconnectObserved",false);
+        result.put("downstreamDeliveryFailureObserved",failure instanceof ListenerFailure||hasCauseType(failure,"ListenerFailure"));
+        var causes=result.putArray("causeChain");
+        Set<Throwable> seen=Collections.newSetFromMap(new IdentityHashMap<>());
+        for(Throwable current=failure;current!=null&&causes.size()<8&&seen.add(current);current=current.getCause()){
+            ObjectNode item=causes.addObject();String type=current.getClass().getSimpleName();
+            item.put("type",type.matches("[A-Za-z0-9_$]{1,96}")?type:"Throwable");
+            item.put("category",transportCategory(type));
+        }
+        return result;
+    }
+    private static String transportTerminationReason(Throwable failure) {
+        if(hasCauseType(failure,"SocketTimeoutException"))return "READ_TIMEOUT";
+        if(hasCauseType(failure,"TimeoutException"))return "TIMEOUT_SOURCE_UNSPECIFIED";
+        if(hasCauseType(failure,"CancellationException"))return "EXPLICIT_CANCELLATION";
+        if(hasCauseType(failure,"InterruptedException"))return "THREAD_INTERRUPTED";
+        if(hasCauseType(failure,"JsonProcessingException")||hasCauseType(failure,"JsonParseException"))return "MALFORMED_STREAM_PAYLOAD";
+        if(hasCauseType(failure,"EOFException"))return "UNEXPECTED_EOF";
+        if(hasCauseType(failure,"SocketException"))return "SOCKET_FAILURE";
+        if(hasCauseType(failure,"IOException"))return "IO_FAILURE";
+        return "UNKNOWN_RUNTIME_FAILURE";
+    }
+    private static boolean hasCauseType(Throwable failure,String simpleName){
+        Set<Throwable> seen=Collections.newSetFromMap(new IdentityHashMap<>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause())if(simpleName.equals(current.getClass().getSimpleName()))return true;
+        return false;
+    }
+    private static String transportCategory(String type){
+        if(type.contains("Timeout"))return "TIMEOUT";if(type.contains("Interrupt"))return "INTERRUPTION";
+        if(type.contains("Cancel"))return "CANCELLATION";if(type.contains("Socket")||type.contains("EOF")||type.contains("IO"))return "IO";
+        if(type.contains("Json")||type.contains("Parse"))return "PARSE";return "RUNTIME";
     }
     private static String modelFailureStage(Throwable failure,String current) {
         String reason=modelFailureReason(failure);

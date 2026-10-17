@@ -87,6 +87,55 @@ class PostLoanRiskTaskTest{
    assertEquals("COLLATERAL_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
   }
  }
+ @Test void completenessDoesNotImplyFreshnessForBothFrozenSubjects()throws Exception{
+  for(var subject:Map.of("鸿远","91370000726200000X","德信","91440100MA5C00000B").entrySet()){
+   var file=temp.resolve("FRESH-"+subject.getKey()+".md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of(subject.getKey(),subject.getValue())),
+     (m,p,r,f)->{assertTrue(f.path("queryComplete").asBoolean());assertTrue(f.at("/completeness/criticalComplete").asBoolean());
+      assertEquals("NOT_EVALUATED",f.at("/freshnessAssessment/status").asText());var out=valid(f.path("deterministicWarning").path("level").asText());
+      var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);item.put("text","数据时间有效，可作为当前判断依据。");
+      item.putArray("factRefs").add("/dataAsOf");return out;},method,temp.resolve("freshness-"+subject.getKey()),Map.of())){
+    var report=task.verify("owner",task.select("owner",subject.getKey(),"核验"),PostLoanRiskTask.Listener.NONE);
+    assertEquals("PARTIAL",report.path("status").asText());assertEquals("FRESHNESS_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
+    assertEquals("2026-08-25T00:00:00Z",report.at("/facts/freshnessAssessment/dataAsOf").asText());
+   }
+  }
+ }
+ @Test void versionedFreshnessRuleRequiresMatchingStatusAndCompleteReferences(){
+  var facts=HarnessJson.mapper().createObjectNode();var assessment=facts.putObject("freshnessAssessment");
+  assessment.put("status","CURRENT");assessment.put("dataAsOf","2026-10-15T00:00:00Z");assessment.put("evaluatedAt","2026-10-16T00:00:00Z");
+  assessment.put("ruleVersion","freshness.v1");assessment.put("maxAgeDays",7);
+  var refs=HarnessJson.mapper().createArrayNode();for(String ref:List.of("/freshnessAssessment/status","/freshnessAssessment/dataAsOf",
+      "/freshnessAssessment/evaluatedAt","/freshnessAssessment/ruleVersion","/freshnessAssessment/maxAgeDays"))refs.add(ref);
+  assertFalse(PostLoanRiskTask.unsupportedFreshnessConclusion("依据规则，数据时间有效。",refs,facts));
+  assertTrue(PostLoanRiskTask.unsupportedFreshnessConclusion("依据规则，数据时间有效。",HarnessJson.mapper().createArrayNode(),facts));
+  assessment.put("status","STALE");
+  assertFalse(PostLoanRiskTask.unsupportedFreshnessConclusion("依据规则，数据已过期。",refs,facts));
+  assertTrue(PostLoanRiskTask.unsupportedFreshnessConclusion("不能保证最新，但数据确实有效。",refs,facts));
+  assertFalse(PostLoanRiskTask.unsupportedFreshnessConclusion("不能声称数据已过期。",HarnessJson.mapper().createArrayNode(),facts));
+ }
+ @Test void asOfWithPendingFreshnessAndThresholdNegationRemainReviewable()throws Exception{
+  var file=temp.resolve("FRESH-PENDING.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  for(String text:List.of(
+      "数据截至2026-08-25，新鲜度规则未提供，时效待人工核实；担保覆盖率不足规则未触发，不等于担保充足。",
+      "尚不能确定数据有效，需依据版本化新鲜度规则核实。",
+      "不能声称数据已过期，只能展示截至时间并待人工核实。")){
+   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远","91370000726200000X")),
+     (m,p,r,f)->{var out=valid("YELLOW");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+      item.put("text",text);item.putArray("factRefs").add("/dataAsOf");return out;},method,temp.resolve("fresh-pending-"+Math.abs(text.hashCode())),Map.of())){
+    var report=task.verify("owner",task.select("owner","鸿远","核验"),PostLoanRiskTask.Listener.NONE);
+    assertEquals("READY_FOR_REVIEW",report.path("status").asText(),text);
+   }
+  }
+  String contradiction="不能保证最新，但数据确实有效，可直接用于当前判断。";
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("鸿远","91370000726200000X")),
+    (m,p,r,f)->{var out=valid("YELLOW");var item=(com.fasterxml.jackson.databind.node.ObjectNode)out.path("evidenceInterpretation").path(0);
+     item.put("text",contradiction);item.putArray("factRefs").add("/dataAsOf");return out;},method,temp.resolve("fresh-contradiction"),Map.of())){
+   var report=task.verify("owner",task.select("owner","鸿远","核验"),PostLoanRiskTask.Listener.NONE);
+   assertEquals("PARTIAL",report.path("status").asText());
+   assertEquals("FRESHNESS_RULE_EVIDENCE_REQUIRED",report.at("/failureDetail/rule").asText());
+  }
+ }
  @Test void frozenR47OutputPassesNegationThenFailsMissingCollateralBasis()throws Exception{
   var file=temp.resolve("R47.md");Files.writeString(file,"方法");var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","r",Map.of("德信","91440100MA5C00000B")),

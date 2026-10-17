@@ -36,4 +36,33 @@ class ExplanationGuardTest {
                         "期间字段未在结果中给出，故期间可比性无法确认。", List.of(result)));
         assertTrue(error.getMessage().startsWith("MODEL_EXPLANATION_CONTRADICTS_CONFIRMED_BASIS"));
     }
+
+    @Test void distinguishesAuthenticityNotVerifiedFromExplicitFailure() {
+        CapabilityResultV1 pending=resultWithAuthenticity("NOT_VERIFIED",false);
+        assertDoesNotThrow(()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "本能力尚未核验材料真实性，需人工补充核验。",List.of(pending)));
+        assertThrows(IllegalArgumentException.class,()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "材料未通过真实性验证。",List.of(pending)));
+        assertThrows(IllegalArgumentException.class,()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "因此材料虚假。",List.of(pending)));
+        assertDoesNotThrow(()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "尚未核验，不能说未通过真实性验证或材料虚假。",List.of(pending)));
+        assertDoesNotThrow(()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "报告引用外部原话“材料虚假”，但当前尚未核验，不能采信该说法。",List.of(pending)));
+        assertThrows(IllegalArgumentException.class,()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "尚未核验，但材料未通过真实性验证。",List.of(pending)));
+        assertThrows(IllegalArgumentException.class,()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "外部人员声称“材料虚假”。",List.of(pending)));
+        CapabilityResultV1 failed=resultWithAuthenticity("FAILED",false);
+        assertDoesNotThrow(()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "真实性核验失败，需人工查看明确失败依据。",List.of(failed)));
+        assertThrows(IllegalArgumentException.class,()->EnterpriseCreditAuditApplication.ExplanationGuard.requireAllowed(
+                "真实性核验失败，需人工处理。",List.of(failed,pending)));
+    }
+
+    private static CapabilityResultV1 resultWithAuthenticity(String status,boolean verified) {
+        return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"request-auth","trace-auth",
+                CapabilityResultV1.Status.COMPLETED,"完成",Map.of("authenticityStatus",status,"authenticityVerified",verified),
+                List.of(),List.of(),"synthetic",Instant.now(),null,null);
+    }
 }

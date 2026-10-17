@@ -114,6 +114,8 @@ public final class EnterpriseCreditAuditApplication {
                 + "不得修改数值、补造材料或形成通过/拒绝/授信/放款/欺诈结论。verificationBasis 是核验时实际使用的"
                 + "主体、期间、币种、单位和业务口径依据：outcome 为 MATCH 或 RECORDED 时，不得因为这些字段未出现在"
                 + "values 中而写成缺失、未知或无法确认；NOT_COMPARABLE 或 MISSING 才按真实缺口说明。"
+                + "authenticityStatus=NOT_VERIFIED 或 authenticityVerified=false 只表示本能力尚未核验真实性，"
+                + "不得写成真实性验证失败、未通过或材料虚假；只有明确的 authenticityStatus=FAILED 才能描述核验失败。"
                 + "正文使用业务语言，例如‘发现不一致’‘缺少必要字段’‘当前材料不可比’，原始状态码只在技术证据中"
                 + "必要时保留。最小补件只针对结果中明确存在的缺失或不可比原因。给出证据矩阵、影响和最小补件：\n"
                 + HarnessJson.mapper().writeValueAsString(results);
@@ -228,6 +230,32 @@ public final class EnterpriseCreditAuditApplication {
                     throw new IllegalArgumentException("MODEL_EXPLANATION_CONTRADICTS_CONFIRMED_BASIS:" + label);
                 }
             }
+            boolean notVerified=results.stream().anyMatch(result->"NOT_VERIFIED".equals(result.data().get("authenticityStatus")));
+            boolean allExplicitlyFailed=!results.isEmpty()&&results.stream().allMatch(result->"FAILED".equals(result.data().get("authenticityStatus")));
+            if(notVerified&&!allExplicitlyFailed&&unsupportedAuthenticityClaim(response))
+                throw new IllegalArgumentException("MODEL_EXPLANATION_AUTHENTICITY_STATUS_CONFLICT");
+        }
+
+        private static boolean unsupportedAuthenticityClaim(String response) {
+            for(String phrase:List.of("未通过真实性验证","真实性验证失败","真实性核验失败","材料虚假","真实性不合格")){
+                int offset=0;
+                while((offset=response.indexOf(phrase,offset))>=0){
+                    int boundary=0;
+                    for(String marker:List.of("，",",","；",";","。","！","!","？","?","但","然而","却")){
+                        int index=response.lastIndexOf(marker,offset-1);
+                        if(index>=0)boundary=Math.max(boundary,index+marker.length());
+                    }
+                    String before=response.substring(boundary,offset);
+                    String after=response.substring(offset+phrase.length(),Math.min(response.length(),offset+phrase.length()+48));
+                    boolean negated=before.matches(
+                            "(?s).*(不能|不得|不应|不可|无法)(?:据此|直接|明确)?(?:说|声称|认定|判断|说明|证明)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
+                    boolean attributed=before.matches("(?s).*(引用|原话|声称|表示|(?:有人|外部人员|报告)?说)[：:“”\"']?.{0,20}$");
+                    boolean rejected=after.matches("(?s).{0,32}(不能采信|不采信|不认可|不得据此|仅为转述|不作为结论).*");
+                    if(!negated&&!(attributed&&rejected))return true;
+                    offset+=phrase.length();
+                }
+            }
+            return false;
         }
 
         private static Set<String> confirmedDimensions(List<CapabilityResultV1> results) {
