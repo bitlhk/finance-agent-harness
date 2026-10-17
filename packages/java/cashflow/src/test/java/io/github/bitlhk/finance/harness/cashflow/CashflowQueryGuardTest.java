@@ -12,7 +12,7 @@ class CashflowQueryGuardTest {
     final List<Map<String,Object>> events = new ArrayList<>();
     final AtomicInteger reads = new AtomicInteger();
     final AtomicBoolean revoked = new AtomicBoolean();
-    boolean expired, rejectReturnAudit;
+    boolean expired, rejectReturnAudit, sourceThrows, sourcePolicyFailure;
     Set<String> grantedScopes = Set.of("cashflow:read");
     final String policy = "sha256:" + "a".repeat(64), binding = "sha256:" + "b".repeat(64);
     CapabilityRequestV1 request(String subject, Map<String,Object> parameters) {
@@ -43,6 +43,12 @@ class CashflowQueryGuardTest {
             }
             public CapabilityResultV1 query(CapabilityRequestV1 r) {
                 reads.incrementAndGet(); if (revokeAfter) revoked.set(true);
+                if (sourceThrows) throw new IllegalStateException("SECRET_SOURCE_EXCEPTION");
+                if (sourcePolicyFailure) return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
+                        "request", "trace", CapabilityResultV1.Status.FAILED, "SECRET_PROSE", Map.of(), List.of(),
+                        List.of("VERIFY_SOURCE_POLICY"), "fixture", Instant.now(), null,
+                        new CapabilityResultV1.Failure("PRECONDITION_CHANGED", "CASHFLOW_SOURCE_POLICY_BLOCKED", false,
+                                "SECRET_MESSAGE", List.of("SECRET_FIELD")));
                 var data = new HashMap<>(facts()); if (extraNested) data.put("secret", "MUST_NOT_LEAK");
                 return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, "request", "trace", CapabilityResultV1.Status.COMPLETED,
                         "UNTRUSTED_PROSE", Map.of("facts", data, "secret", "MUST_NOT_LEAK"), List.of(), List.of(), "fixture", Instant.now(), null, null);
@@ -63,9 +69,9 @@ class CashflowQueryGuardTest {
     @Test void wrongSubjectAndInvalidPeriodNeverQuerySource() {
         var guard = guard(false, false, false);
         assertThrows(SecurityException.class, () -> guard.query(request("other", Map.of("period", "2026-09"))));
-        assertThrows(SecurityException.class, () -> guard.query(request("subject", Map.of("period", "2026-99"))));
+        assertEquals("CASHFLOW_PERIOD_INVALID",guard.query(request("subject", Map.of("period", "2026-99"))).error().sourceCode());
         assertThrows(SecurityException.class, () -> guard.query(request("subject", Map.of("period", "2026-09", "customerRef", "other"))));
-        assertEquals(0, reads.get()); assertTrue(events.stream().allMatch(e -> e.get("decision").equals("DENY")));
+        assertEquals(0, reads.get()); assertTrue(events.stream().anyMatch(e -> e.get("decision").equals("DENY")));
     }
     @Test void revocationBeforeCallRejectsWithoutQuery() {
         revoked.set(true);
@@ -77,13 +83,13 @@ class CashflowQueryGuardTest {
         assertEquals(1, reads.get()); assertEquals("RETURN", events.getLast().get("stage")); assertEquals("DENY", events.getLast().get("decision"));
     }
     @Test void nestedUnknownFieldsAreRejectedNotReturned() {
-        assertThrows(SecurityException.class, () -> guard(false,true,false).query(request("subject", Map.of("period", "2026-09"))));
+        assertEquals("CASHFLOW_RESULT_REJECTED",guard(false,true,false).query(request("subject", Map.of("period", "2026-09"))).error().sourceCode());
         assertEquals(1, reads.get()); assertEquals("RESULT_CONTRACT_REJECTED", events.getLast().get("reason"));
         assertFalse(events.toString().contains("MUST_NOT_LEAK"));
     }
     @Test void auditFailurePreventsSourceCall() {
-        var ex = assertThrows(SecurityException.class, () -> guard(false,false,true).query(request("subject", Map.of("period", "2026-09"))));
-        assertEquals("AUTHORIZATION_AUDIT_UNAVAILABLE", ex.getMessage()); assertEquals(0, reads.get());
+        var result = guard(false,false,true).query(request("subject", Map.of("period", "2026-09")));
+        assertEquals("AUTHORIZATION_AUDIT_UNAVAILABLE", result.error().sourceCode()); assertEquals(0, reads.get());
     }
     @Test void expiredOrInsufficientGrantNeverQueries() {
         expired=true;
@@ -94,7 +100,40 @@ class CashflowQueryGuardTest {
     }
     @Test void returnAuditFailureSuppressesResultWithoutAnotherQuery() {
         rejectReturnAudit=true;
-        var ex=assertThrows(SecurityException.class, () -> guard(false,false,false).query(request("subject",Map.of("period","2026-09"))));
-        assertEquals("AUTHORIZATION_AUDIT_UNAVAILABLE",ex.getMessage()); assertEquals(1,reads.get());
+        var result=guard(false,false,false).query(request("subject",Map.of("period","2026-09")));
+        assertEquals("AUTHORIZATION_AUDIT_UNAVAILABLE",result.error().sourceCode()); assertEquals(1,reads.get());
+        assertEquals(Map.of("failureStage","RETURN"),result.data());
+    }
+    @Test void missingMonthKeepsNeedUserAfterAuthorization() {
+        var result = guard(false,false,false).query(request("subject",Map.of()));
+        assertEquals(CapabilityResultV1.Status.NEED_USER,result.status());
+        assertEquals(List.of("period"),result.missingInputs());
+        assertEquals(List.of("PROVIDE_PERIOD"),result.nextActions());
+        assertEquals(0,reads.get());
+        grantedScopes=Set.of();
+        assertThrows(SecurityException.class,()->guard(false,false,false).query(request("subject",Map.of())));
+        grantedScopes=Set.of("cashflow:read");
+        revoked.set(true);
+        assertThrows(SecurityException.class,()->guard(false,false,false).query(request("subject",Map.of())));
+    }
+    @Test void auditUnavailableReturnsStructuredFailureNotAuthorizationDenial() {
+        var result=guard(false,false,true).query(request("subject",Map.of("period","2026-09")));
+        assertEquals(CapabilityResultV1.Status.FAILED,result.status());
+        assertEquals("AUTHORIZATION_AUDIT_UNAVAILABLE",result.error().sourceCode());
+        assertEquals("ENTRY",result.data().get("failureStage"));
+        assertEquals(0,reads.get());
+    }
+    @Test void sourceExceptionIsSanitizedAndStagePreserved() {
+        sourceThrows=true;
+        var result=guard(false,false,false).query(request("subject",Map.of("period","2026-09")));
+        assertEquals("CASHFLOW_SOURCE_FAILED",result.error().sourceCode());
+        assertEquals("SOURCE",result.data().get("failureStage"));
+        assertFalse(result.toString().contains("SECRET"));
+    }
+    @Test void allowlistedSourcePolicyCodeSurvivesWithoutRawText() {
+        sourcePolicyFailure=true;
+        var result=guard(false,false,false).query(request("subject",Map.of("period","2026-09")));
+        assertEquals("CASHFLOW_SOURCE_POLICY_BLOCKED",result.error().sourceCode());
+        assertFalse(result.toString().contains("SECRET"));
     }
 }
