@@ -271,13 +271,29 @@ public final class EnterpriseCreditAuditApplication {
                     }
                     String before=response.substring(boundary,offset);
                     String after=response.substring(offset+phrase.length(),Math.min(response.length(),offset+phrase.length()+48));
-                    boolean negated=before.matches(
-                            "(?s).*(不能|不得|不应|不可|无法)(?:据此|直接|明确)?(?:说|声称|认定|判断|说明|证明)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
+                    boolean negated=negatesAuthenticityClaim(before);
                     boolean attributed=before.matches("(?s).*(引用|原话|声称|表示|(?:有人|外部人员|报告)?说)[：:“”\"']?.{0,20}$");
-                    boolean rejected=after.matches("(?s).{0,32}(不能采信|不采信|不认可|不得据此|仅为转述|不作为结论).*");
+                    boolean rejected=after.matches("(?s)^[”\"']?[，,]?\\s*(?:但|然而)?(?:当前尚未核验[，,])?"
+                            + "(?:不能采信|不采信|不认可|不得据此|仅为转述|不作为结论).*");
                     if(!negated&&!(attributed&&rejected))return true;
                     offset+=phrase.length();
                 }
+            }
+            return false;
+        }
+
+        private static boolean negatesAuthenticityClaim(String before) {
+            // Only a bounded claim-list can inherit negation, not arbitrary later assertions.
+            var denial=java.util.regex.Pattern.compile(
+                    "(?:不能|不得|不应|不可|无法)(?:据此|直接|明确)?(?:说|声称|认定|判断|说明|证明)?"
+                    + "|不构成|不代表|不意味着|不等于|没有证据证明").matcher(before);
+            while(denial.find()) {
+                String prefix=before.substring(0,denial.start());
+                if(prefix.matches("(?s).*(并非|不是|不能|不得|不应|无法|没有|并不)(?:说|认为)?$"))continue;
+                String tail=before.substring(denial.end());
+                if(tail.length()>64)continue;
+                if(tail.matches("(?:核验失败|真实性验证失败|未通过真实性验证|真实性核验失败|真实性不合格|材料虚假|"
+                        + "结论|的|或|以及|和|也|[\\s“”\"'：:])*"))return true;
             }
             return false;
         }
