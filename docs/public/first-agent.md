@@ -2,7 +2,7 @@
 
 **交付目标：** 一份有方法和案例、可构建、可核对调用证据、停止后可查历史的月度收支Agent；手机与ATM模拟端复用同一资产。不要求先学完全部架构。
 
-路线分两段：先用固定版本现有资产完成完整运行；再在隔离源码副本修改方法正文并验证两端消费，提交维护者受管发布。**第二段不是“上传任意Skill即可替换受保护方法”的承诺。**
+严格分两轮：第一轮先登记案例、执行原版预检并保存基线，再构建运行原版；第二轮才修改方法正文、比较影响，交维护者安装独立候选，作者验收候选后申请正式发布。**线上工作台不会读取作者的本地diff。第二轮不是“上传任意Skill即可替换受保护方法”的承诺。**
 
 ## 取得材料与环境
 
@@ -66,33 +66,31 @@ python --version
 
 **缺零件怎么办：** 缺数据来源转[Provider开发](first-agent.md#roles)；缺Runtime适配转Host任务。不可把新接口塞进Skill文字并声称已经接通。
 
-## 3. 方法与案例：先跑原版，再做可比较修改
+## 3. 第一轮：登记案例，不修改方法
 
 **输入：** 原方法及下面三个案例，存入自己的验收记录。此表是人工验收用例，不会因为写进Markdown自动成为运行测试。
 
-[下载案例记录文件](first-agent-cases.json)，放入`TUTORIAL_DIR/first-agent-cases.json`。这是明确标记`MANUAL_ACCEPTANCE_RECORD`的交接输入，不是平台Eval导入格式；只填实际观察、request ID和证据位置，不把预期当实测。合成覆盖未知fixture需要开发包交付方提供，不能改线上数据制造用例。
+[下载案例记录文件](first-agent-cases.json)，放入`TUTORIAL_DIR/first-agent-cases.json`。这是`MANUAL_ACCEPTANCE_RECORD`，不是Eval导入格式；第一轮记录原版结果，第二轮另存一份记录，不覆盖首败。此时不要改SKILL；先完成第4步基线保存与原版运行。
 
 | 案例 | 输入／故障条件 | 固定通过条件 |
 | --- | --- | --- |
 | 正常 | 第1步固定月份问题 | 工具事实+币种+覆盖缺口；请求记录可对应 |
 | 缺期间 | “查询收支”，没有其他可信期间上下文 | 澄清期间；合法实授的工具缺参保留NEED_USER与missingInputs；不默认月份 |
-| 覆盖未知 | 使用已有覆盖未知合成fixture | 可展示返回数值，但不能断言全月无交易；不补造来源 |
+| 覆盖未知 | 独立fixture查询2026-08，来源文件和配置如下 | coverage保留范围，gaps包含PERIOD_COVERAGE_NOT_VERIFIED，展示数值但不宣称完整月份 |
 
-**源码练习操作（独立副本，不直接改线上）：** 打开[SKILL正文](source:skill)，在原有授权、来源和缺项要求之后加入一句：`最终回答分为“收支事实”和“覆盖与待核实”两段；每项数值保留来源、币种和月份。` 原规则不能删。不改Provider或两个终端文件。
+**覆盖未知的固定来源：** Harness `conformance/fixtures/cashflow/source/summary.json`和`summary-policy.json`。前者period为`2026-08`，收入`10000.00`、支出`1250.50`、净额`8749.50`；后者evidenceRef为`D05-003-SUMMARY-GOVERNANCE`。不能拿2026-09查询这份fixture，也不能将旧`v0.1/valid/summary.json`当成本次运行响应。
 
-只修改正文的候选可沿用原方法ID/版本做**未发布对照**，但必须以新Git提交和正文摘要区分，不覆盖已发布制品。正式发布新方法版本时，由维护者同步检查pack、assembly默认方法、guard声明、目录与Builder固定配方引用；不把未发布实验冒充新版本发布。
+**维护者开跑前准备：** 在隔离测试进程使用Builder `src/finance_solution_builder/method_trials.py:fixture_module(project,harness)`加载上述source目录的`summary/summary-policy/analysis/analysis-policy.json`；它返回`engineering/verify_local_service.py`的helper。现有接线为`fixture = helper.Endpoints(); fixture.cashflow = helper.cashflow_data`，仅回环随机端口。该fixture实际响应`/api/v1/finance/transaction-summary/readiness`和`/api/v1/finance/transaction-summary?period=2026-08`，不是可直接导入工作台的包。
 
-**重要限制：** 通用“定制方法”编辑入口存在，但当前Java收支guard仍要求声明中的固定方法。私有方法替换可能被`CASHFLOW_COMPATIBILITY_INVALID`拒绝；本教程不承诺该UI派生路径在本切片可直接上线。先用隔离源码正文变化完成对照，受管发布走第7步。新增任意方法支持不是本教程偷偷增加的功能。
+维护者必须先交付配置回执：固定H/B提交、四个fixture文件SHA256、隔离fixture进程和回环地址、候选连接引用确实指向该地址、合成主体及`cashflow:read`实授范围/到期、模型模式（CONTROLLED_TEST或已批准模型）、对应候选入口及清理责任；不交付秘密。现有隔离流程未完成此接线时，本案例标记`BLOCKED_FIXTURE_BINDING`，不能借线上来源冒充fixture验收。本轮教程修订不启动fixture或模型。
 
-**预期／通过：** git差异只有预期正文和自己的案例记录，两端引用同一正文摘要；既有方法不变。仅渲染摘要变化证明“消费了新资产”，模型是否遵循两段表达还要第6步核对。
+**结果验收：** 当前Provider的`CashflowMapper.map`输出`coverage=OWN_BANK_ACCOUNT_STATEMENT`、`gaps`包含`PERIOD_COVERAGE_NOT_VERIFIED`；`CashflowConsumer.describe`应为PARTIAL。coverage表示查询范围，不表示历史完整性。记录映射后的工具结果、request ID和配置回执；原始source JSON本身不含这些映射字段。固定模型fixture只能证明接线与事实，不能证明自然语言遵循新方法。
 
-**排障：** 阅读辅助提示`REVIEW_REQUIRED`时，核对正文摘要与静态阅读辅助，不把旧说明当新方法已验证；不要修改资格文件伪造通过。
+## 4. 第一轮：保存原版基线，再构建运行
 
-## 4. 装配Runtime、模型、连接和终端
+**输入：** 尚未修改的固定Harness源码`HARNESS_DIR`、Builder项目`BUILDER_DIR`、独立空目录`TUTORIAL_DIR`。以下命令均在作者本地开发环境执行。
 
-**输入：** 原版或维护者核准的新候选；上述连接、权限和名额。
-
-**页面操作：** “创建Agent”选择OpenJiuwen Java `0.1.15`、已配置且获准的模型引用、合成只读银行连接；先选择手机端，另一份选择ATM浏览器模拟端。核对安装计划再构建。模型可以配置，不代表任意型号工具行为等价。不要把运行时地址或凭据贴进Skill。
+**本轮页面位置：** 原版普通工作台，仅用于原版构建运行。选择OpenJiuwen Java `0.1.15`、已配置且获准模型和合成只读连接，分别选择手机与ATM模拟端。先执行下面两段命令，再去页面构建。不要把运行地址或凭据贴进Skill。
 
 **源码预检输入（不构建、不联网业务）：** 以下调用现有`service.solution_for`生成真实装配JSON；它是兼容预检输入，不是完整模型/终端/服务启动配置。两个终端的实际配置仍由上述页面生成并锁定。
 
@@ -119,41 +117,77 @@ PY
 
 **预期／通过：** 新文件包含两项能力、原方法和Provider引用；重复运行会因文件已存在停止，不覆盖旧输入。**排障：** 导入错误检查Python隔离环境、`base`依赖和工作目录；不要改业务代码“补齐”教程环境。
 
-## 5. 兼容预检与安装准入
+**保存修改前基线（必须在改SKILL之前）：** 执行真实兼容CLI，提取外层输出中的`compatibility`对象，以独占创建方式写入`previous.json`。已有文件则停止；不通过重定向覆盖旧基线。
 
-**输入：** 第4步`solution.json`和干净基线。**命令（Builder项目根）：**
+```bash
+cd "$BUILDER_DIR"
+PYTHONPATH=src:../base/src python - "$HARNESS_DIR" "$BUILDER_DIR" "$TUTORIAL_DIR" <<'BASELINE'
+import json, subprocess, sys
+from pathlib import Path
+harness, project, out = map(Path, sys.argv[1:])
+assert all(p.is_absolute() for p in (harness, project, out))
+previous = out / "previous.json"
+if previous.exists():
+    raise SystemExit("previous.json exists; keep original baseline")
+result = subprocess.run([sys.executable, "-m", "finance_solution_builder.cashflow_compatibility",
+    "--harness", str(harness), "--project", str(project),
+    "--solution", str(out / "solution.json")], cwd=project,
+    check=True, capture_output=True, text=True)
+current = json.loads(result.stdout)["compatibility"]
+assert current["status"] == "COMPATIBLE" and current["required"] is True
+with previous.open("x", encoding="utf-8") as stream:
+    json.dump(current, stream, ensure_ascii=False, indent=2)
+print(json.dumps({"saved": str(previous), "bindingDigest": current["bindingDigest"]}))
+BASELINE
+```
+
+**预期／通过：** 输出saved与真实bindingDigest；previous.json顶层含status/files/asset，不含外层compatibility。它仅是预检基线，不是安装资格。现在在原版工作台构建，看五阶段准入，按第6步运行原版并登记原版Lock/request和首次结果，再停止自己的原版实例；未通过则保留并排障，不进入第二轮。原版页面绑定的H/B需与材料一致，不宣称读取过本地目录。
+
+## 5. 第二轮：修改、比较、交接候选安装
+
+**作者本地修改：** 从固定Harness基线建立自己的独立源码副本，记为绝对路径`CANDIDATE_HARNESS`；不修改第一轮HARNESS_DIR。仅改`domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md`正文，加入`最终回答分为“收支事实”和“覆盖与待核实”两段；每项数值保留来源、币种和月份。`，保留原授权与缺项规则。提交自己的变更并记录SHA；不改Provider、Host、guard或两个终端文件。
+
+同ID/version只作**未发布对照**，以新Git SHA和正文摘要区分，不能覆盖已发布内容。通用私有方法派生不保证通过当前固定绑定，可能被`CASHFLOW_COMPATIBILITY_INVALID`拒绝；本教程走独立源码候选，不绕过该检查。
+
+**作者本地比较（Builder项目根）：**
 
 ```bash
 cd "$BUILDER_DIR"
 PYTHONPATH=src:../base/src python -m finance_solution_builder.cashflow_compatibility \
-  --harness "$HARNESS_DIR" --project "$BUILDER_DIR" \
-  --solution "$TUTORIAL_DIR/solution.json"
+  --harness "$CANDIDATE_HARNESS" --project "$BUILDER_DIR" \
+  --solution "$TUTORIAL_DIR/solution.json" --previous "$TUTORIAL_DIR/previous.json" \
+  --changed-path domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md
 ```
 
-**预期输出片段（摘要值随真实文件计算，不抄固定hash）：**
+**预期：** COMPATIBLE且impact=AFFECTED，changedDependencies含该SKILL，consumers为MOBILE_WEB/ATM_WEB，qualificationReuse=REVIEW_REQUIRED。未知路径为UNKNOWN_REQUIRES_REVIEW且退出码2。保留完整输出；此时没有新Agent/Lock/request，不能要求作者先提交它们。
 
-```json
-{"compatibility":{"status":"COMPATIBLE","required":true,"impactPolicy":"UNLISTED_CHANGE_REQUIRES_REVIEW"}}
+**作者交给维护者的第一份交付：** 基线H/B、作者候选Git SHA与diff、previous.json、修改后预检输出、案例及原版观察、候选需要的连接/实授/模型模式。不要交秘密；尚不存在的候选Lock/request明确写“构建后产生”。
+
+**维护者接纳与构建（独立环境）：** 审阅后将同一提交接纳为自己的独立候选副本`CANDIDATE_HARNESS`，记录绝对路径和clean SHA，不能只把作者diff放到目录旁。准备新`CANDIDATE_DATA`，沿已有合成连接、模型和资格配置启动独立本地工作台：
+
+```bash
+# 维护者的Builder项目根；所有变量为该机实际路径，端口必须空闲
+cd "$BUILDER_DIR"
+PYTHONPATH=src:../base/src python -m finance_solution_builder.workbench \
+  --harness-repo "$CANDIDATE_HARNESS" --port 18158 --data-dir "$CANDIDATE_DATA"
 ```
 
-记录返回中的`files`、`bindingDigest`、`providerRefs`和方法声明。此CLI成功**只证明兼容预检**，不证明编译、安装、授权或模型成功。
+该入口实际只监听维护者机器回环地址，Jobs把这个harness路径传入SolutionBuilder，页面构建从这里取资产；不是作者本机路径、不是原线上工作台，也不会把本地修改自动同步到服务器。作者若不在同一机器，维护者必须提供既有获授权访问方式；没有则`BLOCKED_CANDIDATE_ACCESS`，不能把回环地址当云端入口。
 
-方法修改前保存完整输出的`compatibility`对象作为`previous.json`；`--previous`要求该对象，不是整个外层输出。修改后可加`--previous "$TUTORIAL_DIR/previous.json" --changed-path domain-packs/cashflow/customer-self-service/skills/cashflow-review/SKILL.md`，预期`AFFECTED`、两个consumer、`qualificationReuse: REVIEW_REQUIRED`。未知路径为`UNKNOWN_REQUIRES_REVIEW`且退出码2；不能据此沿用旧资格。
+**维护者准入任务：** 先按[候选资格准备与服务环境门禁](source:release-guide)的Isolated candidate preparation及Service environment gate核对本次收支组合，按[本地连接配置](source:local-guide)准备隔离环境；该历史文档后面的八轮业务验收不是本教程要求。配置真实`FH_OBSERVATION_QUALIFICATION_FILE/SHA256`及适用的release gate来源绑定，摘要变化先判断覆盖，不重标旧资格或关闭门禁。缺资格/连接/访问条件则分别记录BLOCKED_QUALIFICATION/CONNECTION/ACCESS，不能假装已完成安装。
 
-**页面操作：** 正式构建看五阶段与首次失败记录；成功后核对Lock、实际Host/依赖/资格摘要，而不是仅看卡片“已选”。新代码或依赖影响Collector时，由维护者按影响重做对应资格，非作者不能自己写`passed=true`。
-
-**排障／交接：** 将Agent/build/request ID、失败阶段及安全错误码、H/B SHA、Lock摘要、预检输出交给当前开发包交付方。缺准入资格不能关闭校验；容量满先检查自己实例与名额，不停止他人。保留首败，不反复构建筛成功。
+维护者在这个候选工作台分别选择手机/ATM收支组合并完成真实受管构建准入，**随后**回传候选可访问入口、实际源H/B提交、方法文件摘要、两个Agent ID/终端、构建回执与Lock/资格摘要、连接/fixture配置回执。作者核对来源提交和实际安装文件摘要一致后才进入第6步。新摘要的验收在这次新构建后进行，不用预检digest冒充新Lock。
 
 ## 6. 一次查询，核对事实与可信证据
 
-**输入／操作：** 启动自己的新Agent，通过正常登录“开始服务”，只发送第1步固定问题。首次失败先留请求ID和阶段，不用重试掩盖。合成银行会话建立失败不等于模型问题。
+**入口与顺序：** 第一轮从原版工作台按第4步运行；第二轮只能在第5步维护者回传并核对来源的候选入口运行，不返回原线上页面验证localdiff。取得候选Lock/准入回执后，启动自己可操作的候选Agent并开始服务，发送固定问题。普通合成来源用2026-09；第3步指定fixture用2026-08，不混用。首次失败留request ID/阶段，不重试筛成功；无候选访问权则保持BLOCKED。
 
 **预期输出形态：** 收入、支出、净额及CNY；来源返回0时可显示0，覆盖未知必须保留。隔离修改版还需看到“收支事实／覆盖与待核实”两段，数值仍与工具一致。
 
 | 运行记录中查什么 | 阶段三带来的可操作收益 | 不能误读为 |
 | --- | --- | --- |
 | hostRequestId、buildId、instanceId、serviceLockDigest及主体/对象摘要 | 知道哪次可信实例代表哪个授权主体，查哪个对象 | 把SSO owner当银行客户；hash可反查姓名 |
-| period=`2026-09`、parametersDigest | 修改期间要重新判断，旧ALLOW不是新查询许可证 | 模型可以改可信上下文 |
+| period与本次输入一致（普通来源2026-09／指定fixture2026-08）、parametersDigest | 修改期间要重新判断，旧ALLOW不是新查询许可证 | 模型可以改可信上下文 |
 | ENTRY／RETURN与effectiveExpiresAt | 查询前核实、回来再次核实；撤权后未释放结果阻断 | 已发送请求可以撤回；原子撤权 |
 | PROJECTION、CONTRACT_FIELDS_ONLY、resultDigest | 只把合规字段和对应结果交给模型，便于核对错对象/错期间 | SHA是签名或WORM |
 | authorizationBasis、bankPolicyVersion | 明示本地合成策略+银行会话身份；银行版本缺失写UNKNOWN | 本地policyDigest是银行授权快照 |
@@ -165,7 +199,7 @@ PYTHONPATH=src:../base/src python -m finance_solution_builder.cashflow_compatibi
 
 ## 7. 发布版本、停止、历史和维护
 
-**输入：** 首次结果、自己的改动、定向测试与失败记录。
+**输入：** 第6步候选业务验收结果、候选Lock/request、作者改动及首败。第5步是候选安装交接，本步才是验收后的正式发布申请，不倒置依赖。
 
 **交付维护者：** 业务目标与边界、Skill及案例diff、H/B与方法版本、兼容/影响结果、测试命令及原始结果、两端Lock与request ID、未覆盖项。新Provider还需工厂注册、依赖与权限要求；新Host需认证/生命周期/观测协议证明。通过既定审阅与受管准入后再进入目录复用，不手改线上目录或资格。
 

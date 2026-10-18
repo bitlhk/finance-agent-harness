@@ -18,6 +18,8 @@ export const sourceReferences = {
   guard: ['Harness', 'capability-packs/cashflow-readonly/query-guard.v1.json'],
   provider: ['Harness', 'providers/non-ai-banking/src/main/java/io/github/bitlhk/finance/harness/providers/nonaibanking/NonAiBankingFactoryV01.java'],
   'provider-test': ['Harness', 'providers/non-ai-banking/src/test/java/io/github/bitlhk/finance/harness/providers/nonaibanking/CashflowProviderTest.java'],
+  'release-guide': ['Builder project', 'docs/r51-release-qualification.md'],
+  'local-guide': ['Builder project', 'docs/local-workbench-v01.md'],
   ...Object.fromEntries(Object.entries({host:'LocalAgentHost',wiring:'ReadOnlyProviders',bank:'BankAccess',runtime:'NativeConversation'}).map(([key, name]) => [key, ['Builder project', `templates/local-readonly-service/src/main/java/io/github/bitlhk/finance/builder/local/${name}.java`]])),
 };
 const escape = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

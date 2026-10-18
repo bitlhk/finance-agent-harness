@@ -38,4 +38,11 @@ test('downloadable cases are unexecuted manual records, not invented Eval import
   assert.equal(cases.builderCommit,edition.builderCommit);
   assert.equal(cases.cases.length,3);
   assert.ok(cases.cases.every(c=>c.status==='NOT_RUN' && c.observed===null));
+  for (const relative of cases.cases[2].sourceFiles) assert.ok(fs.statSync(path.join(root,relative)).isFile());
+});
+test('baseline precedes modification and candidate installation precedes author acceptance', () => {
+  const text=pages[1].text;
+  assert.ok(text.indexOf('previous.open("x"') < text.indexOf('## 5. 第二轮'));
+  assert.ok(text.indexOf('维护者接纳与构建') < text.indexOf('## 6.'));
+  for (const phrase of ['BLOCKED_CANDIDATE_ACCESS','--harness-repo "$CANDIDATE_HARNESS"','构建后产生','PERIOD_COVERAGE_NOT_VERIFIED','BLOCKED_FIXTURE_BINDING']) assert.ok(text.includes(phrase));
 });
