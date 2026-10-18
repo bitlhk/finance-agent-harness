@@ -290,7 +290,8 @@ class ServicePreparationTest {
                 assertTrue(entered.await(5,TimeUnit.SECONDS));
                 String id;
                 try(var paths=Files.list(store)) {
-                    id=paths.filter(Files::isDirectory).findFirst().orElseThrow().getFileName().toString();
+                    id=paths.filter(Files::isDirectory).filter(p->Files.isRegularFile(p.resolve("latest.json")))
+                            .findFirst().orElseThrow().getFileName().toString();
                 }
                 var partial=pending.read("owner-a",id);
                 assertEquals(1000,partial.at("/facts/customer/totalAssets").asInt());

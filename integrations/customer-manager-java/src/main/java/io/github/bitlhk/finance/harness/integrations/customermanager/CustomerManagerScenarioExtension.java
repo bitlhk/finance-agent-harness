@@ -37,7 +37,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
-                        "runtime", "openjiuwen-java@0.1.15"), method);
+                        "runtime", "openjiuwen-java@0.1.15"), method,
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
         return new Managed(owner, sessionId, task, method);
     }
 
