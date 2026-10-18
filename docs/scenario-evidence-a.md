@@ -1,5 +1,13 @@
 # Scenario evidence A candidate
 
+> HISTORICAL CHECKPOINT, not current release status. The incomplete notes below
+> describe Harness 7a0c342 / Builder cdd0369 during A-batch development and are
+> retained as the original checkpoint. Later A/B implementation, installation
+> evidence, release and independent UI findings are indexed in
+> [Scenario A/B closeout and validation patches](scenario-evidence-closeout-20261018.md).
+> Do not treat the historical blockers below as a fresh inventory of the current
+> release, or treat later release completion as proof that every business output passed.
+
 Scope frozen before implementation: synthetic customer-manager, credit-material
 review, post-loan and fraud; existing authority policies, same-owner review.
 No new roles, permission source, storage service, UI, or production mutation.
