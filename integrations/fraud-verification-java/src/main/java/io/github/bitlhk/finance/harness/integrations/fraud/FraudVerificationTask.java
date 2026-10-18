@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.integrations.fraud;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
+import io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence;
 import io.github.bitlhk.finance.harness.core.spi.FinanceProvider;
 import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
 import io.github.bitlhk.finance.harness.providers.fraud.FraudMiningProvider;
@@ -31,6 +32,7 @@ final class FraudVerificationTask implements AutoCloseable {
     private final InstalledPreparationMethod method;
     private final Path records;
     private final Map<String,String> assets;
+    private final ScenarioEvidence evidence;
     private final AtomicLong providerCalls=new AtomicLong(), modelCalls=new AtomicLong();
     private long generation;
     private Selection selected;
@@ -39,9 +41,15 @@ final class FraudVerificationTask implements AutoCloseable {
 
     FraudVerificationTask(String owner,FinanceProvider provider,Supplier<FraudSubjectMapping> mappings,
             ExplanationGenerator generator,InstalledPreparationMethod method,Path records,Map<String,String> assets) throws Exception {
+        this(owner,provider,mappings,generator,method,records,assets,Map::of);
+    }
+    FraudVerificationTask(String owner,FinanceProvider provider,Supplier<FraudSubjectMapping> mappings,
+            ExplanationGenerator generator,InstalledPreparationMethod method,Path records,Map<String,String> assets,
+            Supplier<Map<String,String>> trustedHost) throws Exception {
         this.owner=Objects.requireNonNull(owner);this.provider=Objects.requireNonNull(provider);
         this.mappings=Objects.requireNonNull(mappings);this.generator=Objects.requireNonNull(generator);
         this.method=Objects.requireNonNull(method);this.records=records.toAbsolutePath();this.assets=Map.copyOf(assets);
+        this.evidence=new ScenarioEvidence(this.records,trustedHost);
         Files.createDirectories(this.records);
         if(Files.isSymbolicLink(this.records))throw new SecurityException("UNSAFE_REPORT_DIRECTORY");
         Files.setPosixFilePermissions(this.records,java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
@@ -72,8 +80,13 @@ final class FraudVerificationTask implements AutoCloseable {
             report.set("method",HarnessJson.mapper().valueToTree(Map.of("id",method.id(),"version",method.version(),"digest",method.digest(),"lockDigest",method.lockDigest())));
             persist(report);
         }
+        var proof=evidence.begin(run,owner,selection.subjectRef(),selection.purpose(),
+                "fraud.risk-evidence.query",Map.of("subjectRef",selection.subjectRef(),"subjectType",FraudMiningProvider.FRAUD_SOURCE_CINO),
+                Map.of("mappingRevision",selection.mappingRevision(),"subjectRef",selection.subjectRef()),"LOCAL_SYNTHETIC_OBJECT_MAPPING");
+        report.set("executionBinding",proof.binding());
+        Runnable authorize=()->{synchronized(this){current(selection,run);}};
         try{
-            synchronized(this){current(selection,run);}providerCalls.incrementAndGet();
+            proof.check("ENTRY",authorize,null);proof.invoked();providerCalls.incrementAndGet();
             var context=new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION,run,run,owner,
                     FinanceContextV1.PrincipalType.EMPLOYEE,"fraud-verification","READ_ONLY_INVESTIGATION",
                     selection.subjectRef(),run,FinanceContextV1.AuthenticationLevel.STRONG,Set.of("fraud-risk:read"));
@@ -81,7 +94,7 @@ final class FraudVerificationTask implements AutoCloseable {
                     CapabilityRequestV1.Operation.QUERY,context,
                     Map.of("subjectType",FraudMiningProvider.FRAUD_SOURCE_CINO,"subjectRef",selection.subjectRef()),
                     null,null,Map.of(),null);
-            CapabilityResultV1 result=provider.query(request);synchronized(this){current(selection,run);}
+            CapabilityResultV1 result=provider.query(request);proof.returned();proof.check("RETURN",authorize,result);
             report.set("providerResult",HarnessJson.mapper().valueToTree(result));report.put("source","fraud-mining");report.put("queriedAt",Instant.now().toString());
             if(result.status()!=CapabilityResultV1.Status.COMPLETED){
                 report.put("verificationStatus","FAILED");report.put("queryComplete",false);report.put("status","PARTIAL");
@@ -97,19 +110,27 @@ final class FraudVerificationTask implements AutoCloseable {
                 report.put("queryComplete",facts.path("queryComplete").asBoolean(false));report.put("evidenceAsOf",result.asOf().toString());
                 ObjectNode modelFacts=modelFacts(facts);List<String> refs=new ArrayList<>();collect(modelFacts,"",refs,300);
                 report.set("factRefs",HarnessJson.mapper().valueToTree(refs));
-                report.put("status","PARTIAL");report.put("explanationStatus","RUNNING");persist(report);listener.stage("FACTS_READY",report.deepCopy());
+                report.put("status","PARTIAL");report.put("explanationStatus","RUNNING");persist(report);
+                proof.check("FACTS_RELEASE",authorize,report);listener.stage("FACTS_READY",report.deepCopy());
                 try{
-                    synchronized(this){current(selection,run);}modelCalls.incrementAndGet();
+                    proof.check("MODEL_RELEASE",authorize,modelFacts);modelCalls.incrementAndGet();
                     ObjectNode explanation=generator.generate(method,selection.purpose(),List.copyOf(refs),modelFacts.deepCopy());
                     validate(explanation,refs,modelFacts);synchronized(this){current(selection,run);}
                     report.set("modelExplanation",explanation);report.put("explanationStatus","READY");report.put("status","READY_FOR_REVIEW");
                 }catch(Exception failure){
+                    if(failure instanceof ScenarioEvidence.Unavailable)throw failure;
                     if(failure instanceof SecurityException)throw failure;
                     report.put("explanationStatus","FAILED");report.put("status","PARTIAL");report.put("failureCode","REPORT_MODEL_FAILED");
                     report.putArray("missingEvidence").add("核验解释未完整生成；确定性风险事实与查询完整性已保留");
                 }
             }
-            report.put("finishedAt",Instant.now().toString());synchronized(this){current(selection,run);persist(report);return report.deepCopy();}
+            report.put("finishedAt",Instant.now().toString());synchronized(this){current(selection,run);persist(report);proof.check("PAGE_RELEASE",authorize,report);return report.deepCopy();}
+        }catch(ScenarioEvidence.Unavailable unavailable){
+            report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
+            report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
+            report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
+            try{persist(report);}catch(Exception storageFailure){/* The same storage may also be unavailable. */}
+            throw unavailable;
         }catch(SecurityException stale){
             synchronized(this){ObjectNode discarded=report.deepCopy();discarded.remove(List.of("facts","providerResult","modelExplanation"));discarded.put("status","DISCARDED");persist(discarded);}throw stale;
         }
@@ -144,10 +165,15 @@ final class FraudVerificationTask implements AutoCloseable {
     synchronized ObjectNode review(String caller,String id,int revision,String opinion)throws Exception{
         ObjectNode report=read(caller,id);if(revision!=report.path("reportRevision").asInt())throw new IllegalStateException("REPORT_VERSION_CONFLICT");
         if(opinion==null||opinion.isBlank()||opinion.length()>2000)throw new IllegalArgumentException("REVIEW_REQUIRED");
-        report.put("reviewStatus","REVIEWED");report.put("reviewerRef",owner);report.put("reviewOpinion",opinion);report.put("reviewedAt",Instant.now().toString());persist(report);return report.deepCopy();
+        report.put("reviewStatus","REVIEWED");report.put("reviewerRef",owner);report.put("reviewOpinion",opinion);report.put("reviewedAt",Instant.now().toString());persist(report);releaseSaved(report);return report.deepCopy();
     }
-    synchronized ObjectNode read(String caller,String id)throws Exception{owner(caller);ObjectNode value=readLatest(id);authorize(value);return value;}
-    synchronized ObjectNode readVersion(String caller,String id,int revision)throws Exception{read(caller,id);Path file=directory(id).resolve(String.format("v%06d.json",revision));if(!Files.isRegularFile(file))throw new IllegalArgumentException("REPORT_VERSION_NOT_FOUND");ObjectNode value=readVerified(file);authorize(value);return value;}
+    synchronized ObjectNode read(String caller,String id)throws Exception{owner(caller);ObjectNode value=readLatest(id);releaseSaved(value);return value;}
+    synchronized ObjectNode readVersion(String caller,String id,int revision)throws Exception{owner(caller);Path file=directory(id).resolve(String.format("v%06d.json",revision));if(!Files.isRegularFile(file))throw new IllegalArgumentException("REPORT_VERSION_NOT_FOUND");ObjectNode value=readVerified(file);releaseSaved(value);return value;}
+    private void releaseSaved(ObjectNode value){
+        authorize(value);
+        evidence.releaseSaved(owner,value.path("subjectRef").asText(),value.path("reportId").asText(),value.path("reportRevision").asInt(),
+                Map.of("mappingRevision",mappings.get().revision()),"LOCAL_SYNTHETIC_OBJECT_MAPPING",()->authorize(value),value);
+    }
     synchronized List<Integer> versions(String caller,String id)throws Exception{
         read(caller,id);
         try(var paths=Files.list(directory(id))){
@@ -165,7 +191,7 @@ final class FraudVerificationTask implements AutoCloseable {
                     .sorted().toList();
         }
     }
-    synchronized Optional<ObjectNode> latest(String caller)throws Exception{owner(caller);if(!Files.isDirectory(records))return Optional.empty();try(var paths=Files.list(records)){for(Path p:paths.filter(Files::isDirectory).sorted((a,b)->Long.compare(modified(b),modified(a))).limit(1000).toList())try{ObjectNode value=read(caller,p.getFileName().toString());if(!Set.of("RUNNING","DISCARDED").contains(value.path("status").asText())&&!"RUNNING".equals(value.path("explanationStatus").asText()))return Optional.of(value);}catch(Exception ignored){}return Optional.empty();}}
+    synchronized Optional<ObjectNode> latest(String caller)throws Exception{owner(caller);if(!Files.isDirectory(records))return Optional.empty();try(var paths=Files.list(records)){for(Path p:paths.filter(Files::isDirectory).sorted((a,b)->Long.compare(modified(b),modified(a))).limit(1000).toList())try{ObjectNode value=read(caller,p.getFileName().toString());if(!Set.of("RUNNING","DISCARDED").contains(value.path("status").asText())&&!"RUNNING".equals(value.path("explanationStatus").asText()))return Optional.of(value);}catch(ScenarioEvidence.Unavailable unavailable){throw unavailable;}catch(Exception ignored){}return Optional.empty();}}
     synchronized ObjectNode replay(String caller,String id,Integer revision)throws Exception{
         long p=providerCalls.get(),m=modelCalls.get();ObjectNode report=revision==null?read(caller,id):readVersion(caller,id,revision);ObjectNode result=HarnessJson.mapper().createObjectNode();result.set("report",report);
         ObjectNode evidence=result.putObject("replayEvidence");evidence.put("businessProviderCalls",providerCalls.get()-p);evidence.put("modelGenerationCalls",modelCalls.get()-m);evidence.put("authorizationRevalidated",true);evidence.put("recordedAt",Instant.now().toString());return result;

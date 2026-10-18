@@ -24,7 +24,8 @@ public final class PostLoanRiskScenarioExtension implements ManagedScenarioExten
         var provider=new ObservedFinanceProvider(source,PostLoanRiskReferenceProvider.PROVIDER_ID,context.currentObservation());
         InstalledPreparationMethod method=installed(context.artifactRoot());var model=Objects.requireNonNull(context.model());
         var task=new PostLoanRiskTask(owner,provider,mappings,new OpenJiuwenPostLoanReportGenerator(model.clientProvider(),model.apiKey(),model.apiBase(),model.modelName()),method,records,
-                Map.of("capability","post-loan-risk-snapshot@0.1.0","provider","post-loan-risk-reference@0.1.0-SNAPSHOT","runtime","openjiuwen-java@0.1.15"));
+                Map.of("capability","post-loan-risk-snapshot@0.1.0","provider","post-loan-risk-reference@0.1.0-SNAPSHOT","runtime","openjiuwen-java@0.1.15"),
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
         return new Managed(owner,UUID.randomUUID().toString(),task,method);
     }
     private static final class Managed implements Session{

@@ -15,6 +15,27 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FraudVerificationTaskTest {
+    @Test void necessaryEntryFailurePreventsQueryAndExplanation() throws Exception {
+        try(var task=task()) {
+            long selected=task.select("owner","合成核验对象甲","synthetic verification");
+            Files.writeString(temp.resolve("reports/decision-evidence"),"blocked storage");
+            var error=assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->task.verify("owner",selected,FraudVerificationTask.Listener.NONE));
+            assertEquals("ENTRY",error.stage());assertEquals("NOT_INVOKED",error.providerDispatch());
+        }
+    }
+
+    @Test void savedEvidenceIsNotReleasedWhenDecisionStoreFails() throws Exception {
+        try(var task=task()) {
+            var report=task.verify("owner",task.select("owner","合成核验对象甲","synthetic verification"),FraudVerificationTask.Listener.NONE);
+            Files.move(temp.resolve("reports/decision-evidence"),temp.resolve("retained-decisions"));
+            Files.writeString(temp.resolve("reports/decision-evidence"),"blocked storage");
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->task.replay("owner",report.path("reportId").asText(),null));
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,()->task.latest("owner"));
+        }
+    }
+
     @Test void modelPromptRequiresExactLeafReferencesAndRejectsEmptyContainers(){
         assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("逐字选择输入 factIds"));
         assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("空数组、空对象"));

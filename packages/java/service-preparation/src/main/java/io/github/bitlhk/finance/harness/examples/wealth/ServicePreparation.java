@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.examples.wealth;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
+import io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence;
 import java.nio.file.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,6 +54,7 @@ public final class ServicePreparation implements AutoCloseable {
     private final InstalledPreparationMethod method;
     private final Path records;
     private final Map<String,String> versions;
+    private final ScenarioEvidence evidence;
     private final AtomicLong businessProviderCalls = new AtomicLong();
     private final AtomicLong modelGenerationCalls = new AtomicLong();
     private long generation;
@@ -69,10 +71,16 @@ public final class ServicePreparation implements AutoCloseable {
     public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
             ReportGenerator generator, Path records, Map<String,String> versions,
             InstalledPreparationMethod method) throws Exception {
+        this(owner,access,mappings,generator,records,versions,method,Map::of);
+    }
+    public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
+            ReportGenerator generator, Path records, Map<String,String> versions,
+            InstalledPreparationMethod method, Supplier<Map<String,String>> trustedHost) throws Exception {
         this.owner = Objects.requireNonNull(owner); this.access = Objects.requireNonNull(access);
         this.mappings = Objects.requireNonNull(mappings); this.generator = Objects.requireNonNull(generator);
         this.method = Objects.requireNonNull(method);
         this.records = records.toAbsolutePath(); this.versions = Map.copyOf(versions);
+        this.evidence = new ScenarioEvidence(this.records,trustedHost);
         Files.createDirectories(this.records);
         if (Files.isSymbolicLink(this.records)) throw new SecurityException("UNSAFE_RECORD_DIRECTORY");
         Files.setPosixFilePermissions(this.records, java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
@@ -150,11 +158,15 @@ public final class ServicePreparation implements AutoCloseable {
                     "digest", method.digest(), "lockDigest", method.lockDigest())));
             report.putArray("events").add("RUN_STARTED"); persist(report);
         }
+        var proof=evidence.begin(run,owner,s.customer(),s.goal(),CAPABILITY,
+                Map.of("customerRef",s.customer(),"taskContext",s.taskContext()),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        report.set("executionBinding",proof.binding());
+        Runnable authorize=()->{synchronized(this){current(s,run);}};
         try {
-            synchronized (this) { current(s,run); }
+            proof.check("ENTRY",authorize,null);proof.invoked();
             businessProviderCalls.incrementAndGet();
             CapabilityResultV1 result = access.query(run,run,s.customer(),CAPABILITY,Map.of());
-            synchronized (this) { current(s,run); }
+            proof.returned();proof.check("RETURN",authorize,result);
             JsonNode data = HarnessJson.mapper().valueToTree(result.data());
             JsonNode context = data.path("previsitContext");
             report.set("execution",HarnessJson.mapper().valueToTree(result));
@@ -178,10 +190,13 @@ public final class ServicePreparation implements AutoCloseable {
                 generationContext.set("taskContext",s.taskContext().deepCopy());
                 collectFactRefs(s.taskContext(),"/taskContext",ids,ids.size()+100);
                 if(productArguments!=null) {
-                    synchronized(this){current(s,run);}
+                    var productProof=evidence.begin(run+"-products",owner,s.customer(),s.goal(),"wealth.allocation-context.query",
+                            Map.of("customerRef",s.customer(),"arguments",productArguments),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+                    report.set("productExecutionBinding",productProof.binding());
+                    productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
                     CapabilityResultV1 allocation=access.query(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments);
-                    synchronized(this){current(s,run);}
+                    productProof.returned();productProof.check("RETURN",authorize,allocation);
                     if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
                         missing.add("产品适当性筛选未完成");
                         if(allocation.error()!=null)report.put("failureCode",allocation.error().sourceCode());
@@ -227,12 +242,12 @@ public final class ServicePreparation implements AutoCloseable {
                 modelDiagnostics.put("startedAt",Instant.now().toString());modelDiagnostics.put("provisionalDeltaCount",0);
                 report.withArray("events").add("FACTS_PRESERVED");
                 synchronized (this) { current(s,run); persist(report); }
-                listener.stage("FACTS_READY", report.deepCopy());
+                proof.check("FACTS_RELEASE",authorize,report);listener.stage("FACTS_READY", report.deepCopy());
                 var provisionalDeltas=new AtomicLong();
                 var firstDeltaAt=new java.util.concurrent.atomic.AtomicReference<String>();
                 var modelStage=new java.util.concurrent.atomic.AtomicReference<>("MODEL_DISPATCH");
                 try {
-                    synchronized (this) { current(s,run); }
+                    proof.check("MODEL_RELEASE",authorize,generationContext);
                     listener.stage("REPORT_GENERATION_STARTED", report.deepCopy());
                     modelGenerationCalls.incrementAndGet();
                     modelStage.set("MODEL_STREAM");
@@ -242,7 +257,7 @@ public final class ServicePreparation implements AutoCloseable {
                         validateDelta(normalized, ids, generationContext, s.goal());
                         firstDeltaAt.compareAndSet(null,Instant.now().toString());provisionalDeltas.incrementAndGet();
                         modelStage.set("MODEL_STREAM");
-                        try { listener.reportDelta(normalized); }
+                        try { proof.check("DELTA_RELEASE",authorize,normalized);listener.reportDelta(normalized); }
                         catch (RuntimeException failure) { throw failure; }
                         catch (Exception failure) { throw new ListenerFailure(failure); }
                     });
@@ -258,6 +273,7 @@ public final class ServicePreparation implements AutoCloseable {
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
                     report.withArray("events").add("MODEL_SUGGESTION_COMMITTED");
                 } catch (Exception failure) {
+                    if(failure instanceof SecurityException || failure instanceof ScenarioEvidence.Unavailable)throw failure;
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
                     boolean timedOut = causedByTimeout(failure);
@@ -281,7 +297,13 @@ public final class ServicePreparation implements AutoCloseable {
             }
             report.put("finishedAt",Instant.now().toString());
             report.withArray("events").add("FACT_QUERY_FINISHED").add("REPORT_GENERATED");
-            synchronized (this) { current(s,run); persist(report); return report.deepCopy(); }
+            synchronized (this) { current(s,run); persist(report);proof.check("PAGE_RELEASE",authorize,report); return report.deepCopy(); }
+        } catch (ScenarioEvidence.Unavailable unavailable) {
+            report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
+            report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
+            report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
+            try { persist(report); } catch(Exception storageFailure) { /* No claim that a failed store retained the receipt. */ }
+            throw unavailable;
         } catch (SecurityException stale) {
             synchronized (this) {
                 ObjectNode discarded = report.deepCopy();
@@ -294,6 +316,10 @@ public final class ServicePreparation implements AutoCloseable {
     }
     public synchronized ObjectNode read(String caller, String id) throws Exception {
         owner(caller); ObjectNode r = (ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+        releaseSaved(r);
+        return r;
+    }
+    private void authorizeReport(ObjectNode r) {
         if (!owner.equals(r.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
         var a = access.authorize(r.path("customerRef").asText());
         Mapping m = mappings.get();
@@ -301,7 +327,11 @@ public final class ServicePreparation implements AutoCloseable {
                 || !r.path("customerRef").asText().equals(m.customers().get(r.path("customerAlias").asText()))
                 || !a.authorityRef().equals(r.path("authorityRef").asText()))
             throw new SecurityException("REPORT_AUTHORITY_CHANGED");
-        return r;
+    }
+    private void releaseSaved(ObjectNode r) {
+        authorizeReport(r);
+        evidence.releaseSaved(owner,r.path("customerRef").asText(),r.path("reportId").asText(),r.path("reportRevision").asInt(),
+                access.authorize(r.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY",()->authorizeReport(r),r);
     }
     public synchronized ObjectNode review(String caller, String id, int revision, String opinion) throws Exception {
         ObjectNode r = read(caller,id);
@@ -317,7 +347,7 @@ public final class ServicePreparation implements AutoCloseable {
         entry.put("revision",revision+1); entry.put("reviewerRef",r.path("reviewerRef").asText());
         entry.put("opinion",opinion); entry.put("reviewedAt",r.path("reviewedAt").asText());
         r.withArray("events").add("MANAGER_REVIEW_SAVED");
-        persist(r);return r.deepCopy(); // Review never upgrades execution or explanation status.
+        persist(r);releaseSaved(r);return r.deepCopy(); // Review never upgrades execution or explanation status.
     }
     public synchronized ObjectNode readVersion(String caller, String id, int revision) throws Exception {
         read(caller,id); // Recheck current owner, mapping and CRM authority before historical access.
@@ -325,7 +355,7 @@ public final class ServicePreparation implements AutoCloseable {
         Path file = reportDirectory(id).resolve(String.format("v%06d.json", revision));
         if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) throw new IllegalArgumentException("REPORT_VERSION_NOT_FOUND");
         ObjectNode value = (ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(file));
-        if (!owner.equals(value.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
+        releaseSaved(value);
         return value;
     }
     public synchronized List<Integer> versions(String caller, String id) throws Exception {

@@ -10,6 +10,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.FinanceContextV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
@@ -47,7 +48,11 @@ public final class EnterpriseCreditAuditApplication {
         var base = new EnterpriseCreditMaterialAuditProvider(
                 new MaterialSetRepository(Path.of(requiredEnv("FH_CREDIT_AUDIT_MATERIAL_ROOT"))),
                 DemoRuleSet.load(Path.of(requiredEnv("FH_CREDIT_AUDIT_RULE_FILE"))));
-        var provider = new RecordingProvider(base);
+        String taskFile=System.getenv("FH_CREDIT_AUDIT_TASK_RECORD");
+        Runnable current=taskFile==null?()->{}:taskAuthority(Path.of(taskFile),
+                Long.parseLong(requiredEnv("FH_CREDIT_AUDIT_TASK_GENERATION")),owner,principal,session,materialSetRef);
+        var evidence=new ScenarioEvidence(output.getParent(),Map::of);
+        var provider = new RecordingProvider(base,current,evidence);
         var context = context(owner, principal, session);
         var controlledProvider = bindHost(provider, context);
         List<CapabilityResultV1> deterministic = List.of(
@@ -75,6 +80,9 @@ public final class EnterpriseCreditAuditApplication {
             if (!Runner.start()) throw new IllegalStateException("OpenJiuwen Runner failed to start");
             started = true;
             try {
+                var modelProof=evidence.begin(conversation,owner,materialSetRef,"MATERIAL_EXPLANATION","credit.explanation",
+                        Map.of("materialSetRef",materialSetRef),Map.of("owner",owner,"principal",principal,"session",session),"PLATFORM_OWNER_MATERIALS");
+                modelProof.check("MODEL_RELEASE",current,deterministic);
                 response = render(Runner.runAgent(agent, Map.of(
                         "query", explanationPrompt(materialSetRef, deterministic),
                         "conversation_id", conversation), conversation, null));
@@ -82,6 +90,7 @@ public final class EnterpriseCreditAuditApplication {
                 explanationStatus = "COMPLETED";
                 explanationError = "";
             } catch (Exception exception) {
+                if(exception instanceof SecurityException || exception instanceof ScenarioEvidence.Unavailable)throw exception;
                 explanationError = exception.getClass().getSimpleName() + ": " + safe(exception.getMessage());
             }
             Files.createDirectories(output.getParent());
@@ -102,11 +111,26 @@ public final class EnterpriseCreditAuditApplication {
             report.put("installationLock", lock.toString());
             report.put("startedAt", startedAt.toString());
             report.put("finishedAt", Instant.now().toString());
+            current.run();
             HarnessJson.mapper().writerWithDefaultPrettyPrinter().writeValue(output.toFile(), report);
         } finally {
             Runner.release(conversation);
             if (started) Runner.stop();
         }
+    }
+
+    static Runnable taskAuthority(Path taskFile,long generation,String owner,String principal,String session,String material) {
+        return ()->{
+            try {
+                if(Files.isSymbolicLink(taskFile))throw new SecurityException("AUDIT_TASK_AUTHORITY_UNAVAILABLE");
+                var task=HarnessJson.mapper().readTree(Files.readAllBytes(taskFile));
+                if(!owner.equals(task.path("ownerRef").asText()) || !principal.equals(task.path("principalId").asText())
+                        || !session.equals(task.path("sessionRef").asText()) || !material.equals(task.path("materialSetRef").asText())
+                        || task.path("generation").asLong(-1)!=generation
+                        || Set.of("CANCELED","CANCEL_REQUESTED").contains(task.path("status").asText()))
+                    throw new SecurityException("AUDIT_TASK_AUTHORITY_CHANGED");
+            } catch(java.io.IOException invalid){throw new SecurityException("AUDIT_TASK_AUTHORITY_UNAVAILABLE");}
+        };
     }
 
     static String explanationPrompt(String reference, List<CapabilityResultV1> results) throws Exception {
@@ -278,11 +302,23 @@ public final class EnterpriseCreditAuditApplication {
 
     static final class RecordingProvider implements DescribedFinanceProvider {
         private final EnterpriseCreditMaterialAuditProvider delegate;
+        private final Runnable current;
+        private final ScenarioEvidence evidence;
         private final List<Map<String, Object>> attempts = new ArrayList<>();
-        RecordingProvider(EnterpriseCreditMaterialAuditProvider delegate) { this.delegate = delegate; }
+        RecordingProvider(EnterpriseCreditMaterialAuditProvider delegate) { this(delegate,()->{},null); }
+        RecordingProvider(EnterpriseCreditMaterialAuditProvider delegate,Runnable current,ScenarioEvidence evidence) {
+            this.delegate=delegate;this.current=current;this.evidence=evidence;
+        }
         @Override public ProviderDescriptorV1 descriptor() { return delegate.descriptor(); }
         @Override public CapabilityResultV1 query(CapabilityRequestV1 request) {
+            current.run();
+            var proof=evidence==null?null:evidence.begin(request.context().requestId(),request.context().subjectRef(),
+                    String.valueOf(request.parameters().get("materialSetRef")),request.context().purpose(),request.capabilityId(),
+                    request.parameters(),Map.of("principal",request.context().principalId(),"session",request.context().sessionRef()),"PLATFORM_OWNER_MATERIALS");
+            if(proof!=null){proof.check("ENTRY",current,null);proof.invoked();}
             CapabilityResultV1 result = delegate.query(request);
+            current.run();
+            if(proof!=null){proof.returned();proof.check("RETURN",current,result);}
             attempts.add(Map.of("capabilityId", request.capabilityId(), "status", result.status().name(),
                     "requestId", result.requestId(), "observedAt", Instant.now().toString()));
             return result;

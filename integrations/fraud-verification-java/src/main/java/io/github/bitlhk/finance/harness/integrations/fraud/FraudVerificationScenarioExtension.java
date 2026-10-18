@@ -30,7 +30,8 @@ public final class FraudVerificationScenarioExtension implements ManagedScenario
         var provider=new ObservedFinanceProvider(source,FraudMiningProvider.PROVIDER_ID,context.currentObservation());
         InstalledPreparationMethod method=installed(context.artifactRoot());var model=Objects.requireNonNull(context.model());
         var task=new FraudVerificationTask(owner,provider,mappings,new OpenJiuwenFraudReportGenerator(model.clientProvider(),model.apiKey(),model.apiBase(),model.modelName()),method,records,
-                Map.of("capability","fraud-risk-evidence-query@0.1.0","provider","fraud-mining-reference@0.1.0-SNAPSHOT","runtime","openjiuwen-java@0.1.15"));
+                Map.of("capability","fraud-risk-evidence-query@0.1.0","provider","fraud-mining-reference@0.1.0-SNAPSHOT","runtime","openjiuwen-java@0.1.15"),
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
         return new Managed(owner,UUID.randomUUID().toString(),task,method);
     }
     private static final class Managed implements Session{
