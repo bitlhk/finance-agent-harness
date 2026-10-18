@@ -128,6 +128,12 @@ public final class ServicePreparation implements AutoCloseable {
             saved.remove(List.of("modelSuggestion", "fallbackSuggestion"));
             saved.put("status", "CANCELLED"); saved.put("explanationStatus", "CANCELLED");
             saved.put("finishedAt", Instant.now().toString());
+            if (saved.path("modelDiagnostics").isObject()) {
+                ObjectNode diagnostics=(ObjectNode)saved.get("modelDiagnostics");
+                diagnostics.put("status","CANCELLED");diagnostics.put("stage","RESULT_RELEASE_CANCELLED");
+                diagnostics.put("terminationSource","USER_REQUEST");
+                diagnostics.put("upstreamTerminationObserved",false);
+            }
             saved.withArray("events").add("USER_CANCELLED_RESULT_RELEASE");
             persist(saved);
         }

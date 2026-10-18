@@ -324,6 +324,8 @@ class ServicePreparationTest {
                 assertEquals("CANCELLED",pending.cancel("owner-a",first));
                 var cancelled=pending.read("owner-a",id);
                 assertEquals("CANCELLED",cancelled.path("status").asText());
+                assertEquals("CANCELLED",cancelled.at("/modelDiagnostics/status").asText());
+                assertFalse(cancelled.at("/modelDiagnostics/upstreamTerminationObserved").asBoolean());
                 assertEquals(1000,cancelled.at("/facts/customer/totalAssets").asInt());
                 assertFalse(cancelled.has("modelSuggestion"));
                 long next=pending.select("owner-a","客户甲","新的核实任务");
