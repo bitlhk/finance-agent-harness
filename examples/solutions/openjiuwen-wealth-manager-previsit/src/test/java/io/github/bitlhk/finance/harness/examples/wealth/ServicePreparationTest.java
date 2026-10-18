@@ -304,6 +304,52 @@ class ServicePreparationTest {
             assertEquals("完成后复核",saved.path("reviewOpinion").asText());assertEquals(1,calls.get());
         }
     }
+    @Test void cancellationPreservesFactsAndCannotCommitLateModelOrReplaceNextReport() throws Exception {
+        var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
+        var count=new AtomicInteger();
+        Path store=files.resolve("cancelled");
+        try(var pending=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(g,ids,c)->{
+                if(count.incrementAndGet()==1) { entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS)); }
+                return List.of("/customer/totalAssets");
+            },store,Map.of());var executor=Executors.newVirtualThreadPerTaskExecutor()) {
+            long first=pending.select("owner-a","客户甲","核实资金");
+            var future=executor.submit(()->pending.prepare("owner-a",first));
+            try {
+                assertTrue(entered.await(5,TimeUnit.SECONDS));
+                var snapshot=pending.latest("owner-a").orElseThrow();
+                String id=snapshot.path("reportId").asText();
+                assertThrows(SecurityException.class,()->pending.cancel("another-owner",first));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",first+1));
+                assertEquals("CANCELLED",pending.cancel("owner-a",first));
+                assertEquals("CANCELLED",pending.cancel("owner-a",first));
+                var cancelled=pending.read("owner-a",id);
+                assertEquals("CANCELLED",cancelled.path("status").asText());
+                assertEquals(1000,cancelled.at("/facts/customer/totalAssets").asInt());
+                assertFalse(cancelled.has("modelSuggestion"));
+                long next=pending.select("owner-a","客户甲","新的核实任务");
+                var completed=pending.prepare("owner-a",next);
+                var durable=pending.read("owner-a",completed.path("reportId").asText());
+                byte[] frozen=Files.readAllBytes(store.resolve(id).resolve("latest.json"));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",next));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",first));
+                release.countDown();
+                assertInstanceOf(CancellationException.class,assertThrows(ExecutionException.class,
+                        ()->future.get(5,TimeUnit.SECONDS)).getCause());
+                assertArrayEquals(frozen,Files.readAllBytes(store.resolve(id).resolve("latest.json")));
+                assertEquals(durable,pending.read("owner-a",completed.path("reportId").asText()));
+                assertEquals(completed.path("reportId"),pending.latest("owner-a").orElseThrow().path("reportId"));
+            } finally { release.countDown(); }
+        }
+    }
+    @Test void cancellationBeforeDispatchDoesNotQueryOrModifyExistingHistory() throws Exception {
+        var generated=prepare(); var previous=host.read("owner-a",generated.path("reportId").asText());
+        int before=calls.get();
+        long next=host.select("owner-a","客户甲","新任务");
+        assertEquals("CANCELLED",host.cancel("owner-a",next));
+        assertThrows(CancellationException.class,()->host.prepare("owner-a",next));
+        assertEquals(before,calls.get());
+        assertEquals(previous,host.read("owner-a",previous.path("reportId").asText()));
+    }
     @Test void missingBusinessDateIsNotReplacedByReceiptTime() throws Exception {
         missingDate=true;var r=prepare();assertEquals("",r.path("dataAsOf").asText());assertEquals("PARTIAL",r.path("status").asText());
     }

@@ -15,7 +15,7 @@ import java.util.*;
 /** Declarative managed-Host extension. Browser input cannot provide authority, credentials or asset paths. */
 public final class CustomerManagerScenarioExtension implements ManagedScenarioExtensionV01 {
     public static final String ID = "customer-manager-service-preparation.v1";
-    private static final Set<String> ACTIONS = Set.of("chat", "select", "prepare", "read", "latest", "review", "versions", "read-version", "replay", "note");
+    private static final Set<String> ACTIONS = Set.of("chat", "cancel", "select", "prepare", "read", "latest", "review", "versions", "read-version", "replay", "note");
 
     @Override public String id() { return ID; }
     @Override public Set<String> actions() { return ACTIONS; }
@@ -51,6 +51,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
         private final Map<String,ObjectNode> taskContexts=new HashMap<>();
         private volatile boolean closed;
+        private final Object operationLock = new Object();
+        private final Set<String> operationIds = new HashSet<>();
+        private Operation operation;
+        private static final class Operation {
+            final String id;
+            long generation = -1;
+            boolean cancelled, finished;
+            Operation(String id) { this.id = id; }
+        }
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             var latest=task.latest(owner);
@@ -67,12 +76,29 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     "steps", List.of("CUSTOMER_AND_GOAL", "FACT_COLLECTION", "PREPARATION_REPORT", "MANAGER_REVIEW"),
                     "method", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(), "lockDigest", method.lockDigest()));
         }
-        @Override public synchronized Map<String,Object> call(String action, JsonNode body) throws Exception {
+        @Override public Map<String,Object> call(String action, JsonNode body) throws Exception {
             current(); if (!ACTIONS.contains(action) || body == null || !body.isObject()) throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
+            // Cancellation must not queue behind the streaming session monitor.
+            if ("cancel".equals(action)) {
+                exact(body,"runId"); String id = text(body,"runId");
+                synchronized (operationLock) {
+                    current();
+                    if (operation == null || !operation.id.equals(id)) return Map.of("status","NOT_ACTIVE");
+                    if (operation.cancelled) return Map.of("status","CANCELLED");
+                    if (operation.finished) return Map.of("status","NOT_ACTIVE");
+                    String status = operation.generation < 0 ? "CANCELLED" : task.cancel(owner,operation.generation);
+                    operation.cancelled = "CANCELLED".equals(status);
+                    return Map.of("status",status);
+                }
+            }
+            return callSerial(action,body);
+        }
+        private synchronized Map<String,Object> callSerial(String action, JsonNode body) throws Exception {
+            current();
             return switch (action) {
                 case "chat" -> {
                     exactChat(body);
-                    yield chat(text(body,"query"));
+                    yield runChat(body,event -> {});
                 }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
@@ -107,9 +133,32 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             current();
             if (!"chat".equals(action)) return call(action, body);
             exactChat(body);
-            return chat(text(body,"query"), sink);
+            return runChat(body, sink);
         }
-        private Map<String,Object> chat(String query) throws Exception { return chat(query, event -> {}); }
+        private Map<String,Object> runChat(JsonNode body, EventSink sink) throws Exception {
+            Operation current = new Operation(body.has("runId") ? text(body,"runId") : UUID.randomUUID().toString());
+            synchronized (operationLock) {
+                if (operationIds.contains(current.id)) throw new IllegalArgumentException("RUN_ID_ALREADY_USED");
+                if (operationIds.size() >= 128) throw new IllegalStateException("SESSION_OPERATION_LIMIT");
+                operationIds.add(current.id); operation = current;
+            }
+            try {
+                var result = chat(text(body,"query"),sink);
+                synchronized (operationLock) {
+                    if (current.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                    current.finished = true;
+                }
+                return result;
+            }
+            finally { synchronized (operationLock) { current.finished = true; } }
+        }
+        private long selectOperation(String customer, String query, JsonNode context) {
+            synchronized (operationLock) {
+                if (operation.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                operation.generation = task.select(owner,customer,query,context);
+                return operation.generation;
+            }
+        }
         private Map<String,Object> chat(String query, EventSink sink) throws Exception {
             List<String> customers=task.customers(owner);
             String conversationalCustomer=selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
@@ -136,7 +185,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!pendingProductArguments.containsKey("channel"))missing.add("办理渠道（手机银行或网点）");
                 if(!missing.isEmpty())return Map.of("status","NEED_CLARIFICATION","response","为 "+displayName(customer)+" 筛选产品候选前，请补充："+String.join("、",missing)+"。候选只供经理复核，不会执行购买。");
                 ObjectNode taskContext=updateContext(customer,query);
-                selectedCustomer=customer;selectedGoal=query;long generation=task.select(owner,customer,query,taskContext);
+                selectedCustomer=customer;selectedGoal=query;long generation=selectOperation(customer,query,taskContext);
                 sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
                 JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
                 clearPendingProduct();
@@ -154,7 +203,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             selectedCustomer=customer;selectedGoal=query;
             sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of(
                     "stage","AUTHORIZATION_CONFIRMED","label","已核对客户服务范围")));
-            long generation=task.select(owner,customer,query,taskContext);
+            long generation=selectOperation(customer,query,taskContext);
             JsonNode report=task.prepare(owner,generation,listener(sink));
             String status=report.path("status").asText();
             String response="READY_FOR_REVIEW".equals(status)
