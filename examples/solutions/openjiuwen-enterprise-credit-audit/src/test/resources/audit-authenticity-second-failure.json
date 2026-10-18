@@ -1,0 +1,408 @@
+{
+  "explanation": "# 企业信贷材料核验辅助报告\n\n## 核验摘要\n\n本次核验针对材料集 `materials-010632c5c91f4d2daaab0ee540761d19`，共执行两项确定性核验：\n\n1. **财报勾稽核验**：资产与负债加权益不一致，需人工复核来源字段。\n2. **申请与用途合同一致性核验**：申请金额与用途合同金额不一致，需核对用途范围或补充差额说明。\n\n两项核验均已完成（COMPLETED），状态均为不一致（INCONSISTENT）。两项核验的真实性均**尚未核验**（NOT_VERIFIED），仅表示本能力未执行真实性验证，**不得**解释为真实性验证失败或材料虚假。\n\n---\n\n## 证据矩阵\n\n### 核验一：财报勾稽（financial-statement-equation）\n\n| 事项 | 值 | 主体 | 期间 | 币种/单位 | 来源 | 确认状态 |\n|---|---|---|---|---|---|---|\n| 资产 | 1,123,456.78 | 上海示例制造有限公司 | 2025-01-01 至 2025-12-31 | CNY / 元 | statement-001（v1） | 已提取 |\n| 负债 | 650,000.00 | 上海示例制造有限公司 | 2025-01-01 至 2025-12-31 | CNY / 元 | statement-001（v1） | 已提取 |\n| 权益 | 300,000.00 | 上海示例制造有限公司 | 2025-01-01 至 2025-12-31 | CNY / 元 | statement-001（v1） | 已提取 |\n| 负债+权益（期望资产） | 950,000.00 | — | — | CNY / 元 | 计算值 | 已记录 |\n| 实际资产 | 1,123,456.78 | — | — | CNY / 元 | statement-001（v1） | 已提取 |\n| 差额 | 173,456.78 | — | — | CNY / 元 | 计算值 | 不一致 |\n\n**核验依据（verificationBasis）**：主体、期间、币种、计量单位、业务口径（账面口径 BOOK）均已从单一材料 statement-001 记录确认，核验模式为单材料（SINGLE_MATERIAL），结果状态为 RECORDED。上述字段均已确认，**不构成缺失或未知**。\n\n### 核验二：申请与用途合同一致性（application-contract-consistency）\n\n| 事项 | 值 | 主体 | 期间 | 币种/单位 | 来源 | 确认状态 |\n|---|---|---|---|---|---|---|\n| 申请金额 | 623,456.78 | 上海示例制造有限公司 | 2026-09-01 至 2026-12-31（项目期） | CNY / 元 | application-001（v1） | 已提取 |\n| 用途合同金额 | 450,000.00 | 上海示例制造有限公司 | 2026-09-01 至 2026-12-31（项目期） | CNY / 元 | contract-001（v1） | 已提取 |\n| 差额 | 173,456.78 | — | — | CNY / 元 | 计算值 | 不一致 |\n\n**核验依据（verificationBasis）**：主体、期间、币种、计量单位、业务口径（设备采购 EQUIPMENT_PURCHASE）在申请表与用途合同之间均一致（MATCH），核验模式为跨材料（CROSS_MATERIAL），结果状态为可比（COMPARABLE）。即申请与合同在可比维度上完全对齐，金额差异为真实可比下的不一致。\n\n---\n\n## 发现的问题\n\n### 不一致\n\n1. **财报勾稽不一致**：资产（1,123,456.78 元）与负债加权益（950,000.00 元）相差 173,456.78 元。资产大于负债加权益之和。\n2. **申请与用途合同金额不一致**：申请金额（623,456.78 元）高于用途合同金额（450,000.00 元），相差 173,456.78 元。主体、期间、币种、单位、业务口径均一致，属可比条件下的金额差异。\n\n### 缺失\n\n- 无（missingInputs 为空，未发现必要字段缺失）。\n\n### 不可比\n\n- 无（两项核验均达到可比条件）。\n\n### 待人工判断\n\n- 财报勾稽差额的来源字段（资产、负债或权益中哪一项存在录入或口径问题）需人工复核。\n- 申请金额超出用途合同金额的差额部分（173,456.78 元）的用途范围或构成说明需人工核对。\n\n---\n\n## 审核影响\n\n仅说明对本次材料核验的影响，不构成任何审批决定：\n\n- **财报勾稽**：资产与负债加权益不一致，影响对财务报表内部一致性的确认，需先解决差额来源后方可确认勾稽关系成立。\n- **申请与用途合同**：申请金额与用途合同金额存在可比条件下的差异，影响对申请用途与合同金额匹配性的确认。\n\n两项核验的真实性均未核验，本报告不涉及真实性结论。\n\n---\n\n## 最小补件与复核建议\n\n针对结果中明确存在的差异，建议如下最小补件：\n\n1. **财报勾稽差额**：请提供资产、负债、权益三项中差异来源字段的更正或说明（如科目重分类、口径调整、录入更正），使资产等于负债加权益。\n2. **申请与用途合同差额**：请补充申请金额超出用途合同金额部分（173,456.78 元）的用途构成说明，或提供覆盖该差额的补充用途合同/报价，使申请金额与用途合同金额一致。\n\n复核建议：对上述补件材料进行人工复核，确认差额来源及用途范围后，再行评估。\n\n---\n\n## 人工复核草稿\n\n> 本草稿仅供人工复核，不包含最终审批决定。\n>\n> 1. 财报勾稽核验：上海示例制造有限公司 2025 年度财报（statement-001）中，资产 1,123,456.78 元与负债 650,000.00 元加权益 300,000.00 元（合计 950,000.00 元）不一致，差额 173,456.78 元。需复核资产、负债、权益来源字段。\n> 2. 申请与用途合同核验：申请表（application-001）申请金额 623,456.78 元与用途合同（contract-001）金额 450,000.00 元不一致，差额 173,456.78 元。主体、期间、币种、单位、业务口径（设备采购）均一致，属可比条件下的金额差异。\n> 3. 两项核验真实性均未核验（NOT_VERIFIED），不构成真实性结论。\n> 4. 建议补件：财报勾稽差额来源说明或更正；申请与用途合同差额的用途构成说明或补充合同。\n> 5. 请人工复核上述差异及补件后，再行后续评估。",
+  "explanationStatus": "FAILED",
+  "explanationError": "IllegalArgumentException: MODEL_EXPLANATION_AUTHENTICITY_STATUS_CONFLICT",
+  "deterministicResults": [
+    {
+      "schemaVersion": "capability-result.v1",
+      "requestId": "request-d85eb804-e007-4e84-9bd3-e4eee3dcc97d",
+      "traceId": "trace-117b5d45-6ce6-407e-b878-150fa5d901ed",
+      "status": "COMPLETED",
+      "content": "资产与负债加权益不一致，需人工复核来源字段。",
+      "data": {
+        "checkId": "financial-statement-equation",
+        "authenticityVerified": false,
+        "values": {
+          "difference": "173456.78",
+          "currency": "CNY",
+          "expectedAssets": "950000.00",
+          "actualAssets": "1123456.78",
+          "unit": "YUAN"
+        },
+        "approvalDecision": false,
+        "rule": {
+          "businessDate": "2026-10-18",
+          "version": "0.1.0",
+          "id": "demo-enterprise-material-verification",
+          "classification": "DEMO"
+        },
+        "authenticityStatus": "NOT_VERIFIED",
+        "authenticityAssessment": {
+          "status": "NOT_VERIFIED",
+          "meaning": "真实性尚未核验；不得解释为核验失败或材料虚假",
+          "basis": "NOT_PERFORMED_BY_THIS_CAPABILITY"
+        },
+        "verificationBasis": {
+          "dimensions": [
+            {
+              "outcome": "RECORDED",
+              "name": "subject",
+              "label": "主体",
+              "values": [
+                {
+                  "value": "上海示例制造有限公司",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/subject"
+                  },
+                  "materialId": "statement-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f"
+                }
+              ]
+            },
+            {
+              "outcome": "RECORDED",
+              "name": "period",
+              "label": "期间",
+              "values": [
+                {
+                  "value": {
+                    "end": "2025-12-31",
+                    "start": "2025-01-01",
+                    "label": "2025"
+                  },
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/period"
+                  },
+                  "materialId": "statement-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f"
+                }
+              ]
+            },
+            {
+              "outcome": "RECORDED",
+              "name": "currency",
+              "label": "币种",
+              "values": [
+                {
+                  "value": "CNY",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/currency"
+                  },
+                  "materialId": "statement-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f"
+                }
+              ]
+            },
+            {
+              "outcome": "RECORDED",
+              "name": "unit",
+              "label": "计量单位",
+              "values": [
+                {
+                  "value": "YUAN",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/unit"
+                  },
+                  "materialId": "statement-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f"
+                }
+              ]
+            },
+            {
+              "outcome": "RECORDED",
+              "name": "businessBasis",
+              "label": "业务口径",
+              "values": [
+                {
+                  "value": "BOOK",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/businessBasis"
+                  },
+                  "materialId": "statement-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f"
+                }
+              ]
+            }
+          ],
+          "mode": "SINGLE_MATERIAL",
+          "outcome": "RECORDED"
+        },
+        "advisoryOnly": true,
+        "status": "INCONSISTENT",
+        "materialSetRef": "materials-010632c5c91f4d2daaab0ee540761d19",
+        "materialSetDigestRefs": [
+          "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f",
+          "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455",
+          "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+        ],
+        "evidence": [
+          {
+            "field": "assets",
+            "fieldStatus": "EXTRACTED",
+            "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f",
+            "materialId": "statement-001",
+            "materialVersion": "1",
+            "value": 1123456.78,
+            "sourceLocator": {
+              "kind": "JSON_POINTER",
+              "value": "/fields/assets"
+            }
+          },
+          {
+            "field": "liabilities",
+            "fieldStatus": "EXTRACTED",
+            "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f",
+            "materialId": "statement-001",
+            "materialVersion": "1",
+            "value": 650000,
+            "sourceLocator": {
+              "kind": "JSON_POINTER",
+              "value": "/fields/liabilities"
+            }
+          },
+          {
+            "field": "equity",
+            "fieldStatus": "EXTRACTED",
+            "materialDigest": "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f",
+            "materialId": "statement-001",
+            "materialVersion": "1",
+            "value": 300000,
+            "sourceLocator": {
+              "kind": "JSON_POINTER",
+              "value": "/fields/equity"
+            }
+          }
+        ]
+      },
+      "missingInputs": [],
+      "nextActions": [
+        "REVIEW_SOURCE_FIELDS",
+        "HUMAN_REVIEW"
+      ],
+      "sourceSystem": "synthetic-enterprise-materials",
+      "asOf": "2026-10-18T06:52:50.846039444Z"
+    },
+    {
+      "schemaVersion": "capability-result.v1",
+      "requestId": "request-d85eb804-e007-4e84-9bd3-e4eee3dcc97d",
+      "traceId": "trace-117b5d45-6ce6-407e-b878-150fa5d901ed",
+      "status": "COMPLETED",
+      "content": "申请与用途合同金额不一致，需核对用途范围或补充差额说明。",
+      "data": {
+        "checkId": "application-contract-consistency",
+        "authenticityVerified": false,
+        "values": {
+          "difference": "173456.78",
+          "contractAmount": "450000.00",
+          "businessBasis": "EQUIPMENT_PURCHASE",
+          "applicationAmount": "623456.78",
+          "subject": "上海示例制造有限公司",
+          "currency": "CNY"
+        },
+        "approvalDecision": false,
+        "rule": {
+          "businessDate": "2026-10-18",
+          "version": "0.1.0",
+          "id": "demo-enterprise-material-verification",
+          "classification": "DEMO"
+        },
+        "authenticityStatus": "NOT_VERIFIED",
+        "authenticityAssessment": {
+          "status": "NOT_VERIFIED",
+          "meaning": "真实性尚未核验；不得解释为核验失败或材料虚假",
+          "basis": "NOT_PERFORMED_BY_THIS_CAPABILITY"
+        },
+        "verificationBasis": {
+          "dimensions": [
+            {
+              "outcome": "MATCH",
+              "name": "subject",
+              "label": "主体",
+              "values": [
+                {
+                  "value": "上海示例制造有限公司",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/subject"
+                  },
+                  "materialId": "application-001",
+                  "materialVersion": "1",
+                  "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455"
+                },
+                {
+                  "value": "上海示例制造有限公司",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/subject"
+                  },
+                  "materialId": "contract-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+                }
+              ]
+            },
+            {
+              "outcome": "MATCH",
+              "name": "period",
+              "label": "期间",
+              "values": [
+                {
+                  "value": {
+                    "end": "2026-12-31",
+                    "start": "2026-09-01",
+                    "label": "项目期"
+                  },
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/period"
+                  },
+                  "materialId": "application-001",
+                  "materialVersion": "1",
+                  "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455"
+                },
+                {
+                  "value": {
+                    "end": "2026-12-31",
+                    "start": "2026-09-01",
+                    "label": "项目期"
+                  },
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/period"
+                  },
+                  "materialId": "contract-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+                }
+              ]
+            },
+            {
+              "outcome": "MATCH",
+              "name": "currency",
+              "label": "币种",
+              "values": [
+                {
+                  "value": "CNY",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/currency"
+                  },
+                  "materialId": "application-001",
+                  "materialVersion": "1",
+                  "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455"
+                },
+                {
+                  "value": "CNY",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/currency"
+                  },
+                  "materialId": "contract-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+                }
+              ]
+            },
+            {
+              "outcome": "MATCH",
+              "name": "unit",
+              "label": "计量单位",
+              "values": [
+                {
+                  "value": "YUAN",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/unit"
+                  },
+                  "materialId": "application-001",
+                  "materialVersion": "1",
+                  "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455"
+                },
+                {
+                  "value": "YUAN",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/unit"
+                  },
+                  "materialId": "contract-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+                }
+              ]
+            },
+            {
+              "outcome": "MATCH",
+              "name": "businessBasis",
+              "label": "业务口径",
+              "values": [
+                {
+                  "value": "EQUIPMENT_PURCHASE",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/businessBasis"
+                  },
+                  "materialId": "application-001",
+                  "materialVersion": "1",
+                  "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455"
+                },
+                {
+                  "value": "EQUIPMENT_PURCHASE",
+                  "sourceLocator": {
+                    "kind": "JSON_POINTER",
+                    "value": "/businessBasis"
+                  },
+                  "materialId": "contract-001",
+                  "materialVersion": "1",
+                  "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+                }
+              ]
+            }
+          ],
+          "mode": "CROSS_MATERIAL",
+          "outcome": "COMPARABLE"
+        },
+        "advisoryOnly": true,
+        "status": "INCONSISTENT",
+        "materialSetRef": "materials-010632c5c91f4d2daaab0ee540761d19",
+        "materialSetDigestRefs": [
+          "0c4f26309eb8476af113c17da4d351a065aef16f18fd6d962b65a02e4b2e868f",
+          "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455",
+          "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6"
+        ],
+        "evidence": [
+          {
+            "field": "requestedAmount",
+            "fieldStatus": "EXTRACTED",
+            "materialDigest": "d8bc93378e8fd8d1684f2cdaf70e6b6f462db1af7f295ef03dcdc821e950d455",
+            "materialId": "application-001",
+            "materialVersion": "1",
+            "value": 623456.78,
+            "sourceLocator": {
+              "kind": "JSON_POINTER",
+              "value": "/fields/requestedAmount"
+            }
+          },
+          {
+            "field": "contractAmount",
+            "fieldStatus": "EXTRACTED",
+            "materialDigest": "0bba5daaaf32dc308227150d12b46cc781faa5a34f1fd42a20274f73733f25c6",
+            "materialId": "contract-001",
+            "materialVersion": "1",
+            "value": 450000,
+            "sourceLocator": {
+              "kind": "JSON_POINTER",
+              "value": "/fields/contractAmount"
+            }
+          }
+        ]
+      },
+      "missingInputs": [],
+      "nextActions": [
+        "REVIEW_SOURCE_FIELDS",
+        "HUMAN_REVIEW"
+      ],
+      "sourceSystem": "synthetic-enterprise-materials",
+      "asOf": "2026-10-18T06:52:50.882446814Z"
+    }
+  ]
+}
