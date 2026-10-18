@@ -21,39 +21,64 @@ try {
   page.on('request', request => {
     if (request.resourceType() !== 'document' && !/^data:image\/(svg\+xml|png);base64,/.test(request.url())) evidence.extraRequests.push(request.url());
   });
-  for (const [name, width, height] of [['desktop',1440,1000], ['tablet',820,1000], ['mobile',390,844], ['narrow',320,740]]) {
+  for (const [name, width, height] of [['desktop',1440,1000], ['tablet',820,1000], ['mobile',390,844], ['mobile375',375,812], ['narrow',320,740]]) {
     await page.setViewportSize({ width, height });
     const response = await page.goto(url, { waitUntil: 'networkidle' });
     if (liveUrl) check(`${name}:anonymous_200`, response.status() === 200);
     await page.locator('#article h1').waitFor();
     const book = await page.locator('#book-data').textContent().then(JSON.parse);
-    check(`${name}:only_reviewed_public_document`, book.pages.length === 1 && book.sourceCount === 0 && book.pages[0].id === 'public/developer-guide.md');
-    check(`${name}:no_internal_addresses`, isSafePublicText(book.pages[0].text));
+    check(`${name}:three_reviewed_public_documents`, book.pages.length === 3 && book.sourceCount === 0 && book.pages[0].id === 'public/start.md');
+    check(`${name}:no_internal_addresses`, book.pages.every(p => isSafePublicText(p.text)));
+    check(`${name}:home_fits`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    const cta = page.locator('#article a.guide-start').first();
+    check(`${name}:primary_task_visible`, (await cta.boundingBox()).y < height);
+    await page.screenshot({path:path.join(output,`${name}-home.png`)});
+    await cta.click();
+    await page.locator('#step-1').waitFor();
+    await page.locator('#materials').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    check(`${name}:seven_steps`, await page.locator('#article h2[id^="step-"]').count() === 7);
+    check(`${name}:tutorial_fits`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({path:path.join(output,`${name}-tutorial.png`)});
+    if (name === 'desktop' && !liveUrl) {
+      const pending = page.waitForEvent('download');
+      await page.locator('#article a[download]').click();
+      const download = await pending;
+      await download.saveAs(path.join(output,'downloaded-cases.json'));
+      check('download:cases_match', fs.readFileSync(path.join(output,'downloaded-cases.json')).equals(fs.readFileSync(path.join(output,'first-agent-cases.json'))));
+    }
+    await page.locator('[data-reference]').first().click();
+    check(`${name}:source_location`, await page.locator('#reference-path').textContent().then(t => t.includes(edition.harnessExecutionCommit)));
+    await page.locator('#close-dialog').click();
+    if (width <= 880) await page.locator('#menu').click();
+    await page.locator('#search').fill('cashflow-review');
+    await page.waitForTimeout(200);
+    check(`${name}:full_text_search`, await page.locator('#navigation a').count() >= 1);
+    await page.locator('#clear').click();
+    await page.locator('#navigation a[href*="developer-guide.md"]').click();
+    await page.waitForFunction(() => document.querySelector('#article h1')?.textContent.includes('开发指导'));
     const externalLinks = await page.locator('#article a[href^="https://"]').evaluateAll(links => links.map(link => ({href:link.getAttribute('href'),rel:link.rel})));
     check(`${name}:only_four_reviewed_external_links`, externalLinks.length === 4 && externalLinks.every(link => reviewedPublicLinks.has(link.href) && link.rel.includes('noreferrer')));
     check(`${name}:page_fits`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    check(`${name}:seventeen_chapters`, await page.locator('.sidebar-chapters a').count() === 17);
+    check(`${name}:seventeen_chapters`, await page.locator('#article h2').count() === 17);
     check(`${name}:three_embedded_diagrams`, await page.locator('img.harness-diagram').count() === diagramPaths.length);
     check(`${name}:edition_matches`, book.baseline === edition.version && book.date === edition.date);
     check(`${name}:real_ui_screenshots`, await page.locator('img.harness-screenshot').count() === screenshotPaths.length);
     check(`${name}:screenshots_render`, await page.locator('img.harness-screenshot').evaluateAll(images => images.every(img => img.complete && img.naturalWidth >= 1280 && img.alt)));
     check(`${name}:diagrams_render`, await page.locator('img.harness-diagram').evaluateAll(images => images.every(img => img.complete && img.naturalWidth > 1000 && img.getBoundingClientRect().height > 100 && img.alt)));
-    check(`${name}:granularity_and_self_test_guidance`, ['沉淀粒度', 'Profile', 'Integrator', 'Provider', 'run-controlled.sh', 'verify_wealth_kit.py', '独立接入'].every(term => book.pages[0].text.includes(term)));
-    check(`${name}:internal_link_separate`, await page.locator('.internal-guide').getAttribute('href') === '/developer-guide/internal/');
+    check(`${name}:granularity_and_self_test_guidance`, ['沉淀粒度', 'Profile', 'Integrator', 'Provider', 'run-controlled.sh', 'verify_wealth_kit.py', '独立接入'].every(term => book.pages[2].text.includes(term)));
+    check(`${name}:internal_link_separate`, await page.locator('a[href="/developer-guide/internal/"]').count() === 1);
     await page.screenshot({ path: path.join(output, `${liveUrl ? 'live-' : ''}${name}.png`) });
-    if (width <= 880) {
-      await page.locator('#menu').click();
-      check(`${name}:menu_opens`, await page.locator('#menu').getAttribute('aria-expanded') === 'true');
-    }
-    await page.locator('.sidebar-chapters a').nth(7).click();
+    const reference = book.pages[2];
+    const chapter = reference.headings.filter(h => h.depth === 2)[7];
+    await page.evaluate(id => {location.hash = `#doc=public%2Fdeveloper-guide.md&section=${id}`;}, chapter.id);
     await page.waitForFunction(() => location.hash.includes('section='));
     check(`${name}:chapter_navigation`, (await page.locator('#article h2').nth(7).textContent()).includes('路径 A'));
     check(`${name}:menu_closes`, await page.locator('#menu').getAttribute('aria-expanded') === 'false');
-    if (width <= 880) await page.locator('#menu').click();
-    await page.locator('.sidebar-chapters a').nth(16).click();
+    await page.evaluate(id => {location.hash = `#doc=public%2Fdeveloper-guide.md&section=${id}`;}, reference.headings.filter(h => h.depth === 2)[16].id);
     if (width <= 880) await page.waitForFunction(() => document.getElementById('sidebar').getBoundingClientRect().right <= 1);
     await page.getByRole('heading', { name: '16. 从看懂资产到开发一个新特性', exact: true }).scrollIntoViewIfNeeded();
-    check(`${name}:development_navigation`, book.pages[0].text.includes('后续金融新特性统一交付卡'));
+    check(`${name}:development_navigation`, book.pages[2].text.includes('后续金融新特性统一交付卡'));
     check(`${name}:development_no_overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: path.join(output, `${liveUrl ? 'live-' : ''}${name}-development.png`) });
     await page.locator('[data-screenshot="cashflow-relations"]').scrollIntoViewIfNeeded();
@@ -98,4 +123,10 @@ try {
   }
   fs.writeFileSync(path.join(output, `${liveUrl ? 'live-' : ''}verification.json`), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify({ mode: evidence.mode, checks: evidence.checks.length, errors: evidence.errors, extraRequests: evidence.extraRequests }));
-} finally { await browser.close(); }
+} catch (error) {
+  evidence.errors.push(error.stack);
+  throw error;
+} finally {
+  fs.writeFileSync(path.join(output, `${liveUrl ? 'live-' : ''}verification.json`), JSON.stringify(evidence, null, 2));
+  await browser.close();
+}
