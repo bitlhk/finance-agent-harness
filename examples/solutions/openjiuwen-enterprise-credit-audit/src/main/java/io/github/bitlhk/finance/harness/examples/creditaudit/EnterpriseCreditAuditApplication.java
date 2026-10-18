@@ -73,6 +73,7 @@ public final class EnterpriseCreditAuditApplication {
         String response = "";
         String explanationStatus = "FAILED";
         String explanationError = "MODEL_NOT_RUN";
+        Map<String, Object> explanationValidation = Map.of();
         boolean started = false;
         String conversation = "credit-audit-" + UUID.randomUUID();
         Instant startedAt = Instant.now();
@@ -92,6 +93,8 @@ public final class EnterpriseCreditAuditApplication {
             } catch (Exception exception) {
                 if(exception instanceof SecurityException || exception instanceof ScenarioEvidence.Unavailable)throw exception;
                 explanationError = exception.getClass().getSimpleName() + ": " + safe(exception.getMessage());
+                if (exception instanceof AuditAuthenticityPolicy.Rejected rejection)
+                    explanationValidation = rejection.diagnostic();
             }
             Files.createDirectories(output.getParent());
             Path lock = output.resolveSibling(output.getFileName() + ".lock.json");
@@ -103,6 +106,7 @@ public final class EnterpriseCreditAuditApplication {
             report.put("explanationStatus", explanationStatus);
             report.put("explanation", response);
             report.put("explanationError", explanationError);
+            if (!explanationValidation.isEmpty()) report.put("explanationValidation", explanationValidation);
             report.put("model", settings.model());
             report.put("modelParameters", Map.of("temperature", 0.1, "maxTokens", 2200,
                     "thinking", "disabled"));
@@ -254,48 +258,7 @@ public final class EnterpriseCreditAuditApplication {
                     throw new IllegalArgumentException("MODEL_EXPLANATION_CONTRADICTS_CONFIRMED_BASIS:" + label);
                 }
             }
-            boolean notVerified=results.stream().anyMatch(result->"NOT_VERIFIED".equals(result.data().get("authenticityStatus")));
-            boolean allExplicitlyFailed=!results.isEmpty()&&results.stream().allMatch(result->"FAILED".equals(result.data().get("authenticityStatus")));
-            if(notVerified&&!allExplicitlyFailed&&unsupportedAuthenticityClaim(response))
-                throw new IllegalArgumentException("MODEL_EXPLANATION_AUTHENTICITY_STATUS_CONFLICT");
-        }
-
-        private static boolean unsupportedAuthenticityClaim(String response) {
-            for(String phrase:List.of("未通过真实性验证","真实性验证失败","真实性核验失败","材料虚假","真实性不合格")){
-                int offset=0;
-                while((offset=response.indexOf(phrase,offset))>=0){
-                    int boundary=0;
-                    for(String marker:List.of("，",",","；",";","。","！","!","？","?","但","然而","却")){
-                        int index=response.lastIndexOf(marker,offset-1);
-                        if(index>=0)boundary=Math.max(boundary,index+marker.length());
-                    }
-                    String before=response.substring(boundary,offset);
-                    String after=response.substring(offset+phrase.length(),Math.min(response.length(),offset+phrase.length()+48));
-                    boolean negated=negatesAuthenticityClaim(before);
-                    boolean attributed=before.matches("(?s).*(引用|原话|声称|表示|(?:有人|外部人员|报告)?说)[：:“”\"']?.{0,20}$");
-                    boolean rejected=after.matches("(?s)^[”\"']?[，,]?\\s*(?:但|然而)?(?:当前尚未核验[，,])?"
-                            + "(?:不能采信|不采信|不认可|不得据此|仅为转述|不作为结论).*");
-                    if(!negated&&!(attributed&&rejected))return true;
-                    offset+=phrase.length();
-                }
-            }
-            return false;
-        }
-
-        private static boolean negatesAuthenticityClaim(String before) {
-            // Only a bounded claim-list can inherit negation, not arbitrary later assertions.
-            var denial=java.util.regex.Pattern.compile(
-                    "(?:不能|不得|不应|不可|无法)(?:据此|直接|明确)?(?:说|声称|认定|判断|说明|证明)?"
-                    + "|不构成|不代表|不意味着|不等于|没有证据证明").matcher(before);
-            while(denial.find()) {
-                String prefix=before.substring(0,denial.start());
-                if(prefix.matches("(?s).*(并非|不是|不能|不得|不应|无法|没有|并不)(?:说|认为)?$"))continue;
-                String tail=before.substring(denial.end());
-                if(tail.length()>64)continue;
-                if(tail.matches("(?:核验失败|真实性验证失败|未通过真实性验证|真实性核验失败|真实性不合格|材料虚假|"
-                        + "结论|的|或|以及|和|也|[\\s“”\"'：:])*"))return true;
-            }
-            return false;
+            AuditAuthenticityPolicy.requireAllowed(response, results);
         }
 
         private static Set<String> confirmedDimensions(List<CapabilityResultV1> results) {

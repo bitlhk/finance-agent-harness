@@ -62,7 +62,8 @@ class ExplanationGuardTest {
 
     private static CapabilityResultV1 resultWithAuthenticity(String status,boolean verified) {
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"request-auth","trace-auth",
-                CapabilityResultV1.Status.COMPLETED,"完成",Map.of("authenticityStatus",status,"authenticityVerified",verified),
+                CapabilityResultV1.Status.COMPLETED,"完成",Map.of("authenticityStatus",status,"authenticityVerified",verified,
+                "checkId","financial-statement-equation","materialSetRef","materials-auth-fixture"),
                 List.of(),List.of(),"synthetic",Instant.now(),null,null);
     }
 }
