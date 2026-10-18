@@ -45,7 +45,10 @@ export function loadPublicPages(root, edition) {
     renderer.heading = function(t) { return `<h${t.depth} id="${page.headings[heading++].id}">${this.parser.parseInline(t.tokens)}</h${t.depth}>`; };
     renderer.link = function(t) {
       const label = this.parser.parseInline(t.tokens);
-      if (t.href === 'first-agent-cases.json') return `<a href="first-agent-cases.json" download>${label}</a>`;
+      if (t.href === 'first-agent-cases.json') {
+        const bytes = fs.readFileSync(path.join(root, 'docs/public/first-agent-cases.json'));
+        return `<a href="data:application/json;base64,${bytes.toString('base64')}" download="first-agent-cases.json">${label}</a>`;
+      }
       if (t.href.startsWith('source:')) {
         const ref = sourceReferences[t.href.slice(7)];
         if (!ref) throw new Error(`Unknown source: ${t.href}`);
