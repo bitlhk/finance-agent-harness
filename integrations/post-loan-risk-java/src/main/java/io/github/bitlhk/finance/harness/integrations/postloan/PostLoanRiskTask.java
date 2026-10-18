@@ -292,7 +292,12 @@ final class PostLoanRiskTask implements AutoCloseable {
                 boolean doubleNegative=before.matches("(?s).*(不能不|并非不能|不是不能|不得不).{0,12}$");
                 boolean negated=!doubleNegative&&before.matches(
                         "(?s).*(尚?不能|无法|不得|不应|不可|尚未|未能)(?:据此|直接|明确)?(?:说|声称|确定|认定|判断|说明|证明|保证)?[^，,；;。！？!?但然而却]{0,32}(?:或|以及|和)?$");
-                if(!negated)return true;
+                String after=text.substring(offset+phrase.length());
+                // A request to verify freshness is not a freshness conclusion. Limit it to this predicate.
+                boolean pending=before.matches("(?:仍需|尚需|需要|需|有待|待)(?:进一步|人工)?(?:核实|核验|确认|评估)(?:是否)?")
+                        &&after.matches("(?s)^(?:性)?(?:[。；;，,！？!?]|$).*");
+                pending|=before.isBlank()&&after.matches("(?s)^性(?:尚|仍)?待(?:人工)?(?:核实|核验|确认|评估)(?:[。；;，,！？!?]|$).*");
+                if(!negated&&!pending)return true;
                 offset+=phrase.length();
             }
         }
