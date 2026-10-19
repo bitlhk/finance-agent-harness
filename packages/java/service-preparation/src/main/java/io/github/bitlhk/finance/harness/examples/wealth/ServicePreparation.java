@@ -45,8 +45,10 @@ public final class ServicePreparation implements AutoCloseable {
         default void stage(String stage, JsonNode snapshot) throws Exception {}
         default void reportDelta(ReportDelta delta) throws Exception {}
     }
+    private static final class Completion { boolean cancelled; boolean finished; }
     private record Selection(long generation, String alias, String customer, String goal,
-                             JsonNode taskContext, Mapping mapping, PreparationAccess.Snapshot authority) {}
+                             JsonNode taskContext, Mapping mapping, PreparationAccess.Snapshot authority,
+                             Completion completion) {}
     private final String owner;
     private final PreparationAccess access;
     private final Supplier<Mapping> mappings;
@@ -112,10 +114,34 @@ public final class ServicePreparation implements AutoCloseable {
         String customer = m.customers().get(alias);
         var authority = access.authorize(customer);
         if (taskContext == null || !taskContext.isObject()) throw new IllegalArgumentException("TASK_CONTEXT_INVALID");
-        selected = new Selection(generation, alias, customer, goal, taskContext.deepCopy(), m, authority);
+        selected = new Selection(generation, alias, customer, goal, taskContext.deepCopy(), m, authority, new Completion());
         return generation;
     }
+    public synchronized String cancel(String caller, long expectedGeneration) throws Exception {
+        owner(caller);
+        if (selected == null || selected.generation() != expectedGeneration) return "NOT_ACTIVE";
+        if (selected.completion().cancelled) return "CANCELLED";
+        if (selected.completion().finished) return "NOT_ACTIVE";
+        if (activeRun != null) {
+            // Only the last durable snapshot is retained; a late model result cannot rewrite it.
+            ObjectNode saved = (ObjectNode) HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(activeRun)));
+            saved.remove(List.of("modelSuggestion", "fallbackSuggestion"));
+            saved.put("status", "CANCELLED"); saved.put("explanationStatus", "CANCELLED");
+            saved.put("finishedAt", Instant.now().toString());
+            if (saved.path("modelDiagnostics").isObject()) {
+                ObjectNode diagnostics=(ObjectNode)saved.get("modelDiagnostics");
+                diagnostics.put("status","CANCELLED");diagnostics.put("stage","RESULT_RELEASE_CANCELLED");
+                diagnostics.put("terminationSource","USER_REQUEST");
+                diagnostics.put("upstreamTerminationObserved",false);
+            }
+            saved.withArray("events").add("USER_CANCELLED_RESULT_RELEASE");
+            persist(saved);
+        }
+        selected.completion().cancelled = true;
+        return "CANCELLED";
+    }
     private void current(Selection s, String run) {
+        if (s.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
         if (closed || selected != s || !Objects.equals(run, activeRun)
                 || !s.mapping().equals(mappings.get())
                 || !s.authority().equals(access.authorize(s.customer()))) {
@@ -273,7 +299,8 @@ public final class ServicePreparation implements AutoCloseable {
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
                     report.withArray("events").add("MODEL_SUGGESTION_COMMITTED");
                 } catch (Exception failure) {
-                    if(failure instanceof SecurityException || failure instanceof ScenarioEvidence.Unavailable)throw failure;
+                    if(failure instanceof SecurityException || failure instanceof ScenarioEvidence.Unavailable
+                            || failure instanceof java.util.concurrent.CancellationException)throw failure;
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
                     boolean timedOut = causedByTimeout(failure);
@@ -297,21 +324,32 @@ public final class ServicePreparation implements AutoCloseable {
             }
             report.put("finishedAt",Instant.now().toString());
             report.withArray("events").add("FACT_QUERY_FINISHED").add("REPORT_GENERATED");
-            synchronized (this) { current(s,run); persist(report);proof.check("PAGE_RELEASE",authorize,report); return report.deepCopy(); }
+            synchronized (this) {
+                current(s,run); persist(report); proof.check("PAGE_RELEASE",authorize,report);
+                s.completion().finished = true;
+                return report.deepCopy();
+            }
         } catch (ScenarioEvidence.Unavailable unavailable) {
             report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
             report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
             report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
-            try { persist(report); } catch(Exception storageFailure) { /* No claim that a failed store retained the receipt. */ }
+            synchronized (this) {
+                if (!s.completion().cancelled) {
+                    try { persist(report); } catch(Exception storageFailure) { /* No claim that a failed store retained the receipt. */ }
+                }
+            }
             throw unavailable;
         } catch (SecurityException stale) {
             synchronized (this) {
+                if (s.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
                 ObjectNode discarded = report.deepCopy();
                 discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
                 discarded.put("status","DISCARDED"); discarded.withArray("events").add("LATE_RESULT_DISCARDED");
                 persist(discarded);
             }
             throw stale;
+        } finally {
+            synchronized (this) { s.completion().finished = true; }
         }
     }
     public synchronized ObjectNode read(String caller, String id) throws Exception {
