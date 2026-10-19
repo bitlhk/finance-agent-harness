@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.13",
+  "catalogVersion": "0.2.14",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -363,6 +363,24 @@
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "quotation-consultation-readonly",
+      "version": "0.1.0",
+      "displayName": "只读报价咨询（候选，需实际披露控制）",
+      "source": "repo://capability-packs/quotation-consultation-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "quotation.offer.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
     {
       "id": "curated-synthetic-wealth",
       "version": "1.1.0",
@@ -737,6 +755,25 @@
   ],
   "providers": [
     {
+      "id": "quotation-synthetic-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "合成报价参考源（候选，非银行授权）",
+      "source": "repo://providers/quotation-reference",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-quotation-reference:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "quotation.offer.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
       "id": "curated-synthetic-mcp",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "受控评测合成 MCP Provider",
@@ -965,7 +1002,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-11.post-loan-risk-verification-mvp-1",
+  "catalogRevision": "2026-10-19.quotation-h1-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

@@ -1,0 +1,1470 @@
+{
+  "schemaVersion": "quotation-case-manifest.v1",
+  "frozenBeforeImplementation": true,
+  "cases": [
+    {
+      "id": "Q001",
+      "label": "正常九折",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "ALLOWED"
+    },
+    {
+      "id": "Q002",
+      "label": "一折精确语义",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "100.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 1000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "ALLOWED"
+    },
+    {
+      "id": "Q003",
+      "label": "零参考价不等于免所有费",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "0.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 0,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "ALLOWED"
+    },
+    {
+      "id": "Q004",
+      "label": "零原价无虚构折扣",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "0.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "0.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 10000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "ALLOWED"
+    },
+    {
+      "id": "Q005",
+      "label": "同数错客户",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-b",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "SUBJECT_MISMATCH"
+    },
+    {
+      "id": "Q006",
+      "label": "同数错产品",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-002",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "PRODUCT_MISMATCH"
+    },
+    {
+      "id": "Q007",
+      "label": "错币种",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "USD",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q008",
+      "label": "有效期终点拒绝",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T13:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "QUOTE_EXPIRED"
+    },
+    {
+      "id": "Q009",
+      "label": "未来报价",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T12:01:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "NOT_YET_VALID"
+    },
+    {
+      "id": "Q010",
+      "label": "金额折扣冲突",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9999,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "PRICE_CONFLICT"
+    },
+    {
+      "id": "Q011",
+      "label": "精度超限",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.001",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q012",
+      "label": "指数金额",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "9e2",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q013",
+      "label": "数字不得转字符串",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": 900,
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q014",
+      "label": "额外自由文本",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rawText": "已锁定一折"
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q015",
+      "label": "未经允许保证承诺",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE",
+            "GUARANTEED"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q016",
+      "label": "未知条件",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "MODEL_APPROVED",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q017",
+      "label": "旧来源版本",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v0",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "SOURCE_MISMATCH"
+    },
+    {
+      "id": "Q018",
+      "label": "错误配置摘要",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "SOURCE_MISMATCH"
+    },
+    {
+      "id": "Q019",
+      "label": "未来观察时间",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T12:01:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "SOURCE_TIME_INVALID"
+    },
+    {
+      "id": "Q020",
+      "label": "非法日历",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-02-30T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q021",
+      "label": "来源不可用",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "UNAVAILABLE",
+        "quote": null,
+        "gaps": [
+          "SOURCE_UNAVAILABLE"
+        ],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "UNAVAILABLE"
+    },
+    {
+      "id": "Q022",
+      "label": "缺失状态不能带旧价",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "MISSING",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [
+          "MISSING_QUOTE"
+        ],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": false,
+      "disclosureReason": "STRUCTURE_INVALID"
+    },
+    {
+      "id": "Q023",
+      "label": "零原价不得虚造折扣",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "0.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "0.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "PRICE_CONFLICT"
+    },
+    {
+      "id": "Q024",
+      "label": "同价不得无来源优惠措辞",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 10000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:30:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T12:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "CLAIM_CONFLICT"
+    },
+    {
+      "id": "Q025",
+      "label": "有效期起点允许",
+      "payload": {
+        "schemaVersion": "quote-facts.v0.1",
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "state": "AVAILABLE",
+        "quote": {
+          "quoteId": "demo-quote-001",
+          "listPrice": {
+            "value": "1000.00",
+            "currency": "CNY"
+          },
+          "referencePrice": {
+            "value": "900.00",
+            "currency": "CNY"
+          },
+          "priceFactorBps": 9000,
+          "priceBasis": "PER_UNIT",
+          "validFrom": "2026-10-19T11:00:00Z",
+          "validUntil": "2026-10-19T13:00:00Z",
+          "eligibility": "ELIGIBLE",
+          "conditions": [
+            {
+              "code": "DEMO_MEMBER_ELIGIBLE",
+              "state": "SATISFIED"
+            }
+          ],
+          "claimCodes": [
+            "REFERENCE_UNIT_PRICE",
+            "CONDITIONAL_PRICE"
+          ],
+          "effect": "INFORMATION_ONLY"
+        },
+        "gaps": [],
+        "source": {
+          "sourceKind": "CONTROLLED_FIXTURE",
+          "sourceId": "quotation-synthetic-reference",
+          "sourceVersion": "demo-v1",
+          "recordRef": "demo-record-001",
+          "observedAt": "2026-10-19T11:00:00Z",
+          "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "binding": {
+        "subjectRef": "demo-customer-a",
+        "productRef": "demo-service-001",
+        "currency": "CNY",
+        "contractVersion": "quote-facts.v0.1",
+        "sourceId": "quotation-synthetic-reference",
+        "sourceVersion": "demo-v1",
+        "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": "2026-10-19T11:00:00Z",
+      "schemaValid": true,
+      "disclosureReason": "ALLOWED"
+    }
+  ],
+  "deferred": [
+    {
+      "stage": "H2",
+      "scenario": "真实Host撤权/流式首片段/SDK及出口"
+    },
+    {
+      "stage": "H3",
+      "scenario": "Builder审批、交付及跨Harness迁移资格"
+    }
+  ]
+}

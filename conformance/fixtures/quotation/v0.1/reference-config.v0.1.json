@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "quotation-reference-config.v0.1",
+  "sourceId": "quotation-synthetic-reference",
+  "sourceVersion": "demo-v1",
+  "subjects": [
+    {
+      "subjectRef": "demo-customer-a",
+      "productRefs": [
+        "demo-service-001"
+      ]
+    }
+  ],
+  "records": [
+    {
+      "subjectRef": "demo-customer-a",
+      "productRef": "demo-service-001",
+      "currency": "CNY",
+      "state": "AVAILABLE",
+      "quote": {
+        "quoteId": "demo-quote-001",
+        "listPrice": {
+          "value": "1000.00",
+          "currency": "CNY"
+        },
+        "referencePrice": {
+          "value": "900.00",
+          "currency": "CNY"
+        },
+        "priceFactorBps": 9000,
+        "priceBasis": "PER_UNIT",
+        "validFrom": "2026-10-19T11:00:00Z",
+        "validUntil": "2026-10-19T13:00:00Z",
+        "eligibility": "ELIGIBLE",
+        "conditions": [
+          {
+            "code": "DEMO_MEMBER_ELIGIBLE",
+            "state": "SATISFIED"
+          }
+        ],
+        "claimCodes": [
+          "REFERENCE_UNIT_PRICE",
+          "CONDITIONAL_PRICE"
+        ],
+        "effect": "INFORMATION_ONLY"
+      },
+      "gaps": [],
+      "recordRef": "demo-record-001",
+      "observedAt": "2026-10-19T11:30:00Z"
+    }
+  ]
+}
