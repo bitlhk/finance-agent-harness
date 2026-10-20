@@ -63,7 +63,8 @@ final class ConversationHostTest {
         taskReference.set(task);
         return new CustomerManagerScenarioExtension.Managed("owner-a", "session-a", task, method,
                 new ConversationCapabilities(Set.of(ConversationIntent.Kind.PREPARE), List.of("wealth.previsit-context.query")),
-                "instance-a", proposer,scope::get);
+                "instance-a", proposer,scope::get,
+                new io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence(files,Map::of));
     }
     private static JsonNode body(String query, String confirmation) {
         var value = HarnessJson.mapper().createObjectNode().put("query", query).put("runId", UUID.randomUUID().toString())
@@ -78,6 +79,64 @@ final class ConversationHostTest {
     private static final String MISSING_OBJECT=PROPOSAL.replace("\"synthetic-a\"","null");
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
+    private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void naturalCapabilityReplyUsesRealSdkAndManagedReleaseChecksWithoutBusiness() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"我可以帮助准备客户回访，但不能购买产品。");
+            var session=session(model.proposer())) {
+            var events=new ArrayList<Map<String,Object>>();
+            var result=session.callStreaming("chat",body("你能干啥",null),events::add);
+            assertEquals("我可以帮助准备客户回访，但不能购买产品。",result.get("response"));
+            assertEquals("ANSWERED",result.get("status"));
+            assertEquals(2,model.requests.size(),"Intent and answer are two actual local SDK HTTP requests");
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            assertEquals(1,events.size());
+            assertEquals("finance.conversation.progress",events.getFirst().get("name"));
+            var progress=(Map<?,?>)events.getFirst().get("value");
+            assertEquals(result.get("response"),progress.get("text"));
+            assertEquals(false,progress.get("businessExecuted"));
+            assertEquals(1,progress.get("sequence"));
+            assertFalse(model.requests.get(1).toString().contains("synthetic-scope-a"));
+            assertFalse(model.requests.get(1).toString().contains("owner-a"));
+            try(var paths=java.nio.file.Files.list(files.resolve("decision-evidence"))) {
+                var stages=paths.map(p->{try{return HarnessJson.mapper().readTree(java.nio.file.Files.readAllBytes(p)).path("stage").asText();}
+                    catch(Exception failure){throw new AssertionError(failure);}}).toList();
+                assertTrue(stages.containsAll(List.of("RESPONSE_ENTRY","RESPONSE_TEXT_RELEASE","RESPONSE_COMPLETE_RELEASE")));
+            }
+        }
+    }
+    @Test @Timeout(30) void changedScopeWhileAnsweringBlocksTextAndFinalResult() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"不应释放");var session=session(model.proposer())) {
+            model.onRequest=ignored->{if(model.requests.size()==2)scope.set("changed");};
+            var events=new ArrayList<Map<String,Object>>();
+            assertThrows(SecurityException.class,()->session.callStreaming("chat",body("你是谁",null),events::add));
+            assertTrue(events.isEmpty());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void answerEntryEvidenceFailurePreventsSecondModelRequest() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"不应调用");var session=session(model.proposer())) {
+            java.nio.file.Files.createFile(files.resolve("decision-evidence"));
+            var events=new ArrayList<Map<String,Object>>();
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->session.callStreaming("chat",body("你是谁",null),events::add));
+            assertEquals(1,model.requests.size());assertTrue(events.isEmpty());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void answerReleaseEvidenceFailureDoesNotPublishText() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"不应释放");var session=session(model.proposer())) {
+            model.onRequest=ignored->{
+                if(model.requests.size()==2)try{
+                    java.nio.file.Files.move(files.resolve("decision-evidence"),files.resolve("retained-response-entry"));
+                    java.nio.file.Files.createFile(files.resolve("decision-evidence"));
+                }catch(Exception failure){throw new AssertionError(failure);}
+            };
+            var events=new ArrayList<Map<String,Object>>();
+            var failure=assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->session.callStreaming("chat",body("你是谁",null),events::add));
+            assertEquals("RESPONSE_TEXT_RELEASE",failure.stage());
+            assertEquals("INVOKED_SEND_UNOBSERVED",failure.providerDispatch());
+            assertEquals(2,model.requests.size());assertTrue(events.isEmpty());assertEquals(0,business.get());
+        }
+    }
     @Test @Timeout(30) void selectedVersionExplanationUsesNoNewBusinessQueryAndDoesNotRewriteReport() throws Exception {
         String[] replies={PROPOSAL,"",SAVED_ANSWER};
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(replies);var session=session(model.proposer())) {

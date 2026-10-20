@@ -16,6 +16,7 @@ import java.util.function.BooleanSupplier;
 final class OpenJiuwenIntentProposer {
     private final ReActAgent agent;
     private final OpenJiuwenSavedReportExplainer savedExplainer;
+    private final io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder responder;
     static final String INSTRUCTION = "你是意图分类器，不回答业务问题、不调用工具、不产生授权。只输出一个JSON对象，"
             + "严格包含schema、kind、objectRef、reportRef、revision五个字段，不得增加字段或代码围栏。"
             + "schema必须为finance-conversation-intent.v1。kind只可为GREETING、CAPABILITIES、LIST_OBJECTS、"
@@ -35,6 +36,7 @@ final class OpenJiuwenIntentProposer {
     OpenJiuwenIntentProposer(ManagedScenarioExtensionV01.ModelConnection model) {
         Objects.requireNonNull(model);
         savedExplainer=new OpenJiuwenSavedReportExplainer(model);
+        responder=new io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder(model);
         agent = new ReActAgent(AgentCard.builder().id("customer-manager-conversation-intent")
                 .name("Conversation intent proposal").description("Tool-free bounded intent proposal").build());
         var config = ReActAgentConfig.builder()
@@ -105,6 +107,13 @@ final class OpenJiuwenIntentProposer {
     }
     com.fasterxml.jackson.databind.node.ObjectNode explainSaved(String question,com.fasterxml.jackson.databind.JsonNode report,BooleanSupplier cancelled) throws Exception {
         return savedExplainer.explain(question,report,cancelled);
+    }
+    String respond(String question,
+            io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder.Context context,
+            BooleanSupplier cancelled,
+            io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder.ReleaseCheck check,
+            io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder.SnapshotSink sink) throws Exception {
+        return responder.respond(question,context,cancelled,check,sink);
     }
     static String content(Object value) {
         if (value instanceof String text) return text;

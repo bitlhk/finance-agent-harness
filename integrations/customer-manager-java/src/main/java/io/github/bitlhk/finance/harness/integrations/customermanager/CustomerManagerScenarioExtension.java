@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence;
+import io.github.bitlhk.finance.harness.integrations.openjiuwen.conversation.ConversationResponder;
 import io.github.bitlhk.finance.harness.core.spi.ManagedScenarioExtensionV01;
 import io.github.bitlhk.finance.harness.examples.wealth.*;
 import io.github.bitlhk.finance.harness.providers.customercrm.*;
@@ -42,7 +44,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
         return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
-                new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()));
+                new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
+                new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
     }
 
     static final class Managed implements Session {
@@ -53,6 +56,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final String instanceId;
         private final OpenJiuwenIntentProposer intentProposer;
         private final java.util.function.Supplier<String> scopeDigest;
+        private final ScenarioEvidence conversationEvidence;
         private String confirmedScope;
         private final ConversationConfirmation confirmation = new ConversationConfirmation(Clock.systemUTC());
         private long conversationEpoch;
@@ -76,11 +80,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         }
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
                 ConversationCapabilities capabilities, String instanceId, OpenJiuwenIntentProposer intentProposer,
-                java.util.function.Supplier<String> scopeDigest) throws Exception {
+                java.util.function.Supplier<String> scopeDigest, ScenarioEvidence conversationEvidence) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             this.capabilities=capabilities;
             this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.intentProposer=intentProposer;
             this.scopeDigest=Objects.requireNonNull(scopeDigest);
+            this.conversationEvidence=Objects.requireNonNull(conversationEvidence);
             var latest=task.latest(owner);
             if(latest.isPresent()) {
                 JsonNode report=latest.get();selectedCustomer=report.path("customerAlias").asText(null);
@@ -329,11 +334,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             return switch(intent.kind()) {
                 case RESOLVE_OBJECT -> throw new IllegalStateException("CONVERSATION_INTENT_INVALID");
-                case GREETING -> Map.of("status","ANSWERED","response","你好。你可以说明要完成的客户服务工作，也可以先问我具备哪些能力或你可服务哪些客户。本轮没有查询客户事实或生成报告。");
-                case CAPABILITIES -> Map.of("status","ANSWERED","response",capabilities.description());
+                case GREETING -> naturalReply(query,ConversationResponder.Purpose.GREETING,List.of(),
+                        "本轮仅问候，尚未查询客户事实或生成报告。",proposedBinding,customers,sink);
+                case CAPABILITIES -> naturalReply(query,ConversationResponder.Purpose.CAPABILITIES,List.of(),
+                        "仅介绍当前装配能力，不表示已获得业务授权；尚未执行。",proposedBinding,customers,sink);
                 case LIST_OBJECTS -> Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
-                case UNSUPPORTED -> Map.of("status","ANSWERED","response","这项请求不在当前Agent已装配能力范围内，未执行。"+capabilities.description());
-                case CLARIFY -> Map.of("status","NEED_CLARIFICATION","response","请明确你想解释已有报告，还是取得新事实生成报告；本轮未执行查询。","missingInputs",List.of("intent"));
+                case UNSUPPORTED -> naturalReply(query,ConversationResponder.Purpose.UNSUPPORTED,List.of(),
+                        "请求不在当前已装配能力内，未执行；只能说明已装配能力内的替代。",proposedBinding,customers,sink);
+                case CLARIFY -> naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
+                        "用户意图尚不能唯一确定；需澄清，不查询客户事实或生成报告。",proposedBinding,customers,sink);
                 case EXPLAIN_REPORT -> {
                     if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
                     var answer=task.explainSaved(owner,reportId,reportRevision,query,
@@ -366,6 +375,41 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                                     "query",plan.originalQuery(),"expiresAt",plan.expiresAt().toString()));
                 }
             };
+        }
+        private Map<String,Object> naturalReply(String query,ConversationResponder.Purpose purpose,List<String> missing,
+                String decision,ConversationConfirmation.Binding binding,Set<String> customers,EventSink sink) throws Exception {
+            String runId=operation.id;
+            Runnable authorize=()->{
+                current();
+                if(operationCancelled())throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                if(!customers.equals(Set.copyOf(task.customers(owner)))||!binding.equals(conversationBinding()))
+                    throw new SecurityException("CRM_AUTHORITY_CHANGED");
+            };
+            var proof=conversationEvidence.begin(runId,owner,"CONVERSATION",purpose.name(),
+                    "conversation.response",Map.of("questionDigest",ScenarioEvidence.digest(query),
+                            "bindingDigest",ScenarioEvidence.digest(binding),"purpose",purpose.name()),
+                    binding.scopeDigest(),"EXISTING_CRM_MAPPING_AND_INSTALLED_LOCK");
+            proof.check("RESPONSE_ENTRY",authorize,null);
+            int[] sequence={0};
+            boolean[] invoked={false};
+            String answer=intentProposer.respond(query,new ConversationResponder.Context(purpose,
+                            capabilities.description(),missing,decision),this::operationCancelled,
+                    ()->{authorize.run();if(!invoked[0]){proof.invoked();invoked[0]=true;}},
+                    text->{
+                        proof.check("RESPONSE_TEXT_RELEASE",authorize,text);
+                        sink.emit(Map.of("type","CUSTOM","name","finance.conversation.progress","value",Map.of(
+                                "schemaVersion","finance-conversation-progress.v1","runId",runId,
+                                "sequence",++sequence[0],"text",text,"purpose",purpose.name(),
+                                "status","GENERATING","businessExecuted",false,
+                                "bindingDigest",ScenarioEvidence.digest(binding))));
+                    });
+            proof.returned();
+            proof.check("RESPONSE_COMPLETE_RELEASE",authorize,answer);
+            var reply=new LinkedHashMap<String,Object>();
+            reply.put("status",purpose==ConversationResponder.Purpose.CLARIFY?"NEED_CLARIFICATION":"ANSWERED");
+            reply.put("response",answer);
+            if(!missing.isEmpty())reply.put("missingInputs",missing);
+            return reply;
         }
         private void clearPendingProduct() {
             pendingProductCustomer=null;
