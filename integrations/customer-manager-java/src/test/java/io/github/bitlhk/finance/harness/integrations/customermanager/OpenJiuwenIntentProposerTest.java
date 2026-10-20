@@ -49,11 +49,13 @@ final class OpenJiuwenIntentProposerTest {
     static final class Fixture implements AutoCloseable {
         final HttpServer server;
         final List<JsonNode> requests = new CopyOnWriteArrayList<>();
-        Fixture(String reply) throws Exception {
+        Fixture(String... replies) throws Exception {
+            if(replies.length==0) throw new IllegalArgumentException("FIXTURE_REPLY_REQUIRED");
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             server.createContext("/", exchange -> {
                 JsonNode request = HarnessJson.mapper().readTree(exchange.getRequestBody());
                 requests.add(request);
+                String reply=replies[Math.min(requests.size()-1,replies.length-1)];
                 String chunk = HarnessJson.mapper().writeValueAsString(Map.of("id", "synthetic", "model", "synthetic",
                         "choices", List.of(Map.of("index", 0, "delta", Map.of("role", "assistant", "content", reply)))));
                 String body = "data: " + chunk + "\n\ndata: {\"id\":\"synthetic\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";

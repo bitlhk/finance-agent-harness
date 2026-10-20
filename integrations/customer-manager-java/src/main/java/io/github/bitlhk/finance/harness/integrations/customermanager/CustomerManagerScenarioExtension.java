@@ -56,6 +56,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private String confirmedScope;
         private final ConversationConfirmation confirmation = new ConversationConfirmation(Clock.systemUTC());
         private long conversationEpoch;
+        private PendingClarification clarification;
+        private String conversationContext;
+        private record PendingClarification(ConversationConfirmation.Binding binding,
+                ConversationIntent.Kind kind,String query,Instant expiresAt) {}
         private String selectedCustomer, selectedGoal;
         private String pendingProductCustomer;
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
@@ -106,7 +110,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     if (operation.finished) return Map.of("status","NOT_ACTIVE");
                     String status = operation.generation < 0 ? "CANCELLED" : task.cancel(owner,operation.generation);
                     operation.cancelled = "CANCELLED".equals(status);
-                    if (operation.cancelled) confirmation.invalidate();
+                    if (operation.cancelled) { confirmation.invalidate();clarification=null; }
                     return Map.of("status",status);
                 }
             }
@@ -122,6 +126,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case "select" -> {
                     exact(body,"customerAlias","goal");
                     invalidateConfirmation();
+                    clarification=null;
                     clearPendingProduct();
                     selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
                     yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
@@ -165,7 +170,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             try {
                 String requested = body.has("customerAlias") ? body.path("customerAlias").asText() : null;
-                if(!body.has("conversationContract")) invalidateConfirmation();
+                String context=body.path("conversationContext").textValue();
+                if(!Objects.equals(context,conversationContext)) {
+                    invalidateConfirmation();clarification=null;conversationContext=context;
+                }
+                if(!body.has("conversationContract")) { invalidateConfirmation();clarification=null; }
                 var result = body.has("conversationContract") ? converse(body, requested, sink)
                         : chat(text(body,"query"),requested,sink);
                 synchronized (operationLock) {
@@ -262,6 +271,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             synchronized(operationLock) { return closed || operation == null || operation.cancelled; }
         }
         private Map<String,Object> converse(JsonNode body, String requested, EventSink sink) throws Exception {
+            PendingClarification pending;
+            synchronized(operationLock) {
+                pending=clarification;clarification=null;
+                if(pending!=null&&(!pending.binding().equals(conversationBinding())
+                        ||!Instant.now().isBefore(pending.expiresAt()))) pending=null;
+            }
             if(!body.has("confirmationId")) invalidateConfirmation();
             Set<String> customers;
             try {
@@ -295,10 +310,18 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             String query=text(body,"query");
             var proposedBinding=conversationBinding();
             ConversationIntent intent=intentProposer.propose(query,customers,capabilities.actions(),
-                    requested==null||requested.isBlank()?null:requested,null,null,this::operationCancelled);
+                    requested==null||requested.isBlank()?null:requested,null,null,
+                    pending==null?null:Map.of("kind",pending.kind().name(),"query",pending.query()),this::operationCancelled);
             if(!customers.equals(Set.copyOf(task.customers(owner)))||!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
             if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            boolean resolving=intent.kind()==ConversationIntent.Kind.RESOLVE_OBJECT;
+            if(resolving) {
+                if(pending==null) return Map.of("status","NEED_CLARIFICATION","response","前一项待补充任务已失效，请重新说明本次目标；尚未执行。","missingInputs",List.of("intent"));
+                capabilities.require(pending.kind());
+                intent=new ConversationIntent(pending.kind(),intent.objectRef(),null,null);
+            }
             return switch(intent.kind()) {
+                case RESOLVE_OBJECT -> throw new IllegalStateException("CONVERSATION_INTENT_INVALID");
                 case GREETING -> Map.of("status","ANSWERED","response","你好。你可以说明要完成的客户服务工作，也可以先问我具备哪些能力或你可服务哪些客户。本轮没有查询客户事实或生成报告。");
                 case CAPABILITIES -> Map.of("status","ANSWERED","response",capabilities.description());
                 case LIST_OBJECTS -> Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
@@ -306,11 +329,21 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case CLARIFY -> Map.of("status","NEED_CLARIFICATION","response","请明确你想解释已有报告，还是取得新事实生成报告；本轮未执行查询。","missingInputs",List.of("intent"));
                 case EXPLAIN_REPORT -> Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
                 case PREPARE, PRODUCT_REVIEW -> {
-                    if(intent.objectRef()==null) yield Map.of("status","NEED_CLARIFICATION","response","请明确本次服务的授权客户；尚未查询客户事实。","missingInputs",List.of("customerAlias"));
+                    String executionQuery=resolving
+                            ? pending.query()+"\n本轮补充："+query : query;
+                    if(executionQuery.length()>500) yield Map.of("status","NEED_CLARIFICATION",
+                            "response","任务与补充内容过长，请合并为500字以内的明确请求；尚未执行。","missingInputs",List.of("query"));
+                    if(intent.objectRef()==null) {
+                        synchronized(operationLock) {
+                            if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                            clarification=new PendingClarification(proposedBinding,intent.kind(),executionQuery,Instant.now().plusSeconds(300));
+                        }
+                        yield Map.of("status","NEED_CLARIFICATION","response","请告诉我本次服务的授权客户，我会保留这次目标供你确认；尚未查询客户事实。","missingInputs",List.of("customerAlias"));
+                    }
                     ConversationConfirmation.Plan plan;
                     synchronized(operationLock) {
                         if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
-                        plan=confirmation.propose(proposedBinding,intent,query);
+                        plan=confirmation.propose(proposedBinding,intent,executionQuery);
                     }
                     yield Map.of("status","NEED_CONFIRMATION","response","请确认：为"+displayName(intent.objectRef())
                             +(intent.kind()==ConversationIntent.Kind.PREPARE?"取得新事实并准备回访报告。":"取得新事实并筛选待复核产品候选。")
@@ -350,7 +383,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(selectedGoal!=null)value.put("selectedGoal",selectedGoal);
             return value;
         }
-        @Override public void close() { if(!closed){closed=true;confirmation.invalidate();task.close();} }
+        @Override public void close() { if(!closed){closed=true;confirmation.invalidate();clarification=null;task.close();} }
         private void current(){if(closed)throw new SecurityException("SCENARIO_SESSION_CLOSED");}
     }
 
@@ -417,6 +450,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         Set<String> actual = new HashSet<>();
         body.fieldNames().forEachRemaining(actual::add);
         if(body.has("conversationContract")) {
+            if(body.has("conversationContext")) {
+                String context=body.path("conversationContext").textValue();
+                if(context==null||!context.matches("[A-Za-z0-9_-]{1,100}")) throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
+                actual.remove("conversationContext");
+            }
             Set<String> required=Set.of("query","runId","customerAlias","conversationContract");
             var withConfirmation=new HashSet<>(required);withConfirmation.addAll(Set.of("confirmationId","confirmationDecision"));
             if((!actual.equals(required)&&!actual.equals(withConfirmation))

@@ -116,6 +116,37 @@ and qualifications require actual impact analysis before any release.
 
 ## Remaining ordered work
 
+### Short-lived clarification follow-up
+
+The manager v2 path now supplies one pending, not-executed request to the tool-free
+classifier. RESOLVE_OBJECT is distinct from a new PREPARE/PRODUCT_REVIEW, so an
+unrelated new goal of the same kind does not inherit old text. The original request
+plus the actual user supplement are displayed in the immutable confirmation.
+No business query happens from clarification alone. This is not general dialogue
+memory or automatic multi-step planning.
+
+Pending context expires after five minutes and is bound to the same trusted
+owner/instance/Lock/scope/epoch. It is consumed on the next turn, and cleared by
+legacy turns, object selection, cancellation, closure or changed trusted scope.
+The browser rotates an untrusted conversation grouping on task.open. The server
+uses changes only to invalidate context/confirmation, never as identity or authority.
+A new dialogue cannot reuse an earlier plan.
+
+Evidence at the root above:
+- `clarification-final-01.log` and `clarification-final-01-xml/`: 62 manager tests
+  passed, replacing the previous 58 count, including four new managed Session
+  scenarios over the actual SDK and loopback synthetic model responses.
+- `clarification-api-01.log`: 63 transport/API regression tests passed.
+- `clarification-node-01.log`: 37 frontend tests passed, including actual client
+  request generation and context rotation (mock HTTP, no ordinary SSO).
+- Generated frontend bundle: 684233 bytes, 123 packages, 27 license notices,
+  zero cloud-service bytes per existing build check. No dependency upgrade.
+
+This proves the constrained protocol flow, not real-model interpretation quality.
+History explanation remains incomplete: the independent authorized readers exist,
+but the conversation still asks for a report/version rather than answering it.
+No new package qualification, production deployment or independent QA is claimed.
+
 1. Complete manager conversational slot/context handling. V2 wiring and the source
    exception repair are present, but neither a production model
    quality test nor packaged Host/admission verification has run.

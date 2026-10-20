@@ -75,6 +75,60 @@ final class ConversationHostTest {
         assertEquals("NEED_CONFIRMATION", result.get("status"));
         return (String)((Map<?,?>)result.get("confirmation")).get("id");
     }
+    private static final String MISSING_OBJECT=PROPOSAL.replace("\"synthetic-a\"","null");
+    private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
+    @Test @Timeout(30) void naturalObjectClarificationRetainsOriginalTaskButRequiresExplicitConfirmation() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,RESOLVE_OBJECT);var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("Prepare a visit about liquidity",null);
+            first.put("customerAlias","");
+            assertEquals("NEED_CLARIFICATION",session.call("chat",first).get("status"));
+            var result=session.call("chat",body("Use synthetic-a please",null));
+            String id=planId(result);
+            var plan=(Map<?,?>)result.get("confirmation");
+            String combined=(String)plan.get("query");
+            assertEquals("Prepare a visit about liquidity\n本轮补充：Use synthetic-a please",combined);
+            assertEquals(0,business.get());
+            assertTrue(model.requests.get(1).path("messages").toString().contains("Prepare a visit about liquidity"));
+            assertEquals("FAILED",session.call("chat",body(combined,id)).get("status"));
+            assertEquals(1,business.get());assertEquals(2,model.requests.size());
+        }
+    }
+    @Test @Timeout(30) void newTaskOfSameKindDoesNotInheritUnrelatedPendingText() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,PROPOSAL);var session=session(model.proposer())) {
+            session.call("chat",body("Previous unrelated task",null));
+            var result=session.call("chat",body(QUERY,null));
+            planId(result);
+            assertEquals(QUERY,((Map<?,?>)result.get("confirmation")).get("query"));
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void trustedScopeChangeInvalidatesPendingClarificationWithoutQuery() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,RESOLVE_OBJECT);var session=session(model.proposer())) {
+            session.call("chat",body("Prepare a visit",null));
+            scope.set("changed-real-scope");
+            var result=session.call("chat",body("Use synthetic-a please",null));
+            assertEquals("NEED_CLARIFICATION",result.get("status"));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+            assertFalse(model.requests.get(1).path("messages").toString().contains("Prepare a visit"));
+        }
+    }
+    @Test @Timeout(30) void newConversationCannotResumePreviousClarificationOrConfirmation() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,RESOLVE_OBJECT,PROPOSAL);var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("Prepare a visit",null);
+            first.put("conversationContext","first-conversation");
+            session.call("chat",first);
+            var next=(com.fasterxml.jackson.databind.node.ObjectNode)body("Use synthetic-a please",null);
+            next.put("conversationContext","second-conversation");
+            assertEquals("NEED_CLARIFICATION",session.call("chat",next).get("status"));
+            assertFalse(model.requests.get(1).path("messages").toString().contains("Prepare a visit"));
+            next.put("query",QUERY);
+            String id=planId(session.call("chat",next.put("runId",UUID.randomUUID().toString())));
+            var confirm=(com.fasterxml.jackson.databind.node.ObjectNode)body(QUERY,id);
+            confirm.put("conversationContext","third-conversation");
+            assertThrows(SecurityException.class,()->session.call("chat",confirm));
+            assertEquals(0,business.get());
+        }
+    }
     @Test @Timeout(30) void proposalDoesNotQueryAndConfirmationExecutesOnceWithFailureFactsPreserved() throws Exception {
         try(var model = new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL); var session = session(model.proposer())) {
             String id = planId(session.call("chat", body(QUERY,null)));
