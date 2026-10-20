@@ -256,3 +256,43 @@ Still pending: audit/fraud/postloan NEW-task intent/clarification/confirmation t
 the common contract, finite real-model quality evaluation, final generated-package
 qualifications and actual service identity, independent experience review, release
 and ordinary SSO acceptance. This checkpoint is not a deployable completion claim.
+
+## Shared task proposal and confirmed-material checkpoint
+
+Added `TaskIntentProposer` in the existing OpenJiuwen integration, through the same
+locked one-shot worker. Its output is a strict `finance-task-intent.v1` proposal:
+kind, installed action reference, authorized object reference; no owner/role/tool
+arguments, permissions or generated business answer. Greeting, capability/object
+questions, ambiguity, saved-report explanation and unsupported requests cannot
+carry an execution action. Missing-object continuation requires server-held context.
+This is a reusable primitive for the remaining three adapters, not an assertion
+that their UI/API orchestration is already connected or that real-model intent
+accuracy has been established.
+
+Builder revalidates the proposal and adds bounded, single-use confirmation storage.
+Plans bind owner, Agent, conversation context, artifact, instance, authority digest,
+input digest and generation. Concurrent claims consume once; expiry, changed binding,
+new proposal and cancellation invalidate the old proposal. These helpers still need
+the actual trusted scenario capture/dispatch wiring before release.
+
+Audit has an actual atomic input precondition at `_begin_run` under the existing
+workspace lock. Existing empty-body runs remain compatible. An optional
+`expectedInput` with generation/materialSetRef/materialSetDigest can only restrict
+execution: changed input rejects BEFORE creating an attempt or invoking the runner;
+it never replaces owner authorization. The confirmation endpoint must supply its
+server-frozen precondition when wired. Risk dispatch still needs equivalent binding
+between confirmed object mapping and the Host selection generation; do not claim
+the new generic plan alone closes that race.
+
+Evidence:
+- `task-intent-java-01.log`, `task-intent-java-01-xml/`: 16 Java contract checks.
+- `task-intent-python-01.log`: 30 proposal/worker/history regression checks.
+- `task-intent-packaged-01.log`: 3 actual packaged SDK/loopback HTTP cases
+  (saved explanation, allowed intent, rejected uninstalled intent) plus 8
+  confirmation-store checks. Each SDK case observed exactly one local HTTP call;
+  no target/classes, business tools or CRM environment passed to the child.
+- `task-audit-binding-01.log`: 46 actual workspace/API regression checks, including
+  changed materials, matching generation, malformed input and wrong owner.
+
+No production model inference, business request, service mutation, qualification
+replacement, push/merge or deployment occurred in this checkpoint.

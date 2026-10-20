@@ -25,13 +25,19 @@ public final class ConversationWorker {
                 request=HarnessJson.mapper().reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(parser);
             }
             var fields=new HashSet<String>();request.fieldNames().forEachRemaining(fields::add);
-            if(!request.isObject()||!fields.equals(Set.of("schema","question","projection"))
+            if(!request.isObject()||!(fields.equals(Set.of("schema","question","projection"))
+                    ||fields.equals(Set.of("schema","question","projection","operation")))
                     ||!"finance-conversation-worker.v1".equals(request.path("schema").textValue())
                     ||!request.path("question").isTextual()||!request.path("projection").isObject())
                 throw new IllegalArgumentException();
             var connection=new ManagedScenarioExtensionV01.ModelConnection(required("FH_CONVERSATION_MODEL_PROVIDER"),
                     required("FH_MODEL_KEY"),required("FH_MODEL_URL"),required("FH_MODEL_NAME"));
-            var answer=new SavedReportExplainer(connection).explain(request.path("question").asText(),request.path("projection"),()->false);
+            String operation=request.has("operation")?request.path("operation").asText():"EXPLAIN";
+            var answer=switch(operation) {
+                case "EXPLAIN" -> new SavedReportExplainer(connection).explain(request.path("question").asText(),request.path("projection"),()->false);
+                case "PROPOSE" -> new TaskIntentProposer(connection).propose(request.path("question").asText(),request.path("projection"));
+                default -> throw new IllegalArgumentException();
+            };
             Path output=Path.of(args[0]);
             Files.write(output,HarnessJson.mapper().writeValueAsString(answer).getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS);
