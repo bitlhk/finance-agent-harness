@@ -73,6 +73,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         @Override public String sessionId() { return sessionId; }
         @Override public Map<String,Object> bootstrap() {
             current(); return Map.of("scenarioId", ID, "sessionId", sessionId, "customers", task.customers(owner),
+                    "conversationContract", "manager-conversation.v1",
                     "steps", List.of("CUSTOMER_AND_GOAL", "FACT_COLLECTION", "PREPARATION_REPORT", "MANAGER_REVIEW"),
                     "method", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(), "lockDigest", method.lockDigest()));
         }
@@ -143,7 +144,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 operationIds.add(current.id); operation = current;
             }
             try {
-                var result = chat(text(body,"query"),sink);
+                String requested = body.has("customerAlias") ? body.path("customerAlias").asText() : null;
+                var result = chat(text(body,"query"),requested,sink);
                 synchronized (operationLock) {
                     if (current.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
                     current.finished = true;
@@ -159,10 +161,17 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 return operation.generation;
             }
         }
-        private Map<String,Object> chat(String query, EventSink sink) throws Exception {
+        private Map<String,Object> chat(String query, String requested, EventSink sink) throws Exception {
             List<String> customers=task.customers(owner);
-            String conversationalCustomer=selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
+            if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
+                throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            String conversationalCustomer=requested!=null?(requested.isBlank()?null:requested):selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
             var decision=CustomerManagerDialogue.resolve(query,customers,conversationalCustomer);
+            if(decision.action()==CustomerManagerDialogue.Action.GREETING)
+                return Map.of("status","ANSWERED","response","你好。我可以协助处理当前已接入的客户服务任务。你可以先问我能做什么，或查看当前获授权服务的客户。此次没有查询客户事实或生成报告。");
+            if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_INTENT
+                    && !(pendingProductCustomer!=null&&!productArguments(query).isEmpty()))
+                return Map.of("status","NEED_CLARIFICATION","response","请说明你希望完成的具体工作。当前不会把这句话自动当作回访请求；若要查看已有结果，请从历史选择相应报告。","missingInputs",List.of("action"));
             if(CustomerManagerDialogue.rejectsProductSelection(query)) clearPendingProduct();
             if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
                 return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，汇集资料与持仓事实并生成待复核的回访准备建议。你也可以提供客户、金额、期限和渠道，让我从合成产品目录中形成待复核候选；我不会执行购买、CRM 写入、消息发送或交易办理。");
@@ -299,8 +308,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     static void exactChat(JsonNode body) {
         Set<String> actual = new HashSet<>();
         body.fieldNames().forEachRemaining(actual::add);
-        if (!actual.equals(Set.of("query")) && !actual.equals(Set.of("query", "runId"))) {
+        if (!actual.equals(Set.of("query")) && !actual.equals(Set.of("query", "runId"))
+                && !actual.equals(Set.of("query", "runId", "customerAlias"))) {
             throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
         }
+        if(body.has("customerAlias")&&(!body.path("customerAlias").isTextual()||body.path("customerAlias").asText().length()>200))
+            throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
     }
 }

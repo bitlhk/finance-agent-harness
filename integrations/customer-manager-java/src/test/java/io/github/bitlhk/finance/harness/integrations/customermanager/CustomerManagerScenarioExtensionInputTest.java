@@ -9,6 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class CustomerManagerScenarioExtensionInputTest {
+    @Test void optionalObjectIsAValidatedHintNotAnAuthorityField() throws Exception {
+        assertDoesNotThrow(() -> CustomerManagerScenarioExtension.exactChat(
+                HarnessJson.mapper().readTree("{\"query\":\"你好\",\"runId\":\"r\",\"customerAlias\":\"\"}")));
+        for (String value : java.util.List.of("null", "42", "{}")) {
+            assertThrows(IllegalArgumentException.class, () -> CustomerManagerScenarioExtension.exactChat(
+                    HarnessJson.mapper().readTree("{\"query\":\"你好\",\"runId\":\"r\",\"customerAlias\":"+value+"}")));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CustomerManagerScenarioExtension.exactChat(
+                HarnessJson.mapper().readTree("{\"query\":\"你好\",\"runId\":\"r\",\"customerAlias\":\"客户\",\"owner\":\"other\"}")));
+    }
     @Test
     void acceptsWorkbenchRunCorrelationWithoutRelaxingTheActionBody() throws Exception {
         assertDoesNotThrow(() -> CustomerManagerScenarioExtension.exactChat(
