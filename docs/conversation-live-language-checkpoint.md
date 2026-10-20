@@ -48,7 +48,26 @@ mvn -o -pl integrations/openjiuwen-java -am \
 XML is retained in `task-intent-composite-01/`. Terminal stdout was not saved in
 full; do not claim a complete stdout archive. The local SSE response is deterministic
 and proves transport/prompt/validation wiring, not real-model classification quality.
-Targeted real-model revalidation remains necessary.
+Targeted real-model revalidation used the actual newly packaged shared integration
+JAR (SHA256 `9867768ae29b86c3257476b2b9593eb6ed54de55a26740bcadd6bdd29b46f82d`)
+with the unchanged verified dependency set. Results are in
+`live-language-composite-real-01/cases/results.json`. Five SDK invocations were made
+once each. Four expected classifications passed: the original audit request,
+negated audit, saved-result explanation, and unsupported transfer.
+
+The fifth case (two named clients) returned EXECUTE/VERIFY with null object instead
+of the frozen expected CLARIFY. Keep it as a classification failure, not a PASS.
+The test's names were "合成客户甲/乙", whereas its authorized object aliases were
+"合成对象甲/乙"; do not silently change the input or normalize these identities.
+Builder TaskConversation.turn refuses to issue a risk execution confirmation when
+objectRef is null and returns a request for an authorized object instead. It does not
+fall back to selectedObject. Thus this result does not show unauthorized execution,
+but the intent-level expectation remains unmet. No business call was made by the
+probe. Actual HTTP retry attempts remain unobserved.
+
+This evaluation used the real service UID/mount namespace but no business Host.
+It is not final package admission, independent experience acceptance, or a live
+business test. No online service, permissions, or policies were changed.
 
 This changes the shared integration JAR. Previous four-scene package qualification
 does not qualify the new JAR. Recompute actual generation/collector impact and
