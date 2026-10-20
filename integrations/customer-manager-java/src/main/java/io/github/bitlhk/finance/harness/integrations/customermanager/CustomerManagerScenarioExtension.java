@@ -309,8 +309,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             clearPendingProduct();
             String query=text(body,"query");
             var proposedBinding=conversationBinding();
+            String reportId=body.has("reportId")?text(body,"reportId"):null;
+            Integer reportRevision=body.has("revision")?integer(body,"revision"):null;
+            if(reportId!=null) {
+                var saved=task.readVersion(owner,reportId,reportRevision);
+                if(requested!=null&&!requested.isBlank()&&!requested.equals(saved.path("customerAlias").asText()))
+                    throw new SecurityException("REPORT_OBJECT_MISMATCH");
+            }
             ConversationIntent intent=intentProposer.propose(query,customers,capabilities.actions(),
-                    requested==null||requested.isBlank()?null:requested,null,null,
+                    requested==null||requested.isBlank()?null:requested,reportId,reportRevision,
                     pending==null?null:Map.of("kind",pending.kind().name(),"query",pending.query()),this::operationCancelled);
             if(!customers.equals(Set.copyOf(task.customers(owner)))||!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
             if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
@@ -327,8 +334,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case LIST_OBJECTS -> Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
                 case UNSUPPORTED -> Map.of("status","ANSWERED","response","这项请求不在当前Agent已装配能力范围内，未执行。"+capabilities.description());
                 case CLARIFY -> Map.of("status","NEED_CLARIFICATION","response","请明确你想解释已有报告，还是取得新事实生成报告；本轮未执行查询。","missingInputs",List.of("intent"));
-                case EXPLAIN_REPORT -> Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
+                case EXPLAIN_REPORT -> {
+                    if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
+                    var answer=task.explainSaved(owner,reportId,reportRevision,query,
+                            saved->intentProposer.explainSaved(query,saved,this::operationCancelled),this::operationCancelled);
+                    yield Map.of("status","ANSWERED","response",answer.path("interpretation").path("answer").asText(),
+                            "savedExplanation",value(answer));
+                }
                 case PREPARE, PRODUCT_REVIEW -> {
+                    if(reportId!=null)yield Map.of("status","NEED_CLARIFICATION","response","当前正在解释已保存版本。若需取得新事实，请返回新对话确认执行；本轮没有业务查询。","missingInputs",List.of("newConversation"));
                     String executionQuery=resolving
                             ? pending.query()+"\n本轮补充："+query : query;
                     if(executionQuery.length()>500) yield Map.of("status","NEED_CLARIFICATION",
@@ -457,11 +471,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             Set<String> required=Set.of("query","runId","customerAlias","conversationContract");
             var withConfirmation=new HashSet<>(required);withConfirmation.addAll(Set.of("confirmationId","confirmationDecision"));
-            if((!actual.equals(required)&&!actual.equals(withConfirmation))
+            var withReport=new HashSet<>(required);withReport.addAll(Set.of("reportId","revision"));
+            if((!actual.equals(required)&&!actual.equals(withConfirmation)&&!actual.equals(withReport))
                     ||!"manager-conversation.v2".equals(body.path("conversationContract").textValue())
                     ||!body.path("query").isTextual()||body.path("query").asText().isBlank()||body.path("query").asText().length()>500
                     ||!body.path("runId").isTextual()||body.path("runId").asText().isBlank()
                     ||!body.path("customerAlias").isTextual()||body.path("customerAlias").asText().length()>200
+                    ||body.has("reportId")&&(!body.path("reportId").isTextual()||!body.path("reportId").asText().matches("[0-9a-f-]{36}")
+                        ||!body.path("revision").isIntegralNumber()||!body.path("revision").canConvertToInt()||body.path("revision").asInt()<1)
                     ||body.has("confirmationId")&&(!body.path("confirmationId").isTextual()||body.path("confirmationId").asText().isBlank()
                         ||!Set.of("EXECUTE","CANCEL").contains(body.path("confirmationDecision").asText())))
                 throw new IllegalArgumentException("SCENARIO_BODY_INVALID");

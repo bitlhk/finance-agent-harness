@@ -143,15 +143,60 @@ Evidence at the root above:
   zero cloud-service bytes per existing build check. No dependency upgrade.
 
 This proves the constrained protocol flow, not real-model interpretation quality.
-History explanation remains incomplete: the independent authorized readers exist,
-but the conversation still asks for a report/version rather than answering it.
-No new package qualification, production deployment or independent QA is claimed.
+At that checkpoint history explanation was not connected. The next increment below
+connects selected-version follow-up on the active manager Host. No new package
+qualification, production deployment or independent QA is claimed.
+
+### Selected report explanation increment
+
+V2 requests can carry one reportId/revision pair (not together with an execution
+confirmation). The actual managed Session checks existing historical authorization
+before intent classification. EXPLAIN_REPORT then reads that exact immutable version,
+writes necessary MODEL_ENTRY evidence, invokes a tool-free SDK explainer, rereads and
+checks the whole report digest/current historical permission, and writes required
+EXPLANATION_RELEASE before returning. New-execution proposals in a report-bound turn
+request a new conversation instead. No report revision or review state is changed.
+
+The model receives a bounded display projection, not owner/authority metadata.
+Failed modelSuggestion is excluded. Answer JSON and exact existing leaf references
+are validated. Reference validation is NOT proof of factual/numeric correctness of
+free-language paraphrase; the answer is labeled interpretation of saved evidence,
+not newly verified facts or a replacement for the report's original validation.
+Real-model interpretation quality is still untested. No arbitrary tools are supplied.
+
+Counts explicitly distinguish explanationModelInvocations=1 from businessQueries=0;
+model HTTP attempts remain NOT_OBSERVED outside the local fixture. Intent classification
+is another model invocation, separately visible in the fixture's measured HTTP list.
+If necessary evidence fails after the model, the exception stage is
+EXPLANATION_RELEASE_AFTER_MODEL, not an assertion that no model call occurred.
+
+Builder forwards the exact pair, validates the returned pair against the request,
+and the UI rejects an answer bound to another visible report/version. Existing report
+and its original validation/review state are retained. The current-report composer
+sends this binding, rather than treating every follow-up as a new financial query.
+
+Evidence:
+- `history-answer-final-02.log`: 69 manager tests plus 36 shared preparation tests,
+  all passed. The former supersedes 62, not a cumulative addition. Final XML is in
+  `history-answer-final-02-xml/` and `history-answer-shared-02-xml/`.
+- Actual managed Session + SDK/local synthetic HTTP covers selected-version answer,
+  original report digest unchanged, zero additional business call, revocation during
+  explanation, failed post-model evidence write, and missing version before model.
+- `history-answer-api-01.log`: 64 API/transport regressions passed.
+- `history-answer-node-01.log`: 38 UI/client/store tests passed; mismatched version
+  or object cannot attach an explanation to another displayed report.
+- UI build: 684846 bytes, same 123 packages/27 notices; no dependency upgrade.
+
+Remaining: stopped-Host historical explanation is NOT connected yet; its existing
+independent historical reading remains unchanged. Shared four-scene interpretation,
+real model evaluation, packaged Host/qualification, actual service identity and
+independent browser/SSO checks remain release blockers.
 
 1. Complete manager conversational slot/context handling. V2 wiring and the source
    exception repair are present, but neither a production model
    quality test nor packaged Host/admission verification has run.
-2. Explain a selected immutable report/version through its existing authorized
-   historical reader without new Provider calls. Precisely report any model calls.
+2. Extend selected-version explanation to the independent stopped-Host historical
+   reader without new Provider calls; complete real-model quality and failure checks.
 3. Make audit/fraud/postloan consume the same versioned conversation contract via
    thin adapters, preserving their distinct authorization and input policies.
 4. Validate real packaged Host cancellation/late result/confirmation behavior,

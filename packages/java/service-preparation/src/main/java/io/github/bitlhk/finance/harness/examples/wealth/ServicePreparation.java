@@ -437,8 +437,50 @@ public final class ServicePreparation implements AutoCloseable {
         Path file = reportDirectory(id).resolve(String.format("v%06d.json", revision));
         if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) throw new IllegalArgumentException("REPORT_VERSION_NOT_FOUND");
         ObjectNode value = (ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(file));
+        if(!id.equals(value.path("reportId").asText())||value.path("reportRevision").asInt()!=revision)
+            throw new SecurityException("REPORT_VERSION_BINDING_MISMATCH");
         releaseSaved(value);
         return value;
+    }
+    @FunctionalInterface public interface SavedExplanation {
+        ObjectNode explain(ObjectNode report) throws Exception;
+    }
+    public ObjectNode explainSaved(String caller,String id,int revision,String question,
+            SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
+        ObjectNode snapshot=readVersion(caller,id,revision);
+        String snapshotDigest=ScenarioEvidence.digest(snapshot);
+        Runnable authorized=()-> {
+            if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())
+                throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            owner(caller);authorizeReport(snapshot);
+        };
+        var proof=evidence.begin(UUID.randomUUID().toString(),owner,snapshot.path("customerRef").asText(),
+                "EXPLAIN_SAVED_REPORT","scenario.report.explain",
+                Map.of("reportId",id,"revision",revision,"reportDigest",snapshotDigest,"questionDigest",ScenarioEvidence.digest(question)),
+                access.authorize(snapshot.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        proof.check("MODEL_ENTRY",authorized,Map.of("businessQueries",0,"explanationModelInvocations",0));
+        ObjectNode answer;
+        try { answer=model.explain(snapshot.deepCopy()); }
+        catch(java.util.concurrent.CancellationException cancelledFailure){throw cancelledFailure;}
+        catch(Exception failure) {
+            proof.check("MODEL_FAILED",authorized,Map.of("businessQueries",0,"explanationModelInvocations",1,"resultReleased",false));
+            throw new IllegalStateException("SAVED_REPORT_EXPLANATION_FAILED");
+        }
+        try {
+            ObjectNode again=readVersion(caller,id,revision);
+            if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
+            ObjectNode result=HarnessJson.mapper().createObjectNode();
+            result.set("interpretation",answer);
+            result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
+                    .put("customerAlias",snapshot.path("customerAlias").asText());
+            result.put("basis","SAVED_VERSION_ONLY").put("businessQueries",0).put("explanationModelInvocations",1)
+                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+            proof.check("EXPLANATION_RELEASE",authorized,result);
+            return result;
+        }catch(ScenarioEvidence.Unavailable failure) {
+            // No business Provider was invoked; the separate model attempt already happened.
+            throw new ScenarioEvidence.Unavailable("EXPLANATION_RELEASE_AFTER_MODEL","NOT_INVOKED");
+        }
     }
     public synchronized List<Integer> versions(String caller, String id) throws Exception {
         read(caller,id);

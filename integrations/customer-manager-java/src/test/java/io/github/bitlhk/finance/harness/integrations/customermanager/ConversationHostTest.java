@@ -77,6 +77,75 @@ final class ConversationHostTest {
     }
     private static final String MISSING_OBJECT=PROPOSAL.replace("\"synthetic-a\"","null");
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
+    private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
+    @Test @Timeout(30) void selectedVersionExplanationUsesNoNewBusinessQueryAndDoesNotRewriteReport() throws Exception {
+        String[] replies={PROPOSAL,"",SAVED_ANSWER};
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(replies);var session=session(model.proposer())) {
+            String plan=planId(session.call("chat",body(QUERY,null)));
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("chat",body(QUERY,plan)).get("report"));
+            String reportId=saved.path("reportId").asText();int revision=saved.path("reportRevision").asInt();
+            replies[1]="{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"EXPLAIN_REPORT\",\"objectRef\":null,\"reportRef\":\""+reportId+"\",\"revision\":"+revision+"}";
+            var question=(com.fasterxml.jackson.databind.node.ObjectNode)body("为什么这份报告不完整？",null);
+            question.put("reportId",reportId).put("revision",revision);
+            var reply=session.call("chat",question);
+            assertEquals("ANSWERED",reply.get("status"));
+            JsonNode explanation=HarnessJson.mapper().valueToTree(reply.get("savedExplanation"));
+            assertEquals(reportId,explanation.path("binding").path("reportId").asText());
+            assertEquals(revision,explanation.path("binding").path("revision").asInt());
+            assertEquals(0,explanation.path("businessQueries").asInt());
+            assertEquals(1,explanation.path("explanationModelInvocations").asInt());
+            assertEquals(1,business.get());assertEquals(0,reportModels.get());assertEquals(3,model.requests.size());
+            JsonNode after=HarnessJson.mapper().valueToTree(session.call("latest",HarnessJson.mapper().createObjectNode()).get("report"));
+            assertEquals(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.digest(saved),
+                    io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.digest(after));
+            assertFalse(model.requests.get(2).toString().contains("synthetic-authority"));
+            assertFalse(model.requests.get(2).toString().contains("owner-a"));
+        }
+    }
+    @Test @Timeout(30) void revocationDuringSavedExplanationBlocksLateAnswerWithoutBusinessRetry() throws Exception {
+        String[] replies={PROPOSAL,"",SAVED_ANSWER};
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(replies);var session=session(model.proposer())) {
+            String plan=planId(session.call("chat",body(QUERY,null)));
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("chat",body(QUERY,plan)).get("report"));
+            String id=saved.path("reportId").asText();int version=saved.path("reportRevision").asInt();
+            replies[1]="{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"EXPLAIN_REPORT\",\"objectRef\":null,\"reportRef\":\""+id+"\",\"revision\":"+version+"}";
+            model.onRequest=ignored->{if(model.requests.size()==3)revoked.set(true);};
+            var question=(com.fasterxml.jackson.databind.node.ObjectNode)body("解释这份报告",null);
+            question.put("reportId",id).put("revision",version);
+            assertThrows(SecurityException.class,()->session.call("chat",question));
+            assertEquals(1,business.get());assertEquals(3,model.requests.size());
+        }
+    }
+    @Test @Timeout(30) void savedExplanationEvidenceFailureAfterModelWithholdsAnswer() throws Exception {
+        String[] replies={PROPOSAL,"",SAVED_ANSWER};
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(replies);var session=session(model.proposer())) {
+            String plan=planId(session.call("chat",body(QUERY,null)));
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("chat",body(QUERY,plan)).get("report"));
+            String id=saved.path("reportId").asText();int version=saved.path("reportRevision").asInt();
+            replies[1]="{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"EXPLAIN_REPORT\",\"objectRef\":null,\"reportRef\":\""+id+"\",\"revision\":"+version+"}";
+            model.onRequest=ignored->{
+                if(model.requests.size()==3)try {
+                    java.nio.file.Files.move(files.resolve("decision-evidence"),files.resolve("preserved-read-receipts"));
+                    java.nio.file.Files.createFile(files.resolve("decision-evidence"));
+                }catch(java.io.IOException failure){throw new AssertionError(failure);}
+            };
+            var question=(com.fasterxml.jackson.databind.node.ObjectNode)body("解释这份报告",null);
+            question.put("reportId",id).put("revision",version);
+            var failure=assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,()->session.call("chat",question));
+            assertEquals("EXPLANATION_RELEASE_AFTER_MODEL",failure.stage());
+            assertEquals(1,business.get());assertEquals(3,model.requests.size());
+        }
+    }
+    @Test @Timeout(30) void missingVersionRejectsBeforeIntentOrExplanationModel() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            String plan=planId(session.call("chat",body(QUERY,null)));
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("chat",body(QUERY,plan)).get("report"));
+            var question=(com.fasterxml.jackson.databind.node.ObjectNode)body("解释这份报告",null);
+            question.put("reportId",saved.path("reportId").asText()).put("revision",999);
+            assertThrows(IllegalArgumentException.class,()->session.call("chat",question));
+            assertEquals(1,business.get());assertEquals(1,model.requests.size());
+        }
+    }
     @Test @Timeout(30) void naturalObjectClarificationRetainsOriginalTaskButRequiresExplicitConfirmation() throws Exception {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,RESOLVE_OBJECT);var session=session(model.proposer())) {
             var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("Prepare a visit about liquidity",null);
