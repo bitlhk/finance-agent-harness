@@ -57,10 +57,16 @@ final class FraudVerificationTask implements AutoCloseable {
     private void owner(String caller){if(closed||!owner.equals(caller))throw new SecurityException("OWNER_OR_SESSION_REJECTED");}
     synchronized List<String> subjects(String caller){owner(caller);return mappings.get().subjects().keySet().stream().sorted().toList();}
     synchronized long select(String caller,String alias,String purpose){
+        return select(caller,alias,purpose,null,null);
+    }
+    synchronized long select(String caller,String alias,String purpose,String expectedRevision,String expectedSubject){
         owner(caller);generation++;selected=null;activeRun=null;
         if(purpose==null||purpose.isBlank()||purpose.length()>500)throw new IllegalArgumentException("PURPOSE_REQUIRED");
         FraudSubjectMapping mapping=mappings.get();String ref=mapping.subjects().get(alias);
         if(ref==null||ref.isBlank())throw new SecurityException("FRAUD_SUBJECT_NOT_AUTHORIZED");
+        if((expectedRevision!=null||expectedSubject!=null)
+                &&(!mapping.revision().equals(expectedRevision)||!ref.equals(expectedSubject)))
+            throw new SecurityException("CONFIRMED_OBJECT_BINDING_CHANGED");
         selected=new Selection(generation,alias,ref,purpose,mapping.revision());return generation;
     }
     private void current(Selection value,String run){

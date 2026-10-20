@@ -38,11 +38,11 @@ public final class FraudVerificationScenarioExtension implements ManagedScenario
         final String owner,id;final FraudVerificationTask task;final InstalledPreparationMethod method;boolean closed;
         Managed(String owner,String id,FraudVerificationTask task,InstalledPreparationMethod method){this.owner=owner;this.id=id;this.task=task;this.method=method;}
         @Override public String sessionId(){return id;}
-        @Override public Map<String,Object> bootstrap(){current();return Map.of("scenarioId",ID,"subjects",task.subjects(owner),"steps",List.of("SUBJECT_AND_PURPOSE","RISK_FACTS_AND_EVIDENCE","VERIFICATION_REPORT","HUMAN_REVIEW"),"method",Map.of("id",method.id(),"version",method.version(),"digest",method.digest(),"lockDigest",method.lockDigest()));}
+        @Override public Map<String,Object> bootstrap(){current();return Map.of("scenarioId",ID,"subjects",task.subjects(owner),"conversationContracts",List.of("risk-confirmation.v1"),"steps",List.of("SUBJECT_AND_PURPOSE","RISK_FACTS_AND_EVIDENCE","VERIFICATION_REPORT","HUMAN_REVIEW"),"method",Map.of("id",method.id(),"version",method.version(),"digest",method.digest(),"lockDigest",method.lockDigest()));}
         @Override public synchronized Map<String,Object> call(String action,JsonNode body)throws Exception{
             current();if(!ACTIONS.contains(action)||body==null||!body.isObject())throw new IllegalArgumentException("SCENARIO_ACTION_INVALID");
             return switch(action){
-                case "select"->{exact(body,"subjectAlias","purpose");yield Map.of("status","SELECTED","generation",task.select(owner,text(body,"subjectAlias"),text(body,"purpose")));}
+                case "select"->{exactOne(body,Set.of("subjectAlias","purpose"),Set.of("subjectAlias","purpose","expectedMappingRevision","expectedSubjectRef"));yield Map.of("status","SELECTED","generation",task.select(owner,text(body,"subjectAlias"),text(body,"purpose"),body.has("expectedMappingRevision")?text(body,"expectedMappingRevision"):null,body.has("expectedSubjectRef")?text(body,"expectedSubjectRef"):null));}
                 case "verify"->{exact(body,"generation");yield value(task.verify(owner,integer(body,"generation"),FraudVerificationTask.Listener.NONE));}
                 case "latest"->{exact(body);var latest=task.latest(owner);var result=new LinkedHashMap<String,Object>();result.put("found",latest.isPresent());latest.ifPresent(v->result.put("report",value(v)));yield Map.copyOf(result);}
                 case "read"->{exact(body,"reportId");yield value(task.read(owner,text(body,"reportId")));}

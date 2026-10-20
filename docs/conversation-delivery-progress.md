@@ -296,3 +296,51 @@ Evidence:
 
 No production model inference, business request, service mutation, qualification
 replacement, push/merge or deployment occurred in this checkpoint.
+
+## Audit/fraud/postloan routing checkpoint
+
+The three adapters now consume `conversation.turn` and `conversation.confirm` on
+the existing authenticated reference command route. They no longer send every new
+message straight to `run.start` / `risk.run`. The common model context uses verified
+artifact Lock capabilities, existing owner materials or current risk object mapping,
+and server-held pending requests. Model proposals are strictly revalidated. Entry
+and proposal release evidence are necessary; evidence failure yields no executable
+plan. Plans contain the original request and trusted binding, not client commands.
+
+Audit dispatch reuses `run_audit` and the atomic confirmed-material precondition.
+Fraud/postloan Hosts advertise `risk-confirmation.v1` and accept paired optional
+expectedMappingRevision/expectedSubjectRef on select. The synchronized selection
+rejects a changed mapping before verification, while the existing verify lifecycle
+continues checking authority and selection generation. Old two-field selections
+remain supported for legacy explicit clients. Old Hosts lacking the new handshake
+are refused for this new conversational dispatch, not silently downgraded.
+These are Host changes affecting qualification, not an UI-only release.
+
+UI uses the same input/messages/confirmation component for the three adapters;
+editing text/object/materials invalidates visible proposals. Old direct task APIs
+remain compatible; the model has no access to them. Historical explanations retain
+the previous independent read policies. New-task risk conversation currently requires
+an active, bound managed Host; stopped report reading/explanation does not.
+
+Evidence:
+- `task-adapters-01.log`: retained first failure, two audit tests rejected valid
+  material because new adapter compared prefixed digest to the audit's bare SHA.
+  Fixed by reusing the existing audit digest function, not relaxing integrity.
+- `task-adapters-final-01.log`: 80 bounded API/workspace/history regression tests
+  passed. Actual audit workspace; synthetic risk transport/model are explicitly
+  substituted in adapter tests. Not a real packaged four-Host run.
+- `risk-confirmation-java-01.log`: 14 fraud + 16 postloan task regressions passed,
+  including expected mapping revision/resource mismatch before query and the existing
+  source/authority/evidence behavior. These are Java task tests, not service admission.
+- `task-adapters-node-01.log`: local UI/client/store checks.
+- `task-browser-01/result.json`: audit/fraud/postloan actual shared UI with finite
+  synthetic transport, greeting/no report, cancel/no report, explicit confirmation/
+  one fixed report; 1180/390/375/320 screenshots. No production SSO or actual model
+  understanding claim. Existing narrow-screen dense amount rows need independent
+  readability review; document width checks alone do not prove every inner label.
+
+Production bundle: 687137 bytes, existing 123 packages and 27 notices, cloudBytes=0.
+No dependency upgrade. Remaining release gates are real packaged integrated paths,
+real-model finite understanding/answer evaluation, changed group qualifications,
+actual service identity, independent experience review, protected merge/deployment
+and ordinary SSO acceptance. Do not infer them from this checkpoint.
