@@ -3,6 +3,12 @@ package io.github.bitlhk.finance.harness.providers.quotation;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.net.URI;
+import java.time.Duration;
+import io.github.bitlhk.finance.harness.core.spi.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,6 +20,24 @@ class QuotationReferenceConfigTest {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(p)));
     }
     Path copy(String name, String content) throws Exception { return Files.writeString(tmp.resolve(name), content); }
+    @Test void actualCoreRegistryAcceptsIdentityAndRejectsMissingOrWrongLock() throws Exception {
+        var factory = new QuotationReferenceFactoryV01(fixture().toAbsolutePath().toString(), hash(fixture()));
+        var registry = new ManagedProviderFactoriesV01(List.of(factory));
+        var selected = Set.of(QuotationReferenceProvider.ID);
+        var expected = Map.of(QuotationReferenceProvider.ID, Map.of("configuration-file-sha256", hash(fixture())));
+        assertEquals(expected, registry.configurationDigests(selected));
+        var connection = new ManagedProviderFactoryV01.Connection(factory.connectionKind(), URI.create("reference://quotation"),
+                Duration.ofSeconds(1), () -> { throw new AssertionError("Installation must not fetch session"); },
+                () -> null, ignored -> fail("Installation must not dispatch HTTP"));
+        assertEquals(selected, registry.create(connection,
+                () -> { throw new AssertionError("Installation must not grant access"); }, selected, expected).keySet());
+        var missing = assertThrows(IllegalArgumentException.class,
+                () -> registry.create(connection, () -> null, selected));
+        assertEquals("PROVIDER_CONFIGURATION_LOCK_MISMATCH", missing.getMessage());
+        var wrong = assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> null, selected,
+                Map.of(QuotationReferenceProvider.ID, Map.of("configuration-file-sha256", "0".repeat(64)))));
+        assertEquals("PROVIDER_CONFIGURATION_LOCK_MISMATCH", wrong.getMessage());
+    }
     @Test void freezesActualBytesAndDoesNotReloadChangedSource() throws Exception {
         Path p = copy("source.json", Files.readString(fixture()));
         var config = QuotationReferenceConfig.load(p, hash(p));
@@ -25,7 +49,7 @@ class QuotationReferenceConfigTest {
         assertEquals("900.00", facts.quote().referencePrice().value());
         assertThrows(IllegalArgumentException.class, () -> QuotationReferenceConfig.load(p, config.sha256()));
         var factory = new QuotationReferenceFactoryV01(fixture().toAbsolutePath().toString(), hash(fixture()));
-        assertEquals(hash(fixture()), factory.configurationDigests().get("configurationFileSha256"));
+        assertEquals(hash(fixture()), factory.configurationDigests().get("configuration-file-sha256"));
     }
     @Test void rejectsDigestSizeDuplicateUnknownAndAmbiguousRecords() throws Exception {
         String original = Files.readString(fixture());

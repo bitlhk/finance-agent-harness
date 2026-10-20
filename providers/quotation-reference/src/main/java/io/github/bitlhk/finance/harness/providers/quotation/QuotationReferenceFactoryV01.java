@@ -27,7 +27,7 @@ public final class QuotationReferenceFactoryV01 implements ManagedProviderFactor
     public Map<String,Set<String>> requirements() {
         return Map.of(QuotationReferenceProvider.CAPABILITY, Set.of(QuotationReferenceProvider.SCOPE));
     }
-    public Map<String,String> configurationDigests() { return Map.of("configurationFileSha256", config().sha256()); }
+    public Map<String,String> configurationDigests() { return Map.of("configuration-file-sha256", config().sha256()); }
     public DescribedFinanceProvider create(Connection connection, Map<String,BoundFinanceProvider> dependencies) {
         if (!KIND.equals(connection.kind()) || !dependencies.isEmpty()
                 || !"reference://quotation".equals(connection.endpoint().toString()))

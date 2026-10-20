@@ -20,6 +20,70 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpenJiuwenFinanceBridgeTest {
+    @Test
+    void strictQuerySeparatesExecutionIdentityAndRetainsTrustedSession() {
+        AtomicReference<CapabilityRequestV1> captured = new AtomicReference<>();
+        AtomicInteger calls = new AtomicInteger();
+        FinanceProvider provider = new FinanceProvider() {
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                calls.incrementAndGet();
+                captured.set(request);
+                return result(request, CapabilityResultV1.Status.COMPLETED, "read", Map.of(), null, null);
+            }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("TASK must not dispatch");
+            }
+        };
+        var input = invocation(QUERY, Set.of("wealth:read"), Map.of("productRef", "demo"), Map.of());
+        var legacy = new OpenJiuwenFinanceBridge(provider, "test-provider", DEFAULTS,
+                Set.of(QUERY), true, "trusted-session");
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, legacy.query(input).status());
+        assertEquals(input.taskId(), captured.get().taskRef());
+        var strict = new OpenJiuwenFinanceBridge(provider, "test-provider",
+                DEFAULTS.withStrictReadOnlyQueries().withPurpose("STRICT_READ"),
+                Set.of(QUERY, TASK), true, "trusted-session");
+        var output = strict.query(input);
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, output.status());
+        assertEquals(null, captured.get().taskRef());
+        assertEquals(input.taskId(), output.taskId());
+        assertEquals("trusted-session", captured.get().context().sessionRef());
+        assertEquals("STRICT_READ", captured.get().context().purpose());
+        assertEquals(input.arguments(), captured.get().parameters());
+        assertEquals(2, calls.get(), "one dispatch per query");
+        assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, strict.executeTask(input).status());
+        assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, strict.executeTask(input, null).status());
+        assertEquals(2, calls.get());
+        assertFalse(DEFAULTS.strictReadOnlyQueries(), "legacy defaults are not mutated");
+    }
+
+    @Test
+    void strictQueryStillChecksCurrentScopesAndDoesNotStripBusinessArguments() {
+        AtomicReference<Set<String>> scopes = new AtomicReference<>(Set.of("wealth:read"));
+        AtomicInteger calls = new AtomicInteger();
+        FinanceProvider provider = new FinanceProvider() {
+            public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                calls.incrementAndGet();
+                assertEquals("injected-task", request.parameters().get("taskRef"),
+                        "strict mapping is not a Provider parameter sanitizer");
+                return result(request, CapabilityResultV1.Status.COMPLETED, "read", Map.of(), null, null);
+            }
+            public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                throw new AssertionError("TASK must not dispatch");
+            }
+        };
+        var defaults = new OpenJiuwenFinanceBridge.InvocationDefaults("customer-001", "customer-001",
+                FinanceContextV1.PrincipalType.CUSTOMER, "test", "STRICT_READ",
+                FinanceContextV1.AuthenticationLevel.BASIC, Set.of("wealth:read"), scopes::get);
+        assertFalse(defaults.strictReadOnlyQueries(), "legacy eight-argument constructor");
+        var strict = new OpenJiuwenFinanceBridge(provider, "test-provider",
+                defaults.withStrictReadOnlyQueries(), Set.of(QUERY), true, "trusted-session");
+        var input = invocation(QUERY, Set.of("wealth:read"), Map.of("taskRef", "injected-task"), Map.of());
+        assertEquals(OpenJiuwenExecutionV1.Status.COMPLETED, strict.query(input).status());
+        scopes.set(Set.of());
+        assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, strict.query(input).status());
+        assertEquals(1, calls.get());
+    }
+
     private static final String QUERY = "wealth.customer-context.query";
     private static final String TASK = "channel.preferences.update";
     private static final OpenJiuwenFinanceBridge.InvocationDefaults DEFAULTS =

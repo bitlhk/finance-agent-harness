@@ -125,6 +125,7 @@ public final class OpenJiuwenFinanceBridge {
     /** The approval parameter belongs to the trusted host API, not tool arguments. */
     public OpenJiuwenExecutionV1 executeTask(OpenJiuwenInvocationV1 invocation, HostTaskConfirmation approval) {
         Instant startedAt = Instant.now();
+        if (defaults.strictReadOnlyQueries()) return accessDenied(invocation, startedAt);
         try {
             var outcome = ProviderTaskExecution.execute(provider, () -> {
                 if (!supports(invocation.capabilityId())) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
@@ -207,7 +208,8 @@ public final class OpenJiuwenFinanceBridge {
                         ? sanitizeMap(invocation.arguments())
                         : businessParameters(invocation.arguments()),
                 null,
-                invocation.taskId(),
+                operation == CapabilityRequestV1.Operation.QUERY && defaults.strictReadOnlyQueries()
+                        ? null : invocation.taskId(),
                 Map.of(),
                 null);
     }
@@ -392,7 +394,16 @@ public final class OpenJiuwenFinanceBridge {
             String purpose,
             FinanceContextV1.AuthenticationLevel authenticationLevel,
             Set<String> scopes,
-            java.util.function.Supplier<Set<String>> currentScopes) {
+            java.util.function.Supplier<Set<String>> currentScopes,
+            boolean strictReadOnlyQueries) {
+
+        /** Legacy trusted wiring keeps its original QUERY/TASK mapping. */
+        public InvocationDefaults(String principalId, String subjectRef, FinanceContextV1.PrincipalType principalType,
+                String channel, String purpose, FinanceContextV1.AuthenticationLevel authenticationLevel,
+                Set<String> scopes, java.util.function.Supplier<Set<String>> currentScopes) {
+            this(principalId, subjectRef, principalType, channel, purpose, authenticationLevel, scopes,
+                    currentScopes, false);
+        }
 
         public InvocationDefaults(String principalId, String subjectRef, FinanceContextV1.PrincipalType principalType,
                 String channel, String purpose, FinanceContextV1.AuthenticationLevel authenticationLevel, Set<String> scopes) {
@@ -417,7 +428,17 @@ public final class OpenJiuwenFinanceBridge {
                     ? this
                     : new InvocationDefaults(
                             principalId, subjectRef, principalType, channel, newPurpose,
-                            authenticationLevel, scopes, currentScopes);
+                            authenticationLevel, scopes, currentScopes, strictReadOnlyQueries);
+        }
+
+        /**
+         * Trusted Host opt-in: QUERY carries no business taskRef and TASK is denied.
+         * The SDK execution ID and authenticated session remain independent and unchanged.
+         * This option grants no authority and is not a tool argument.
+         */
+        public InvocationDefaults withStrictReadOnlyQueries() {
+            return new InvocationDefaults(principalId, subjectRef, principalType, channel, purpose,
+                    authenticationLevel, scopes, currentScopes, true);
         }
     }
 }
