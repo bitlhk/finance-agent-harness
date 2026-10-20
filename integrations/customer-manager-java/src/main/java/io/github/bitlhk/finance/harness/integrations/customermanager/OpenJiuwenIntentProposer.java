@@ -47,9 +47,17 @@ final class OpenJiuwenIntentProposer {
     ConversationIntent propose(String query, Set<String> authorizedObjects,
             Set<ConversationIntent.Kind> installedActions, String reportRef, Integer revision,
             BooleanSupplier cancelled) throws Exception {
+        return propose(query, authorizedObjects, installedActions, null, reportRef, revision, cancelled);
+    }
+
+    ConversationIntent propose(String query, Set<String> authorizedObjects,
+            Set<ConversationIntent.Kind> installedActions, String selectedObject, String reportRef, Integer revision,
+            BooleanSupplier cancelled) throws Exception {
         if (query == null || query.isBlank() || query.length() > 8000)
             throw new IllegalArgumentException("CONVERSATION_INPUT_INVALID");
         if ((reportRef == null) != (revision == null)) throw new IllegalArgumentException("CONVERSATION_REPORT_BINDING_INVALID");
+        if (selectedObject != null && !authorizedObjects.contains(selectedObject))
+            throw new SecurityException("CONVERSATION_OBJECT_REJECTED");
         checkCancelled(cancelled);
         String session = UUID.randomUUID().toString();
         try {
@@ -57,6 +65,7 @@ final class OpenJiuwenIntentProposer {
             input.put("userText", query);
             input.put("authorizedObjects", new TreeSet<>(authorizedObjects));
             input.put("availableActions", installedActions.stream().map(Enum::name).sorted().toList());
+            input.put("selectedObject", selectedObject);
             input.put("selectedReport", reportRef == null ? null : Map.of("reportRef", reportRef, "revision", revision));
             var chunks = Runner.runAgentStreaming(agent,
                     Map.of("query", HarnessJson.mapper().writeValueAsString(input)), session, null, List.of(StreamMode.OUTPUT));

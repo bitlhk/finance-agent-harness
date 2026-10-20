@@ -5,10 +5,10 @@ import java.util.*;
 
 /** Session-local one-shot confirmation, never a replacement for execution-time authorization. */
 final class ConversationConfirmation {
-    record Binding(String owner, String instance, String lockDigest, long epoch) {
+    record Binding(String owner, String instance, String lockDigest, long epoch, String scopeDigest) {
         Binding {
             if (owner == null || owner.isBlank() || instance == null || instance.isBlank()
-                    || lockDigest == null || lockDigest.isBlank() || epoch < 0)
+                    || lockDigest == null || lockDigest.isBlank() || epoch < 0 || scopeDigest == null || scopeDigest.isBlank())
                 throw new IllegalArgumentException("CONVERSATION_BINDING_REQUIRED");
         }
     }

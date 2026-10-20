@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 final class ConversationConfirmationTest {
     private static final Instant NOW = Instant.parse("2026-10-20T00:00:00Z");
-    private static final ConversationConfirmation.Binding BINDING = new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-a", 1);
+    private static final ConversationConfirmation.Binding BINDING = new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-a", 1, "scope-a");
     private static final ConversationIntent INTENT = new ConversationIntent(ConversationIntent.Kind.PREPARE, "object-a", null, null);
     private static final Set<String> OBJECTS = Set.of("object-a");
     private static final Set<ConversationIntent.Kind> ACTIONS = Set.of(ConversationIntent.Kind.PREPARE);
@@ -30,10 +30,11 @@ final class ConversationConfirmationTest {
     }
     @Test void ownerInstanceLockAndEpochAreEachBound() {
         for (var changed : List.of(
-                new ConversationConfirmation.Binding("owner-b", "instance-a", "lock-a", 1),
-                new ConversationConfirmation.Binding("owner-a", "instance-b", "lock-a", 1),
-                new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-b", 1),
-                new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-a", 2))) {
+                new ConversationConfirmation.Binding("owner-b", "instance-a", "lock-a", 1, "scope-a"),
+                new ConversationConfirmation.Binding("owner-a", "instance-b", "lock-a", 1, "scope-a"),
+                new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-b", 1, "scope-a"),
+                new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-a", 2, "scope-a"),
+                new ConversationConfirmation.Binding("owner-a", "instance-a", "lock-a", 1, "scope-b"))) {
             var store = store(); var plan = store.propose(BINDING, INTENT, "synthetic query");
             assertThrows(SecurityException.class, () -> store.claim(plan.id(), changed, OBJECTS, ACTIONS));
         }

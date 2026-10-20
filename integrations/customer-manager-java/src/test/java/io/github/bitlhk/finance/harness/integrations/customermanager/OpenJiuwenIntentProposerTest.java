@@ -46,7 +46,7 @@ final class OpenJiuwenIntentProposerTest {
             assertTrue(fixture.requests.isEmpty());
         }
     }
-    private static final class Fixture implements AutoCloseable {
+    static final class Fixture implements AutoCloseable {
         final HttpServer server;
         final List<JsonNode> requests = new CopyOnWriteArrayList<>();
         Fixture(String reply) throws Exception {

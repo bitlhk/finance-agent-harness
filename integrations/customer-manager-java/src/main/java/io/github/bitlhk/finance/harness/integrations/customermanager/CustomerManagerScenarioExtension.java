@@ -41,14 +41,21 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
-        return new Managed(owner, sessionId, task, method, capabilities);
+        return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
+                new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()));
     }
 
-    private static final class Managed implements Session {
+    static final class Managed implements Session {
         private final String owner, sessionId;
         private final ServicePreparation task;
         private final InstalledPreparationMethod method;
         private final ConversationCapabilities capabilities;
+        private final String instanceId;
+        private final OpenJiuwenIntentProposer intentProposer;
+        private final java.util.function.Supplier<String> scopeDigest;
+        private String confirmedScope;
+        private final ConversationConfirmation confirmation = new ConversationConfirmation(Clock.systemUTC());
+        private long conversationEpoch;
         private String selectedCustomer, selectedGoal;
         private String pendingProductCustomer;
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
@@ -64,9 +71,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             Operation(String id) { this.id = id; }
         }
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
-                ConversationCapabilities capabilities) throws Exception {
+                ConversationCapabilities capabilities, String instanceId, OpenJiuwenIntentProposer intentProposer,
+                java.util.function.Supplier<String> scopeDigest) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             this.capabilities=capabilities;
+            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.intentProposer=intentProposer;
+            this.scopeDigest=Objects.requireNonNull(scopeDigest);
             var latest=task.latest(owner);
             if(latest.isPresent()) {
                 JsonNode report=latest.get();selectedCustomer=report.path("customerAlias").asText(null);
@@ -79,6 +89,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         @Override public Map<String,Object> bootstrap() {
             current(); return Map.of("scenarioId", ID, "sessionId", sessionId, "customers", task.customers(owner),
                     "conversationContract", "manager-conversation.v1",
+                    "conversationContracts", List.of("manager-conversation.v1", "manager-conversation.v2"),
                     "installedConversationActions", capabilities.actions().stream().map(Enum::name).sorted().toList(),
                     "steps", List.of("CUSTOMER_AND_GOAL", "FACT_COLLECTION", "PREPARATION_REPORT", "MANAGER_REVIEW"),
                     "method", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(), "lockDigest", method.lockDigest()));
@@ -95,6 +106,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     if (operation.finished) return Map.of("status","NOT_ACTIVE");
                     String status = operation.generation < 0 ? "CANCELLED" : task.cancel(owner,operation.generation);
                     operation.cancelled = "CANCELLED".equals(status);
+                    if (operation.cancelled) confirmation.invalidate();
                     return Map.of("status",status);
                 }
             }
@@ -109,6 +121,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
                 case "select" -> {
                     exact(body,"customerAlias","goal");
+                    invalidateConfirmation();
                     clearPendingProduct();
                     selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
                     yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
@@ -152,7 +165,9 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             try {
                 String requested = body.has("customerAlias") ? body.path("customerAlias").asText() : null;
-                var result = chat(text(body,"query"),requested,sink);
+                if(!body.has("conversationContract")) invalidateConfirmation();
+                var result = body.has("conversationContract") ? converse(body, requested, sink)
+                        : chat(text(body,"query"),requested,sink);
                 synchronized (operationLock) {
                     if (current.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
                     current.finished = true;
@@ -164,16 +179,22 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private long selectOperation(String customer, String query, JsonNode context) {
             synchronized (operationLock) {
                 if (operation.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                if(confirmedScope!=null&&!confirmedScope.equals(scopeDigest.get())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
                 operation.generation = task.select(owner,customer,query,context);
+                if(confirmedScope!=null&&!confirmedScope.equals(scopeDigest.get())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
                 return operation.generation;
             }
         }
         private Map<String,Object> chat(String query, String requested, EventSink sink) throws Exception {
+            return chat(query, requested, sink, null);
+        }
+        private Map<String,Object> chat(String query, String requested, EventSink sink,
+                CustomerManagerDialogue.Decision confirmedDecision) throws Exception {
             List<String> customers=task.customers(owner);
             if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
             String conversationalCustomer=requested!=null?(requested.isBlank()?null:requested):selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
-            var decision=CustomerManagerDialogue.resolve(query,customers,conversationalCustomer);
+            var decision=confirmedDecision == null ? CustomerManagerDialogue.resolve(query,customers,conversationalCustomer) : confirmedDecision;
             if(decision.action()==CustomerManagerDialogue.Action.GREETING)
                 return Map.of("status","ANSWERED","response","你好。我可以协助处理当前已接入的客户服务任务。你可以先问我能做什么，或查看当前获授权服务的客户。此次没有查询客户事实或生成报告。");
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_INTENT
@@ -231,6 +252,74 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             result.put("status",status);result.put("response",response);result.put("customer",customer);
             result.put("report",value(report));return Map.copyOf(result);
         }
+        private ConversationConfirmation.Binding conversationBinding() {
+            return new ConversationConfirmation.Binding(owner, instanceId, method.lockDigest(), conversationEpoch, scopeDigest.get());
+        }
+        private void invalidateConfirmation() {
+            synchronized(operationLock) { confirmation.invalidate(); conversationEpoch++; }
+        }
+        private boolean operationCancelled() {
+            synchronized(operationLock) { return closed || operation == null || operation.cancelled; }
+        }
+        private Map<String,Object> converse(JsonNode body, String requested, EventSink sink) throws Exception {
+            if(!body.has("confirmationId")) invalidateConfirmation();
+            Set<String> customers;
+            try {
+                customers=Set.copyOf(task.customers(owner));
+                if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
+                    throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            } catch(RuntimeException rejected) {
+                confirmation.invalidate();
+                throw rejected;
+            }
+            if(body.has("confirmationId")) {
+                ConversationConfirmation.Plan plan;
+                synchronized(operationLock) {
+                    if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                    plan=confirmation.claim(text(body,"confirmationId"),conversationBinding(),customers,capabilities.actions());
+                }
+                // The submitted text and object cannot rewrite a previously confirmed request.
+                if(!plan.originalQuery().equals(text(body,"query")) || !plan.intent().objectRef().equals(requested))
+                    throw new SecurityException("CONVERSATION_CONFIRMATION_REJECTED");
+                if("CANCEL".equals(body.path("confirmationDecision").asText()))
+                    return Map.of("status","ANSWERED","response","已取消这项尚未执行的提案，未查询客户事实，也未生成新报告。");
+                clearPendingProduct();
+                var action=plan.intent().kind()==ConversationIntent.Kind.PREPARE
+                        ? CustomerManagerDialogue.Action.PREPARE : CustomerManagerDialogue.Action.PRODUCT_REVIEW;
+                confirmedScope=plan.binding().scopeDigest();
+                try { return chat(plan.originalQuery(),plan.intent().objectRef(),sink,
+                        new CustomerManagerDialogue.Decision(action,plan.intent().objectRef(),List.of(plan.intent().objectRef()))); }
+                finally { confirmedScope=null; }
+            }
+            clearPendingProduct();
+            String query=text(body,"query");
+            var proposedBinding=conversationBinding();
+            ConversationIntent intent=intentProposer.propose(query,customers,capabilities.actions(),
+                    requested==null||requested.isBlank()?null:requested,null,null,this::operationCancelled);
+            if(!customers.equals(Set.copyOf(task.customers(owner)))||!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
+            if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            return switch(intent.kind()) {
+                case GREETING -> Map.of("status","ANSWERED","response","你好。你可以说明要完成的客户服务工作，也可以先问我具备哪些能力或你可服务哪些客户。本轮没有查询客户事实或生成报告。");
+                case CAPABILITIES -> Map.of("status","ANSWERED","response",capabilities.description());
+                case LIST_OBJECTS -> Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
+                case UNSUPPORTED -> Map.of("status","ANSWERED","response","这项请求不在当前Agent已装配能力范围内，未执行。"+capabilities.description());
+                case CLARIFY -> Map.of("status","NEED_CLARIFICATION","response","请明确你想解释已有报告，还是取得新事实生成报告；本轮未执行查询。","missingInputs",List.of("intent"));
+                case EXPLAIN_REPORT -> Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
+                case PREPARE, PRODUCT_REVIEW -> {
+                    if(intent.objectRef()==null) yield Map.of("status","NEED_CLARIFICATION","response","请明确本次服务的授权客户；尚未查询客户事实。","missingInputs",List.of("customerAlias"));
+                    ConversationConfirmation.Plan plan;
+                    synchronized(operationLock) {
+                        if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                        plan=confirmation.propose(proposedBinding,intent,query);
+                    }
+                    yield Map.of("status","NEED_CONFIRMATION","response","请确认：为"+displayName(intent.objectRef())
+                            +(intent.kind()==ConversationIntent.Kind.PREPARE?"取得新事实并准备回访报告。":"取得新事实并筛选待复核产品候选。")
+                            +"尚未执行业务查询，已有报告不会被改写。",
+                            "confirmation",Map.of("id",plan.id(),"customerAlias",intent.objectRef(),"action",intent.kind().name(),
+                                    "query",plan.originalQuery(),"expiresAt",plan.expiresAt().toString()));
+                }
+            };
+        }
         private void clearPendingProduct() {
             pendingProductCustomer=null;
             pendingProductArguments.clear();
@@ -261,7 +350,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(selectedGoal!=null)value.put("selectedGoal",selectedGoal);
             return value;
         }
-        @Override public void close() { if(!closed){closed=true;task.close();} }
+        @Override public void close() { if(!closed){closed=true;confirmation.invalidate();task.close();} }
         private void current(){if(closed)throw new SecurityException("SCENARIO_SESSION_CLOSED");}
     }
 
@@ -269,6 +358,16 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         if (value == null) return "";
         String normalized = value.trim();
         return normalized.startsWith("合成客户") && normalized.length() > 4 ? normalized.substring(4) : normalized;
+    }
+    static String conversationScopeDigest(CustomerCrmEmployeeMapping mapping) {
+        var authority=mapping.authority();
+        try {
+            byte[] encoded=HarnessJson.mapper().writeValueAsBytes(new TreeMap<>(Map.of(
+                    "owner",authority.ownerRef(),"principal",authority.principalRef(),"revision",authority.revision(),
+                    "expiresAt",authority.expiresAt().toString(),"authenticationLevel",authority.authenticationLevel().name(),
+                    "allowedCustomers",new TreeSet<>(authority.allowedCustomerRefs()),"aliases",new TreeMap<>(mapping.customers()))));
+            return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(encoded));
+        } catch(Exception failure) { throw new IllegalStateException("CONVERSATION_SCOPE_UNAVAILABLE"); }
     }
     static String displayNames(Collection<String> values) {
         return String.join("、", values.stream().map(CustomerManagerScenarioExtension::displayName).toList());
@@ -317,6 +416,19 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     static void exactChat(JsonNode body) {
         Set<String> actual = new HashSet<>();
         body.fieldNames().forEachRemaining(actual::add);
+        if(body.has("conversationContract")) {
+            Set<String> required=Set.of("query","runId","customerAlias","conversationContract");
+            var withConfirmation=new HashSet<>(required);withConfirmation.addAll(Set.of("confirmationId","confirmationDecision"));
+            if((!actual.equals(required)&&!actual.equals(withConfirmation))
+                    ||!"manager-conversation.v2".equals(body.path("conversationContract").textValue())
+                    ||!body.path("query").isTextual()||body.path("query").asText().isBlank()||body.path("query").asText().length()>500
+                    ||!body.path("runId").isTextual()||body.path("runId").asText().isBlank()
+                    ||!body.path("customerAlias").isTextual()||body.path("customerAlias").asText().length()>200
+                    ||body.has("confirmationId")&&(!body.path("confirmationId").isTextual()||body.path("confirmationId").asText().isBlank()
+                        ||!Set.of("EXECUTE","CANCEL").contains(body.path("confirmationDecision").asText())))
+                throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
+            return;
+        }
         if (!actual.equals(Set.of("query")) && !actual.equals(Set.of("query", "runId"))
                 && !actual.equals(Set.of("query", "runId", "customerAlias"))) {
             throw new IllegalArgumentException("SCENARIO_BODY_INVALID");
