@@ -9,6 +9,8 @@ import java.nio.file.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Map;
 
 /** One-shot child of the authenticated workbench; no Host, tools, archive discovery or business access. */
 public final class ConversationWorker {
@@ -33,9 +35,27 @@ public final class ConversationWorker {
             var connection=new ManagedScenarioExtensionV01.ModelConnection(required("FH_CONVERSATION_MODEL_PROVIDER"),
                     required("FH_MODEL_KEY"),required("FH_MODEL_URL"),required("FH_MODEL_NAME"));
             String operation=request.has("operation")?request.path("operation").asText():"EXPLAIN";
-            var answer=switch(operation) {
+            JsonNode answer=switch(operation) {
                 case "EXPLAIN" -> new SavedReportExplainer(connection).explain(request.path("question").asText(),request.path("projection"),()->false);
                 case "PROPOSE" -> new TaskIntentProposer(connection).propose(request.path("question").asText(),request.path("projection"));
+                case "RESPOND" -> {
+                    var context=responseContext(request.path("projection"));
+                    Path stream=Path.of(args[0]+".stream");
+                    try(var writer=Files.newBufferedWriter(stream,StandardCharsets.UTF_8,
+                            StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)) {
+                        int[] sequence={0};
+                        String text=new ConversationResponder(connection).respond(request.path("question").asText(),
+                                context,()->false,()->{},snapshot->{
+                                    // Private IPC only. Parent must authorize/audit before client release.
+                                    writer.write(HarnessJson.mapper().writeValueAsString(Map.of(
+                                            "schema","finance-conversation-worker-progress.v1",
+                                            "sequence",++sequence[0],"text",snapshot)));
+                                    writer.newLine();writer.flush();
+                                });
+                        yield HarnessJson.mapper().createObjectNode()
+                                .put("schema","finance-conversation-response.v1").put("answer",text);
+                    }
+                }
                 default -> throw new IllegalArgumentException();
             };
             Path output=Path.of(args[0]);
@@ -48,6 +68,20 @@ public final class ConversationWorker {
             com.openjiuwen.core.runner.Runner.stop();
         }
         if(exit!=0)System.exit(exit);
+    }
+    static ConversationResponder.Context responseContext(JsonNode value) {
+        var names=new HashSet<String>();value.fieldNames().forEachRemaining(names::add);
+        if(!value.isObject()||!names.equals(Set.of("purpose","capabilityDescription","missingInputs","decisionDescription"))
+                ||!value.path("purpose").isTextual()||!value.path("capabilityDescription").isTextual()
+                ||!value.path("decisionDescription").isTextual()||!value.path("missingInputs").isArray())
+            throw new IllegalArgumentException("CONVERSATION_RESPONSE_INPUT_INVALID");
+        var missing=new ArrayList<String>();
+        for(JsonNode field:value.path("missingInputs")) {
+            if(!field.isTextual())throw new IllegalArgumentException("CONVERSATION_RESPONSE_INPUT_INVALID");
+            missing.add(field.asText());
+        }
+        return new ConversationResponder.Context(ConversationResponder.Purpose.valueOf(value.path("purpose").asText()),
+                value.path("capabilityDescription").asText(),missing,value.path("decisionDescription").asText());
     }
     private static String required(String name) {
         String value=System.getenv(name);

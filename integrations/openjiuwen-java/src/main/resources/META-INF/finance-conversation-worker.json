@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "finance-conversation-worker-support.v1",
+  "operations": ["EXPLAIN", "PROPOSE", "RESPOND"],
+  "responseSchema": "finance-conversation-response.v1"
+}
