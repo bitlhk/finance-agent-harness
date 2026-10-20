@@ -207,3 +207,52 @@ independent browser/SSO checks remain release blockers.
 
 The goal remains active. Do not mark it complete from these bounded tests or
 from synthetic previews; neither production deployment nor SSO acceptance occurred.
+
+## Shared stopped-history checkpoint
+
+This supersedes the stopped-Host gap above, but not the remaining release gates.
+The shared OpenJiuwen SavedReportExplainer and one-shot ConversationWorker are now
+packaged independently of a running Agent Host. Builder discovers the actual class
+in compiled dependency JARs and binds its declaration and complete classpath to the
+artifact Lock digest. Old packages without this declaration are explicitly rejected
+for explanation; their existing historical reads are unchanged.
+
+The authenticated `report.explain` command adapts manager CRM relationship checks,
+fraud/postloan persisted object mapping, and audit owner/material/run/review checks.
+It rechecks historical permission and immutable version digest before and after the
+model. It writes required entry/release receipts, withholds on evidence failure, and
+never changes an original report or promotes interpretation to verified facts.
+Audit revision zero means original run evidence without saved review, not report v0.
+The worker has no business tools and does not inherit bank/CRM environment variables.
+This is application control, NOT an independent OS sandbox or atomic revocation.
+The model worker can run after Agent stop; this consumes model resources and is
+distinct from zero-model historical replay.
+
+Current evidence under the same compact output root:
+- `shared-history-final-01.log`: 141 Python checks passed, including four persisted
+  history adapters, cross-owner/version/tamper denial, revocation during explanation,
+  required audit failure, package binding and generation gate regression.
+- `conversation-worker-packaged-02.log`: one actual packaged-JAR + actual SDK +
+  loopback synthetic HTTP test passed; no target/classes on the worker classpath,
+  exactly one observed fixture HTTP request, no tools, no business credentials
+  inherited, original Lock unchanged. Not real service identity or production model.
+- `shared-explainer-java-01.log`: 25 Java checks passed for shared extraction.
+- `history-node-01.log`: 38 UI/client/store checks passed.
+- `browser-history-02.log`: seven finite synthetic browser checks passed, including
+  explicit confirmation and stopped-version question; 1180/390/375/320 screenshots.
+  The fixture explicitly labels its explanation as fixed, not a real model answer.
+- `history-service-01.log`: 18 passed, one failure. Existing owner drain rejects a
+  nonexistent child as RuntimeError(NO_OWNED_PROCESS); old test expects ValueError.
+  Neither owner_drain.py nor this test was changed here. No stop/restart was performed.
+
+First failures retained: packaged test classpath extraction initially included an
+empty Surefire classpath component; test preparation corrected. Generation gate test
+collection initially lacked engineering on PYTHONPATH; corrected invocation.
+Browser history test initially left the sidebar collapsed after mobile sizing;
+test now opens the actual history control before selecting a record. No product
+authorization, failure expectation or release gate was relaxed.
+
+Still pending: audit/fraud/postloan NEW-task intent/clarification/confirmation through
+the common contract, finite real-model quality evaluation, final generated-package
+qualifications and actual service identity, independent experience review, release
+and ordinary SSO acceptance. This checkpoint is not a deployable completion claim.
