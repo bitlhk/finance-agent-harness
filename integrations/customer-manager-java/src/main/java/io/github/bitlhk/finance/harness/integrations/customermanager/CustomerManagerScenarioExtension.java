@@ -39,13 +39,16 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method,
                 io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
-        return new Managed(owner, sessionId, task, method);
+        var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
+                Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
+        return new Managed(owner, sessionId, task, method, capabilities);
     }
 
     private static final class Managed implements Session {
         private final String owner, sessionId;
         private final ServicePreparation task;
         private final InstalledPreparationMethod method;
+        private final ConversationCapabilities capabilities;
         private String selectedCustomer, selectedGoal;
         private String pendingProductCustomer;
         private final Map<String,Object> pendingProductArguments=new LinkedHashMap<>();
@@ -60,8 +63,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             boolean cancelled, finished;
             Operation(String id) { this.id = id; }
         }
-        Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method) throws Exception {
+        Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
+                ConversationCapabilities capabilities) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
+            this.capabilities=capabilities;
             var latest=task.latest(owner);
             if(latest.isPresent()) {
                 JsonNode report=latest.get();selectedCustomer=report.path("customerAlias").asText(null);
@@ -74,6 +79,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         @Override public Map<String,Object> bootstrap() {
             current(); return Map.of("scenarioId", ID, "sessionId", sessionId, "customers", task.customers(owner),
                     "conversationContract", "manager-conversation.v1",
+                    "installedConversationActions", capabilities.actions().stream().map(Enum::name).sorted().toList(),
                     "steps", List.of("CUSTOMER_AND_GOAL", "FACT_COLLECTION", "PREPARATION_REPORT", "MANAGER_REVIEW"),
                     "method", Map.of("id", method.id(), "version", method.version(), "digest", method.digest(), "lockDigest", method.lockDigest()));
         }
@@ -107,7 +113,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
                     yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
                 }
-                case "prepare" -> { exact(body,"generation"); yield value(task.prepare(owner,integer(body,"generation"))); }
+                case "prepare" -> { exact(body,"generation"); capabilities.require(ConversationIntent.Kind.PREPARE);
+                    yield value(task.prepare(owner,integer(body,"generation"))); }
                 case "read" -> { exact(body,"reportId"); yield value(task.read(owner,text(body,"reportId"))); }
                 case "latest" -> {
                     exact(body);var latest=task.latest(owner);var result=new LinkedHashMap<String,Object>();
@@ -174,7 +181,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 return Map.of("status","NEED_CLARIFICATION","response","请说明你希望完成的具体工作。当前不会把这句话自动当作回访请求；若要查看已有结果，请从历史选择相应报告。","missingInputs",List.of("action"));
             if(CustomerManagerDialogue.rejectsProductSelection(query)) clearPendingProduct();
             if(decision.action()==CustomerManagerDialogue.Action.DESCRIBE_CAPABILITIES)
-                return Map.of("status","ANSWERED","response","我可以列出你当前获授权服务的客户，汇集资料与持仓事实并生成待复核的回访准备建议。你也可以提供客户、金额、期限和渠道，让我从合成产品目录中形成待复核候选；我不会执行购买、CRM 写入、消息发送或交易办理。");
+                return Map.of("status","ANSWERED","response",capabilities.description());
             if(decision.action()==CustomerManagerDialogue.Action.LIST_CUSTOMERS)
                 return Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。你可以直接告诉我客户姓名和本次服务目标。","customers",customers);
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_MULTIPLE)
@@ -186,6 +193,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             boolean product=shouldUseProductFlow(decision.action(),pendingProductCustomer!=null,query);
             if(!product && pendingProductCustomer!=null) clearPendingProduct();
             if(product) {
+                capabilities.require(ConversationIntent.Kind.PRODUCT_REVIEW);
                 String customer=decision.customer()!=null?decision.customer():pendingProductCustomer;
                 if(customer==null||customer.isBlank())return Map.of("status","NEED_CLARIFICATION","response","请先告诉我要为哪位获授权客户筛选产品候选。");
                 pendingProductCustomer=customer;pendingProductArguments.putAll(productArguments(query));
@@ -208,6 +216,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(decision.action()==CustomerManagerDialogue.Action.CLARIFY_CUSTOMER)
                 return Map.of("status","NEED_CLARIFICATION","response","请告诉我要查看哪位获授权客户。你也可以先问“我负责哪些客户？”。");
             String customer=decision.customer();
+            capabilities.require(ConversationIntent.Kind.PREPARE);
             ObjectNode taskContext=updateContext(customer,query);
             selectedCustomer=customer;selectedGoal=query;
             sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of(
