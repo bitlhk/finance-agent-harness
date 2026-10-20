@@ -58,8 +58,39 @@ First failure retained: `conversation-host-attempt-01.log` and
 exception while expecting a normalized FAILED response. Existing ServicePreparation
 rethrows this runtime exception and does not make that path terminal. The normalized
 failure fixture now tests the documented CapabilityResult contract, but the raw
-exception terminal-state gap remains OPEN and needs a focused repair/test before
-release; it is not dismissed as just a fixture issue.
+exception terminal-state gap was fixed in the following focused increment below;
+it was not dismissed as just a fixture issue.
+
+## Provider exception terminal-state increment
+
+The shared ServicePreparation query boundary now distinguishes a raw source
+exception from authorization, cancellation and necessary-evidence failures. It
+retains FAILED (or PARTIAL if earlier facts exist), NOT_RUN explanation and safe
+PREPARATION_SOURCE_CALL_FAILED without the exception body. Dispatch is honestly
+INVOKED_SEND_UNOBSERVED, not a claimed HTTP count. The consumed plan cannot retry.
+Reauthorization and mandatory decision writes still precede any result release.
+Revocation discards the result; a prior CANCELLED snapshot is not overwritten.
+If evidence storage fails after dispatch, the response is withheld and the existing
+report store attempts to retain the honest failure. No successful persistence in a
+failed medium is promised.
+
+- `source-terminal-final-01.log` and `source-terminal-final-01-xml/`: 58 distinct
+  tests, zero failures/skips, including 11 managed-Session/SDK tests. This replaces,
+  not adds to, the preceding manager run's 53-test count.
+- `source-terminal-shared-regression-01.log`: 49 distinct additional regressions:
+  ScenarioEvidenceTest 6, EmployeeAgentPreparationBrokerTest 7,
+  ServicePreparationTest 33, BrokeredServicePreparationTest 3. Raw XML retained
+  separately under `source-terminal-shared-{core,employee,wealth}-xml/`.
+- Intermediate attempt 01 failed a whole-JSON numeric-node representation equality
+  assertion; canonical whole-content digest comparison fixes the test representation.
+  Attempt 03 incorrectly expected discovery to throw for a revoked record; existing
+  latest deliberately hides unauthorized records. The corrected test requires
+  found=false and explicit read rejection, plus a durable stripped DISCARDED state.
+  Both original logs/XML remain; no production failures or records were rewritten.
+
+This changes the shared service-preparation JAR. Its actual consumers must be included
+in generated-input/qualification impact analysis, not classified as a UI-only change.
+All model responses in this increment came from loopback synthetic fixtures.
 
 ## Actual verification
 
@@ -85,8 +116,8 @@ and qualifications require actual impact analysis before any release.
 
 ## Remaining ordered work
 
-1. Complete manager conversational slot/context handling and raw Provider exception
-   terminal-state repair. V2 wiring is now present, but neither a production model
+1. Complete manager conversational slot/context handling. V2 wiring and the source
+   exception repair are present, but neither a production model
    quality test nor packaged Host/admission verification has run.
 2. Explain a selected immutable report/version through its existing authorized
    historical reader without new Provider calls. Precisely report any model calls.
@@ -98,5 +129,5 @@ and qualifications require actual impact analysis before any release.
    identity and old-artifact compatibility; normal protected merge, authoritative
    drain, rollback, controlled deployment, then independent ordinary-SSO acceptance.
 
-The goal remains active. Do not mark it complete from these 46 distinct tests or
+The goal remains active. Do not mark it complete from these bounded tests or
 from synthetic previews; neither production deployment nor SSO acceptance occurred.

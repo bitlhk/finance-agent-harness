@@ -191,7 +191,7 @@ public final class ServicePreparation implements AutoCloseable {
         try {
             proof.check("ENTRY",authorize,null);proof.invoked();
             businessProviderCalls.incrementAndGet();
-            CapabilityResultV1 result = access.query(run,run,s.customer(),CAPABILITY,Map.of());
+            CapabilityResultV1 result = querySource(run,run,s.customer(),CAPABILITY,Map.of(),proof);
             proof.returned();proof.check("RETURN",authorize,result);
             JsonNode data = HarnessJson.mapper().valueToTree(result.data());
             JsonNode context = data.path("previsitContext");
@@ -221,7 +221,7 @@ public final class ServicePreparation implements AutoCloseable {
                     report.set("productExecutionBinding",productProof.binding());
                     productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
-                    CapabilityResultV1 allocation=access.query(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments);
+                    CapabilityResultV1 allocation=querySource(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments,productProof);
                     productProof.returned();productProof.check("RETURN",authorize,allocation);
                     if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
                         missing.add("产品适当性筛选未完成");
@@ -329,27 +329,71 @@ public final class ServicePreparation implements AutoCloseable {
                 s.completion().finished = true;
                 return report.deepCopy();
             }
-        } catch (ScenarioEvidence.Unavailable unavailable) {
-            report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
-            report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
-            report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
-            synchronized (this) {
-                if (!s.completion().cancelled) {
-                    try { persist(report); } catch(Exception storageFailure) { /* No claim that a failed store retained the receipt. */ }
+        } catch (SourceCallFailure failure) {
+            // A local exception does not prove whether an external HTTP request was sent.
+            report.put("status",report.has("facts")?"PARTIAL":"FAILED");
+            report.put("explanationStatus","NOT_RUN");
+            report.put("failureCode","PREPARATION_SOURCE_CALL_FAILED");
+            report.put("failureStage","PROVIDER_CALL");
+            report.put("failedCapability",failure.capability);
+            report.put("providerDispatch","INVOKED_SEND_UNOBSERVED");
+            report.put("finishedAt",Instant.now().toString());
+            report.withArray("events").add("PROVIDER_CALL_FAILED_NO_AUTOMATIC_RETRY");
+            try {
+                synchronized(this) {
+                    current(s,run);
+                    failure.proof.check("PROVIDER_FAILURE",authorize,report);
+                    persist(report);
+                    proof.check("PAGE_RELEASE",authorize,report);
+                    return report.deepCopy();
                 }
+            } catch(ScenarioEvidence.Unavailable unavailable) {
+                retainEvidenceFailure(report,s,unavailable);
+                throw unavailable;
+            } catch(SecurityException stale) {
+                retainDiscarded(report,s);
+                throw stale;
             }
+        } catch (ScenarioEvidence.Unavailable unavailable) {
+            retainEvidenceFailure(report,s,unavailable);
             throw unavailable;
         } catch (SecurityException stale) {
-            synchronized (this) {
-                if (s.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
-                ObjectNode discarded = report.deepCopy();
-                discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
-                discarded.put("status","DISCARDED"); discarded.withArray("events").add("LATE_RESULT_DISCARDED");
-                persist(discarded);
-            }
+            retainDiscarded(report,s);
             throw stale;
         } finally {
             synchronized (this) { s.completion().finished = true; }
+        }
+    }
+    private synchronized void retainDiscarded(ObjectNode report,Selection selection) throws Exception {
+        if(selection.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+        ObjectNode discarded=report.deepCopy();
+        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
+        discarded.put("status","DISCARDED");discarded.withArray("events").add("LATE_RESULT_DISCARDED");
+        persist(discarded);
+    }
+    private static final class SourceCallFailure extends RuntimeException {
+        final String capability;
+        final ScenarioEvidence.Run proof;
+        SourceCallFailure(String capability,ScenarioEvidence.Run proof) {
+            super("PREPARATION_SOURCE_CALL_FAILED"); this.capability=capability; this.proof=proof;
+        }
+    }
+    private CapabilityResultV1 querySource(String request,String trace,String customer,String capability,
+            Map<String,Object> arguments,ScenarioEvidence.Run proof) {
+        try { return access.query(request,trace,customer,capability,arguments); }
+        catch(SecurityException|java.util.concurrent.CancellationException|ScenarioEvidence.Unavailable protectedFailure) {
+            throw protectedFailure;
+        }
+        catch(RuntimeException sourceFailure) { throw new SourceCallFailure(capability,proof); }
+    }
+    private void retainEvidenceFailure(ObjectNode report,Selection selection,ScenarioEvidence.Unavailable unavailable) {
+        report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
+        report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
+        report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
+        synchronized(this) {
+            if(!selection.completion().cancelled) {
+                try { persist(report); } catch(Exception storageFailure) { /* A failed store cannot promise a retained receipt. */ }
+            }
         }
     }
     public synchronized ObjectNode read(String caller, String id) throws Exception {
