@@ -65,6 +65,15 @@ fall back to selectedObject. Thus this result does not show unauthorized executi
 but the intent-level expectation remains unmet. No business call was made by the
 probe. Actual HTTP retry attempts remain unobserved.
 
+The follow-up candidate `8c00471` explicitly distinguishes a request for multiple
+objects from a missing single object, including names not in the authorized alias
+set. The same five cases were each invoked once using the rebuilt actual JAR:
+`live-language-multiobject-real-01/cases/results.json` records five matching
+classifications. The previous failure is not overwritten. This is a bounded
+regression, not a model success-rate estimate or proof for arbitrary wording.
+`task-intent-multiobject-01` preserves the targeted Maven stdout/stderr and 17
+passing cases' XML.
+
 This evaluation used the real service UID/mount namespace but no business Host.
 It is not final package admission, independent experience acceptance, or a live
 business test. No online service, permissions, or policies were changed.
