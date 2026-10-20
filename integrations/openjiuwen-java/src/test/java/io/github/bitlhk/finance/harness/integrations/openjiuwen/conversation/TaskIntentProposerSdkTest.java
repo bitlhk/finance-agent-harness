@@ -52,6 +52,8 @@ class TaskIntentProposerSdkTest {
             String messages = request.path("messages").toString();
             assertTrue(messages.contains("动作按availableActions中的ref区分"));
             assertTrue(messages.contains("不同动作或不同对象的歧义仍需CLARIFY"));
+            assertTrue(messages.contains("也不能当成单个缺对象的EXECUTE"));
+            assertTrue(messages.contains("未知名称不可近似匹配为已授权对象"));
             assertTrue(messages.contains("EXECUTE仍需另行确认"));
             assertTrue(messages.contains("核验已冻结的财报与申请用途合同材料"));
             assertThrows(IllegalArgumentException.class, () -> TaskIntentProposer.validate(
