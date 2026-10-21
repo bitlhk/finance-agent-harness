@@ -7,6 +7,26 @@ import static org.junit.jupiter.api.Assertions.*;
 class CustomerManagerDialogueTest {
     private static final List<String> CUSTOMERS=List.of("周明远","沈嘉禾","赵婉清");
 
+    @Test void aSelectedCustomerIsNotPermissionToExecuteEveryUtterance() {
+        for (String query : List.of("你好", "解释刚才报告的70万元", "帮我订机票", "帮周明远分析理财")) {
+            assertNotEquals(CustomerManagerDialogue.Action.PREPARE,
+                    CustomerManagerDialogue.resolve(query,CUSTOMERS,"周明远").action(), query);
+        }
+    }
+
+    @Test void greetingsCannotResumeAnEarlierTask() {
+        for (String query : List.of("你好", "您好！", "谢谢", "再见")) {
+            assertEquals("GREETING",CustomerManagerDialogue.resolve(query,CUSTOMERS,"周明远").action().name());
+        }
+    }
+
+    @Test void explicitPreparationStillSelectsOnlyAnAuthorizedAlias() {
+        assertEquals(CustomerManagerDialogue.Action.PREPARE,
+                CustomerManagerDialogue.resolve("请为周明远准备回访",CUSTOMERS,null).action());
+        assertNotEquals(CustomerManagerDialogue.Action.PREPARE,
+                CustomerManagerDialogue.resolve("不要准备回访",CUSTOMERS,"周明远").action());
+    }
+
     @Test void listsAuthorizedCustomersWithoutPreparing() {
         assertEquals(CustomerManagerDialogue.Action.LIST_CUSTOMERS,
                 CustomerManagerDialogue.resolve("我负责哪些客户？",CUSTOMERS,null).action());

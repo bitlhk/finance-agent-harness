@@ -15,6 +15,15 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FraudVerificationTaskTest {
+    @Test void confirmedAliasMustStillResolveToTheSameRevisionAndResource() throws Exception {
+        try(var task=task()) {
+            assertThrows(SecurityException.class,()->task.select("owner","合成核验对象甲","核验","old-revision","SYN-CINO-001"));
+            assertThrows(SecurityException.class,()->task.select("owner","合成核验对象甲","核验","rev-1","OTHER-CINO"));
+            assertTrue(task.latest("owner").isEmpty());
+            long generation=task.select("owner","合成核验对象甲","核验","rev-1","SYN-CINO-001");
+            assertEquals("SYN-CINO-001",task.verify("owner",generation,FraudVerificationTask.Listener.NONE).path("subjectRef").asText());
+        }
+    }
     @Test void necessaryEntryFailurePreventsQueryAndExplanation() throws Exception {
         try(var task=task()) {
             long selected=task.select("owner","合成核验对象甲","synthetic verification");

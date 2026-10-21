@@ -3,6 +3,19 @@ import io.github.bitlhk.finance.harness.core.HarnessJson;import io.github.bitlhk
 import org.junit.jupiter.api.Test;import org.junit.jupiter.api.io.TempDir;import java.nio.file.*;import java.util.*;import static org.junit.jupiter.api.Assertions.*;
 class PostLoanRiskTaskTest{
  @TempDir Path temp;
+ @Test void confirmedMappingCannotSilentlySwitchResource()throws Exception{
+  var file=temp.resolve("confirmed.md");Files.writeString(file,"只读方法");
+  var method=InstalledPreparationMethod.load("m","1",file,digest(file),"sha256:l");
+  var mapping=new java.util.concurrent.atomic.AtomicReference<>(new PostLoanSubjectMapping("owner","r1",Map.of("对象","91440100MA5C00000B")));
+  try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),mapping::get,(m,p,r,f)->valid("ORANGE"),method,temp.resolve("confirmed"),Map.of())){
+   mapping.set(new PostLoanSubjectMapping("owner","r1",Map.of("对象","91370000726200000X")));
+   assertThrows(SecurityException.class,()->task.select("owner","对象","核验","r1","91440100MA5C00000B"));
+   assertTrue(task.latest("owner").isEmpty());
+   mapping.set(new PostLoanSubjectMapping("owner","r2",Map.of("对象","91440100MA5C00000B")));
+   assertThrows(SecurityException.class,()->task.select("owner","对象","核验","r1","91440100MA5C00000B"));
+   assertTrue(task.select("owner","对象","核验","r2","91440100MA5C00000B")>0);
+  }
+ }
  @Test void snapshotWarningReviewAndZeroExecutionReplay()throws Exception{
   var file=temp.resolve("SKILL.md");Files.writeString(file,"只读贷后核验方法");var method=InstalledPreparationMethod.load("post-loan-risk-verification","0.1.0",file,digest(file),"sha256:lock");
   try(var task=new PostLoanRiskTask("owner",new PostLoanRiskReferenceProvider(),()->new PostLoanSubjectMapping("owner","rev-1",Map.of("德信商业地产","91440100MA5C00000B")),
