@@ -1,0 +1,409 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/native-observation.v1.schema.json",
+  "title": "Metadata-only native SDK observation; not financial execution evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "requestId",
+    "instanceId",
+    "processBootId",
+    "runtimeLockDigest",
+    "sequence",
+    "source",
+    "mode",
+    "sampled",
+    "supportState",
+    "droppedRecords",
+    "lateRecords",
+    "budgetRefusedRecords"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance.native-observation.v1"
+    },
+    "kind": {
+      "enum": [
+        "SDK_SPAN",
+        "COVERAGE"
+      ]
+    },
+    "requestId": {
+      "$ref": "#/$defs/id"
+    },
+    "instanceId": {
+      "$ref": "#/$defs/id"
+    },
+    "processBootId": {
+      "$ref": "#/$defs/id"
+    },
+    "runtimeLockDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "frameworkVersion",
+        "integrationId",
+        "integrationVersion"
+      ],
+      "properties": {
+        "framework": {
+          "const": "openjiuwen-java"
+        },
+        "frameworkVersion": {
+          "const": "0.1.16"
+        },
+        "integrationId": {
+          "const": "finance-harness-openjiuwen-java-otel"
+        },
+        "integrationVersion": {
+          "const": "0.1.0-SNAPSHOT"
+        }
+      }
+    },
+    "mode": {
+      "enum": [
+        "off",
+        "sample",
+        "full"
+      ]
+    },
+    "sampled": {
+      "type": "boolean"
+    },
+    "supportState": {
+      "enum": [
+        "SUPPORTED",
+        "UNVERIFIED",
+        "UNAVAILABLE"
+      ]
+    },
+    "droppedRecords": {
+      "$ref": "#/$defs/count"
+    },
+    "lateRecords": {
+      "$ref": "#/$defs/count"
+    },
+    "budgetRefusedRecords": {
+      "$ref": "#/$defs/count"
+    },
+    "sdkTraceId": {
+      "type": "string",
+      "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+    },
+    "sdkSpanId": {
+      "type": "string",
+      "pattern": "^(?!0{16}$)[0-9a-f]{16}$"
+    },
+    "parentSdkSpanId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(?!0{16}$)[0-9a-f]{16}$"
+    },
+    "frameworkTraceId": {
+      "$ref": "#/$defs/id"
+    },
+    "category": {
+      "enum": [
+        "RUN",
+        "MODEL",
+        "TOOL",
+        "WORKFLOW"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "START",
+        "END"
+      ]
+    },
+    "status": {
+      "enum": [
+        "PENDING",
+        "RETURNED",
+        "ERROR",
+        "CANCELLED",
+        "UNKNOWN"
+      ]
+    },
+    "clockSource": {
+      "const": "SDK_OTEL_EPOCH_NANOS"
+    },
+    "startEpochNanos": {
+      "type": "string",
+      "pattern": "^[0-9]{1,20}$"
+    },
+    "endEpochNanos": {
+      "type": "string",
+      "pattern": "^[0-9]{1,20}$"
+    },
+    "durationNanos": {
+      "$ref": "#/$defs/count"
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "inputTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "outputTokens": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis"
+      ],
+      "properties": {
+        "basis": {
+          "const": "HOST_EXPLICIT_BINDING"
+        },
+        "financialSpanId": {
+          "$ref": "#/$defs/id"
+        },
+        "toolCallId": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "financialSpanId"
+          ]
+        },
+        {
+          "required": [
+            "toolCallId"
+          ]
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "SDK_SPAN"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "sdkTraceId",
+          "sdkSpanId",
+          "category",
+          "phase",
+          "status",
+          "clockSource",
+          "startEpochNanos"
+        ],
+        "properties": {
+          "sampled": {
+            "const": true
+          },
+          "mode": {
+            "enum": [
+              "sample",
+              "full"
+            ]
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "sdkTraceId"
+              ]
+            },
+            {
+              "required": [
+                "sdkSpanId"
+              ]
+            },
+            {
+              "required": [
+                "category"
+              ]
+            },
+            {
+              "required": [
+                "phase"
+              ]
+            },
+            {
+              "required": [
+                "status"
+              ]
+            },
+            {
+              "required": [
+                "clockSource"
+              ]
+            },
+            {
+              "required": [
+                "startEpochNanos"
+              ]
+            },
+            {
+              "required": [
+                "parentSdkSpanId"
+              ]
+            },
+            {
+              "required": [
+                "frameworkTraceId"
+              ]
+            },
+            {
+              "required": [
+                "endEpochNanos"
+              ]
+            },
+            {
+              "required": [
+                "durationNanos"
+              ]
+            },
+            {
+              "required": [
+                "usage"
+              ]
+            },
+            {
+              "required": [
+                "links"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "SDK_SPAN"
+          },
+          "phase": {
+            "const": "START"
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "PENDING"
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "endEpochNanos"
+              ]
+            },
+            {
+              "required": [
+                "durationNanos"
+              ]
+            },
+            {
+              "required": [
+                "usage"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "SDK_SPAN"
+          },
+          "phase": {
+            "const": "END"
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "required": [
+          "endEpochNanos",
+          "durationNanos"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "RETURNED",
+              "ERROR",
+              "CANCELLED",
+              "UNKNOWN"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "off"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sampled": {
+            "const": false
+          },
+          "kind": {
+            "const": "COVERAGE"
+          }
+        }
+      }
+    }
+  ]
+}
