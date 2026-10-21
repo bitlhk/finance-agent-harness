@@ -87,6 +87,32 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void clarificationNumberUsesServerDialogueButStillRequiresConfirmation() throws Exception {
+        String clarification="不能单独查询资料。可以为synthetic-a准备回访：1.确认准备；2.暂不执行。";
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","CLARIFY"),clarification,PROPOSAL);
+            var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("帮我看看synthetic-a的情况",null);
+            first.put("customerAlias","");
+            assertEquals("NEED_CLARIFICATION",session.callStreaming("chat",first,ignored->{}).get("status"));
+            var second=(com.fasterxml.jackson.databind.node.ObjectNode)body("1",null);second.put("customerAlias","");
+            var result=session.callStreaming("chat",second,ignored->{});
+            assertNotNull(planId(result));
+            String actual=model.requests.get(2).path("messages").toString();
+            assertTrue(actual.contains("previousDialogue"));assertTrue(actual.contains("帮我看看synthetic-a的情况"));
+            assertTrue(actual.contains("确认准备"));assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void newConversationDoesNotReceiveEarlierClarification() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","CLARIFY"),"SYNTHETIC_OLD_OPTIONS",CAPABILITIES,"当前能力说明");
+            var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("SYNTHETIC_OLD_GOAL",null);first.put("conversationContext","chat-a");
+            session.callStreaming("chat",first,ignored->{});
+            var second=(com.fasterxml.jackson.databind.node.ObjectNode)body("你能做什么",null);second.put("conversationContext","chat-b");
+            session.callStreaming("chat",second,ignored->{});
+            for(int i:List.of(2,3))assertFalse(model.requests.get(i).toString().contains("SYNTHETIC_OLD_"));
+            assertEquals(0,business.get());
+        }
+    }
     @Test @Timeout(30) void naturalCapabilityReplyUsesRealSdkAndManagedReleaseChecksWithoutBusiness() throws Exception {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"我可以帮助准备客户回访，但不能购买产品。");
             var session=session(model.proposer())) {
