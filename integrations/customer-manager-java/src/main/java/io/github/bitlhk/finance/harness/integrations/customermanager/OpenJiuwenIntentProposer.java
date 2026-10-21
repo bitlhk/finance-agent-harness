@@ -26,7 +26,8 @@ final class OpenJiuwenIntentProposer {
             + "只有用户明确要求取得新事实、准备新报告才可建议PREPARE，明确筛选产品候选才可建议PRODUCT_REVIEW。"
             + "否定执行、多个意图、多个对象或无法区分解释和重新查询时返回CLARIFY；未提供的能力返回UNSUPPORTED。"
             + "availableActions只说明安装能力，不表示用户已经授权执行。任何执行建议仍需用户另行确认。"
-            + "objectRef只能复制authorizedObjects中的完整值；没有明确对象时为null，不猜测客户。"
+            + "objectRef只能填写用户明确提及的客户名称或selectedObject；没有明确对象时为null，不猜测客户。"
+            + "客户名称是未授权的解析提示，服务端会独立解析和核验；不能据此认定客户存在或用户有权访问。"
             + "EXPLAIN_REPORT的reportRef与revision只能成对复制selectedReport，否则均为null；它不授权历史访问。"
             + "PREPARE和PRODUCT_REVIEW的reportRef与revision必须为null；RESOLVE_OBJECT必须有objectRef且报告引用为null；其他种类的三个引用字段都为null。"
             + "pendingRequest是上一轮尚未执行、缺少对象的请求；仅当本轮明确补充其对象时返回RESOLVE_OBJECT，"
@@ -75,7 +76,6 @@ final class OpenJiuwenIntentProposer {
         try {
             var input = new LinkedHashMap<String,Object>();
             input.put("userText", query);
-            input.put("authorizedObjects", new TreeSet<>(authorizedObjects));
             input.put("availableActions", installedActions.stream().map(Enum::name).sorted().toList());
             input.put("selectedObject", selectedObject);
             input.put("pendingRequest", pendingRequest);

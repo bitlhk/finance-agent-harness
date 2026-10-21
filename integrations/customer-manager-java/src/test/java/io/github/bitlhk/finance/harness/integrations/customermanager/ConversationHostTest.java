@@ -18,6 +18,8 @@ final class ConversationHostTest {
     private static final String PROPOSAL = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"PREPARE\",\"objectRef\":\"synthetic-a\",\"reportRef\":null,\"revision\":null}";
     final AtomicInteger business = new AtomicInteger();
     final AtomicInteger reportModels = new AtomicInteger();
+    final AtomicInteger authorityReads = new AtomicInteger();
+    final AtomicBoolean authorityUnavailable = new AtomicBoolean();
     final AtomicBoolean revoked = new AtomicBoolean();
     final AtomicBoolean throwsSource = new AtomicBoolean();
     final AtomicBoolean breakEvidenceDuringCall = new AtomicBoolean();
@@ -27,8 +29,13 @@ final class ConversationHostTest {
     final AtomicReference<String> scope = new AtomicReference<>("synthetic-scope-a");
 
     private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer) throws Exception {
-        var access = new PreparationAccess() {
+        return session(proposer,null);
+    }
+    private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer,PreparationAccess override) throws Exception {
+        PreparationAccess access = override!=null?override:new PreparationAccess() {
             public Snapshot authorize(String ref) {
+                authorityReads.incrementAndGet();
+                if(authorityUnavailable.get()) throw new IllegalStateException("SYNTHETIC_AUTHORITY_UNAVAILABLE");
                 if(revoked.get()) throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
                 return new Snapshot("synthetic-authority", "synthetic-employee", FinanceContextV1.AuthenticationLevel.BASIC);
             }
@@ -103,6 +110,74 @@ final class ConversationHostTest {
                 assertTrue(stages.containsAll(List.of("RESPONSE_ENTRY","RESPONSE_TEXT_RELEASE","RESPONSE_COMPLETE_RELEASE")));
             }
         }
+    }
+    @Test @Timeout(30) void greetingWithSlowReleaseKeepsAllSdkChunksWithoutBusinessOrSelectedCustomer() throws Exception {
+        String answer = "你好。我可以介绍当前能力，不需要先选择客户，也没有查询客户事实。";
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","GREETING"),answer);
+            var session=session(model.proposer())) {
+            model.onRequest=ignored->{if(model.requests.size()==1)model.chunkCharacters=2;};
+            var events=new ArrayList<Map<String,Object>>();
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("你好",null);
+            request.put("customerAlias","");
+            var result=session.callStreaming("chat",request,event->{
+                events.add(event);
+                try { Thread.sleep(200); } catch(InterruptedException failure) { Thread.currentThread().interrupt();throw new AssertionError(failure); }
+            });
+            assertEquals(answer,result.get("response"));
+            assertEquals("ANSWERED",result.get("status"));
+            assertEquals(2,model.requests.size());
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            assertFalse(events.isEmpty());
+            assertEquals(answer,((Map<?,?>)events.getLast().get("value")).get("text"));
+        }
+    }
+    @Test @Timeout(30) void greetingAndCapabilitiesDoNotDependOnCrmAvailability() throws Exception {
+        for(String kind:List.of("GREETING","CAPABILITIES","CLARIFY","UNSUPPORTED")) {
+            try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES",kind),"请说明目标；尚未查询客户事实。");
+                var session=session(model.proposer())) {
+                authorityUnavailable.set(true);
+                authorityReads.set(0);
+                var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("你好，你能做什么？",null);
+                request.put("customerAlias","");
+                var result=session.callStreaming("chat",request,ignored->{});
+                assertEquals(kind.equals("CLARIFY")?"NEED_CLARIFICATION":"ANSWERED",result.get("status"));
+                assertEquals(0,authorityReads.get(),"Plain conversation cannot depend on CRM relationship lookup");
+                assertFalse(model.requests.getFirst().path("messages").toString().contains("synthetic-a"),
+                        "Server-side mapping hints must not disclose the customer directory to the intent model");
+                assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            }
+        }
+    }
+    @Test @Timeout(30) void dataIntentStillRequiresLiveAuthorityEvenWhenItStartsWithGreeting() throws Exception {
+        for(String intent:List.of(PROPOSAL,CAPABILITIES.replace("CAPABILITIES","LIST_OBJECTS"))) {
+            try(var model=new OpenJiuwenIntentProposerTest.Fixture(intent);var session=session(model.proposer())) {
+                authorityUnavailable.set(true);
+                assertThrows(RuntimeException.class,()->session.call("chat",body("你好，帮我看看客户",null)));
+                assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            }
+        }
+    }
+    @Test @Timeout(30) void realCrmHttpOutageIsNotAGreetingDependencyButStillBlocksData() throws Exception {
+        var crm=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+        var requests=new AtomicInteger();
+        crm.createContext("/",exchange->{requests.incrementAndGet();exchange.sendResponseHeaders(503,-1);exchange.close();});
+        crm.start();
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","GREETING"),"你好。尚未查询客户事实。",PROPOSAL)) {
+            var authority=new io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmAuthority(
+                    "owner-a","employee-a","revision-a",Set.of("customer-a"),java.time.Instant.now().plusSeconds(120),FinanceContextV1.AuthenticationLevel.BASIC);
+            var client=new io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmClient(
+                    java.net.URI.create("http://127.0.0.1:"+crm.getAddress().getPort()),java.time.Duration.ofSeconds(2),()->"synthetic-only");
+            var provider=new io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmProvider("owner-a",client,()->authority,java.time.Clock.systemUTC());
+            try(var session=session(model.proposer(),new DirectCrmPreparationAccess("owner-a","session-a",provider))) {
+                assertEquals("ANSWERED",session.call("chat",body("你好",null)).get("status"));
+                assertEquals(0,requests.get(),"Actual local CRM HTTP requests, not a mock counter");
+                var error=assertThrows(io.github.bitlhk.finance.harness.core.ConversationFailure.class,
+                        ()->session.call("chat",body("你好，帮我分析客户",null)));
+                assertEquals("CONVERSATION_AUTHORITY_UNAVAILABLE",error.getMessage());
+                assertEquals(1,requests.get());
+                assertEquals(0,reportModels.get());
+            }
+        } finally { crm.stop(0); }
     }
     @Test @Timeout(30) void changedScopeWhileAnsweringBlocksTextAndFinalResult() throws Exception {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"不应释放");var session=session(model.proposer())) {

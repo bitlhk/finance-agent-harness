@@ -7,6 +7,7 @@ import com.openjiuwen.core.singleagent.agents.ReActAgent;
 import com.openjiuwen.core.singleagent.agents.ReActAgentConfig;
 import com.openjiuwen.core.singleagent.schema.AgentCard;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.ConversationFailure;
 import io.github.bitlhk.finance.harness.core.spi.ManagedScenarioExtensionV01;
 import java.util.*;
 import java.util.concurrent.CancellationException;
@@ -81,16 +82,17 @@ public final class ConversationResponder {
                 "installedCapabilities", context.capabilityDescription(),
                 "missingInputs", context.missingInputs(), "serverDecision", context.decisionDescription()));
         String session = UUID.randomUUID().toString();
-        try {
-            var chunks = Runner.runAgentStreaming(agent, Map.of("query", input), session, null,
-                    List.of(StreamMode.OUTPUT));
+        try (AutoCloseable sessionCleanup = () -> cleanup(() -> Runner.release(session))) {
+            Iterator<?> chunks;
             try {
-                return consume(chunks, cancelled, releaseCheck, sink);
-            } finally {
+                chunks = Runner.runAgentStreaming(agent, Map.of("query", input), session, null,
+                        List.of(StreamMode.OUTPUT));
+            } catch (RuntimeException failure) { throw streamFailure(failure); }
+            try (AutoCloseable streamCleanup = () -> cleanup(() -> {
                 if (chunks instanceof AutoCloseable closeable) closeable.close();
+            })) {
+                return consume(chunks, cancelled, releaseCheck, sink);
             }
-        } finally {
-            Runner.release(session);
         }
     }
 
@@ -99,9 +101,12 @@ public final class ConversationResponder {
         String current = "";
         while (true) {
             check(cancelled);
-            if (!chunks.hasNext()) break;
-            check(cancelled);
-            Object next = chunks.next();
+            Object next;
+            try {
+                if (!chunks.hasNext()) break;
+                check(cancelled);
+                next = chunks.next();
+            } catch (RuntimeException failure) { throw streamFailure(failure); }
             if (!(next instanceof OutputSchema item)) continue;
             if ("error".equals(item.getType()))
                 throw new IllegalArgumentException("CONVERSATION_MODEL_FAILED");
@@ -129,6 +134,16 @@ public final class ConversationResponder {
         if (payload instanceof String text) return text;
         if (payload instanceof Map<?, ?> map && map.get("content") instanceof String text) return text;
         throw new IllegalArgumentException("CONVERSATION_MODEL_ENVELOPE_INVALID");
+    }
+    private static RuntimeException streamFailure(RuntimeException failure) {
+        if (failure instanceof CancellationException) return failure;
+        return new ConversationFailure("CONVERSATION_MODEL_STREAM_FAILED","MODEL_STREAM",failure);
+    }
+    private static void cleanup(AutoCloseable action) {
+        try { action.close(); }
+        catch (Exception failure) {
+            throw new ConversationFailure("CONVERSATION_MODEL_CLEANUP_FAILED","MODEL_CLEANUP",failure);
+        }
     }
     private static String bounded(String value, int limit) {
         if (value == null || value.isBlank() || value.length() > limit) throw invalidInput();
