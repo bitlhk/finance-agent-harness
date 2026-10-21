@@ -23,6 +23,14 @@ final class ConversationIntentTest {
         assertEquals("synthetic-a", value.objectRef());
         assertNull(parse(proposal("PREPARE", "null", "null", "null")).objectRef());
     }
+    @Test void displayNameResolutionUsesOnlyExistingServerCandidates() {
+        var value = ConversationIntent.parse(proposal("PREPARE", "\"Alice\"", "null", "null"),
+                Set.of("合成客户Alice"), ACTIONS);
+        assertEquals("合成客户Alice", value.objectRef());
+        assertTrue(value.requiresExecutionConfirmation());
+        assertThrows(IllegalArgumentException.class, () -> ConversationIntent.parse(
+                proposal("PREPARE", "\"Unknown\"", "null", "null"), Set.of("合成客户Alice"), ACTIONS));
+    }
     @Test void nonExecutionKindsCannotSmuggleAnObjectOrReport() {
         for (String kind : new String[]{"GREETING", "CAPABILITIES", "LIST_OBJECTS", "CLARIFY", "UNSUPPORTED"}) {
             assertFalse(parse(proposal(kind, "null", "null", "null")).requiresExecutionConfirmation());

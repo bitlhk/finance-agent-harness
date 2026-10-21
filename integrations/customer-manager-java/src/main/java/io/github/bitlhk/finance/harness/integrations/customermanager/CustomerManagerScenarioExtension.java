@@ -285,7 +285,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(!body.has("confirmationId")) invalidateConfirmation();
             Set<String> customers;
             try {
-                customers=Set.copyOf(task.customers(owner));
+                customers=body.has("confirmationId")?liveCustomers():task.conversationCandidates(owner);
                 if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                     throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
             } catch(RuntimeException rejected) {
@@ -324,7 +324,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             ConversationIntent intent=intentProposer.propose(query,customers,capabilities.actions(),
                     requested==null||requested.isBlank()?null:requested,reportId,reportRevision,
                     pending==null?null:Map.of("kind",pending.kind().name(),"query",pending.query()),this::operationCancelled);
-            if(!customers.equals(Set.copyOf(task.customers(owner)))||!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
+            if(!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
             if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
             boolean resolving=intent.kind()==ConversationIntent.Kind.RESOLVE_OBJECT;
             if(resolving) {
@@ -332,17 +332,27 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 capabilities.require(pending.kind());
                 intent=new ConversationIntent(pending.kind(),intent.objectRef(),null,null);
             }
+            // Model classification cannot grant access. Only non-data replies bypass CRM I/O;
+            // every data/list/history/confirmation path still obtains current business authority.
+            if(!Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
+                    ConversationIntent.Kind.CLARIFY,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
+                customers=liveCustomers();
+                if((requested!=null&&!requested.isBlank()&&!customers.contains(requested))
+                        ||(intent.objectRef()!=null&&!customers.contains(intent.objectRef()))
+                        ||!proposedBinding.equals(conversationBinding()))
+                    throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            }
             return switch(intent.kind()) {
                 case RESOLVE_OBJECT -> throw new IllegalStateException("CONVERSATION_INTENT_INVALID");
                 case GREETING -> naturalReply(query,ConversationResponder.Purpose.GREETING,List.of(),
-                        "本轮仅问候，尚未查询客户事实或生成报告。",proposedBinding,customers,sink);
+                        "本轮仅问候，尚未查询客户事实或生成报告。",proposedBinding,sink);
                 case CAPABILITIES -> naturalReply(query,ConversationResponder.Purpose.CAPABILITIES,List.of(),
-                        "仅介绍当前装配能力，不表示已获得业务授权；尚未执行。",proposedBinding,customers,sink);
+                        "仅介绍当前装配能力，不表示已获得业务授权；尚未执行。",proposedBinding,sink);
                 case LIST_OBJECTS -> Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
                 case UNSUPPORTED -> naturalReply(query,ConversationResponder.Purpose.UNSUPPORTED,List.of(),
-                        "请求不在当前已装配能力内，未执行；只能说明已装配能力内的替代。",proposedBinding,customers,sink);
+                        "请求不在当前已装配能力内，未执行；只能说明已装配能力内的替代。",proposedBinding,sink);
                 case CLARIFY -> naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
-                        "用户意图尚不能唯一确定；需澄清，不查询客户事实或生成报告。",proposedBinding,customers,sink);
+                        "用户意图尚不能唯一确定；需澄清，不查询客户事实或生成报告。",proposedBinding,sink);
                 case EXPLAIN_REPORT -> {
                     if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
                     var answer=task.explainSaved(owner,reportId,reportRevision,query,
@@ -376,13 +386,21 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
             };
         }
+        private Set<String> liveCustomers() {
+            try { return Set.copyOf(task.customers(owner)); }
+            catch(SecurityException denied) { throw denied; }
+            catch(RuntimeException failure) {
+                throw new io.github.bitlhk.finance.harness.core.ConversationFailure(
+                        "CONVERSATION_AUTHORITY_UNAVAILABLE","BUSINESS_AUTHORITY",failure);
+            }
+        }
         private Map<String,Object> naturalReply(String query,ConversationResponder.Purpose purpose,List<String> missing,
-                String decision,ConversationConfirmation.Binding binding,Set<String> customers,EventSink sink) throws Exception {
+                String decision,ConversationConfirmation.Binding binding,EventSink sink) throws Exception {
             String runId=operation.id;
             Runnable authorize=()->{
                 current();
                 if(operationCancelled())throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
-                if(!customers.equals(Set.copyOf(task.customers(owner)))||!binding.equals(conversationBinding()))
+                if(!binding.equals(conversationBinding()))
                     throw new SecurityException("CRM_AUTHORITY_CHANGED");
             };
             var proof=conversationEvidence.begin(runId,owner,"CONVERSATION",purpose.name(),
@@ -408,6 +426,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             var reply=new LinkedHashMap<String,Object>();
             reply.put("status",purpose==ConversationResponder.Purpose.CLARIFY?"NEED_CLARIFICATION":"ANSWERED");
             reply.put("response",answer);
+            reply.put("responseScope","NON_BUSINESS");
+            reply.put("conversationPurpose",purpose.name());
             if(!missing.isEmpty())reply.put("missingInputs",missing);
             return reply;
         }

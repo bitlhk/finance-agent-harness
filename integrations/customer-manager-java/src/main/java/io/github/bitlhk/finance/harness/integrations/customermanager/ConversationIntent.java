@@ -31,7 +31,13 @@ record ConversationIntent(Kind kind, String objectRef, String reportRef, Integer
                 if (!version.isIntegralNumber() || !version.canConvertToInt() || version.asInt() < 1) throw invalid();
                 revision = version.asInt();
             }
-            if (object != null && !authorizedObjects.contains(object)) throw invalid();
+            if (object != null && !authorizedObjects.contains(object)) {
+                String hint=object;
+                var matches=authorizedObjects.stream().filter(alias ->
+                        CustomerManagerScenarioExtension.displayName(alias).equals(hint)).toList();
+                if(matches.size()!=1) throw invalid();
+                object=matches.getFirst();
+            }
             if (kind == Kind.PREPARE || kind == Kind.PRODUCT_REVIEW) {
                 if (!installedActions.contains(kind) || report != null || revision != null) throw invalid();
             } else if (kind == Kind.EXPLAIN_REPORT) {

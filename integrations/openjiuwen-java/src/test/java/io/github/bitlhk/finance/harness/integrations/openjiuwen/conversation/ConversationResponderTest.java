@@ -114,4 +114,22 @@ class ConversationResponderTest {
         assertThrows(IllegalArgumentException.class, () -> new ConversationResponder.Context(
                 ConversationResponder.Purpose.GREETING, "回访", List.of("not a field"), "尚未执行"));
     }
+    @Test void iteratorFailureIsDistinctFromAuthorityAndDoesNotExposeCauseText() {
+        var iterator=new Iterator<Object>() {
+            public boolean hasNext(){throw new IllegalStateException("private upstream detail");}
+            public Object next(){throw new AssertionError();}
+        };
+        var error=assertThrows(io.github.bitlhk.finance.harness.core.ConversationFailure.class,
+                ()->ConversationResponder.consume(iterator,()->false,()->{},text->{throw new AssertionError();}));
+        assertEquals("CONVERSATION_MODEL_STREAM_FAILED",error.getMessage());
+        assertEquals("MODEL_STREAM",error.stage());
+        assertFalse(error.getMessage().contains("private"));
+    }
+    @Test void cancellationFromIteratorIsNotADependencyFailure() {
+        var iterator=new Iterator<Object>() {
+            public boolean hasNext(){throw new CancellationException("cancelled");}
+            public Object next(){throw new AssertionError();}
+        };
+        assertThrows(CancellationException.class,()->ConversationResponder.consume(iterator,()->false,()->{},text->{}));
+    }
 }

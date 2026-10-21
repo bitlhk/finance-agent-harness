@@ -50,6 +50,7 @@ final class OpenJiuwenIntentProposerTest {
         final HttpServer server;
         final List<JsonNode> requests = new CopyOnWriteArrayList<>();
         java.util.function.Consumer<JsonNode> onRequest=ignored->{};
+        int chunkCharacters = Integer.MAX_VALUE;
         Fixture(String... replies) throws Exception {
             if(replies.length==0) throw new IllegalArgumentException("FIXTURE_REPLY_REQUIRED");
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -58,9 +59,15 @@ final class OpenJiuwenIntentProposerTest {
                 requests.add(request);
                 onRequest.accept(request);
                 String reply=replies[Math.min(requests.size()-1,replies.length-1)];
-                String chunk = HarnessJson.mapper().writeValueAsString(Map.of("id", "synthetic", "model", "synthetic",
-                        "choices", List.of(Map.of("index", 0, "delta", Map.of("role", "assistant", "content", reply)))));
-                String body = "data: " + chunk + "\n\ndata: {\"id\":\"synthetic\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
+                var frames = new StringBuilder();
+                for (int offset = 0; offset < reply.length();) {
+                    int end = (int)Math.min((long)reply.length(), (long)offset + chunkCharacters);
+                    String chunk = HarnessJson.mapper().writeValueAsString(Map.of("id", "synthetic", "model", "synthetic",
+                            "choices", List.of(Map.of("index", 0, "delta", Map.of("role", "assistant", "content", reply.substring(offset,end))))));
+                    frames.append("data: ").append(chunk).append("\n\n");
+                    offset = end;
+                }
+                String body = frames + "data: {\"id\":\"synthetic\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
                 exchange.sendResponseHeaders(200, bytes.length);

@@ -101,6 +101,12 @@ public final class ServicePreparation implements AutoCloseable {
             }
         }).map(Map.Entry::getKey).sorted().toList();
     }
+    /** Server mapping hints for intent resolution only, not current CRM grants or a releasable customer list. */
+    public synchronized Set<String> conversationCandidates(String caller) {
+        owner(caller); Mapping mapping = mappings.get();
+        if (mapping == null) throw new SecurityException("CUSTOMER_MAPPING_MISSING");
+        return Set.copyOf(mapping.customers().keySet());
+    }
     public synchronized long select(String caller, String alias, String goal) {
         return select(caller, alias, goal, HarnessJson.mapper().createObjectNode());
     }
