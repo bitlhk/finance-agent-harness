@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/analysis-result.v1.schema.json",
+  "title": "Evidence-bound deterministic diagnosis; technical completion is not business success",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "instanceId",
+    "processBootId",
+    "runtimeLockDigest",
+    "snapshotDigest",
+    "ruleVersion",
+    "business",
+    "technical",
+    "integrity",
+    "findings",
+    "coverage"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance.observation-analysis-result.v1"
+    },
+    "requestId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "instanceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "processBootId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "runtimeLockDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "snapshotDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ruleVersion": {
+      "const": "finance-single-run.v1"
+    },
+    "business": {
+      "enum": [
+        "COMPLETED",
+        "FAILED",
+        "DENIED",
+        "CANCELLED",
+        "MIXED",
+        "UNKNOWN"
+      ]
+    },
+    "technical": {
+      "enum": [
+        "PENDING",
+        "RETURNED",
+        "COMPLETED",
+        "ERROR",
+        "DENIED",
+        "SKIPPED",
+        "INCOMPLETE",
+        "CANCEL_REQUESTED",
+        "CANCELLED",
+        "UNKNOWN"
+      ]
+    },
+    "integrity": {
+      "enum": [
+        "COMPLETE",
+        "GAPPED",
+        "UNKNOWN"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "classification",
+          "ruleId",
+          "reasonCode",
+          "evidenceIds",
+          "stepIds"
+        ],
+        "properties": {
+          "classification": {
+            "enum": [
+              "FACT",
+              "STATISTIC",
+              "INFERENCE",
+              "RECOMMENDATION",
+              "UNKNOWN"
+            ]
+          },
+          "ruleId": {
+            "type": "string",
+            "pattern": "^FIN-[0-9]{3}$"
+          },
+          "reasonCode": {
+            "enum": [
+              "TECHNICAL_FAILURE_OBSERVED",
+              "CONTROL_DENIED_OBSERVED",
+              "BUSINESS_RESULT_FAILED",
+              "RECORD_COVERAGE_GAP",
+              "BUSINESS_RESULT_UNKNOWN",
+              "CAUSE_NOT_ESTABLISHED",
+              "LONGEST_RECORDED_INTERVAL",
+              "CHECK_FAILURE_EVIDENCE",
+              "CHECK_BUSINESS_RESPONSE",
+              "CHECK_RECORD_COVERAGE",
+              "DURATION_GROUP_LIMIT"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            },
+            "maxItems": 256,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "stepIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            },
+            "maxItems": 128,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "clockGroup": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "durationNanos": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "classification": {
+                  "enum": [
+                    "FACT",
+                    "STATISTIC",
+                    "INFERENCE",
+                    "RECOMMENDATION"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidenceIds": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "maxItems": 64
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "sampled",
+        "complete",
+        "gaps",
+        "evidenceIds"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "off",
+            "sample",
+            "full",
+            "UNKNOWN"
+          ]
+        },
+        "sampled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "MISSING_TERMINAL",
+              "MISSING_PARENT",
+              "TRUNCATED",
+              "ARCHIVE_DEGRADED",
+              "HISTORY_INCOMPLETE",
+              "NATIVE_UNAVAILABLE",
+              "NATIVE_LINK_UNVERIFIED",
+              "NATIVE_LIFECYCLE_GAP",
+              "NATIVE_PARENT_UNVERIFIED",
+              "NATIVE_SEQUENCE_GAP",
+              "NATIVE_COVERAGE_MISSING",
+              "NATIVE_CAPTURE_GAP",
+              "NATIVE_ARCHIVE_GAP"
+            ]
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "maxItems": 8,
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}
