@@ -58,6 +58,12 @@ jobs:
         run: python engineering/verify_contracts.py
       - name: Candidate component assembly declarations
         run: python engineering/verify_component_assembly.py
+      - name: Optional observation assembly and fixture contracts
+        run: python engineering/verify_observation_assembly.py
+      - name: Optional native SDK metadata bridge tests
+        run: mvn -B -ntp -f integrations/openjiuwen-java-otel/pom.xml test
+      - name: Optional financial observation semantic tests
+        run: mvn -B -ntp -f packages/java/observation-analysis/pom.xml test
       - name: Unit tests and local HTTP fault injection
         run: mvn -B -ntp verify
       - name: Java timestamp compatibility on supported Python versions

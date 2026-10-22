@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.dev/schemas/financial-evidence-context.v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contextId",
+    "ownerRef",
+    "purpose",
+    "parentLockDigest",
+    "reportDigest",
+    "samples"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-financial-evidence-context.v0.1"
+    },
+    "contextId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "ownerRef": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "purpose": {
+      "enum": [
+        "evaluation",
+        "comparison",
+        "development-context"
+      ]
+    },
+    "parentLockDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reportDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sampleId",
+          "invocationId",
+          "requestId",
+          "instanceId",
+          "processBootId",
+          "runtimeLockDigest",
+          "businessResult",
+          "technicalResult",
+          "coverage",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "sampleId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "invocationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "instanceId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "processBootId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "runtimeLockDigest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "businessResult": {
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "UNKNOWN",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "technicalResult": {
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "UNKNOWN",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "coverage": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNKNOWN"
+            ]
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 256,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "digest"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+                },
+                "digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

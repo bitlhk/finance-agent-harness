@@ -1,0 +1,563 @@
+{
+  "schemaVersion": "finance.native-observation-cases.v1",
+  "cases": [
+    {
+      "name": "native-start",
+      "valid": true,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "native-end-zero-reported-usage",
+      "valid": true,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "inputTokens": 0
+        }
+      }
+    },
+    {
+      "name": "off-coverage-no-span",
+      "valid": true,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "COVERAGE",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "off",
+        "sampled": false,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0
+      }
+    },
+    {
+      "name": "error-is-technical-not-business",
+      "valid": true,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "ERROR",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "inputTokens": 0
+        }
+      }
+    },
+    {
+      "name": "explicit-financial-link",
+      "valid": true,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "inputTokens": 0
+        },
+        "links": {
+          "basis": "HOST_EXPLICIT_BINDING",
+          "financialSpanId": "financial-span-1"
+        }
+      }
+    },
+    {
+      "name": "body-forbidden",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "prompt": "synthetic-sensitive-body"
+      }
+    },
+    {
+      "name": "unknown-source-attribute",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT",
+          "headers": {}
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "runtime-digest-invalid",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "not-a-digest",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "zero-native-trace-forbidden",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "00000000000000000000000000000000",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "unknown-usage-forbidden",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "totalTokens": 1
+        }
+      }
+    },
+    {
+      "name": "start-is-not-success",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "end-requires-end-time",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "off-cannot-contain-spans",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "off",
+        "sampled": false,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "START",
+        "status": "PENDING",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000"
+      }
+    },
+    {
+      "name": "coverage-cannot-hide-span",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "COVERAGE",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 1,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "off",
+        "sampled": false,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkSpanId": "3333333333333333"
+      }
+    },
+    {
+      "name": "implicit-link-forbidden",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "inputTokens": 0
+        },
+        "links": {
+          "basis": "TIME_PROXIMITY",
+          "financialSpanId": "x"
+        }
+      }
+    },
+    {
+      "name": "unknown-link-forbidden",
+      "valid": false,
+      "value": {
+        "schemaVersion": "finance.native-observation.v1",
+        "kind": "SDK_SPAN",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sequence": 2,
+        "source": {
+          "framework": "openjiuwen-java",
+          "frameworkVersion": "0.1.16",
+          "integrationId": "finance-harness-openjiuwen-java-otel",
+          "integrationVersion": "0.1.0-SNAPSHOT"
+        },
+        "mode": "full",
+        "sampled": true,
+        "supportState": "UNVERIFIED",
+        "droppedRecords": 0,
+        "lateRecords": 0,
+        "budgetRefusedRecords": 0,
+        "sdkTraceId": "11111111111111111111111111111111",
+        "sdkSpanId": "2222222222222222",
+        "parentSdkSpanId": null,
+        "category": "MODEL",
+        "phase": "END",
+        "status": "RETURNED",
+        "clockSource": "SDK_OTEL_EPOCH_NANOS",
+        "startEpochNanos": "1792550000000000000",
+        "endEpochNanos": "1792550000000000020",
+        "durationNanos": 20,
+        "usage": {
+          "inputTokens": 0
+        },
+        "links": {
+          "basis": "HOST_EXPLICIT_BINDING",
+          "financialSpanId": "x",
+          "url": "https://invalid.example/"
+        }
+      }
+    }
+  ]
+}
