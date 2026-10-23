@@ -93,7 +93,17 @@ class ModelSnapshotClientTest {
         assertTrue(records.stream().anyMatch(row -> row.boundary().equals("CLIENT_REQUEST_PREPARED")));
         assertFalse(records.stream().anyMatch(row -> row.boundary().equals("MODEL_STREAM_TERMINATION")));
     }
-    private enum StreamCase { COMPLETE, TRUNCATED, MALFORMED, ABANDON_AFTER_FIRST_CHUNK }
+    @Test void explicitCloseIsIdempotentAndRecordedWithoutClaimingCompletion() throws Exception {
+        var records=streamProbe(StreamCase.CLOSE_AFTER_FIRST_CHUNK);
+        var ends=records.stream().filter(row->row.boundary().equals("MODEL_STREAM_TERMINATION")).toList();
+        assertEquals(1,ends.size());
+        assertEquals("CALLER_CLOSED",ends.getFirst().value().get("terminationReason"));
+        assertEquals("NOT_OBSERVED",ends.getFirst().value().get("cancellationSource"));
+        assertEquals("STREAM_CLOSE",ends.getFirst().value().get("phase"));
+        assertEquals(false,ends.getFirst().value().get("iteratorExhaustedObserved"));
+        assertFalse(records.stream().anyMatch(row->row.boundary().equals("PARSED_MODEL_RESPONSE")&&row.state().equals("CAPTURED")));
+    }
+    private enum StreamCase { COMPLETE, TRUNCATED, MALFORMED, ABANDON_AFTER_FIRST_CHUNK, CLOSE_AFTER_FIRST_CHUNK }
     private List<Captured> streamProbe(StreamCase streamCase) throws Exception {
         var requests=new AtomicInteger();
         var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
@@ -117,6 +127,12 @@ class ModelSnapshotClientTest {
                 Iterator<AssistantMessageChunk> stream=client.stream(List.of(Map.of("role","user","content","synthetic")),List.of(),
                         null,null,null,null,null,null,null,Map.of());
                 if(streamCase==StreamCase.ABANDON_AFTER_FIRST_CHUNK){assertTrue(stream.hasNext());stream.next();}
+                else if(streamCase==StreamCase.CLOSE_AFTER_FIRST_CHUNK){
+                    assertTrue(stream.hasNext());stream.next();
+                    var closeable=assertInstanceOf(AutoCloseable.class,stream);
+                    closeable.close();closeable.close();
+                    assertFalse(stream.hasNext());assertThrows(NoSuchElementException.class,stream::next);
+                }
                 else assertThrowsOrConsumes(streamCase,stream);
             }
             assertEquals(1,requests.get());

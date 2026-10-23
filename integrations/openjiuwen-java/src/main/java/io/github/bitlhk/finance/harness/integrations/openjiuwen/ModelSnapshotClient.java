@@ -149,11 +149,13 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
             Iterator<AssistantMessageChunk> delegate = withRequestTraceCallback(
                     request -> capture(receiver, call, "CLIENT_REQUEST_PREPARED", "CAPTURED", request),
                     () -> super.stream(messages, tools, temperature, topP, model, maxTokens, stop, parser, frequencyPenalty, kwargs));
-            return new Iterator<>() {
+            class ObservedStream implements Iterator<AssistantMessageChunk>, AutoCloseable {
                 private final StringBuilder content = new StringBuilder();
                 private boolean captured;
+                private boolean closed;
                 private int chunksObserved;
                 public boolean hasNext() {
+                    if (closed) return false;
                     try {
                         boolean more=delegate.hasNext();
                         if(!more)complete();
@@ -165,6 +167,7 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
                     }
                 }
                 public AssistantMessageChunk next() {
+                    if (closed) throw new NoSuchElementException();
                     try {
                         AssistantMessageChunk chunk=delegate.next();
                         chunksObserved++;
@@ -188,7 +191,28 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
                     capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
                     capture(receiver,call,"MODEL_STREAM_TERMINATION","OBSERVED",streamTermination(failure,phase,chunksObserved));
                 }
-            };
+                public void close() throws Exception {
+                    if (closed) return;
+                    closed = true;
+                    try {
+                        if (delegate instanceof AutoCloseable closeable) closeable.close();
+                    } finally {
+                        if (!captured) {
+                            captured = true;
+                            capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED",
+                                    Map.of("reason", "STREAM_CLOSED_BEFORE_EXHAUSTION"));
+                            var termination = new LinkedHashMap<String,Object>(streamTermination(null, "STREAM_CLOSE", chunksObserved));
+                            termination.put("terminationReason", "CALLER_CLOSED");
+                            termination.put("iteratorExhaustedObserved", false);
+                            // Closing may follow cancellation, revocation or an evidence failure;
+                            // this observer does not know which and must not invent that cause.
+                            capture(receiver, call, "MODEL_STREAM_TERMINATION", "OBSERVED", Map.copyOf(termination));
+                        }
+                        if (Thread.currentThread() != context.owner()) CURRENT.remove();
+                    }
+                }
+            }
+            return new ObservedStream();
         } catch (Exception failed) {
             capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED", Map.of("reason", "MODEL_CALL_FAILED"));
             capture(receiver,call,"MODEL_STREAM_TERMINATION","OBSERVED",streamTermination(failed,"STREAM_OPEN",0));
