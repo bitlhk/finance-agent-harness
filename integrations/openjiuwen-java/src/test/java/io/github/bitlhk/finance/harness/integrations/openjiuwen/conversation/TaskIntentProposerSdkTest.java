@@ -55,6 +55,9 @@ class TaskIntentProposerSdkTest {
             assertTrue(messages.contains("也不能当成单个缺对象的EXECUTE"));
             assertTrue(messages.contains("未知名称不可近似匹配为已授权对象"));
             assertTrue(messages.contains("EXECUTE仍需另行确认"));
+            assertTrue(messages.contains("untrusted-user-context.v1"));
+            assertTrue(messages.contains("仅补充月份、金额等参数"));
+            assertTrue(messages.contains("身份和授权由服务端核验"));
             assertTrue(messages.contains("核验已冻结的财报与申请用途合同材料"));
             assertThrows(IllegalArgumentException.class, () -> TaskIntentProposer.validate(
                     result.toString().replace("\"AUDIT\"", "\"TRANSFER\""), context));

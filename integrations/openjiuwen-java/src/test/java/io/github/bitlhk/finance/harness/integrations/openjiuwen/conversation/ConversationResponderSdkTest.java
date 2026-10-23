@@ -95,6 +95,8 @@ class ConversationResponderSdkTest {
             String messages = request.path("messages").toString();
             assertTrue(messages.contains("你能干啥"));
             assertTrue(messages.contains("不能购买或修改CRM"));
+            assertTrue(messages.contains("不得索取身份证号、密码、验证码"));
+            assertTrue(messages.contains("不能因只给出月份而再次丢失查询目标"));
             assertFalse(messages.contains("synthetic-only"), "Credential is not model context");
         } finally {
             server.stop(0);
