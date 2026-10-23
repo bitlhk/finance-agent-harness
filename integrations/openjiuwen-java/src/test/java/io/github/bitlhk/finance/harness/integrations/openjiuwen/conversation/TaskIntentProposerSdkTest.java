@@ -59,6 +59,20 @@ class TaskIntentProposerSdkTest {
             assertTrue(messages.contains("仅补充月份、金额等参数"));
             assertTrue(messages.contains("身份和授权由服务端核验"));
             assertTrue(messages.contains("核验已冻结的财报与申请用途合同材料"));
+            // Wire contract only: semantic classification needs the frozen real-model cases.
+            String policy = request.path("messages").get(0).path("content").asText();
+            assertEquals("system", request.path("messages").get(0).path("role").asText());
+            String[] stages = {"1. 当前意图", "2. 动作范围", "3. 对象补充", "4. 动作选择", "5. 输出引用"};
+            int previous = -1;
+            for (String stage : stages) {
+                int index = policy.indexOf(stage);
+                assertTrue(index > previous, "Missing or out-of-order decision stage: " + stage);
+                previous = index;
+            }
+            assertTrue(policy.contains("不要将执行前置条件当成意图歧义"));
+            assertTrue(policy.contains("同一ref中的多个材料或核验项目不是多个动作"));
+            assertFalse(policy.contains("其余kind两个引用字段均为null"),
+                    "Reference rules must name the kinds instead of depending on paragraph order");
             assertThrows(IllegalArgumentException.class, () -> TaskIntentProposer.validate(
                     result.toString().replace("\"AUDIT\"", "\"TRANSFER\""), context));
         } finally {
