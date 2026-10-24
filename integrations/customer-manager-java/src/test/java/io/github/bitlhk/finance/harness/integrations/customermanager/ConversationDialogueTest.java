@@ -26,9 +26,28 @@ class ConversationDialogueTest {
             assertTrue(memory.read(next,now).isEmpty());
         }
     }
-    @Test void oversizedTextIsNotPartiallyRemembered() {
+    @Test void oversizedTextIsNotPartiallyRememberedOrAllowedToEraseState() {
         var memory=new ConversationDialogue();memory.read(binding,now);
+        memory.select("a");memory.listed(java.util.Set.of("a","b"));
         memory.append(binding,"question","x".repeat(2001),now);
-        assertTrue(memory.read(binding,now).isEmpty());
+        assertTrue(memory.read(binding,now.plusSeconds(1)).isEmpty());
+        assertEquals("a",memory.object());assertTrue(memory.state().get("directoryPreviouslyReturned").equals(true));
+    }
+    @Test void selectedObjectCannotHideOtherPreviouslyDisclosedNamesFromRevalidation() {
+        var memory=new ConversationDialogue();memory.read(binding,now);
+        memory.listed(java.util.Set.of("a","b"));memory.select("a");
+        assertEquals(java.util.Set.of("a","b"),memory.disclosedObjects());
+        memory.returnedReport();assertEquals(1,memory.state().get("returnedReports"));
+        assertNull(memory.object());assertEquals("NONE",memory.state().get("authority"));
+        memory.clear();assertEquals(0,memory.state().get("returnedReports"));
+        assertTrue(memory.disclosedObjects().isEmpty());
+    }
+    @Test void cancellationRemovesTaskWordingNotCompletedWorkOrAuthorityRevalidation() {
+        var memory=new ConversationDialogue();memory.read(binding,now);
+        memory.listed(java.util.Set.of("a"));memory.returnedReport();memory.select("a");
+        memory.append(binding,"a","请说明目标",now);memory.cancelTask();
+        assertTrue(memory.read(binding,now).isEmpty());assertNull(memory.object());
+        assertEquals(1,memory.state().get("returnedReports"));
+        assertEquals(java.util.Set.of("a"),memory.disclosedObjects());
     }
 }

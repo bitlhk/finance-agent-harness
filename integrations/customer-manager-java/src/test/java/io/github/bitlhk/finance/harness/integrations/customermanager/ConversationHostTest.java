@@ -27,6 +27,7 @@ final class ConversationHostTest {
     final AtomicBoolean cancelDuringCall = new AtomicBoolean();
     final AtomicReference<ServicePreparation> taskReference = new AtomicReference<>();
     final AtomicReference<String> scope = new AtomicReference<>("synthetic-scope-a");
+    Map<String,String> customerMapping = Map.of("synthetic-a","customer-a");
 
     private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer) throws Exception {
         return session(proposer,null);
@@ -64,7 +65,7 @@ final class ConversationHostTest {
         var method = new InstalledPreparationMethod("synthetic-method", "1", "sha256:synthetic-method",
                 "sha256:synthetic-lock", "Synthetic method only.");
         var task = new ServicePreparation("owner-a", access,
-                () -> new ServicePreparation.Mapping("mapping-a", Map.of("synthetic-a","customer-a")),
+                () -> new ServicePreparation.Mapping("mapping-a", customerMapping),
                 (selectedMethod,goal,ids,context) -> { reportModels.incrementAndGet(); return HarnessJson.mapper().createObjectNode(); },
                 files, Map.of(), method);
         taskReference.set(task);
@@ -87,6 +88,129 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void directoryResultReachesNextInterpretationWithoutBeingAnExecutionGrant() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","LIST_OBJECTS"),
+                CAPABILITIES.replace("CAPABILITIES","CLARIFY"),"请选择本次目标");var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("查看客户名单",null);
+            request.put("customerAlias","");
+            session.call("chat",request);
+            session.call("chat",request.deepCopy().put("query","synthetic-a").put("runId",UUID.randomUUID().toString()));
+            assertTrue(model.requests.get(1).path("messages").toString().contains("你当前可服务的客户有"));
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void objectThenGoalProducesBoundConfirmationWithoutRepeatingDirectory() throws Exception {
+        String select=PROPOSAL.replace("PREPARE","SELECT_OBJECT");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(select,"请说明目标",PROPOSAL);var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("synthetic-a",null);
+            request.put("customerAlias","");
+            assertEquals("NEED_CLARIFICATION",session.call("chat",request).get("status"));
+            var result=session.call("chat",request.deepCopy().put("query","回访").put("runId",UUID.randomUUID().toString()));
+            assertNotNull(planId(result));
+            assertEquals("synthetic-a",((Map<?,?>)result.get("confirmation")).get("customerAlias"));
+            var payload=HarnessJson.mapper().readTree(model.requests.get(2).path("messages").get(1).path("content").asText());
+            assertEquals("synthetic-a",payload.path("selectedObject").asText());
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void unresolvedNewObjectCannotSilentlyFallBackToPreviousCustomer() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL.replace("PREPARE","SELECT_OBJECT"),"请说明目标",MISSING_OBJECT);
+                var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("synthetic-a",null);request.put("customerAlias","");
+            session.call("chat",request);
+            var result=session.call("chat",request.deepCopy().put("query","为另一个不明确的客户准备回访").put("runId",UUID.randomUUID().toString()));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void conversationalSelectionOverridesUnchangedOldUiSelectionButNotNewSelection() throws Exception {
+        customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
+        String other=PROPOSAL.replace("synthetic-a","synthetic-b");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(other.replace("PREPARE","SELECT_OBJECT"),"请说明目标",other,PROPOSAL);
+                var session=session(model.proposer())) {
+            session.call("chat",body("换成synthetic-b",null));
+            assertEquals("synthetic-b",((Map<?,?>)session.call("chat",body("回访",null)).get("confirmation")).get("customerAlias"));
+            var input=HarnessJson.mapper().readTree(model.requests.get(2).path("messages").get(1).path("content").asText());
+            assertEquals("synthetic-b",input.path("selectedObject").asText());
+            // Explicitly changing the page selection resets the remembered conversational selection.
+            var changed=(com.fasterxml.jackson.databind.node.ObjectNode)body("为synthetic-a回访",null);
+            changed.put("customerAlias","");
+            session.call("chat",changed);
+            input=HarnessJson.mapper().readTree(model.requests.get(3).path("messages").get(1).path("content").asText());
+            assertTrue(input.path("selectedObject").isNull());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void capabilityInterjectionDoesNotConsumePendingGoal() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,CAPABILITIES,"可准备回访",RESOLVE_OBJECT);var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("准备回访",null);first.put("customerAlias","");
+            session.call("chat",first);
+            session.call("chat",first.deepCopy().put("query","你能做什么").put("runId",UUID.randomUUID().toString()));
+            var result=session.call("chat",body("synthetic-a",null));
+            assertNotNull(planId(result));assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void cancelledGoalIsNotResumedByObjectSupplement() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,CAPABILITIES.replace("CAPABILITIES","CANCEL_TASK"),
+                RESOLVE_OBJECT,"请说明新的目标");var session=session(model.proposer())) {
+            session.call("chat",body("准备回访",null));
+            assertTrue(session.call("chat",body("算了，不执行",null)).get("response").toString().contains("已取消"));
+            var result=session.call("chat",body("synthetic-a",null));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+            var afterCancel=HarnessJson.mapper().readTree(model.requests.get(2).path("messages").get(1).path("content").asText());
+            assertEquals(1,afterCancel.path("previousDialogue").size());
+            assertEquals("算了，不执行",afterCancel.path("previousDialogue").get(0).path("userText").asText());
+        }
+    }
+    @Test @Timeout(30) void revokedDirectoryIsNotReplayedToModelAndDoesNotBlockGreeting() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","LIST_OBJECTS"),
+                CAPABILITIES.replace("CAPABILITIES","GREETING"),"你好");var session=session(model.proposer())) {
+            var first=(com.fasterxml.jackson.databind.node.ObjectNode)body("名单",null);first.put("customerAlias","");
+            session.call("chat",first);revoked.set(true);
+            var result=session.call("chat",first.deepCopy().put("query","你好").put("runId",UUID.randomUUID().toString()));
+            assertEquals("ANSWERED",result.get("status"));
+            assertFalse(model.requests.get(1).path("messages").toString().contains("synthetic-a"));
+            assertFalse(model.requests.get(2).path("messages").toString().contains("synthetic-a"));
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void objectSelectionMustRecheckAuthorityBeforeWording() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL.replace("PREPARE","SELECT_OBJECT"));var session=session(model.proposer())) {
+            revoked.set(true);
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("synthetic-a",null);request.put("customerAlias","");
+            assertThrows(SecurityException.class,()->session.call("chat",request));
+            assertEquals(1,model.requests.size());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void intentEntryEvidenceFailurePreventsModelAndBusiness() throws Exception {
+        java.nio.file.Files.createFile(files.resolve("decision-evidence"));
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->session.call("chat",body(QUERY,null)));
+            assertTrue(model.requests.isEmpty());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void directoryRevokedDuringWordingWithholdsLateText() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","LIST_OBJECTS"),
+                CAPABILITIES,"不应释放");var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("名单",null);request.put("customerAlias","");
+            session.call("chat",request);
+            model.onRequest=ignored->{if(model.requests.size()==3) revoked.set(true);};
+            var output=new ArrayList<Map<String,Object>>();
+            assertThrows(Exception.class,()->session.callStreaming("chat",request.deepCopy().put("query","你能做什么")
+                    .put("runId",UUID.randomUUID().toString()),output::add));
+            assertTrue(output.isEmpty());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void returnedReportIsRememberedAsOperationNotReplayedFinancialFacts() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL,CAPABILITIES.replace("CAPABILITIES","GREETING"),"不客气");var session=session(model.proposer())) {
+            String id=planId(session.call("chat",body(QUERY,null)));
+            assertTrue(session.call("chat",body(QUERY,id)).containsKey("report"));
+            session.call("chat",body("谢谢",null));
+            assertTrue(model.requests.get(1).toString().contains("returnedReports"));
+            var payload=HarnessJson.mapper().readTree(model.requests.get(1).path("messages").get(1).path("content").asText());
+            assertEquals(1,payload.path("continuity").path("returnedReports").asInt());
+            assertEquals(1,business.get());
+        }
+    }
     @Test @Timeout(30) void clarificationNumberUsesServerDialogueButStillRequiresConfirmation() throws Exception {
         String clarification="不能单独查询资料。可以为synthetic-a准备回访：1.确认准备；2.暂不执行。";
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","CLARIFY"),clarification,PROPOSAL);
@@ -213,13 +337,13 @@ final class ConversationHostTest {
             assertTrue(events.isEmpty());assertEquals(0,business.get());
         }
     }
-    @Test @Timeout(30) void answerEntryEvidenceFailurePreventsSecondModelRequest() throws Exception {
+    @Test @Timeout(30) void unavailableEvidencePreventsIntentAndAnswerRequests() throws Exception {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES,"不应调用");var session=session(model.proposer())) {
             java.nio.file.Files.createFile(files.resolve("decision-evidence"));
             var events=new ArrayList<Map<String,Object>>();
             assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
                     ()->session.callStreaming("chat",body("你是谁",null),events::add));
-            assertEquals(1,model.requests.size());assertTrue(events.isEmpty());assertEquals(0,business.get());
+            assertEquals(0,model.requests.size());assertTrue(events.isEmpty());assertEquals(0,business.get());
         }
     }
     @Test @Timeout(30) void answerReleaseEvidenceFailureDoesNotPublishText() throws Exception {
@@ -430,6 +554,7 @@ final class ConversationHostTest {
     @Test @Timeout(30) void necessaryEntryEvidenceFailureStillPreventsProviderCall() throws Exception {
         try(var model = new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL); var session = session(model.proposer())) {
             String id=planId(session.call("chat",body(QUERY,null)));
+            java.nio.file.Files.move(files.resolve("decision-evidence"),files.resolve("retained-intent-evidence"));
             java.nio.file.Files.createFile(files.resolve("decision-evidence"));
             assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
                     ()->session.call("chat",body(QUERY,id)));

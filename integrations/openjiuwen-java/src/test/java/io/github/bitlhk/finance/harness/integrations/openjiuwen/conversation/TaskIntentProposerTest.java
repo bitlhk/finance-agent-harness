@@ -36,6 +36,19 @@ class TaskIntentProposerTest {
         assertEquals("RESOLVE_OBJECT",TaskIntentProposer.validate(intent("RESOLVE_OBJECT","null","\"合成对象B\""),context).path("kind").asText());
         assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("RESOLVE_OBJECT","\"VERIFY\"","\"合成对象B\""),context));
     }
+    @Test void continuityActionsRequireExplicitAdapterSupportAndCannotCarryExecution() throws Exception {
+        var context=(com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(CONTEXT);
+        String select=intent("SELECT_OBJECT","null","\"合成对象B\"");
+        String cancel=intent("CANCEL_TASK","null","null");
+        assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(select,context));
+        assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(cancel,context));
+        context.putObject("continuity").put("schema","conversation-continuity.v1");
+        assertEquals("SELECT_OBJECT",TaskIntentProposer.validate(select,context).path("kind").asText());
+        assertEquals("CANCEL_TASK",TaskIntentProposer.validate(cancel,context).path("kind").asText());
+        assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("SELECT_OBJECT","\"VERIFY\"","\"合成对象B\""),context));
+        assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("SELECT_OBJECT","null","\"未知对象\""),context));
+        assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("CANCEL_TASK","null","\"合成对象B\""),context));
+    }
     @ParameterizedTest
     @ValueSource(strings={
             "{\"schema\":\"finance-task-intent.v1\",\"kind\":\"GREETING\",\"actionRef\":null,\"objectRef\":null,\"role\":\"admin\"}",
