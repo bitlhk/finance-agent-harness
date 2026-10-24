@@ -420,7 +420,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case CLARIFY -> naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
                         "用户意图尚不能唯一确定；需澄清，不查询客户事实或生成报告。",proposedBinding,sink);
                 case EXPLAIN_REPORT -> {
-                    if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","请先选择要解释的已保存报告及版本；不会为了解释旧结果重新查询。","missingInputs",List.of("reportRef","revision"));
+                    if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","你想准备新的回访，还是查看已有的回访记录？准备新的回访请说明客户；查看已有内容可从左侧已保存记录打开。本轮没有查询客户事实。","missingInputs",List.of("intent"));
                     var answer=task.explainSaved(owner,reportId,reportRevision,query,
                             saved->intentProposer.explainSaved(query,saved,this::operationCancelled),this::operationCancelled);
                     yield Map.of("status","ANSWERED","response",answer.path("interpretation").path("answer").asText(),
