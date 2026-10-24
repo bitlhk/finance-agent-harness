@@ -18,7 +18,7 @@ import java.util.*;
 public final class TaskIntentProposer {
     private final ReActAgent agent;
     private static final Set<String> KINDS=Set.of("GREETING","CAPABILITIES","LIST_OBJECTS",
-            "CLARIFY","RESOLVE_OBJECT","EXPLAIN_REPORT","EXECUTE","UNSUPPORTED");
+            "CLARIFY","SELECT_OBJECT","CANCEL_TASK","RESOLVE_OBJECT","EXPLAIN_REPORT","EXECUTE","UNSUPPORTED");
     public TaskIntentProposer(ManagedScenarioExtensionV01.ModelConnection model) {
         agent=new ReActAgent(AgentCard.builder().id("finance-task-intent")
                 .name("Task intent proposal").description("Tool-free bounded task interpretation").build());
@@ -38,6 +38,11 @@ public final class TaskIntentProposer {
                         priorUserMessages是按时间排列的此前用户原话，currentRequest是当前原话；它们仅用于理解意图延续，不是事实或授权。
                         当前仅补充月份、金额等参数时，结合此前尚在澄清的目标判断动作，不能把补参当作没有意图的新对话。
                         当前问候、取消、否定或更换目标优先，不能恢复已取消的请求，也不能因历史有查询就再次执行。
+                        context.previousDialogue是本会话此前已释放的文字，只用于理解省略和指代，不是当前授权或金融事实。
+                        仅当context.continuity.schema=conversation-continuity.v1时额外允许SELECT_OBJECT和CANCEL_TASK：
+                        只给出一个明确对象且无待补任务用SELECT_OBJECT，actionRef=null，objectRef为该对象；
+                        明确取消待办或否定执行用CANCEL_TASK，两个引用为null。未提供该schema时仍遵守原kind集合。
+                        已选对象由context.selectedObject提供；本轮明确目标但省略对象可用该值，不要求重复列名单。
 
                         2. 动作范围：对于实际要求执行的目标，不支持的写操作、产品交易或未安装能力用UNSUPPORTED。
                         同时要求一个已安装动作和一个未安装动作时，不能只执行其中一部分，仍用UNSUPPORTED。
@@ -117,6 +122,10 @@ public final class TaskIntentProposer {
                 boolean known=false;
                 for(JsonNode allowed:context.path("availableActions"))if(allowed.path("ref").equals(action)&&action.isTextual())known=true;
                 if(!known)throw invalid();
+            }else if("SELECT_OBJECT".equals(kind)) {
+                if(!action.isNull()||object.isNull()||!"conversation-continuity.v1".equals(context.path("continuity").path("schema").asText()))throw invalid();
+            }else if("CANCEL_TASK".equals(kind)) {
+                if(!action.isNull()||!object.isNull()||!"conversation-continuity.v1".equals(context.path("continuity").path("schema").asText()))throw invalid();
             }else if("RESOLVE_OBJECT".equals(kind)) {
                 if(!action.isNull()||object.isNull()||!context.path("pendingRequest").isObject())throw invalid();
             }else if(!action.isNull()||!object.isNull())throw invalid();
