@@ -88,6 +88,22 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void unboundOldReportProposalClarifiesBusinessGoalWithoutInventingReportOrQuery() throws Exception {
+        customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
+        String other=PROPOSAL.replace("synthetic-a","synthetic-b");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(
+                CAPABILITIES.replace("CAPABILITIES","EXPLAIN_REPORT"),other);var session=session(model.proposer())) {
+            var result=session.call("chat",body("看下synthetic-b的回访",null));
+            assertEquals("NEED_CLARIFICATION",result.get("status"));
+            assertTrue(result.get("response").toString().contains("准备新的回访"));
+            assertFalse(result.get("response").toString().contains("版本"));
+            assertFalse(result.containsKey("confirmation"));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            var confirmed=session.call("chat",body("为synthetic-b准备新的回访",null));
+            assertEquals("synthetic-b",((Map<?,?>)confirmed.get("confirmation")).get("customerAlias"));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+        }
+    }
     @Test @Timeout(30) void directoryResultReachesNextInterpretationWithoutBeingAnExecutionGrant() throws Exception {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","LIST_OBJECTS"),
                 CAPABILITIES.replace("CAPABILITIES","CLARIFY"),"请选择本次目标");var session=session(model.proposer())) {
