@@ -14,6 +14,25 @@ import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class OpenJiuwenIntentProposerTest {
+    @Test @Timeout(30) void currentGoalIsDistinctFromEarlierObjectSelectionAtActualSdkBoundary() throws Exception {
+        String reply="{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"PREPARE\",\"objectRef\":\"synthetic-a\",\"reportRef\":null,\"revision\":null}";
+        try(var fixture=new Fixture(reply)) {
+            var history=List.of(Map.of("userText","synthetic-a","assistantText","请问需要做什么？"));
+            var intent=fixture.proposer().propose("回访",Set.of("synthetic-a"),Set.of(ConversationIntent.Kind.PREPARE),
+                    "synthetic-a",null,null,null,history,Map.of("schema","conversation-continuity.v1","authority","NONE"),()->false);
+            assertTrue(intent.requiresExecutionConfirmation());
+            var messages=fixture.requests.getFirst().path("messages");
+            assertEquals(2,messages.size());
+            String raw=messages.get(1).path("content").asText();
+            JsonNode payload=HarnessJson.mapper().readTree(raw);
+            assertEquals("回访",payload.path("userText").asText());
+            assertEquals("synthetic-a",payload.path("previousDialogue").get(0).path("userText").asText());
+            assertEquals("synthetic-a",payload.path("selectedObject").asText());
+            assertTrue(raw.endsWith("\"userText\":\"回访\"}"));
+            assertTrue(messages.get(0).path("content").asText().contains("只分类顶层userText"));
+            assertTrue(messages.get(0).path("content").asText().contains("不要求用户补说新"));
+        }
+    }
     @Test @Timeout(30) void actualSdkProducesTypedSuggestionWithNoToolsOrCrossTurnHistory() throws Exception {
         try (var fixture = new Fixture("{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"PREPARE\",\"objectRef\":\"synthetic-a\",\"reportRef\":null,\"revision\":null}")) {
             var proposer = fixture.proposer();
