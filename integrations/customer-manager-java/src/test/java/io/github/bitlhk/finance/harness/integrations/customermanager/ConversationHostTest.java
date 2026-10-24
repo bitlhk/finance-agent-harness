@@ -155,6 +155,9 @@ final class ConversationHostTest {
             assertTrue(session.call("chat",body("算了，不执行",null)).get("response").toString().contains("已取消"));
             var result=session.call("chat",body("synthetic-a",null));
             assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+            var afterCancel=HarnessJson.mapper().readTree(model.requests.get(2).path("messages").get(1).path("content").asText());
+            assertEquals(1,afterCancel.path("previousDialogue").size());
+            assertEquals("算了，不执行",afterCancel.path("previousDialogue").get(0).path("userText").asText());
         }
     }
     @Test @Timeout(30) void revokedDirectoryIsNotReplayedToModelAndDoesNotBlockGreeting() throws Exception {

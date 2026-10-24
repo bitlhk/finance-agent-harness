@@ -331,7 +331,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!plan.originalQuery().equals(text(body,"query")) || !plan.intent().objectRef().equals(requested))
                     throw new SecurityException("CONVERSATION_CONFIRMATION_REJECTED");
                 if("CANCEL".equals(body.path("confirmationDecision").asText())) {
-                    dialogue.forgetObject();
+                    dialogue.cancelTask();
                     return Map.of("status","ANSWERED","response","已取消这项尚未执行的提案，未查询客户事实，也未生成新报告。");
                 }
                 clearPendingProduct();
@@ -409,7 +409,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                             "已记录本次客户；仅缺目标。请询问需要回访准备还是已装配的其他工作，不要求再次列名单；尚未查询客户事实。",proposedBinding,sink);
                 }
                 case CANCEL_TASK -> {
-                    dialogue.forgetObject();clearPendingProduct();
+                    dialogue.cancelTask();clearPendingProduct();
                     yield Map.of("status","ANSWERED","response","已取消尚未执行的待办；未查询新事实，已保存报告不变。");
                 }
                 case UNSUPPORTED -> {

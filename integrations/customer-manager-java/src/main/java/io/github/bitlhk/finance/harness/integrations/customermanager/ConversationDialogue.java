@@ -40,6 +40,10 @@ final class ConversationDialogue {
     }
     synchronized void returnedReport() { returnedReports++; object=null; }
     synchronized void forgetObject() { object=null; }
+    synchronized void cancelTask() {
+        // Retain the record of prior work, not wording that can resurrect its cancelled target.
+        object=null; turns.clear();
+    }
     synchronized Map<String,Object> state() {
         var state=new LinkedHashMap<String,Object>();
         state.put("schema","conversation-continuity.v1");

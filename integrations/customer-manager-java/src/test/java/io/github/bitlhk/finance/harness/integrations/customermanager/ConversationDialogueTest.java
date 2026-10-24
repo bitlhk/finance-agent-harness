@@ -42,4 +42,12 @@ class ConversationDialogueTest {
         memory.clear();assertEquals(0,memory.state().get("returnedReports"));
         assertTrue(memory.disclosedObjects().isEmpty());
     }
+    @Test void cancellationRemovesTaskWordingNotCompletedWorkOrAuthorityRevalidation() {
+        var memory=new ConversationDialogue();memory.read(binding,now);
+        memory.listed(java.util.Set.of("a"));memory.returnedReport();memory.select("a");
+        memory.append(binding,"a","请说明目标",now);memory.cancelTask();
+        assertTrue(memory.read(binding,now).isEmpty());assertNull(memory.object());
+        assertEquals(1,memory.state().get("returnedReports"));
+        assertEquals(java.util.Set.of("a"),memory.disclosedObjects());
+    }
 }
