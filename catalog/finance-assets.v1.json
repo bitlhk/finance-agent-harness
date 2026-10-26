@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.13",
+  "catalogVersion": "0.2.15",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -364,6 +364,24 @@
   ],
   "capabilityPacks": [
     {
+      "id": "quotation-consultation-readonly",
+      "version": "0.1.0",
+      "displayName": "只读报价咨询（候选，需实际披露控制）",
+      "source": "repo://capability-packs/quotation-consultation-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "quotation.offer.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
+    {
       "id": "curated-synthetic-wealth",
       "version": "1.1.0",
       "displayName": "合成评测：财富资料（候选）",
@@ -694,6 +712,24 @@
       }
     },
     {
+      "id": "account-statement-readonly",
+      "version": "0.1.0",
+      "displayName": "Account monthly summary",
+      "source": "repo://capability-packs/account-statement-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["account.statement.query"],
+      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
+    },
+    {
+      "id": "account-transactions-readonly",
+      "version": "0.1.0",
+      "displayName": "Account transaction page",
+      "source": "repo://capability-packs/account-transactions-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["account.transaction.query"],
+      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
+    },
+    {
       "id": "channel-preferences",
       "version": "0.1.0",
       "displayName": "渠道展示偏好",
@@ -736,6 +772,25 @@
     }
   ],
   "providers": [
+    {
+      "id": "quotation-synthetic-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "合成报价参考源（候选，非银行授权）",
+      "source": "repo://providers/quotation-reference",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-quotation-reference:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "quotation.offer.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
     {
       "id": "curated-synthetic-mcp",
       "version": "0.1.0-SNAPSHOT",
@@ -798,6 +853,8 @@
       "capabilities": [
         "account.balance.query",
         "transfer.internal.create",
+        "account.statement.query",
+        "account.transaction.query",
         "wealth.customer-context.query",
         "channel.preferences.update",
         "finance.transaction-summary.query",
@@ -950,6 +1007,18 @@
       }
     },
     {
+      "id": "anti-fraud-transfer-controlled",
+      "version": "0.1.0",
+      "displayName": "手机银行反诈转账受控案例",
+      "source": "repo://conformance/fixtures/anti-fraud-transfer/v0.1",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
+    },
+    {
       "id": "cashflow-controlled",
       "version": "0.1.0",
       "displayName": "收支合同受控案例（非模型质量评测）",
@@ -965,7 +1034,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-11.post-loan-risk-verification-mvp-1",
+  "catalogRevision": "2026-10-26.main-consolidation-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

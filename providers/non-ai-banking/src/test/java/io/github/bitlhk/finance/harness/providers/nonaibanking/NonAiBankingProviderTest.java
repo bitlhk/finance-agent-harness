@@ -30,6 +30,48 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NonAiBankingProviderTest {
+    @Test void historyQueriesUseRealRoutesAndHostIdentityWithoutAutomaticPagination() {
+        var hits = new AtomicInteger();
+        var parameters = new AtomicReference<String>();
+        server.createContext("/api/v1/accounts/synthetic-1/statement", exchange -> {
+            hits.incrementAndGet(); parameters.set(exchange.getRequestURI().getRawQuery());
+            writeJson(exchange, 200, """
+                    {"status":"SUCCESS","data":{"accountId":"synthetic-1","period":"2026-08",
+                    "currency":"CNY","totalIn":50000.00},"sourceSystem":"account-core-simulator","asOf":"2026-09-01T00:00:00Z"}
+                    """);
+        });
+        server.createContext("/api/v1/accounts/synthetic-1/transaction-page", exchange -> {
+            hits.incrementAndGet(); parameters.set(exchange.getRequestURI().getRawQuery());
+            writeJson(exchange, 200, """
+                    {"status":"SUCCESS","data":{"items":[],"hasMore":false},
+                    "sourceSystem":"account-core-simulator","asOf":"2026-09-01T00:00:00Z"}
+                    """);
+        });
+        var bound = new NonAiBankingProvider(NonAiBankingProvider.Config.hostSession(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()), java.time.Duration.ofSeconds(5),
+                () -> new NonAiBankingProvider.HostSession("bank", "customer-demo-001", "customer-demo-001",
+                        "session-contract-001", Instant.now().plusSeconds(60))));
+        var statement = bound.query(historyRequest(NonAiBankingProvider.ACCOUNT_STATEMENT_QUERY,
+                Map.of("accountId", "synthetic-1", "period", "2026-08")));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, statement.status());
+        assertEquals("50000", ((Map<?, ?>) statement.data().get("facts")).get("totalIn"));
+        assertEquals("period=2026-08", parameters.get());
+        var page = bound.query(historyRequest(NonAiBankingProvider.ACCOUNT_TRANSACTION_QUERY,
+                Map.of("accountId", "synthetic-1", "dateFrom", "2026-08-01", "dateTo", "2026-08-31")));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, page.status());
+        assertTrue(parameters.get().contains("dateFrom=2026-08-01"));
+        assertEquals(2, hits.get()); assertEquals(0, sessionHits.get());
+        assertEquals(CapabilityResultV1.Status.FAILED, bound.query(historyRequest(
+                NonAiBankingProvider.ACCOUNT_STATEMENT_QUERY, Map.of("accountId", "../other"))).status());
+        assertEquals(2, hits.get());
+        assertEquals(Set.of("account:read"), new NonAiBankingFactoryV01().requirements().get(NonAiBankingProvider.ACCOUNT_STATEMENT_QUERY));
+    }
+
+    private static CapabilityRequestV1 historyRequest(String capability, Map<String, Object> parameters) {
+        return new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, capability,
+                CapabilityRequestV1.Operation.QUERY, context(), parameters, null, null, Map.of(), null);
+    }
+
     @Test void explicitLoginRetryRecordsEveryTransportAttempt() throws Exception {
         var events = new java.util.ArrayList<io.github.bitlhk.finance.harness.core.observation.ObservationEventV01>();
         var run = new io.github.bitlhk.finance.harness.core.observation.ObservationRun("req", "boot", "instance", events::add);

@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.13",
-    "catalogRevision": "2026-10-11.post-loan-risk-verification-mvp-1",
-    "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
+    "catalogVersion": "0.2.15",
+    "catalogRevision": "2026-10-26.main-consolidation-1",
+    "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:c7cd267cefae5f1dbb3f80711f20f1d9ddbfb336fc880875053ffc17fc4794a5"
+    "digest": "sha256:35e7a975a80e357944059386ddb8e6a226843a78abd76694396e46dc26131f93"
   },
   "target": {
     "kind": "domain-pack",

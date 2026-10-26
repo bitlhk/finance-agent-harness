@@ -1,0 +1,16 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>io.github.bitlhk.finance</groupId><artifactId>finance-agent-harness-parent</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../../pom.xml</relativePath></parent>
+  <artifactId>finance-harness-observation-analysis</artifactId>
+  <name>Optional metadata-only single-run financial analysis</name>
+  <!-- No Runtime SDK, Builder or Provider dependency; not part of the default reactor. -->
+  <dependencies>
+    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+  </dependencies>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><configuration><archive><manifest><mainClass>io.github.bitlhk.finance.harness.analysis.AnalysisMain</mainClass></manifest></archive></configuration></plugin>
+  </plugins></build>
+</project>

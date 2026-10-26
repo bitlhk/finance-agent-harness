@@ -1,0 +1,4 @@
+# Catalog, qualification and asset-tree digests include repository-owned sources
+# as well as declarations. Preserve published LF bytes across platform checkouts.
+# Binary artifacts are auto-detected and never text-normalized.
+* text=auto eol=lf

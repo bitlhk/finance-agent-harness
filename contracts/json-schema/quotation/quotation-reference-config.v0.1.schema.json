@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bitlhk.github.io/finance-agent-harness/schema/quotation-reference-config.v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "sourceVersion",
+    "subjects",
+    "records"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "quotation-reference-config.v0.1"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "sourceVersion": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subjectRef",
+          "productRefs"
+        ],
+        "properties": {
+          "subjectRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "productRefs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+            }
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subjectRef",
+          "productRef",
+          "currency",
+          "state",
+          "quote",
+          "gaps",
+          "recordRef",
+          "observedAt"
+        ],
+        "properties": {
+          "subjectRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "productRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "currency": {
+            "const": "CNY"
+          },
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_APPLICABLE",
+              "MISSING",
+              "UNAVAILABLE",
+              "EXPIRED",
+              "CONFLICT"
+            ]
+          },
+          "quote": {
+            "oneOf": [
+              {
+                "$ref": "https://bitlhk.github.io/finance-agent-harness/schema/quote-facts.v0.1.schema.json#/$defs/quote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gaps": {
+            "$ref": "https://bitlhk.github.io/finance-agent-harness/schema/quote-facts.v0.1.schema.json#/$defs/gaps"
+          },
+          "recordRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          }
+        }
+      }
+    }
+  }
+}

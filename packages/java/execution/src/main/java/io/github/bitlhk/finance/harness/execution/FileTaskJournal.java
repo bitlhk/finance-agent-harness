@@ -6,6 +6,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -23,7 +29,7 @@ public final class FileTaskJournal implements TaskCoordination.Journal {
             if (Files.isSymbolicLink(part)) throw new IOException("Task journal symlink rejected");
         Files.createDirectories(absolute);
         this.directory = absolute.toRealPath();
-        Files.setPosixFilePermissions(this.directory, PosixFilePermissions.fromString("rwx------"));
+        restrictToOwner(this.directory, true);
     }
     public <T> T locked(Function<TaskCoordination.Access, T> operation) {
         synchronized (LOCKS.computeIfAbsent(directory, ignored -> new Object())) {
@@ -45,16 +51,18 @@ public final class FileTaskJournal implements TaskCoordination.Journal {
                         Path target = path(handle);
                         try {
                             if (Files.isSymbolicLink(target)) throw new IOException("Task journal symlink rejected");
-                            Path temp = Files.createTempFile(directory, ".task-", ".tmp", PosixFilePermissions.asFileAttribute(
-                                    PosixFilePermissions.fromString("rw-------")));
+                            Path temp = Files.createTempFile(directory, ".task-", ".tmp");
                             try {
+                                restrictToOwner(temp, false);
                                 try (var output = FileChannel.open(temp, StandardOpenOption.WRITE)) {
                                     var bytes = ByteBuffer.wrap(JSON.writeValueAsBytes(new Entry(VERSION, value)));
                                     while (bytes.hasRemaining()) output.write(bytes);
                                     output.force(true);
                                 }
                                 Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-                                try (var dir = FileChannel.open(directory, StandardOpenOption.READ)) { dir.force(true); }
+                                if (directory.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                                    try (var dir = FileChannel.open(directory, StandardOpenOption.READ)) { dir.force(true); }
+                                }
                             } finally { Files.deleteIfExists(temp); }
                         } catch (IOException failure) { throw new UncheckedIOException(failure); }
                     }
@@ -65,5 +73,16 @@ public final class FileTaskJournal implements TaskCoordination.Journal {
     private Path path(String handle) {
         if (handle == null || !handle.matches("fh-task-handle-[a-f0-9-]{36}")) throw new IllegalArgumentException("Invalid task handle");
         return directory.resolve(handle + ".json");
+    }
+
+    private static void restrictToOwner(Path path, boolean directory) throws IOException {
+        if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(directory ? "rwx------" : "rw-------"));
+            return;
+        }
+        AclFileAttributeView acl = Files.getFileAttributeView(path, AclFileAttributeView.class);
+        if (acl == null) throw new IOException("Private journal ACL is unavailable");
+        acl.setAcl(List.of(AclEntry.newBuilder().setType(AclEntryType.ALLOW)
+                .setPrincipal(Files.getOwner(path)).setPermissions(EnumSet.allOf(AclEntryPermission.class)).build()));
     }
 }

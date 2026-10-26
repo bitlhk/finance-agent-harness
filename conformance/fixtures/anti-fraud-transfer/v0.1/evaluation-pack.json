@@ -1,0 +1,209 @@
+{
+  "packId": "anti-fraud-transfer-controlled",
+  "version": "0.1.0",
+  "partitions": [
+    {
+      "datasetId": "anti-fraud-transfer-controlled-regression",
+      "version": "0.1.0",
+      "purpose": "regression",
+      "source": {
+        "kind": "workspace-path",
+        "locator": "conformance/fixtures/anti-fraud-transfer/v0.1/cases.json",
+        "name": "anti-fraud-transfer-controlled-cases",
+        "mediaType": "application/json",
+        "sha256": "bc470f7c04abcf6dae6d7f69ed5af557aed1922eea6459d245f44e4525b3afe8"
+      },
+      "authorized": true,
+      "authorizationId": "finance-harness-controlled-fixture",
+      "declaredSampleCount": 5,
+      "samples": [
+        {
+          "sampleId": "allow-to-preflight",
+          "payload": {
+            "jsonrpc": "2.0",
+            "id": "allow-to-preflight",
+            "method": "SendStreamingMessage",
+            "params": {
+              "message": {
+                "role": "ROLE_USER",
+                "messageId": "allow-to-preflight",
+                "contextId": "allow-to-preflight",
+                "parts": [{"kind": "text", "text": "发起受控合成转账并返回待确认状态。"}],
+                "metadata": {
+                  "signals": {"intent": "transfer.internal.create"},
+                  "arguments": {"fromAccountId": "synthetic-safe-account", "beneficiaryId": "synthetic-beneficiary-a", "amount": "100.00", "purpose": "controlled-dryrun"}
+                }
+              },
+              "metadata": {
+                "signals": {"intent": "transfer.internal.create"},
+                "arguments": {"fromAccountId": "synthetic-safe-account", "beneficiaryId": "synthetic-beneficiary-a", "amount": "100.00", "purpose": "controlled-dryrun"}
+              }
+            }
+          },
+          "expected": {
+            "outcome": "NEED_CONFIRMATION",
+            "transferCalls": 1,
+            "riskDecision": "ALLOW",
+            "providerCalls": [
+              {"capabilityId": "fraud.transfer-risk.assess", "providerId": "fraud-mining-reference", "operation": "QUERY", "resultStatus": "COMPLETED"},
+              {"capabilityId": "transfer.internal.create", "providerId": "non-ai-banking-reference", "operation": "TASK", "resultStatus": "NEED_CONFIRMATION"}
+            ],
+            "taskHandle": "synthetic-task-created"
+          },
+          "expectedKind": "closed",
+          "expectedPath": "/__financeBuilderEvidence"
+        },
+        {
+          "sampleId": "block-without-transfer",
+          "payload": {
+            "jsonrpc": "2.0",
+            "id": "block-without-transfer",
+            "method": "SendStreamingMessage",
+            "params": {
+              "message": {
+                "role": "ROLE_USER",
+                "messageId": "block-without-transfer",
+                "contextId": "block-without-transfer",
+                "parts": [{"kind": "text", "text": "验证已知风险对象会被阻断。"}],
+                "metadata": {
+                  "signals": {"intent": "transfer.internal.create"},
+                  "arguments": {"fromAccountId": "synthetic-risk-account", "beneficiaryId": "synthetic-beneficiary-b", "amount": "200.00", "purpose": "controlled-dryrun"}
+                }
+              },
+              "metadata": {
+                "signals": {"intent": "transfer.internal.create"},
+                "arguments": {"fromAccountId": "synthetic-risk-account", "beneficiaryId": "synthetic-beneficiary-b", "amount": "200.00", "purpose": "controlled-dryrun"}
+              }
+            }
+          },
+          "expected": {
+            "outcome": "BLOCKED",
+            "transferCalls": 0,
+            "riskDecision": "BLOCK",
+            "providerCalls": [
+              {"capabilityId": "fraud.transfer-risk.assess", "providerId": "fraud-mining-reference", "operation": "QUERY", "resultStatus": "COMPLETED"}
+            ]
+          },
+          "expectedKind": "closed",
+          "expectedPath": "/__financeBuilderEvidence"
+        },
+        {
+          "sampleId": "risk-upstream-failed-closed",
+          "payload": {
+            "jsonrpc": "2.0",
+            "id": "risk-upstream-failed-closed",
+            "method": "SendStreamingMessage",
+            "params": {
+              "message": {
+                "role": "ROLE_USER",
+                "messageId": "risk-upstream-failed-closed",
+                "contextId": "risk-upstream-failed-closed",
+                "parts": [{"kind": "text", "text": "验证风险服务异常时失败关闭。"}],
+                "metadata": {
+                  "signals": {"intent": "transfer.internal.create"},
+                  "arguments": {"fromAccountId": "synthetic-unavailable-account", "beneficiaryId": "synthetic-beneficiary-c", "amount": "300.00", "purpose": "controlled-dryrun"}
+                }
+              },
+              "metadata": {
+                "signals": {"intent": "transfer.internal.create"},
+                "arguments": {"fromAccountId": "synthetic-unavailable-account", "beneficiaryId": "synthetic-beneficiary-c", "amount": "300.00", "purpose": "controlled-dryrun"}
+              }
+            }
+          },
+          "expected": {
+            "outcome": "FAILED_CLOSED",
+            "transferCalls": 0,
+            "riskDecision": "UNKNOWN",
+            "providerCalls": [
+              {"capabilityId": "fraud.transfer-risk.assess", "providerId": "fraud-mining-reference", "operation": "QUERY", "resultStatus": "FAILED"}
+            ]
+          },
+          "expectedKind": "closed",
+          "expectedPath": "/__financeBuilderEvidence"
+        },
+        {
+          "sampleId": "processing-continues-original-task",
+          "payload": {
+            "jsonrpc": "2.0",
+            "id": "processing-continues-original-task",
+            "method": "SendStreamingMessage",
+            "params": {
+              "message": {
+                "role": "ROLE_USER",
+                "messageId": "processing-continues-original-task",
+                "contextId": "processing-continues-original-task",
+                "parts": [{"kind": "text", "text": "验证处理中任务保留原任务句柄。"}],
+                "metadata": {
+                  "signals": {"intent": "transfer.internal.create"},
+                  "arguments": {"fromAccountId": "synthetic-safe-processing", "beneficiaryId": "synthetic-beneficiary-d", "amount": "400.00", "purpose": "controlled-dryrun"}
+                }
+              },
+              "metadata": {
+                "signals": {"intent": "transfer.internal.create"},
+                "arguments": {"fromAccountId": "synthetic-safe-processing", "beneficiaryId": "synthetic-beneficiary-d", "amount": "400.00", "purpose": "controlled-dryrun"}
+              }
+            }
+          },
+          "expected": {
+            "outcome": "PROCESSING",
+            "transferCalls": 1,
+            "riskDecision": "ALLOW",
+            "providerCalls": [
+              {"capabilityId": "fraud.transfer-risk.assess", "providerId": "fraud-mining-reference", "operation": "QUERY", "resultStatus": "COMPLETED"},
+              {"capabilityId": "transfer.internal.create", "providerId": "non-ai-banking-reference", "operation": "TASK", "resultStatus": "NEED_CONFIRMATION"}
+            ],
+            "taskHandle": "synthetic-task-processing"
+          },
+          "expectedKind": "closed",
+          "expectedPath": "/__financeBuilderEvidence"
+        },
+        {
+          "sampleId": "unknown-continues-original-task",
+          "payload": {
+            "jsonrpc": "2.0",
+            "id": "unknown-continues-original-task",
+            "method": "SendStreamingMessage",
+            "params": {
+              "message": {
+                "role": "ROLE_USER",
+                "messageId": "unknown-continues-original-task",
+                "contextId": "unknown-continues-original-task",
+                "parts": [{"kind": "text", "text": "验证结果未知时保留原任务句柄。"}],
+                "metadata": {
+                  "signals": {"intent": "transfer.internal.create"},
+                  "arguments": {"fromAccountId": "synthetic-safe-unknown", "beneficiaryId": "synthetic-beneficiary-e", "amount": "500.00", "purpose": "controlled-dryrun"}
+                }
+              },
+              "metadata": {
+                "signals": {"intent": "transfer.internal.create"},
+                "arguments": {"fromAccountId": "synthetic-safe-unknown", "beneficiaryId": "synthetic-beneficiary-e", "amount": "500.00", "purpose": "controlled-dryrun"}
+              }
+            }
+          },
+          "expected": {
+            "outcome": "UNKNOWN",
+            "transferCalls": 1,
+            "riskDecision": "ALLOW",
+            "providerCalls": [
+              {"capabilityId": "fraud.transfer-risk.assess", "providerId": "fraud-mining-reference", "operation": "QUERY", "resultStatus": "COMPLETED"},
+              {"capabilityId": "transfer.internal.create", "providerId": "non-ai-banking-reference", "operation": "TASK", "resultStatus": "NEED_CONFIRMATION"}
+            ],
+            "taskHandle": "synthetic-task-unknown"
+          },
+          "expectedKind": "closed",
+          "expectedPath": "/__financeBuilderEvidence"
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {"name": "scenario_accuracy", "kind": "accuracy"}
+  ],
+  "acceptance": {
+    "logic": "all",
+    "rules": [
+      {"metric": "scenario_accuracy", "operator": ">=", "threshold": 1.0}
+    ],
+    "groups": []
+  }
+}

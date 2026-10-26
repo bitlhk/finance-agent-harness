@@ -15,6 +15,14 @@ class FileTaskJournalTest {
         return new TaskCoordination.Saved("scope", "synthetic.task", "task", Map.of("amount", new java.math.BigDecimal("12.34")),
                 Map.of("financeHarness.taskRef", "synthetic-task", "financeHarness.continuation", Map.of("submitOutcomeUnknown", true)), null);
     }
+    @Test void posixStoreKeepsOwnerOnlyDirectoryAndPayload() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(root.getFileSystem().supportedFileAttributeViews().contains("posix"));
+        var store = new FileTaskJournal(root);
+        store.locked(a -> { a.put(HANDLE, task()); return null; });
+        assertEquals(java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"), Files.getPosixFilePermissions(root));
+        assertEquals(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"),
+                Files.getPosixFilePermissions(root.resolve(HANDLE + ".json")));
+    }
     @Test void newJournalRestoresCommittedStateWithoutRewriting() throws Exception {
         var store = new FileTaskJournal(root);
         store.locked(a -> { a.put(HANDLE, task()); return null; });

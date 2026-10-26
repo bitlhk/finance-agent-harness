@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "finance-antifraud-transfer-cases.v0.1",
+  "cases": [
+    {
+      "caseId": "allow-to-preflight",
+      "request": {
+        "accountRef": "synthetic-safe-account",
+        "transfer": {
+          "fromAccountId": "synthetic-safe-account",
+          "beneficiaryId": "synthetic-beneficiary-a",
+          "amount": "100.00",
+          "purpose": "controlled-dryrun"
+        }
+      },
+      "risk": {"status": "COMPLETED", "decision": "ALLOW"},
+      "transfer": {"status": "NEED_CONFIRMATION"},
+      "expected": {"outcome": "NEED_CONFIRMATION", "transferCalls": 1}
+    },
+    {
+      "caseId": "block-without-transfer",
+      "request": {
+        "accountRef": "synthetic-risk-account",
+        "transfer": {
+          "fromAccountId": "synthetic-risk-account",
+          "beneficiaryId": "synthetic-beneficiary-b",
+          "amount": "200.00",
+          "purpose": "controlled-dryrun"
+        }
+      },
+      "risk": {"status": "COMPLETED", "decision": "BLOCK"},
+      "transfer": {"status": "NOT_CALLED"},
+      "expected": {"outcome": "BLOCKED", "transferCalls": 0}
+    },
+    {
+      "caseId": "risk-upstream-failed-closed",
+      "request": {
+        "accountRef": "synthetic-unavailable-account",
+        "transfer": {
+          "fromAccountId": "synthetic-unavailable-account",
+          "beneficiaryId": "synthetic-beneficiary-c",
+          "amount": "300.00",
+          "purpose": "controlled-dryrun"
+        }
+      },
+      "risk": {"status": "FAILED", "decision": "UNKNOWN"},
+      "transfer": {"status": "NOT_CALLED"},
+      "expected": {"outcome": "FAILED_CLOSED", "transferCalls": 0}
+    },
+    {
+      "caseId": "processing-continues-original-task",
+      "request": {
+        "accountRef": "synthetic-safe-processing",
+        "transfer": {
+          "fromAccountId": "synthetic-safe-processing",
+          "beneficiaryId": "synthetic-beneficiary-d",
+          "amount": "400.00",
+          "purpose": "controlled-dryrun"
+        }
+      },
+      "risk": {"status": "COMPLETED", "decision": "ALLOW"},
+      "transfer": {
+        "status": "PROCESSING",
+        "sameHandle": true,
+        "taskHandle": "synthetic-task-processing"
+      },
+      "expected": {"outcome": "PROCESSING", "transferCalls": 1}
+    },
+    {
+      "caseId": "unknown-continues-original-task",
+      "request": {
+        "accountRef": "synthetic-safe-unknown",
+        "transfer": {
+          "fromAccountId": "synthetic-safe-unknown",
+          "beneficiaryId": "synthetic-beneficiary-e",
+          "amount": "500.00",
+          "purpose": "controlled-dryrun"
+        }
+      },
+      "risk": {"status": "COMPLETED", "decision": "ALLOW"},
+      "transfer": {
+        "status": "UNKNOWN",
+        "sameHandle": true,
+        "taskHandle": "synthetic-task-unknown"
+      },
+      "expected": {"outcome": "UNKNOWN", "transferCalls": 1}
+    }
+  ]
+}

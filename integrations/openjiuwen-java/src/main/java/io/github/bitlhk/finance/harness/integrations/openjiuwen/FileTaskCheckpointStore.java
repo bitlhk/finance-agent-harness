@@ -12,6 +12,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -26,7 +32,7 @@ public final class FileTaskCheckpointStore implements TaskCheckpointStore {
     public FileTaskCheckpointStore(Path directory) throws IOException {
         Files.createDirectories(directory);
         this.directory = directory.toRealPath();
-        Files.setPosixFilePermissions(this.directory, PosixFilePermissions.fromString("rwx------"));
+        restrictToOwner(this.directory, true);
     }
 
     @Override
@@ -51,9 +57,9 @@ public final class FileTaskCheckpointStore implements TaskCheckpointStore {
                     public void put(String handle, SavedTask task) {
                         Path file = path(handle);
                         try {
-                            Path temp = Files.createTempFile(directory, ".checkpoint-", ".tmp",
-                                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+                            Path temp = Files.createTempFile(directory, ".checkpoint-", ".tmp");
                             try {
+                                restrictToOwner(temp, false);
                                 byte[] bytes = JSON.writeValueAsBytes(task);
                                 try (FileChannel output = FileChannel.open(temp, StandardOpenOption.WRITE)) {
                                     ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -61,8 +67,10 @@ public final class FileTaskCheckpointStore implements TaskCheckpointStore {
                                     output.force(true);
                                 }
                                 Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-                                try (FileChannel dir = FileChannel.open(directory, StandardOpenOption.READ)) {
-                                    dir.force(true);
+                                if (directory.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                                    try (FileChannel dir = FileChannel.open(directory, StandardOpenOption.READ)) {
+                                        dir.force(true);
+                                    }
                                 }
                             } finally {
                                 Files.deleteIfExists(temp);
@@ -83,5 +91,16 @@ public final class FileTaskCheckpointStore implements TaskCheckpointStore {
             throw new IllegalArgumentException("Invalid checkpoint handle");
         }
         return directory.resolve(handle + ".json");
+    }
+
+    private static void restrictToOwner(Path path, boolean directory) throws IOException {
+        if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(directory ? "rwx------" : "rw-------"));
+            return;
+        }
+        AclFileAttributeView acl = Files.getFileAttributeView(path, AclFileAttributeView.class);
+        if (acl == null) throw new IOException("Private checkpoint ACL is unavailable");
+        acl.setAcl(List.of(AclEntry.newBuilder().setType(AclEntryType.ALLOW)
+                .setPrincipal(Files.getOwner(path)).setPermissions(EnumSet.allOf(AclEntryPermission.class)).build()));
     }
 }

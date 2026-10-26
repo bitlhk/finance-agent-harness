@@ -1,0 +1,25 @@
+schemaVersion: finance-capability-pack.v1
+packId: account-statement-readonly
+version: 0.1.0
+systemPrompt: |
+  Read an explicit authorized account and month. Monthly summary only, not an official statement. Missing amounts are unknown, never zero.
+  Use only the installed query tool. Do not guess accounts or periods; do not mutate bank data.
+capabilities:
+  - capabilityId: account.statement.query
+    toolName: account_statement_query
+    name: Account monthly summary
+    description: Read an explicit authorized account and month. Monthly summary only, not an official statement. Missing amounts are unknown, never zero.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [accountId, period]
+      properties:
+        accountId:
+          type: string
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$'
+        period:
+          type: string
+          pattern: '^[0-9]{4}-[0-9]{2}$'
+    requiredScopes:
+      - account:read

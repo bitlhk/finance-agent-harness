@@ -1,0 +1,10 @@
+schema: speckit-feature-catalog/v1
+parent_requirement: https://gitcode.com/Euphoria_Yan/agent-store-builder-dev-wo-fork/issues/44
+features:
+  - id: FEAT-001
+    title: 只读报价与优惠咨询组件 H1
+    record: docs/features/FEAT-001.md
+    priority: P1
+    mvp: true
+    delivery_order: 1
+    dependencies: []
