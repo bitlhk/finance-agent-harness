@@ -34,7 +34,7 @@ class QuotationVerificationTest(unittest.TestCase):
 
     def test_full_matrix_is_required_not_pass_text(self):
         paths = self.write_suites()
-        self.assertEqual(35, sum(row["tests"] for row in v.junit_results(self.root, self.manifest)))
+        self.assertEqual(36, sum(row["tests"] for row in v.junit_results(self.root, self.manifest)))
         node = ET.parse(paths[0]).getroot()
         node.remove(node.findall("testcase")[0])
         ET.ElementTree(node).write(paths[0])
@@ -65,6 +65,18 @@ class QuotationVerificationTest(unittest.TestCase):
     def test_source_or_input_change_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "SOURCE_OR_INPUT_CHANGED"):
             v.require_same_identity({"sha256": "a"}, {"sha256": "b"})
+
+    def test_actual_registry_lock_case_cannot_be_omitted(self):
+        paths = self.write_suites()
+        path = next(p for p in paths if p.name.endswith("QuotationReferenceConfigTest.xml"))
+        node = ET.parse(path).getroot()
+        case = next(row for row in node.findall("testcase") if row.get("name") ==
+                    "actualCoreRegistryAcceptsIdentityAndRejectsMissingOrWrongLock")
+        node.remove(case)
+        node.set("tests", str(len(node.findall("testcase"))))
+        ET.ElementTree(node).write(path)
+        with self.assertRaisesRegex(ValueError, "INCOMPLETE_OR_FAILED_JAVA_SUITE"):
+            v.junit_results(self.root, self.manifest)
 
     def test_frozen_oracle_is_exact(self):
         v.require_frozen()

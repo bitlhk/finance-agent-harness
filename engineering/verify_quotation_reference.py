@@ -22,7 +22,8 @@ SUITES = {
     "providers/quotation-reference": {
         "io.github.bitlhk.finance.harness.providers.quotation.QuotationReferenceConfigTest": {
             "freezesActualBytesAndDoesNotReloadChangedSource",
-            "rejectsDigestSizeDuplicateUnknownAndAmbiguousRecords", "rejectsFileAndParentSymlinks"},
+            "rejectsDigestSizeDuplicateUnknownAndAmbiguousRecords", "rejectsFileAndParentSymlinks",
+            "actualCoreRegistryAcceptsIdentityAndRejectsMissingOrWrongLock"},
         "io.github.bitlhk.finance.harness.providers.quotation.QuotationReferenceProviderTest": {
             "returnsImmutableVersionedFactsWithNoBusinessWrite", "revocationBeforeAndAfterReadDoesNotReturnFacts",
             "refusesUntrustedSelectorsAndAllTaskSemantics", "expiredAndFutureQuotesNeverReturnOldPrice",

@@ -20,7 +20,7 @@
     {
       "id": "parent-build-contract",
       "source": "repo://pom.xml",
-      "digest": "sha256:dd1188c194272736b9e0a7b58f16d81689407bd638d654c5396b8efcd99ba654",
+      "digest": "sha256:2ad641de7e33e121552460613aeee401625eea2223ef7b3f637cfa87ccdb4e31",
       "kind": "file"
     },
     {
