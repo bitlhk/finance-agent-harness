@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "observation-assembly-cases.v0.1",
+  "manifest": "repo://observation-packs/native-analysis/assembly.v0.1.json",
+  "cases": [
+    {
+      "name": "declared-sources",
+      "path": [],
+      "operation": "none",
+      "expected": "DECLARATION_VALID"
+    },
+    {
+      "name": "not-authority",
+      "path": [
+        "authorized"
+      ],
+      "value": true,
+      "expected": "SCHEMA_MISMATCH"
+    },
+    {
+      "name": "not-command",
+      "path": [
+        "command"
+      ],
+      "value": "arbitrary-command",
+      "expected": "SCHEMA_MISMATCH"
+    },
+    {
+      "name": "sdk-mismatch",
+      "path": [
+        "compatibility",
+        "sdkVersion"
+      ],
+      "value": "0.1.15",
+      "expected": "INCOMPATIBLE_RUNTIME"
+    },
+    {
+      "name": "source-traversal",
+      "path": [
+        "components",
+        0,
+        "source"
+      ],
+      "value": "repo://safe/../../outside",
+      "expected": "INVALID_SOURCE"
+    },
+    {
+      "name": "source-drift",
+      "path": [
+        "components",
+        0,
+        "digest"
+      ],
+      "value": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "expected": "DIGEST_MISMATCH"
+    },
+    {
+      "name": "duplicate-reference",
+      "path": [
+        "components",
+        1,
+        "id"
+      ],
+      "value": "native-bridge",
+      "expected": "DUPLICATE_REFERENCE"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "runtime-integration",
+    "id": "native-bridge",
+    "version": "0.1.0",
+    "source": "repo://integrations/openjiuwen-java-otel/src/main/java",
+    "digest": "sha256:832cd5cbc16bcd2113fed4e75d9f3ba9148310162444bbd850203978b7afb422"
+  },
+  "scope": {
+    "capabilityIds": [],
+    "runtimeId": "openjiuwen-java",
+    "integratorId": "finance-harness-openjiuwen-java-otel"
+  },
+  "methodCases": [],
+  "caseRefs": [
+    {
+      "source": "repo://contracts/fixtures/observation/native-cases.v1.json",
+      "digest": "sha256:dc6ef7c7dd018281edcf3dcc3a33204e3a6be47464274185b4ce4c10d11b9999",
+      "format": "finance.native-observation-cases.v1"
+    },
+    {
+      "source": "repo://contracts/fixtures/observation/analysis-cases.v1.json",
+      "digest": "sha256:a685a2b6f5611c41c00dff04a5af92375978865561730fb2403a00d95775449f",
+      "format": "finance.observation-analysis-cases.v1"
+    }
+  ],
+  "commands": [
+    {
+      "name": "Native metadata bridge tests (display only)",
+      "command": "mvn -B -ntp -f integrations/openjiuwen-java-otel/pom.xml test",
+      "sourceCommit": "db1bad66557af9b6f6192853b4c608f84c65305c",
+      "workingDirectory": "repo://"
+    },
+    {
+      "name": "Financial analysis tests (display only)",
+      "command": "mvn -B -ntp -f packages/java/observation-analysis/pom.xml test",
+      "sourceCommit": "db1bad66557af9b6f6192853b4c608f84c65305c",
+      "workingDirectory": "repo://"
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "finance-observation-assembly.v0.1",
+  "id": "native-observation-analysis",
+  "version": "0.1.0",
+  "components": [
+    {
+      "id": "native-bridge",
+      "source": "repo://integrations/openjiuwen-java-otel/src/main/java",
+      "digest": "sha256:832cd5cbc16bcd2113fed4e75d9f3ba9148310162444bbd850203978b7afb422",
+      "kind": "tree"
+    },
+    {
+      "id": "financial-analysis",
+      "source": "repo://packages/java/observation-analysis/src/main/java",
+      "digest": "sha256:9763f3cc1150dd1314c0aef76f02a1a36473d203ef3d5c2fd464b4f38723ede7",
+      "kind": "tree"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "parent-build-contract",
+      "source": "repo://pom.xml",
+      "digest": "sha256:dd1188c194272736b9e0a7b58f16d81689407bd638d654c5396b8efcd99ba654",
+      "kind": "file"
+    },
+    {
+      "id": "native-build-contract",
+      "source": "repo://integrations/openjiuwen-java-otel/pom.xml",
+      "digest": "sha256:b15c1823a5234b42b4de8f9d8f1b0e4a8e3a42f6d29041adb26911817734f4b8",
+      "kind": "file"
+    },
+    {
+      "id": "analysis-build-contract",
+      "source": "repo://packages/java/observation-analysis/pom.xml",
+      "digest": "sha256:c98e551f866c2777a3cd360cecb120bee017c4144515b5b37ec748fb615bba18",
+      "kind": "file"
+    },
+    {
+      "id": "native-v1",
+      "source": "repo://contracts/json-schema/observation/native-observation.v1.schema.json",
+      "digest": "sha256:4b643e7b70844c9816df5bb31f050f3f5c5fe0d577973dac46ce2abda7a44549",
+      "kind": "file"
+    },
+    {
+      "id": "analysis-input-v1",
+      "source": "repo://contracts/json-schema/observation/analysis-input.v1.schema.json",
+      "digest": "sha256:8ab53f2f3913ff06d1dd94169ad8a7913d9285c12977b888f7034459ec95aaeb",
+      "kind": "file"
+    },
+    {
+      "id": "analysis-result-v1",
+      "source": "repo://contracts/json-schema/observation/analysis-result.v1.schema.json",
+      "digest": "sha256:77ba316a70ed9514499f6fb57de696c9c9a677969d6ffb58bb5681625960ddba",
+      "kind": "file"
+    },
+    {
+      "id": "financial-evidence-v01",
+      "source": "repo://contracts/json-schema/observation/financial-evidence-context.v0.1.schema.json",
+      "digest": "sha256:ad3329907d0bbc5552345cdffbc18c2d4efe17cd5d9bacc1ab8c41ef54afe5f9",
+      "kind": "file"
+    }
+  ],
+  "compatibility": {
+    "runtimeId": "openjiuwen-java",
+    "sdkVersion": "0.1.16",
+    "integrationId": "finance-harness-openjiuwen-java-otel",
+    "ruleVersion": "finance-single-run.v1"
+  },
+  "policyContract": {
+    "id": "metadata-policy-v01",
+    "source": "repo://contracts/json-schema/observation/observation-assembly.v0.1.schema.json",
+    "digest": "sha256:b8ca8a44e8afabb9d92d6620578f3d4056274833f2387fb7db529fefb1132a20",
+    "kind": "file"
+  },
+  "requirements": [
+    {
+      "id": "readonly-balance",
+      "source": "repo://observation-packs/readonly/balance.json",
+      "digest": "sha256:0aca3ae34c835e5a03ed4f35ac163872b84e89343ce9d7466a49e64f0cac3342",
+      "kind": "file"
+    }
+  ],
+  "hostBindings": [
+    "requestId",
+    "instanceId",
+    "processBootId",
+    "runtimeLockDigest",
+    "authorization",
+    "storage"
+  ],
+  "consumerPurposes": {
+    "evaluator": [
+      "evaluation",
+      "comparison"
+    ],
+    "developer": [
+      "development-context"
+    ]
+  },
+  "conformance": [
+    {
+      "id": "native-java-tests",
+      "source": "repo://integrations/openjiuwen-java-otel/src/test/java/io/github/bitlhk/finance/harness/integrations/otel/NativeObservationBridgeTest.java",
+      "digest": "sha256:dfcc7111282136a9f2ab553708241a751d42b58845909bd4d236e8b0e1bd34e3",
+      "kind": "file"
+    },
+    {
+      "id": "analysis-java-tests",
+      "source": "repo://packages/java/observation-analysis/src/test/java/io/github/bitlhk/finance/harness/analysis/ObservationAnalyzerTest.java",
+      "digest": "sha256:25039254428174117facc41424ca7b72e721817ac9c96ede504c2419429372db",
+      "kind": "file"
+    },
+    {
+      "id": "native-cases-v1",
+      "source": "repo://contracts/fixtures/observation/native-cases.v1.json",
+      "digest": "sha256:dc6ef7c7dd018281edcf3dcc3a33204e3a6be47464274185b4ce4c10d11b9999",
+      "kind": "file"
+    },
+    {
+      "id": "analysis-cases-v1",
+      "source": "repo://contracts/fixtures/observation/analysis-cases.v1.json",
+      "digest": "sha256:a685a2b6f5611c41c00dff04a5af92375978865561730fb2403a00d95775449f",
+      "kind": "file"
+    }
+  ],
+  "developmentSupport": [
+    {
+      "id": "native-analysis-development-support",
+      "source": "repo://metadata/development-support/native-observation-analysis/0.1.0.json",
+      "digest": "sha256:9a956f6e291173a925505a1db8be2334308092864cd5a5aeb99464df9a9df34a",
+      "kind": "file"
+    }
+  ]
+}

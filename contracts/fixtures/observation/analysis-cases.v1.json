@@ -1,0 +1,1127 @@
+{
+  "schemaVersion": "finance.observation-analysis-cases.v1",
+  "cases": [
+    {
+      "name": "normal-business-result",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "COMPLETE",
+        "reasons": []
+      }
+    },
+    {
+      "name": "technical-completed-business-failed",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "FAILED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "FAILED",
+        "technical": "COMPLETED",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "BUSINESS_RESULT_FAILED",
+          "CHECK_BUSINESS_RESPONSE"
+        ]
+      }
+    },
+    {
+      "name": "no-business-result",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "UNKNOWN",
+        "technical": "COMPLETED",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "BUSINESS_RESULT_UNKNOWN"
+        ]
+      }
+    },
+    {
+      "name": "missing-terminal",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": false,
+          "gaps": [
+            "MISSING_TERMINAL"
+          ],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": null
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "UNKNOWN",
+        "integrity": "GAPPED",
+        "reasons": [
+          "RECORD_COVERAGE_GAP",
+          "CHECK_RECORD_COVERAGE"
+        ]
+      }
+    },
+    {
+      "name": "control-denied-no-dispatch",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CONTROL",
+            "outcome": "DENIED",
+            "dispatch": "NOT_SENT",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "DENIED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "UNKNOWN",
+        "technical": "DENIED",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "CONTROL_DENIED_OBSERVED",
+          "BUSINESS_RESULT_UNKNOWN"
+        ]
+      }
+    },
+    {
+      "name": "sampled-not-complete-audit",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "sample",
+          "sampled": false,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "GAPPED",
+        "reasons": [
+          "RECORD_COVERAGE_GAP",
+          "CHECK_RECORD_COVERAGE"
+        ]
+      }
+    },
+    {
+      "name": "observation-off-still-business-result",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "off",
+          "sampled": false,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "GAPPED",
+        "reasons": [
+          "RECORD_COVERAGE_GAP",
+          "CHECK_RECORD_COVERAGE"
+        ]
+      }
+    },
+    {
+      "name": "contradictory-native-lifecycle",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [
+            "NATIVE_LIFECYCLE_GAP"
+          ],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "GAPPED",
+        "reasons": [
+          "RECORD_COVERAGE_GAP",
+          "CHECK_RECORD_COVERAGE"
+        ]
+      }
+    },
+    {
+      "name": "propagated-errors-not-independent-roots",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "model",
+            "source": "SDK_NATIVE",
+            "kind": "MODEL",
+            "outcome": "ERROR",
+            "dispatch": "NOT_OBSERVED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          },
+          {
+            "id": "run",
+            "source": "SDK_NATIVE",
+            "kind": "RUN",
+            "outcome": "ERROR",
+            "dispatch": "NOT_OBSERVED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "ERROR",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "UNKNOWN",
+        "technical": "ERROR",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "BUSINESS_RESULT_UNKNOWN",
+          "TECHNICAL_FAILURE_OBSERVED",
+          "CAUSE_NOT_ESTABLISHED",
+          "CHECK_FAILURE_EVIDENCE"
+        ]
+      }
+    },
+    {
+      "name": "native-return-is-not-business-result",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "SDK_NATIVE",
+            "kind": "MODEL",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "UNKNOWN",
+        "technical": "COMPLETED",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "BUSINESS_RESULT_UNKNOWN"
+        ]
+      }
+    },
+    {
+      "name": "missing-parent",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ],
+            "parentId": "missing"
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "GAPPED",
+        "reasons": [
+          "RECORD_COVERAGE_GAP",
+          "CHECK_RECORD_COVERAGE"
+        ]
+      }
+    },
+    {
+      "name": "parallel-and-independent-clocks",
+      "valid": true,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ],
+            "clockGroup": "host:boot-1",
+            "durationNanos": 100
+          },
+          {
+            "id": "tool",
+            "source": "SDK_NATIVE",
+            "kind": "TOOL",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ],
+            "clockGroup": "sdk:boot-1",
+            "durationNanos": 200
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      },
+      "expected": {
+        "business": "COMPLETED",
+        "technical": "COMPLETED",
+        "integrity": "COMPLETE",
+        "reasons": [
+          "LONGEST_RECORDED_INTERVAL"
+        ]
+      }
+    },
+    {
+      "name": "unexpected-body",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        },
+        "prompt": "PRIVATE_BODY_SENTINEL"
+      }
+    },
+    {
+      "name": "foreign-evidence",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "foreign"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      }
+    },
+    {
+      "name": "duplicate-step",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          },
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      }
+    },
+    {
+      "name": "duplicate-evidence",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          },
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      }
+    },
+    {
+      "name": "unsupported-rule",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "unknown",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ]
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      }
+    },
+    {
+      "name": "path-not-accepted",
+      "valid": false,
+      "input": {
+        "schemaVersion": "finance.observation-analysis-input.v1",
+        "requestId": "request-1",
+        "instanceId": "instance-1",
+        "processBootId": "boot-1",
+        "runtimeLockDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "snapshotDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "ruleVersion": "finance-single-run.v1",
+        "steps": [
+          {
+            "id": "cap-1",
+            "source": "HOST_FINANCIAL",
+            "kind": "CAPABILITY",
+            "outcome": "COMPLETED",
+            "dispatch": "SENT",
+            "businessStatus": "COMPLETED",
+            "evidenceIds": [
+              "event:1"
+            ],
+            "path": "/etc/passwd"
+          }
+        ],
+        "coverage": {
+          "mode": "full",
+          "sampled": true,
+          "complete": true,
+          "gaps": [],
+          "evidenceIds": [
+            "coverage"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "event:1",
+            "kind": "HOST_EVENT"
+          },
+          {
+            "id": "terminal",
+            "kind": "TERMINAL"
+          },
+          {
+            "id": "coverage",
+            "kind": "COVERAGE"
+          }
+        ],
+        "terminal": {
+          "status": "COMPLETED",
+          "evidenceIds": [
+            "terminal"
+          ]
+        }
+      }
+    }
+  ]
+}
