@@ -59,7 +59,7 @@ final class InstalledTaskController {
             }
             public Map<String, Object> denied(TaskCoordination.Saved saved) {
                 return result(bridge.accessDenied(new OpenJiuwenInvocationV1(saved.taskId(), saved.capabilityId(), agentId,
-                        capability.requiredScopes(), Map.of(), Map.of()), Instant.now()), "");
+                        capability.requiredScopes(), Map.of(), Map.of()), Instant.now(), "TASK"), "");
             }
             public Map<String, Object> declined(TaskCoordination.Saved saved) {
                 return result(new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, saved.taskId(),

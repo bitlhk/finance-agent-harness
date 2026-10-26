@@ -189,6 +189,7 @@ class OpenJiuwenFinanceBridgeTest {
         assertEquals(OpenJiuwenFinanceBridge.ADAPTER_ID,
                 ((Map<?, ?>) output.data().get("harness")).get("adapter"));
         assertNotNull(output.evidence().getFirst().get("receiptId"));
+        assertEquals("QUERY", output.evidence().getFirst().get("adapterMode"));
         assertFalse(output.evidence().getFirst().containsKey("wealthAggregate"));
     }
 
@@ -283,6 +284,41 @@ class OpenJiuwenFinanceBridgeTest {
         assertEquals(OpenJiuwenExecutionV1.Status.REJECTED, task.status());
         assertEquals("FINANCE_HARNESS_ERROR", task.errorCode());
         assertFalse(task.content().contains("secret"));
+    }
+
+    @Test
+    void localBoundaryEvidenceKeepsProviderCapabilityAndOperationIdentity() {
+        OpenJiuwenFinanceBridge denied = new OpenJiuwenFinanceBridge(
+                new FinanceProvider() {
+                    @Override
+                    public CapabilityResultV1 query(CapabilityRequestV1 request) {
+                        throw new AssertionError("access must be rejected before provider invocation");
+                    }
+
+                    @Override
+                    public CapabilityResultV1 executeTask(CapabilityRequestV1 request) {
+                        throw new AssertionError("access must be rejected before provider invocation");
+                    }
+                },
+                "test-provider",
+                DEFAULTS,
+                Set.of(QUERY, TASK),
+                true);
+
+        OpenJiuwenExecutionV1 output = denied.query(
+                invocation(QUERY, Set.of("missing:scope"), Map.of(), Map.of()));
+        Map<String, Object> evidence = output.evidence().getFirst();
+
+        assertEquals(OpenJiuwenFinanceBridge.ADAPTER_ID, evidence.get("adapter"));
+        assertEquals("QUERY", evidence.get("adapterMode"));
+        assertEquals(QUERY, evidence.get("capabilityId"));
+        assertEquals("test-provider", evidence.get("providerId"));
+        assertEquals("ACCESS_DENIED", evidence.get("resultStatus"));
+        OpenJiuwenExecutionV1 task = denied.executeTask(
+                invocation(TASK, Set.of("missing:scope"), Map.of(), Map.of()));
+        assertEquals("TASK", task.evidence().getFirst().get("adapterMode"));
+        assertEquals(TASK, task.evidence().getFirst().get("capabilityId"));
+        assertEquals("AUTHORIZATION_DENIED", task.errorCode());
     }
 
     private static OpenJiuwenFinanceBridge bridge(FinanceProvider provider) {

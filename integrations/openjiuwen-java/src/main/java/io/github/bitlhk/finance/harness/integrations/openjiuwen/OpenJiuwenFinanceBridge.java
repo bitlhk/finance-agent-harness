@@ -109,11 +109,12 @@ public final class OpenJiuwenFinanceBridge {
                     && Set.of("AUTHORIZATION_EXPIRED", "AUTHORITY_UNAVAILABLE", "AUTHORIZATION_AUDIT_UNAVAILABLE").contains(Objects.toString(denied.getMessage(), "")))
                 return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
                         "Authorization could not be established; inspect the safe reason.", Map.of(),
-                        List.of(localEvidence(invocation, startedAt, "UNOBSERVED")), denied.getMessage(), "", Map.of());
-            return accessDenied(invocation, startedAt);
+                        List.of(localEvidence(invocation, startedAt, "UNOBSERVED", "QUERY")), denied.getMessage(), "", Map.of());
+            return accessDenied(invocation, startedAt, "QUERY");
         } catch (RuntimeException exception) {
             return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
-                    "暂时无法完成查询，请稍后重试。", Map.of(), List.of(localEvidence(invocation, startedAt, "UNOBSERVED")),
+                    "暂时无法完成查询，请稍后重试。", Map.of(),
+                    List.of(localEvidence(invocation, startedAt, "UNOBSERVED", "QUERY")),
                     "FINANCE_HARNESS_ERROR", "", Map.of());
         }
     }
@@ -125,7 +126,7 @@ public final class OpenJiuwenFinanceBridge {
     /** The approval parameter belongs to the trusted host API, not tool arguments. */
     public OpenJiuwenExecutionV1 executeTask(OpenJiuwenInvocationV1 invocation, HostTaskConfirmation approval) {
         Instant startedAt = Instant.now();
-        if (defaults.strictReadOnlyQueries()) return accessDenied(invocation, startedAt);
+        if (defaults.strictReadOnlyQueries()) return accessDenied(invocation, startedAt, "TASK");
         try {
             var outcome = ProviderTaskExecution.execute(provider, () -> {
                 if (!supports(invocation.capabilityId())) throw new SecurityException("CAPABILITY_NOT_INSTALLED");
@@ -135,7 +136,7 @@ public final class OpenJiuwenFinanceBridge {
                     approval.eventId(), approval.bindingFingerprint(), approval.confirmedAt(), approval.expiresAt()));
             startedAt = outcome.startedAt();
             switch (outcome.decision()) {
-                case ACCESS_DENIED: return accessDenied(invocation, startedAt);
+                case ACCESS_DENIED: return accessDenied(invocation, startedAt, "TASK");
                 case OWNER_MISMATCH: return rejected(invocation, "续办身份与原任务不一致。");
                 case PARAMETERS_CHANGED: return rejected(invocation, "原任务参数不可变更，请先处理原任务。");
                 case CONFIRMATION_INVALID: return rejected(invocation, "确认事件已过期或与待确认任务不一致。");
@@ -168,12 +169,14 @@ public final class OpenJiuwenFinanceBridge {
             return execution(OpenJiuwenExecutionV1.Status.REJECTED, invocation, result,
                     data, evidence, code, "", Map.of());
         } catch (SecurityException denied) {
-            return accessDenied(invocation, startedAt);
+            return accessDenied(invocation, startedAt, "TASK");
         } catch (RuntimeException exception) {
             if (!invocation.checkpoint().isEmpty()) {
                 return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.NEED_USER,
                         invocation.taskId(), "当前无法确认原任务结果，请勿重新提交。",
-                        Map.of("resultStatus", "UNKNOWN"), List.of(localEvidence(invocation, startedAt, "UNOBSERVED")), "OBSERVATION_FAILED",
+                        Map.of("resultStatus", "UNKNOWN"),
+                        List.of(localEvidence(invocation, startedAt, "UNOBSERVED", "TASK")),
+                        "OBSERVATION_FAILED",
                         "请稍后查证原任务。", recoveryCheckpoint(invocation));
             }
             return rejected(invocation, "暂时无法完成办理，请稍后重试。");
@@ -235,15 +238,34 @@ public final class OpenJiuwenFinanceBridge {
         return TaskCheckpointPolicy.canSupplement(checkpoint, merged);
     }
 
-    private Map<String, Object> localEvidence(OpenJiuwenInvocationV1 invocation, Instant start, String status) {
-        return Map.of("requestId", "fh-local-" + UUID.randomUUID(), "taskId", invocation.taskId(),
-                "providerId", providerId, "startedAt", start.toString(), "finishedAt", Instant.now().toString(),
-                "sourceStatus", status, "evidenceKind", "LOCAL_BOUNDARY", "simulated", simulated);
+    private Map<String, Object> localEvidence(
+            OpenJiuwenInvocationV1 invocation,
+            Instant start,
+            String status,
+            String mode) {
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("adapter", ADAPTER_ID);
+        evidence.put("adapterMode", mode);
+        evidence.put("capabilityId", invocation.capabilityId());
+        evidence.put("providerId", providerId);
+        evidence.put("requestId", "fh-local-" + UUID.randomUUID());
+        evidence.put("taskId", invocation.taskId());
+        evidence.put("startedAt", start.toString());
+        evidence.put("finishedAt", Instant.now().toString());
+        evidence.put("resultStatus", status);
+        evidence.put("sourceStatus", status);
+        evidence.put("evidenceKind", "LOCAL_BOUNDARY");
+        evidence.put("simulated", simulated);
+        return Map.copyOf(evidence);
     }
 
-    OpenJiuwenExecutionV1 accessDenied(OpenJiuwenInvocationV1 invocation, Instant start) {
+    OpenJiuwenExecutionV1 accessDenied(
+            OpenJiuwenInvocationV1 invocation,
+            Instant start,
+            String mode) {
         return new OpenJiuwenExecutionV1(OpenJiuwenExecutionV1.Status.REJECTED, invocation.taskId(),
-                "当前身份或权限不允许此操作。", Map.of(), List.of(localEvidence(invocation, start, "ACCESS_DENIED")),
+                "当前身份或权限不允许此操作。", Map.of(),
+                List.of(localEvidence(invocation, start, "ACCESS_DENIED", mode)),
                 "AUTHORIZATION_DENIED", "", Map.of());
     }
 
@@ -298,7 +320,7 @@ public final class OpenJiuwenFinanceBridge {
             String mode) {
         Map<String, Object> evidence = new LinkedHashMap<>();
         evidence.put("adapter", ADAPTER_ID);
-        if ("TASK".equals(mode)) evidence.put("adapterMode", mode);
+        evidence.put("adapterMode", mode);
         evidence.put("capabilityId", invocation.capabilityId());
         evidence.put("ownerAgentId", invocation.ownerAgentId());
         evidence.put("providerId", receipt.providerId());
