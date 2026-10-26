@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "quotation-synthetic-reference",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-quotation-reference:0.1.0-SNAPSHOT",
+  "connectionKind": "quotation-reference.v0.1",
+  "configurationFiles": [
+    {
+      "id": "quotation-reference",
+      "pathEnvironment": "FH_QUOTATION_REFERENCE_CONFIG",
+      "digestEnvironment": "FH_QUOTATION_REFERENCE_CONFIG_SHA256",
+      "maxBytes": 262144
+    }
+  ],
+  "supports": [
+    {
+      "pack": {
+        "id": "quotation-consultation-readonly",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "quotation.offer.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}

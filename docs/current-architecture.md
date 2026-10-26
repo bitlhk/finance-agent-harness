@@ -38,6 +38,12 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 
 ## 尚未证明的范围
 
+### 报价与优惠咨询候选（2026-10-19）
+
+新增[只读报价合同](quotation-readonly-v01.md)与[Harness FEAT-001](features/FEAT-001.md)：quotation领域包提供严格版本事实、整数分金额关系、绑定及有效期验证；quotation-reference通过既有受管Factory提供无网络合成源，只有quotation.offer.query。依赖方向为Provider→Core/quotation，领域不依赖SDK、Host或UI；Core/SPI/Execution不改。
+
+装配要求新增quotation-disclosure.v0.1。这不是既有Host支持声明：H1组件通过不代表公开出口、动态授权或原生SDK已验收。具体Host必须在每个公开分片发送前重新校验权限、主体、事实及有效期；H2实际接线、H3 Builder交付、上游维护者接纳和发布分别验收。下述历史范围及基线不被新候选替换。
+
 适配完成、指定版本通过、当前部署可构建是三种状态。Python 观测资格等运行前提见指南第 13.5 节。未接入 Runtime、任意包自动发现执行、跨版本图节点完整隔离、所有企业接口通用适配及非原作者真人独立接入均不能据此宣布完成。
 
 本轮只整理文档，不修观测资格、不扩展 Runtime，也不改历史 Agent 或运行证据。
