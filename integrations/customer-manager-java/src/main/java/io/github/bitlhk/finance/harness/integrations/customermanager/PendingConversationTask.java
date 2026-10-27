@@ -3,7 +3,7 @@ package io.github.bitlhk.finance.harness.integrations.customermanager;
 import java.time.Instant;
 import java.util.*;
 
-/** Unexecuted user inputs. Only a separate one-shot confirmation can dispatch them. */
+/** Unexecuted user inputs; dispatch requires complete inputs and the installed action policy. */
 record PendingConversationTask(ConversationConfirmation.Binding binding, ConversationIntent.Kind kind,
         String query, String object, Map<String,Object> parameters, Instant expiresAt) {
     PendingConversationTask {

@@ -258,6 +258,10 @@ public final class ServicePreparation implements AutoCloseable {
                 ObjectNode temporalAssessment=temporalAssessment(factPresentation);
                 generationContext.set("temporalAssessment",temporalAssessment.deepCopy());
                 collectFactRefs(temporalAssessment,"/temporalAssessment",ids,ids.size()+40);
+                ObjectNode derivedObservations=PrevisitDerivedFacts.derive(context);
+                report.set("derivedObservations",derivedObservations.deepCopy());
+                generationContext.set("derivedObservations",derivedObservations.deepCopy());
+                collectFactRefs(derivedObservations,"/derivedObservations",ids,ids.size()+100);
                 report.set("factRefs",HarnessJson.mapper().valueToTree(ids));
                 if(productArguments==null) {
                     if (!"READY".equals(context.path("readiness").path("status").asText())) missing.add("来源未声明准备条件全部就绪");
@@ -838,9 +842,8 @@ public final class ServicePreparation implements AutoCloseable {
             for(JsonNode value:values)if(!value.isTextual()||value.asText().isBlank()||value.asText().length()>500)
                 throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
         }
-        String allowed=facts.toString()+" "+goal;
-        java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
-        while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+        for(String section:expected) for(JsonNode item:generated.path(section))
+            ReportNumbers.validate(item.isTextual()?item.asText():item.path("text").asText(),facts,goal);
         validateProductSemantics(generated.toString(),facts);
         validateTemporalSemantics(generated.toString(),facts);
         validateProvenanceSemantics(generated.toString(),facts);
@@ -853,9 +856,7 @@ public final class ServicePreparation implements AutoCloseable {
         if (evidenced && (delta.factRefs().isEmpty() || !ids.containsAll(delta.factRefs()))
                 || !evidenced && !delta.factRefs().isEmpty())
             throw unknownFactRef(new LinkedHashSet<>(delta.factRefs()),ids);
-        String allowed=facts.toString()+" "+goal;
-        var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
-        while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+        ReportNumbers.validate(delta.text(),facts,goal);
         validateProductSemantics(delta.text(),facts);
         validateTemporalSemantics(delta.text(),facts);
         validateProvenanceSemantics(delta.text(),facts);

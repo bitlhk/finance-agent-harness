@@ -15,21 +15,49 @@ import java.util.*;
 
 /** Model-backed wording over Host-authorized facts and the installed method. */
 final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenerator {
-    static final int REPORT_MAX_TOKENS = 900;
+    static final int REPORT_MAX_TOKENS = 3200;
+    static final String DELIVERY_INSTRUCTION =
+            "四个section只是证据分类，不是限制业务内容的四句模板。按installedMethod中的交付要求组织正文，"
+            + "可在text内使用Markdown小标题和列表，保留每项事实的factRefs；每项text最多500字。"
+            + "分段输出：每个观察、每个问题、每个条件式下一步分别占一个JSON行；每段以100至220字为宜。"
+            + "同一section可以连续输出多行，前两类各最多8行，后两类各最多12行；不要把整篇建议或多个问题塞入一个text。"
+            + "communicationFocus说明本次拜访目标、触发事件与事实支持的主要观察；"
+            + "preparationAdvice展开SOP要求的业务分析、具体追问和有条件的下一步，不要重复概括空泛建议。"
+            + "有资产、持仓、风险测评、到期信息时使用与本次目标有关的具体事实；缺失时明确缺失，不能用泛泛复核清单代替。"
+            + "derivedObservations仅为宿主从同币种同日期快照计算的比例，引用其percent和operandRefs，"
+            + "不得把快照占比当成政策底线或当前资产证明；没有该计算结果时不得自行计算比例。"
+            + "输入中同时存在分子和分母也不等于已提供计算结果，不要自行相除，不要写算式。"
+            + "未提供derivedObservations或其中没有对应计算项时，用原始金额说明观察并提问，不写新占比。"
+            + "来源中的流动性偏好比例只描述偏好，不能改写成当前现金占比。";
+    static final String BUSINESS_LANGUAGE_INSTRUCTION =
+            "text是直接交给客户经理阅读的正文，不是校验过程说明。只写业务结论、具体问题与必要边界。"
+            + "所有英文状态码、输入字段名、引用路径、校验术语只留在factRefs和输入中，绝不复述到text。"
+            + "例如直接写‘只有历史快照，当前资金去向待核实’，不要解释某字段为某状态；"
+            + "没有比例就只写已取得的金额，不解释缺少哪个计算字段。不要复述这些写作指令。";
     static final String FACT_REFERENCE_INSTRUCTION =
-            "factRefs只能逐字复制factReferenceCatalog中列出的叶字段路径；"
+            "factReferenceCatalog逐项给出ref及其value，引用某项值时，factRefs只能逐字复制该项的ref；"
+            + "日期引用必须取实际日期值对应的ref，不能移到其他对象之下。"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";
+    static final String CONTRACT_BOUNDARY_INSTRUCTION =
+            "到期日不是赎回合同：只有到期日而没有提前赎回条款时，不得断言可或不可提前赎回、动用或锁定。"
+            + "客户期限偏好不是匹配结论：没有经过核验的适配结果时，不得断言某持仓期限满足或匹配客户偏好。"
+            + "上述缺项应写成待确认的问题，不得把问题的假设当成事实。"
+            + "比例包括中文的‘一半’、‘两成’等表达；没有对应宿主计算项时同样不得自行推算。"
+            + "不要自行计算时间间隔；按来源写明具体日期即可。";
     private final ReActAgent agent;
 
     OpenJiuwenReportGenerator(String provider, String key, String base, String model) {
         agent = new ReActAgent(AgentCard.builder().id("service-preparation-report")
-                .name("客户经理服务准备报告").description("依据已安装方法和已核实事实生成待复核建议").build());
+                .name("客户经理服务准备报告").description("依据已安装方法和已授权取得的事实生成待复核建议").build());
         var config = ReActAgentConfig.builder().promptTemplate(List.of(Map.of("role", "system", "content",
                 "你只能依据输入中的installedMethod、goal、factReferenceCatalog和facts生成待经理复核的服务准备建议。"
                 + "每行只输出一个JSON对象，不要代码围栏或其他文字。字段严格为section、text、factRefs。"
                 + "section依次使用communicationFocus、preparationAdvice、pendingItems、reviewChecklist；"
                 + "前两类factRefs必须为输入中的非空引用数组，后两类factRefs必须为空数组。"
                 + FACT_REFERENCE_INSTRUCTION
+                + DELIVERY_INSTRUCTION
+                + BUSINESS_LANGUAGE_INSTRUCTION
+                + CONTRACT_BOUNDARY_INSTRUCTION
                 + "涉及产品时，只有productReview.eligibleProducts中的产品可以作为候选；excludedProducts只能说明排除原因，不得推荐。"
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
                 + "不得把eligibleProducts描述为不满足请求，也不得声称没有合格候选。"
@@ -38,10 +66,11 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "taskContext.facts中source.kind=USER_STATEMENT的值才可称为客户口述；"
                 + "source.kind=DETERMINISTIC_DERIVATION的值必须称为依据客户口述计算或推导所得，"
                 + "并保留verification.status=DERIVED_FROM_UNVERIFIED_INPUT所表达的尚未独立核验边界；不得把两类来源合并称为均由客户口述。"
-                + "不得新增输入事实中没有的操作策略、配置方式、材料名称、流程步骤或合规结论；缺少依据时必须写入pendingItems。"
+                + "可以按installedMethod提出有事实依据的问题、待确认假设和条件式建议；必须明确这些是建议，不是已发生事实。"
+                + "不得新增输入和installedMethod都未支持的操作策略、配置方式、材料名称或流程步骤，不得编造合规结论；缺少依据时写入pendingItems。"
                 + "text直接写自然、简洁、便于客户经理使用的沟通话术或准备建议，不要添加“沟通焦点：”“服务准备建议：”等栏目名前缀，"
                 + "不要向用户展示JSON字段名、内部路径或英文集合名。"
-                + "不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
+                + "金额可作等值单位换算，不得新增金额、产品、业务完成状态，不得声称写入CRM或已获经理复核。")))
                 .maxIterations(1).build().configureModelClient(required(provider), required(key), required(base), required(model), true);
         config.getModelConfigObj().setTemperature(0.1);
         config.getModelConfigObj().setMaxTokens(REPORT_MAX_TOKENS);
@@ -94,7 +123,9 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             if(id==null||id.isBlank())continue;
             JsonNode value=context.at(id);
             if(value.isMissingNode()||value.isContainerNode())continue;
-            catalog.add(id);
+            var entry=catalog.addObject();
+            entry.put("ref",id);
+            entry.set("value",value.deepCopy());
         }
         return catalog;
     }

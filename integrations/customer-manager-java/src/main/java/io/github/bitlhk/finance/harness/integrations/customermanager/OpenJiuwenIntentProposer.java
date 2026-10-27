@@ -41,7 +41,7 @@ final class OpenJiuwenIntentProposer {
             + "不能因为previousDialogue含客户姓名或selectedObject已存在就返回SELECT_OBJECT。"
             + "当前仅补客户且有pendingRequest才用RESOLVE_OBJECT。"
             + "当前补充pendingRequest的金额、期限或渠道用CONTINUE_TASK，不另起目标；只提供参数时objectRef可为null。"
-            + "pendingRequest.parameters是本会话待确认的用户输入，不是金融事实。服务端合并参数、列出缺项，条件齐备后仍需明确确认。"
+            + "pendingRequest.parameters是本会话待补充的用户输入，不是金融事实。服务端合并参数、列出缺项，并按已安装动作的策略决定执行或确认；模型不能授予权限或自行决定免确认。"
             + "当前明确提出另一个完整目标用PREPARE或PRODUCT_REVIEW，不能继承之前参数；取消用CANCEL_TASK。"
             + "selectedObject是本会话用户已明确选定的对象；本轮明确回访等目标但省略姓名可使用它。"
             + "例如此前选定客户并被问需要做什么，当前回答回访准备，分类PREPARE并引用selectedObject；"
