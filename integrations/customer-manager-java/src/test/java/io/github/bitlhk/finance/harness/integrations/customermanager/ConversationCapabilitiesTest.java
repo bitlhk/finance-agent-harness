@@ -12,11 +12,13 @@ final class ConversationCapabilitiesTest {
     @Test void helpAndExecutionUseTheSameInstalledCapabilities() throws Exception {
         var basic = catalog("[\"wealth.previsit-context.query\"]");
         assertTrue(basic.description().contains("回访"));
+        assertFalse(basic.requiresConfirmation(ConversationIntent.Kind.PREPARE));
         assertFalse(basic.description().contains("筛选待复核候选"));
         assertThrows(SecurityException.class, () -> basic.require(ConversationIntent.Kind.PRODUCT_REVIEW));
         var full = catalog("[\"wealth.previsit-context.query\",\"wealth.allocation-context.query\"]");
         assertTrue(full.description().contains("筛选待复核候选"));
         assertDoesNotThrow(() -> full.require(ConversationIntent.Kind.PRODUCT_REVIEW));
+        assertFalse(full.requiresConfirmation(ConversationIntent.Kind.PRODUCT_REVIEW));
     }
     @Test void unknownOrIncompleteCompositionDoesNotAcquireAnExecutableAction() throws Exception {
         assertTrue(catalog("[\"unknown.query\"]").actions().isEmpty());
@@ -28,5 +30,12 @@ final class ConversationCapabilitiesTest {
             assertThrows(SecurityException.class, () -> catalog(ids));
         assertThrows(SecurityException.class, () -> ConversationCapabilities.fromLock(
                 HarnessJson.mapper().readTree("{\"schemaVersion\":\"unknown\",\"capabilities\":[]}")));
+    }
+    @Test void unspecifiedPolicyRetainsConfirmationAndCannotGrantUnknownAction() {
+        var legacy=new ConversationCapabilities(java.util.Set.of(ConversationIntent.Kind.PREPARE),java.util.List.of("wealth.previsit-context.query"));
+        assertTrue(legacy.requiresConfirmation(ConversationIntent.Kind.PREPARE));
+        assertThrows(SecurityException.class,()->legacy.requiresConfirmation(ConversationIntent.Kind.PRODUCT_REVIEW));
+        assertThrows(SecurityException.class,()->new ConversationCapabilities(java.util.Set.of(ConversationIntent.Kind.UNSUPPORTED),
+                java.util.List.of("unknown.write"),java.util.Set.of(ConversationIntent.Kind.UNSUPPORTED)));
     }
 }

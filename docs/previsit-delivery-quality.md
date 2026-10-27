@@ -1,6 +1,7 @@
 # Previsit delivery quality candidate
 
 Scope: customer-manager report delivery, not new banking capabilities or a new report protocol.
+Related design baseline: [Agent 动作与交互统一规范](action-interaction-policy.md). Its confirmation-policy changes are not implemented or verified by this report-quality candidate.
 Baseline H: 682073b403c8bfd4b4f83e927101a118eaee5460.
 Baseline B: 7c2d74713a39a1e63b2a73d90cc14c5c8c5aaffc.
 

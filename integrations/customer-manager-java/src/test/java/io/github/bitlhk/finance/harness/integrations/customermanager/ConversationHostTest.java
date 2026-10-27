@@ -28,6 +28,7 @@ final class ConversationHostTest {
     final AtomicReference<ServicePreparation> taskReference = new AtomicReference<>();
     final AtomicReference<Map<String,Object>> productRequest = new AtomicReference<>();
     boolean providePrevisitFacts;
+    boolean useInstalledReadPolicy;
     final AtomicReference<String> scope = new AtomicReference<>("synthetic-scope-a");
     Map<String,String> customerMapping = Map.of("synthetic-a","customer-a");
     Set<ConversationIntent.Kind> installedActions = Set.of(ConversationIntent.Kind.PREPARE);
@@ -79,8 +80,14 @@ final class ConversationHostTest {
                 (selectedMethod,goal,ids,context) -> { reportModels.incrementAndGet(); return HarnessJson.mapper().createObjectNode(); },
                 files, Map.of(), method);
         taskReference.set(task);
+        var capabilityLock=HarnessJson.mapper().createObjectNode().put("schemaVersion","local-agent-service-lock.v0.1");
+        var installed=capabilityLock.putArray("capabilities");
+        if(installedActions.contains(ConversationIntent.Kind.PREPARE)||installedActions.contains(ConversationIntent.Kind.PRODUCT_REVIEW))
+            installed.add("wealth.previsit-context.query");
+        if(installedActions.contains(ConversationIntent.Kind.PRODUCT_REVIEW)) installed.add("wealth.allocation-context.query");
         return new CustomerManagerScenarioExtension.Managed("owner-a", "session-a", task, method,
-                new ConversationCapabilities(installedActions, List.of("wealth.previsit-context.query")),
+                useInstalledReadPolicy?ConversationCapabilities.fromLock(capabilityLock)
+                        :new ConversationCapabilities(installedActions, List.of("wealth.previsit-context.query")),
                 "instance-a", proposer,scope::get,
                 new io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence(files,Map::of));
     }
@@ -98,6 +105,118 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void installedReadExecutesOnceWithoutConfirmationAndRejectsReplay() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            var request=body(QUERY,null);
+            var result=session.call("chat",request);
+            assertTrue(result.containsKey("report"));assertFalse(result.containsKey("confirmation"));
+            assertEquals(1,business.get());assertTrue(authorityReads.get()>0);
+            assertThrows(Exception.class,()->session.call("chat",request));
+            assertEquals(1,business.get());assertEquals(1,model.requests.size());
+        }
+    }
+    @Test @Timeout(30) void installedProductReadCollectsSlotsAndUsesFinalParametersWithoutConfirmation() throws Exception {
+        useInstalledReadPolicy=true;providePrevisitFacts=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        String product=PROPOSAL.replace("PREPARE","PRODUCT_REVIEW");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,CAPABILITIES.replace("CAPABILITIES","CONTINUE_TASK"));var session=session(model.proposer())) {
+            var missing=session.call("chat",body("为synthetic-a筛选20万元、12个月的产品",null));
+            assertEquals(List.of("channel"),missing.get("missingInputs"));assertEquals(0,business.get());
+            assertFalse(missing.get("response").toString().contains("再请你确认"));
+            var result=session.call("chat",body("手机银行",null));
+            assertTrue(result.containsKey("report"));assertFalse(result.containsKey("confirmation"));
+            assertEquals(Map.of("amount",200000.0,"horizonMonths",12,"channel","手机银行"),productRequest.get());
+            assertEquals(2,business.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadStillRejectsUninstalledAction() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL.replace("PREPARE","PRODUCT_REVIEW"));var session=session(model.proposer())) {
+            assertThrows(Exception.class,()->session.call("chat",body("筛选产品",null)));
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadRejectsRevocationBeforeDispatch() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            model.onRequest=ignored->revoked.set(true);
+            assertThrows(Exception.class,()->session.call("chat",body(QUERY,null)));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadRejectsScopeMutationDuringIntent() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            model.onRequest=ignored->scope.set("synthetic-scope-changed");
+            assertThrows(Exception.class,()->session.call("chat",body(QUERY,null)));
+            assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadCancellationBeforeDispatchDoesNotQuery() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            var request=body(QUERY,null);
+            model.onRequest=ignored->{try {
+                session.call("cancel",HarnessJson.mapper().createObjectNode().put("runId",request.path("runId").asText()));
+            } catch(Exception failure){throw new RuntimeException(failure);}};
+            assertThrows(Exception.class,()->session.call("chat",request));assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadEvidenceFailurePreventsIntentAndBusiness() throws Exception {
+        useInstalledReadPolicy=true;
+        java.nio.file.Files.createFile(files.resolve("decision-evidence"));
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            assertThrows(Exception.class,()->session.call("chat",body(QUERY,null)));
+            assertTrue(model.requests.isEmpty());assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadCannotClaimFabricatedConfirmation() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            assertThrows(SecurityException.class,()->session.call("chat",body(QUERY,"fabricated")));
+            assertEquals(0,business.get());assertTrue(model.requests.isEmpty());
+        }
+    }
+    @Test @Timeout(30) void installedReadHistoryRetainsBytesAndCannotExecuteFromSavedView() throws Exception {
+        useInstalledReadPolicy=true;
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL,PROPOSAL);var session=session(model.proposer())) {
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("chat",body(QUERY,null)).get("report"));
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body(QUERY,null);
+            request.put("reportId",saved.path("reportId").asText()).put("revision",saved.path("reportRevision").asInt());
+            assertEquals(List.of("newConversation"),session.call("chat",request).get("missingInputs"));
+            assertEquals(1,business.get());
+            var after=session.call("latest",HarnessJson.mapper().createObjectNode()).get("report");
+            assertEquals(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.digest(saved),
+                    io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.digest(after));
+        }
+    }
+    @Test @Timeout(30) void installedReadProviderLateFailureCannotOverwriteCancellation() throws Exception {
+        useInstalledReadPolicy=true;throwsSource.set(true);cancelDuringCall.set(true);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            assertThrows(Exception.class,()->session.call("chat",body(QUERY,null)));
+            JsonNode saved=HarnessJson.mapper().valueToTree(session.call("latest",HarnessJson.mapper().createObjectNode()).get("report"));
+            assertEquals("CANCELLED",saved.path("status").asText());assertFalse(saved.has("modelSuggestion"));
+            assertEquals(1,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadProviderReturnCannotIgnoreRevocation() throws Exception {
+        useInstalledReadPolicy=true;revokeDuringCall.set(true);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {
+            assertThrows(Exception.class,()->session.call("chat",body(QUERY,null)));
+            assertEquals(1,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void installedReadNewObjectCannotReuseOldReportOrCustomer() throws Exception {
+        useInstalledReadPolicy=true;customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL,PROPOSAL.replace("synthetic-a","synthetic-b"));var session=session(model.proposer())) {
+            var first=session.call("chat",body(QUERY,null));
+            var second=session.call("chat",body("prepare synthetic-b",null));
+            assertEquals("synthetic-a",first.get("customer"));assertEquals("synthetic-b",second.get("customer"));
+            assertNotEquals(((Map<?,?>)first.get("report")).get("reportId"),((Map<?,?>)second.get("report")).get("reportId"));
+            assertEquals(2,business.get());
+        }
+    }
     @Test @Timeout(30) void frozenThreeTurnClassificationRetainsObjectWithoutInventingExecutableGoal() throws Exception {
         customerMapping=Map.of("合成客户周明远","customer-a");
         installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);

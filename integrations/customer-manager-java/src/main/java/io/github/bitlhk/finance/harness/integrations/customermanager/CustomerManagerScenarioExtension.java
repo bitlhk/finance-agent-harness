@@ -319,6 +319,22 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private boolean operationCancelled() {
             synchronized(operationLock) { return closed || operation == null || operation.cancelled; }
         }
+        private Map<String,Object> executeRead(ConversationConfirmation.Binding binding, ConversationIntent intent,
+                String query, Map<String,Object> parameters, EventSink sink) throws Exception {
+            synchronized(operationLock) {
+                if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+                if(!binding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
+                capabilities.require(intent.kind());
+                confirmedScope=binding.scopeDigest();
+            }
+            try {
+                var action=intent.kind()==ConversationIntent.Kind.PREPARE
+                        ? CustomerManagerDialogue.Action.PREPARE : CustomerManagerDialogue.Action.PRODUCT_REVIEW;
+                return chat(query,intent.objectRef(),sink,
+                        new CustomerManagerDialogue.Decision(action,intent.objectRef(),List.of(intent.objectRef())),
+                        intent.kind()==ConversationIntent.Kind.PRODUCT_REVIEW?parameters:null);
+            } finally { confirmedScope=null; }
+        }
         private Map<String,Object> converse(JsonNode body, String requested, EventSink sink) throws Exception {
             PendingConversationTask pending;
             synchronized(operationLock) {
@@ -352,13 +368,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     return Map.of("status","ANSWERED","response","已取消这项尚未执行的提案，未查询客户事实，也未生成新报告。");
                 }
                 clearPendingProduct();
-                var action=plan.intent().kind()==ConversationIntent.Kind.PREPARE
-                        ? CustomerManagerDialogue.Action.PREPARE : CustomerManagerDialogue.Action.PRODUCT_REVIEW;
-                confirmedScope=plan.binding().scopeDigest();
-                try { return chat(plan.originalQuery(),plan.intent().objectRef(),sink,
-                        new CustomerManagerDialogue.Decision(action,plan.intent().objectRef(),List.of(plan.intent().objectRef())),
-                        plan.intent().kind()==ConversationIntent.Kind.PRODUCT_REVIEW?plan.parameters():null); }
-                finally { confirmedScope=null; }
+                return executeRead(plan.binding(),plan.intent(),plan.originalQuery(),plan.parameters(),sink);
             }
             clearPendingProduct();
             String query=text(body,"query");
@@ -461,7 +471,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                             "savedExplanation",value(answer));
                 }
                 case PREPARE, PRODUCT_REVIEW -> {
-                    if(reportId!=null)yield Map.of("status","NEED_CLARIFICATION","response","当前正在解释已保存版本。若需取得新事实，请返回新对话确认执行；本轮没有业务查询。","missingInputs",List.of("newConversation"));
+                    if(reportId!=null)yield Map.of("status","NEED_CLARIFICATION","response","当前正在查看已保存内容。若需取得新事实，请在新对话提出客户和任务；本轮没有业务查询。","missingInputs",List.of("newConversation"));
+                    capabilities.require(intent.kind());
                     PendingConversationTask draft=resolving ? continued
                             : PendingConversationTask.start(proposedBinding,intent.kind(),query,intent.objectRef(),Instant.now());
                     String executionQuery=draft.query();
@@ -477,8 +488,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                         String missing=String.join("、",draft.missing().stream().map(labels::get).toList());
                         yield Map.of("status","NEED_CLARIFICATION","response","已记录"+(draft.object()==null?"":displayName(draft.object())+"的")
                                 +(draft.kind()==ConversationIntent.Kind.PRODUCT_REVIEW?"产品筛选目标":"回访准备目标")
-                                +"，还需补充："+missing+"。条件齐备后再请你确认，尚未查询客户事实。","missingInputs",draft.missing());
+                                +"，还需补充："+missing+"。尚未查询客户事实。","missingInputs",draft.missing());
                     }
+                    if(!capabilities.requiresConfirmation(intent.kind()))
+                        yield executeRead(proposedBinding,intent,executionQuery,draft.parameters(),sink);
                     ConversationConfirmation.Plan plan;
                     synchronized(operationLock) {
                         if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
