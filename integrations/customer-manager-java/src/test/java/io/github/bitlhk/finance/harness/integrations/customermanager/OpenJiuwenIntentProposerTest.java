@@ -31,6 +31,8 @@ final class OpenJiuwenIntentProposerTest {
             assertTrue(raw.endsWith("\"userText\":\"回访\"}"));
             assertTrue(messages.get(0).path("content").asText().contains("只分类顶层userText"));
             assertTrue(messages.get(0).path("content").asText().contains("不要求用户补说新"));
+            assertTrue(messages.get(0).path("content").asText().contains("目标识别与执行条件齐备是两回事"));
+            assertTrue(messages.get(0).path("content").asText().contains("不承诺整个名单批量执行"));
         }
     }
     @Test @Timeout(30) void actualSdkProducesTypedSuggestionWithNoToolsOrCrossTurnHistory() throws Exception {

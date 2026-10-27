@@ -376,14 +376,18 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             if(operationCancelled()) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
             boolean resolving=intent.kind()==ConversationIntent.Kind.RESOLVE_OBJECT;
             if(resolving) {
-                if(pending==null) return naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
-                        "没有可执行的待补充任务；结合previousDialogue解释当前支持的目标，不得称客户授权已失效，尚未执行业务。",proposedBinding,sink);
-                capabilities.require(pending.kind());
-                intent=new ConversationIntent(pending.kind(),intent.objectRef(),null,null);
+                if(pending==null) {
+                    // Retain the object, not an executable goal inferred from old assistant text.
+                    intent=new ConversationIntent(ConversationIntent.Kind.CLARIFY,intent.objectRef(),null,null);
+                    resolving=false;
+                } else {
+                    capabilities.require(pending.kind());
+                    intent=new ConversationIntent(pending.kind(),intent.objectRef(),null,null);
+                }
             }
             // Model classification cannot grant access. Only non-data replies bypass CRM I/O;
             // every data/list/history/confirmation path still obtains current business authority.
-            if(!Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
+            if(intent.objectRef()!=null || !Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
                     ConversationIntent.Kind.CLARIFY,ConversationIntent.Kind.CANCEL_TASK,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
                 customers=liveCustomers();
                 if((requested!=null&&!requested.isBlank()&&!customers.contains(requested))
@@ -392,7 +396,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
             }
             if(!Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
-                    ConversationIntent.Kind.LIST_OBJECTS).contains(intent.kind())) clarification=null;
+                    ConversationIntent.Kind.LIST_OBJECTS,ConversationIntent.Kind.CLARIFY).contains(intent.kind())) clarification=null;
             return switch(intent.kind()) {
                 case RESOLVE_OBJECT -> throw new IllegalStateException("CONVERSATION_INTENT_INVALID");
                 case GREETING -> naturalReply(query,ConversationResponder.Purpose.GREETING,List.of(),
@@ -417,8 +421,13 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     yield naturalReply(query,ConversationResponder.Purpose.UNSUPPORTED,List.of(),
                         "请求不在当前已装配能力内，未执行；只能说明已装配能力内的替代。",proposedBinding,sink);
                 }
-                case CLARIFY -> naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
-                        "用户意图尚不能唯一确定；需澄清，不查询客户事实或生成报告。",proposedBinding,sink);
+                case CLARIFY -> {
+                    if(intent.objectRef()!=null) dialogue.select(intent.objectRef());
+                    yield naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
+                            "本轮没有形成可执行提案；结合previousDialogue中用户已表达的目标和continuity中的客户，只询问尚不明确的条件。"
+                            +"不能把没有可执行提案说成用户从未表达目标；不能承诺批量执行。已明确的客户不必重复选择。"
+                            +"此前助手文字不是执行授权，本轮不查询客户事实或生成报告。",proposedBinding,sink);
+                }
                 case EXPLAIN_REPORT -> {
                     if(reportId==null||intent.reportRef()==null)yield Map.of("status","NEED_CLARIFICATION","response","你想准备新的回访，还是查看已有的回访记录？准备新的回访请说明客户；查看已有内容可从左侧已保存记录打开。本轮没有查询客户事实。","missingInputs",List.of("intent"));
                     var answer=task.explainSaved(owner,reportId,reportRevision,query,

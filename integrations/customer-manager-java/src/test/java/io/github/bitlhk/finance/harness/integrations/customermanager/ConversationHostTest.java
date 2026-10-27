@@ -28,6 +28,7 @@ final class ConversationHostTest {
     final AtomicReference<ServicePreparation> taskReference = new AtomicReference<>();
     final AtomicReference<String> scope = new AtomicReference<>("synthetic-scope-a");
     Map<String,String> customerMapping = Map.of("synthetic-a","customer-a");
+    Set<ConversationIntent.Kind> installedActions = Set.of(ConversationIntent.Kind.PREPARE);
 
     private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer) throws Exception {
         return session(proposer,null);
@@ -70,7 +71,7 @@ final class ConversationHostTest {
                 files, Map.of(), method);
         taskReference.set(task);
         return new CustomerManagerScenarioExtension.Managed("owner-a", "session-a", task, method,
-                new ConversationCapabilities(Set.of(ConversationIntent.Kind.PREPARE), List.of("wealth.previsit-context.query")),
+                new ConversationCapabilities(installedActions, List.of("wealth.previsit-context.query")),
                 "instance-a", proposer,scope::get,
                 new io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence(files,Map::of));
     }
@@ -88,6 +89,70 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void frozenThreeTurnClassificationRetainsObjectWithoutInventingExecutableGoal() throws Exception {
+        customerMapping=Map.of("合成客户周明远","customer-a");
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        String resolve=RESOLVE_OBJECT.replace("synthetic-a","周明远");
+        String clarify=PROPOSAL.replace("PREPARE","CLARIFY").replace("synthetic-a","周明远");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES.replace("CAPABILITIES","CLARIFY"),
+                "请补充客户和筛选条件",resolve,"已记录客户，请明确筛选条件",clarify,"请补充金额、期限和渠道");
+                var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("帮我给我负责的客户筛选产品",null);
+            request.put("customerAlias","");
+            for(String query:List.of("帮我给我负责的客户筛选产品","周明远吧","产品删选")) {
+                var result=session.call("chat",request.deepCopy().put("query",query).put("runId",UUID.randomUUID().toString()));
+                assertEquals("NEED_CLARIFICATION",result.get("status"));
+                assertFalse(result.containsKey("confirmation"));assertFalse(result.containsKey("report"));
+            }
+            var last=HarnessJson.mapper().readTree(model.requests.get(4).path("messages").get(1).path("content").asText());
+            assertEquals("合成客户周明远",last.path("selectedObject").asText());
+            assertTrue(last.path("previousDialogue").toString().contains("帮我给我负责的客户筛选产品"));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+            assertEquals(6,model.requests.size());
+        }
+    }
+    @Test @Timeout(30) void knownProductGoalSurvivesClarificationBeforeCustomerSupplement() throws Exception {
+        installedActions=Set.of(ConversationIntent.Kind.PRODUCT_REVIEW);
+        String product=MISSING_OBJECT.replace("PREPARE","PRODUCT_REVIEW");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,CAPABILITIES.replace("CAPABILITIES","CLARIFY"),
+                "尚缺客户，不会批量执行",RESOLVE_OBJECT);var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("帮我给我负责的客户筛选产品",null);
+            request.put("customerAlias","");
+            var first=session.call("chat",request);
+            assertEquals("NEED_CLARIFICATION",first.get("status"));
+            session.call("chat",request.deepCopy().put("query","需要哪些条件").put("runId",UUID.randomUUID().toString()));
+            var result=session.call("chat",request.deepCopy().put("query","synthetic-a吧").put("runId",UUID.randomUUID().toString()));
+            planId(result);
+            var confirmation=(Map<?,?>)result.get("confirmation");
+            assertEquals("PRODUCT_REVIEW",confirmation.get("action"));
+            assertTrue(confirmation.get("query").toString().startsWith("帮我给我负责的客户筛选产品"));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void clarificationObjectStillRequiresLiveAuthorityAndCannotSurviveRevocation() throws Exception {
+        String clarify=PROPOSAL.replace("PREPARE","CLARIFY");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(clarify);var session=session(model.proposer())) {
+            revoked.set(true);
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("synthetic-a",null);request.put("customerAlias","");
+            assertThrows(SecurityException.class,()->session.call("chat",request));
+            assertEquals(0,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void clarificationCannotRestoreCancelledGoal() throws Exception {
+        String clarify=PROPOSAL.replace("PREPARE","CLARIFY");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,
+                CAPABILITIES.replace("CAPABILITIES","CANCEL_TASK"),clarify,"请说明新的目标",RESOLVE_OBJECT,"请明确目标");
+                var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("准备回访",null);request.put("customerAlias","");
+            session.call("chat",request);
+            session.call("chat",request.deepCopy().put("query","取消").put("runId",UUID.randomUUID().toString()));
+            session.call("chat",request.deepCopy().put("query","synthetic-a").put("runId",UUID.randomUUID().toString()));
+            var result=session.call("chat",request.deepCopy().put("query","这个客户").put("runId",UUID.randomUUID().toString()));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+            var payload=HarnessJson.mapper().readTree(model.requests.get(4).path("messages").get(1).path("content").asText());
+            assertTrue(payload.path("pendingRequest").isNull());
+        }
+    }
     @Test @Timeout(30) void unboundOldReportProposalClarifiesBusinessGoalWithoutInventingReportOrQuery() throws Exception {
         customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
         String other=PROPOSAL.replace("synthetic-a","synthetic-b");

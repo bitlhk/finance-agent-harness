@@ -44,6 +44,9 @@ record ConversationIntent(Kind kind, String objectRef, String reportRef, Integer
                 if ((report == null) != (revision == null)) throw invalid();
             } else if (kind == Kind.RESOLVE_OBJECT || kind == Kind.SELECT_OBJECT) {
                 if(object==null||report!=null||revision!=null) throw invalid();
+            } else if (kind == Kind.CLARIFY) {
+                // A validated object hint is not an action, grant, or report reference.
+                if(report!=null||revision!=null) throw invalid();
             } else if (object != null || report != null || revision != null) throw invalid();
             return new ConversationIntent(kind, object, report, revision);
         } catch (Exception failure) {
