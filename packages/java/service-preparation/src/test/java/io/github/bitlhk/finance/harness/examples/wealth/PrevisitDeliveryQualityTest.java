@@ -69,4 +69,12 @@ class PrevisitDeliveryQualityTest {
         assertDoesNotThrow(()->ReportNumbers.validate("1. 8月27日的快照\n2. 现金0元",source,""));
         assertThrows(IllegalArgumentException.class,()->ReportNumbers.validate("1. 现金12元",source,""));
     }
+
+    @Test void chineseInlineListOrdinalsAreNotFinancialClaims() throws Exception {
+        var source=HarnessJson.mapper().readTree("{\"amount\":300000}");
+        assertDoesNotThrow(()->ReportNumbers.validate("需核实：1）资金去向；2）期限偏好；3）最新持仓。",source,""));
+        assertDoesNotThrow(()->ReportNumbers.validate("1）确认30万元资金去向\n2、确认用途",source,""));
+        for(String unsupported:new String[]{"需核实：1）新增2万元", "余额：1.00元", "占比：2%", "资金：2万元"})
+            assertThrows(IllegalArgumentException.class,()->ReportNumbers.validate(unsupported,source,""),unsupported);
+    }
 }

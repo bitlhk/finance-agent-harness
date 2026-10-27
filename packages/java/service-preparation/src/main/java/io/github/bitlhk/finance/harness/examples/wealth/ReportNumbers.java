@@ -17,7 +17,7 @@ final class ReportNumbers {
         tokens(goal, allowed);
         Set<String> actual = new HashSet<>();
         // Markdown list ordinals are layout, not financial assertions.
-        tokens(text.replaceAll("(?m)^\\s*[0-9]+[.)、]\\s+", ""), actual);
+        tokens(text.replaceAll("(?m)(^|[：:；;\\n])\\s*[0-9]+(?:[)）、]|\\.\\s+)\\s*", "$1"), actual);
         if (!allowed.containsAll(actual)) throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
     }
 

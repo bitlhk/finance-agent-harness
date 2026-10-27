@@ -53,6 +53,7 @@ class OpenJiuwenReportGeneratorTest {
         assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("同一section可以连续输出多行"));
         assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("不要自行相除"));
         assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("不能改写成当前现金占比"));
+        assertTrue(OpenJiuwenReportGenerator.BUSINESS_LANGUAGE_INSTRUCTION.contains("绝不复述到text"));
         var deltas=new ArrayList<String>();
         var parser=new OpenJiuwenReportGenerator.ReportLines(delta->deltas.add(delta.text()));
         var line=HarnessJson.mapper().createObjectNode();

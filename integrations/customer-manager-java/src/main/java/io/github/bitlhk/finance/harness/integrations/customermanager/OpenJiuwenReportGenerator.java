@@ -29,6 +29,11 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             + "输入中同时存在分子和分母也不等于已提供计算结果，不要自行相除，不要写算式。"
             + "未提供derivedObservations或其中没有对应计算项时，用原始金额说明观察并提问，不写新占比。"
             + "来源中的流动性偏好比例只描述偏好，不能改写成当前现金占比。";
+    static final String BUSINESS_LANGUAGE_INSTRUCTION =
+            "text是直接交给客户经理阅读的正文，不是校验过程说明。只写业务结论、具体问题与必要边界。"
+            + "所有英文状态码、输入字段名、引用路径、校验术语只留在factRefs和输入中，绝不复述到text。"
+            + "例如直接写‘只有历史快照，当前资金去向待核实’，不要解释某字段为某状态；"
+            + "没有比例就只写已取得的金额，不解释缺少哪个计算字段。不要复述这些写作指令。";
     static final String FACT_REFERENCE_INSTRUCTION =
             "factRefs只能逐字复制factReferenceCatalog中列出的叶字段路径；"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";
@@ -44,6 +49,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "前两类factRefs必须为输入中的非空引用数组，后两类factRefs必须为空数组。"
                 + FACT_REFERENCE_INSTRUCTION
                 + DELIVERY_INSTRUCTION
+                + BUSINESS_LANGUAGE_INSTRUCTION
                 + "涉及产品时，只有productReview.eligibleProducts中的产品可以作为候选；excludedProducts只能说明排除原因，不得推荐。"
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
                 + "不得把eligibleProducts描述为不满足请求，也不得声称没有合格候选。"
