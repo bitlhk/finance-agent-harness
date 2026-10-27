@@ -9,7 +9,7 @@ import java.util.*;
 /** Untrusted model suggestion. This value cannot authorize or execute an action. */
 record ConversationIntent(Kind kind, String objectRef, String reportRef, Integer revision) {
     static final String SCHEMA = "finance-conversation-intent.v1";
-    enum Kind { GREETING, CAPABILITIES, LIST_OBJECTS, CLARIFY, SELECT_OBJECT, CANCEL_TASK, RESOLVE_OBJECT, EXPLAIN_REPORT, PREPARE, PRODUCT_REVIEW, UNSUPPORTED }
+    enum Kind { GREETING, CAPABILITIES, LIST_OBJECTS, CLARIFY, SELECT_OBJECT, CANCEL_TASK, RESOLVE_OBJECT, CONTINUE_TASK, EXPLAIN_REPORT, PREPARE, PRODUCT_REVIEW, UNSUPPORTED }
     private static final Set<String> FIELDS = Set.of("schema", "kind", "objectRef", "reportRef", "revision");
 
     static ConversationIntent parse(String output, Set<String> authorizedObjects, Set<Kind> installedActions) {
@@ -44,6 +44,9 @@ record ConversationIntent(Kind kind, String objectRef, String reportRef, Integer
                 if ((report == null) != (revision == null)) throw invalid();
             } else if (kind == Kind.RESOLVE_OBJECT || kind == Kind.SELECT_OBJECT) {
                 if(object==null||report!=null||revision!=null) throw invalid();
+            } else if (kind == Kind.CLARIFY || kind == Kind.CONTINUE_TASK) {
+                // A validated object hint is not an action, grant, or report reference.
+                if(report!=null||revision!=null) throw invalid();
             } else if (object != null || report != null || revision != null) throw invalid();
             return new ConversationIntent(kind, object, report, revision);
         } catch (Exception failure) {

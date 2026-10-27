@@ -12,18 +12,24 @@ final class ConversationConfirmation {
                 throw new IllegalArgumentException("CONVERSATION_BINDING_REQUIRED");
         }
     }
-    record Plan(String id, Binding binding, ConversationIntent intent, String originalQuery, Instant expiresAt) {}
+    record Plan(String id, Binding binding, ConversationIntent intent, String originalQuery,
+                Map<String,Object> parameters, Instant expiresAt) {
+        Plan { parameters=Map.copyOf(parameters); }
+    }
     private final Clock clock;
     private Plan pending;
     ConversationConfirmation(Clock clock) { this.clock = Objects.requireNonNull(clock); }
 
     synchronized Plan propose(Binding binding, ConversationIntent intent, String originalQuery) {
+        return propose(binding,intent,originalQuery,Map.of());
+    }
+    synchronized Plan propose(Binding binding, ConversationIntent intent, String originalQuery, Map<String,Object> parameters) {
         pending = null;
         if (!intent.requiresExecutionConfirmation() || intent.objectRef() == null
                 || originalQuery == null || originalQuery.isBlank() || originalQuery.length() > 8000)
             throw new IllegalArgumentException("CONVERSATION_PLAN_INCOMPLETE");
         pending = new Plan(UUID.randomUUID().toString(), Objects.requireNonNull(binding), intent,
-                originalQuery, clock.instant().plusSeconds(300));
+                originalQuery, parameters, clock.instant().plusSeconds(300));
         return pending;
     }
 

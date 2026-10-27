@@ -49,6 +49,15 @@ class TaskIntentProposerTest {
         assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("SELECT_OBJECT","null","\"未知对象\""),context));
         assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent("CANCEL_TASK","null","\"合成对象B\""),context));
     }
+    @Test void optedInClarificationAndOrphanObjectAreHintsNotActions() throws Exception {
+        var context=(com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(CONTEXT);
+        context.putObject("continuity").put("schema","conversation-continuity.v1");
+        for(String kind:new String[]{"CLARIFY","RESOLVE_OBJECT"}) {
+            assertEquals(kind,TaskIntentProposer.validate(intent(kind,"null","\"合成对象B\""),context).path("kind").asText());
+            assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent(kind,"\"VERIFY\"","\"合成对象B\""),context));
+            assertThrows(IllegalArgumentException.class,()->TaskIntentProposer.validate(intent(kind,"null","\"未知对象\""),context));
+        }
+    }
     @ParameterizedTest
     @ValueSource(strings={
             "{\"schema\":\"finance-task-intent.v1\",\"kind\":\"GREETING\",\"actionRef\":null,\"objectRef\":null,\"role\":\"admin\"}",

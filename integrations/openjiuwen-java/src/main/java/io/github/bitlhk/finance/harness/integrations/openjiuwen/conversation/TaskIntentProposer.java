@@ -42,6 +42,7 @@ public final class TaskIntentProposer {
                         仅当context.continuity.schema=conversation-continuity.v1时额外允许SELECT_OBJECT和CANCEL_TASK：
                         只给出一个明确对象且无待补任务用SELECT_OBJECT，actionRef=null，objectRef为该对象；
                         明确取消待办或否定执行用CANCEL_TASK，两个引用为null。未提供该schema时仍遵守原kind集合。
+                        在此schema下CLARIFY可带已知objectRef作为非执行的对象提示，actionRef仍必须为null。
                         已选对象由context.selectedObject提供；本轮明确目标但省略对象可用该值，不要求重复列名单。
 
                         2. 动作范围：对于实际要求执行的目标，不支持的写操作、产品交易或未安装能力用UNSUPPORTED。
@@ -65,7 +66,7 @@ public final class TaskIntentProposer {
                         5. 输出引用：EXECUTE的actionRef必须完整复制availableActions中一个ref。
                         objectRef只能复制authorizedObjects中一个值；缺对象或无法准确匹配为null，不能猜测。
                         RESOLVE_OBJECT的actionRef必须为null，objectRef必须为已知非null对象，且pendingRequest必须存在。
-                        GREETING/CAPABILITIES/LIST_OBJECTS/CLARIFY/EXPLAIN_REPORT/UNSUPPORTED的两个引用字段均为null。
+                        未提供continuity.schema时CLARIFY的两个引用均为null；GREETING/CAPABILITIES/LIST_OBJECTS/EXPLAIN_REPORT/UNSUPPORTED的两个引用始终为null。
                         不得补造材料、objectRef、业务日期、授权或执行确认。分类结果不证明已经执行或获得业务结果。
                         """)))
                 .build().configureModelClient(model.clientProvider(),model.apiKey(),model.apiBase(),model.modelName(),true);
@@ -111,6 +112,7 @@ public final class TaskIntentProposer {
                     ||!"finance-task-intent.v1".equals(value.path("schema").textValue())
                     ||!KINDS.contains(value.path("kind").asText()))throw invalid();
             String kind=value.path("kind").asText();
+            boolean continuity="conversation-continuity.v1".equals(context.path("continuity").path("schema").asText());
             JsonNode action=value.path("actionRef"),object=value.path("objectRef");
             if(!(action.isNull()||action.isTextual())||!(object.isNull()||object.isTextual()))throw invalid();
             if(!object.isNull()) {
@@ -127,7 +129,9 @@ public final class TaskIntentProposer {
             }else if("CANCEL_TASK".equals(kind)) {
                 if(!action.isNull()||!object.isNull()||!"conversation-continuity.v1".equals(context.path("continuity").path("schema").asText()))throw invalid();
             }else if("RESOLVE_OBJECT".equals(kind)) {
-                if(!action.isNull()||object.isNull()||!context.path("pendingRequest").isObject())throw invalid();
+                if(!action.isNull()||object.isNull()||(!context.path("pendingRequest").isObject()&&!continuity))throw invalid();
+            }else if("CLARIFY".equals(kind)&&continuity) {
+                if(!action.isNull())throw invalid();
             }else if(!action.isNull()||!object.isNull())throw invalid();
             return ((ObjectNode)value).deepCopy();
         }catch(Exception failure){throw invalid();}

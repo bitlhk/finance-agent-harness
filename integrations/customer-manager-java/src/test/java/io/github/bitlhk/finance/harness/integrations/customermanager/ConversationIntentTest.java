@@ -32,11 +32,23 @@ final class ConversationIntentTest {
                 proposal("PREPARE", "\"Unknown\"", "null", "null"), Set.of("合成客户Alice"), ACTIONS));
     }
     @Test void nonExecutionKindsCannotSmuggleAnObjectOrReport() {
-        for (String kind : new String[]{"GREETING", "CAPABILITIES", "LIST_OBJECTS", "CLARIFY", "UNSUPPORTED"}) {
+        for (String kind : new String[]{"GREETING", "CAPABILITIES", "LIST_OBJECTS", "UNSUPPORTED"}) {
             assertFalse(parse(proposal(kind, "null", "null", "null")).requiresExecutionConfirmation());
             rejected(proposal(kind, "\"synthetic-a\"", "null", "null"));
             rejected(proposal(kind, "null", "\"report-a\"", "3"));
         }
+    }
+    @Test void frozenClarificationMayCarryOnlyAKnownNonExecutableObjectHint() {
+        var frozen = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CLARIFY\",\"objectRef\":\"周明远\",\"reportRef\":null,\"revision\":null}";
+        var intent = ConversationIntent.parse(frozen, Set.of("合成客户周明远"), ACTIONS);
+        assertEquals("合成客户周明远", intent.objectRef());
+        assertFalse(intent.requiresExecutionConfirmation());
+        assertFalse(parse(proposal("CLARIFY", "null", "null", "null")).requiresExecutionConfirmation());
+        rejected(proposal("CLARIFY", "\"other-owner\"", "null", "null"));
+        rejected(proposal("CLARIFY", "\"synthetic-a\"", "\"report-a\"", "3"));
+        rejected(proposal("CLARIFY", "null", "null", "3"));
+        assertThrows(IllegalArgumentException.class, () -> ConversationIntent.parse(frozen,
+                Set.of("合成客户周明远", " 合成客户周明远"), ACTIONS));
     }
     @Test void reportExplanationRequiresAnExactVersionOrClarification() {
         var value = parse(proposal("EXPLAIN_REPORT", "\"synthetic-a\"", "\"report-a\"", "3"));
