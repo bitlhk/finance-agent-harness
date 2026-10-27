@@ -8,6 +8,57 @@ import io.github.bitlhk.finance.harness.core.HarnessJson;
 import org.junit.jupiter.api.Test;
 
 class OpenJiuwenReportGeneratorTest {
+    @Test @org.junit.jupiter.api.Timeout(30)
+    void actualSdkReceivesDigestBoundMethodReferencesAndStreamsBusinessSections(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
+        String external=System.getProperty("previsit.methodFixture");
+        var file=external==null?directory.resolve("SKILL.md"):java.nio.file.Path.of(external);
+        if(external==null)java.nio.file.Files.writeString(file,"# Synthetic method\nReference text: DELIVERY-REFERENCE-MARKER\n");
+        byte[] bytes=java.nio.file.Files.readAllBytes(file);
+        String digest="sha256:"+java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+        var method=io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod.load(
+                "synthetic-delivery-method","1.0.0",file,digest,"sha256:synthetic-lock");
+        String response="""
+                {"communicationFocus":[{"text":"### 拜访目标\\n确认合成客户资金用途。","factRefs":["/customer/displayName"]}],
+                "preparationAdvice":[{"text":"### 面谈问题\\n资金后续如何安排？","factRefs":["/customer/displayName"]}],
+                "pendingItems":["实际资金去向待确认"],"reviewChecklist":["核对业务日期；未写入CRM"]}
+                """;
+        try(var fixture=new OpenJiuwenIntentProposerTest.Fixture(response)) {
+            fixture.chunkCharacters=13;
+            var generator=new OpenJiuwenReportGenerator("OpenAI","synthetic-only",
+                    "http://127.0.0.1:"+fixture.server.getAddress().getPort()+"/v1","synthetic");
+            var deltas=new ArrayList<String>();
+            var report=generator.generateStreaming(method,"准备面谈",List.of("/customer/displayName"),
+                    HarnessJson.mapper().readTree("{\"customer\":{\"displayName\":\"合成客户\"}}"),d->deltas.add(d.text()));
+            assertEquals(4,deltas.size());
+            assertTrue(report.at("/preparationAdvice/0/text").asText().contains("面谈问题"));
+            assertEquals(1,fixture.requests.size());
+            var request=fixture.requests.getFirst();
+            assertEquals(3200,request.path("max_tokens").asInt(),request.toString());
+            assertTrue(request.path("tools").isMissingNode()||request.path("tools").isEmpty());
+            var payload=HarnessJson.mapper().readTree(request.path("messages").get(1).path("content").asText());
+            assertEquals(method.content(),payload.at("/installedMethod/content").asText());
+            assertEquals(digest,payload.at("/installedMethod/digest").asText());
+            String installed=payload.at("/installedMethod/content").asText();
+            assertTrue(installed.contains(external==null?"DELIVERY-REFERENCE-MARKER":"SOURCE-MARKER-ONE"));
+            if(external!=null)assertTrue(installed.contains("Source digest: "));
+        }
+        assertThrows(SecurityException.class,()->io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod.load(
+                "synthetic-delivery-method","1.0.0",file,"sha256:tampered","sha256:synthetic-lock"));
+    }
+    @Test void sopHeadingsAndConcreteQuestionsFitTheExistingWireContract() throws Exception {
+        assertTrue(OpenJiuwenReportGenerator.REPORT_MAX_TOKENS >= 3000);
+        assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("installedMethod"));
+        var deltas=new ArrayList<String>();
+        var parser=new OpenJiuwenReportGenerator.ReportLines(delta->deltas.add(delta.text()));
+        var line=HarnessJson.mapper().createObjectNode();
+        line.put("section","preparationAdvice");
+        line.put("text","### 面谈问题\n到期资金目前在哪里？\n### 下一步\n确认资金去向后再讨论安排，未写入CRM。");
+        line.putArray("factRefs").add("/temporalAssessment/maturities/0/warning");
+        parser.accept(line.toString()+"\n");
+        assertEquals(line.path("text"),parser.finish().at("/preparationAdvice/0/text"));
+        assertEquals(1,deltas.size());
+    }
     @Test void disablesReasoningOnlyForDeepSeekReportModels() {
         var deepSeek=new com.openjiuwen.core.foundation.llm.schema.ModelRequestConfig();
         OpenJiuwenReportGenerator.configureModelRequest(deepSeek,"deepseek-v4-flash");
