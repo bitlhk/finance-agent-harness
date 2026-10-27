@@ -19,11 +19,16 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
     static final String DELIVERY_INSTRUCTION =
             "四个section只是证据分类，不是限制业务内容的四句模板。按installedMethod中的交付要求组织正文，"
             + "可在text内使用Markdown小标题和列表，保留每项事实的factRefs；每项text最多500字。"
+            + "分段输出：每个观察、每个问题、每个条件式下一步分别占一个JSON行；每段以100至220字为宜。"
+            + "同一section可以连续输出多行，前两类各最多8行，后两类各最多12行；不要把整篇建议或多个问题塞入一个text。"
             + "communicationFocus说明本次拜访目标、触发事件与事实支持的主要观察；"
             + "preparationAdvice展开SOP要求的业务分析、具体追问和有条件的下一步，不要重复概括空泛建议。"
             + "有资产、持仓、风险测评、到期信息时使用与本次目标有关的具体事实；缺失时明确缺失，不能用泛泛复核清单代替。"
             + "derivedObservations仅为宿主从同币种同日期快照计算的比例，引用其percent和operandRefs，"
-            + "不得把快照占比当成政策底线或当前资产证明；没有该计算结果时不得自行计算比例。";
+            + "不得把快照占比当成政策底线或当前资产证明；没有该计算结果时不得自行计算比例。"
+            + "输入中同时存在分子和分母也不等于已提供计算结果，不要自行相除，不要写算式。"
+            + "未提供derivedObservations或其中没有对应计算项时，用原始金额说明观察并提问，不写新占比。"
+            + "来源中的流动性偏好比例只描述偏好，不能改写成当前现金占比。";
     static final String FACT_REFERENCE_INSTRUCTION =
             "factRefs只能逐字复制factReferenceCatalog中列出的叶字段路径；"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";

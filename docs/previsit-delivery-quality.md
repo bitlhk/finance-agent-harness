@@ -62,6 +62,18 @@ Required review: goal-specific trigger; assets/holdings/risk/date when supplied;
 The employee-agent comparison remains indicative only: exact installed SOP, policy context, model settings and complete inputs were not established equal.
 Old records are unchanged; old Agent Locks are not upgraded automatically. UI can read legacy reports without adding derived facts to them.
 
+### First real-model comparison findings
+
+The isolated service-identity comparison uses the same frozen synthetic facts, installed Skill bytes and goal,
+with the same configured model and temperature. The 900/3200 token ceilings are the intentional implementation difference.
+The initial relay's 128 KiB SSE limit truncated both responses; that test-infrastructure failure is preserved separately.
+After correcting only the bounded relay limit, baseline passed while candidate failed: one advice item exceeded
+the existing 500-character bound and included an unprovided calculated percentage. Neither the limit nor the
+numeric validator is relaxed. The generation instruction now requests separate short items for each observation,
+question and conditional next step, and explicitly separates source preference percentages from calculated ratios.
+Frozen failures and subsequent verification remain in the release receipts; this prompt correction is not a
+claim that arbitrary model output is valid. Final qualification and deployment remain conditional on verification.
+
 ## 本轮结论
 
 确有我们自身实现造成的信息损失，不只是开发者的 SOP 问题：生成提示过度收缩业务内容，数值判断使用字符串包含，前端遗漏已取得的资产与持仓。

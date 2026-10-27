@@ -49,6 +49,10 @@ class OpenJiuwenReportGeneratorTest {
     @Test void sopHeadingsAndConcreteQuestionsFitTheExistingWireContract() throws Exception {
         assertTrue(OpenJiuwenReportGenerator.REPORT_MAX_TOKENS >= 3000);
         assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("installedMethod"));
+        assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("每个问题"));
+        assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("同一section可以连续输出多行"));
+        assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("不要自行相除"));
+        assertTrue(OpenJiuwenReportGenerator.DELIVERY_INSTRUCTION.contains("不能改写成当前现金占比"));
         var deltas=new ArrayList<String>();
         var parser=new OpenJiuwenReportGenerator.ReportLines(delta->deltas.add(delta.text()));
         var line=HarnessJson.mapper().createObjectNode();
