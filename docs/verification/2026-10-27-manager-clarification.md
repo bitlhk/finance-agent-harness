@@ -1,5 +1,10 @@
 # Manager Clarification: Partial Candidate
 
+Historical checkpoint at 31ddaeb. The later bounded state repair and its current
+verification/release limits are recorded in [conversation-state-closeout.md](conversation-state-closeout.md).
+The counts and remaining blockers below describe that earlier checkpoint, not
+the final candidate.
+
 ## Status
 
 Local candidate only. No merge, deployment, service restart, online model retry,

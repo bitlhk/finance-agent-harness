@@ -1,0 +1,10 @@
+id	requirement	consumer	positive	negative	status
+C01	Known goal survives missing inputs	manager	product goal customer amount term channel in separate turns	no confirmation before complete	PASS_ISOLATED_HOST
+C02	Confirmation binds exact parameters	manager	one confirmed dispatch uses accumulated parameters	tampered query replay revoked scope rejected	PASS_ISOLATED_HOST
+C03	Object and lifecycle isolation	manager	correct same-object continuation	other object new context expiry cancel failure cannot revive draft	PASS_TARGETED
+C04	Clarification is not execution	manager/risk/audit	known object hint retained through clarification	unknown object injected action unsupported field rejected	PASS_FIXTURE
+C05	Java and Python intent validation agree	shared worker/reference	shared corpus accepted consistently	legacy contexts cannot opt into new state actions	PASS_180_PACKAGED_PARITY_CASES
+C06	Intent and completeness remain distinct	manager/risk/audit	known action retained while required inputs missing	assistant wording cannot create authorization or confirmation	PASS_FIXTURE_REAL_MODEL_NOT_RUN
+C07	Release and evidence checks remain required	manager/risk/audit	authorized released reply and one-shot confirmation	cancel late reply changed binding evidence failure withheld	PASS_TARGETED
+C08	Bank context and fixed Agent UI audited	bank/reference	existing bounded context exact Agent binding retained	no new account selector no invented business date	PASS_SOURCE_AND_UNIT_NOT_SSO
+C09	Impact and compatibility recorded	H/B	new JAR and affected sources identified	old Agent Locks not silently updated no qualification reuse claim	IMPACT_COMPLETE_QUALIFICATION_NOT_RUN

@@ -26,6 +26,8 @@ final class ConversationHostTest {
     final AtomicBoolean revokeDuringCall = new AtomicBoolean();
     final AtomicBoolean cancelDuringCall = new AtomicBoolean();
     final AtomicReference<ServicePreparation> taskReference = new AtomicReference<>();
+    final AtomicReference<Map<String,Object>> productRequest = new AtomicReference<>();
+    boolean providePrevisitFacts;
     final AtomicReference<String> scope = new AtomicReference<>("synthetic-scope-a");
     Map<String,String> customerMapping = Map.of("synthetic-a","customer-a");
     Set<ConversationIntent.Kind> installedActions = Set.of(ConversationIntent.Kind.PREPARE);
@@ -56,6 +58,13 @@ final class ConversationHostTest {
                     } catch(java.io.IOException failure) { throw new IllegalStateException("SYNTHETIC_SETUP_FAILED",failure); }
                 }
                 if(throwsSource.get()) throw new IllegalStateException("PRIVATE_SYNTHETIC_EXCEPTION_BODY");
+                if(capability.equals("wealth.allocation-context.query")) productRequest.set(Map.copyOf(args));
+                if(providePrevisitFacts && capability.equals("wealth.previsit-context.query"))
+                    return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,request,trace,
+                            CapabilityResultV1.Status.COMPLETED,"Synthetic facts",Map.of("previsitContext",Map.of(
+                            "customer",Map.of("customerId",customer),"dataAsOf","2026-10-27T00:00:00Z"),
+                            "hostEvidence",Map.of("receiptId","synthetic-receipt")),List.of(),List.of(),
+                            "synthetic-provider",java.time.Instant.now(),null,null);
                 return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,request,trace,
                         CapabilityResultV1.Status.FAILED,"Synthetic source failure",Map.of(),List.of(),List.of(),
                         "synthetic-provider",java.time.Instant.now(),null,
@@ -122,11 +131,75 @@ final class ConversationHostTest {
             assertEquals("NEED_CLARIFICATION",first.get("status"));
             session.call("chat",request.deepCopy().put("query","需要哪些条件").put("runId",UUID.randomUUID().toString()));
             var result=session.call("chat",request.deepCopy().put("query","synthetic-a吧").put("runId",UUID.randomUUID().toString()));
-            planId(result);
-            var confirmation=(Map<?,?>)result.get("confirmation");
-            assertEquals("PRODUCT_REVIEW",confirmation.get("action"));
-            assertTrue(confirmation.get("query").toString().startsWith("帮我给我负责的客户筛选产品"));
+            assertFalse(result.containsKey("confirmation"));
+            assertEquals(List.of("amount","horizonMonths","channel"),result.get("missingInputs"));
+            assertTrue(result.get("response").toString().contains("产品筛选目标"));
             assertEquals(0,business.get());assertEquals(0,reportModels.get());
+        }
+    }
+    @Test @Timeout(30) void productSlotsAccumulateBeforeOneExactConfirmationAndDoNotReparseStaleText() throws Exception {
+        installedActions=Set.of(ConversationIntent.Kind.PRODUCT_REVIEW);providePrevisitFacts=true;
+        String product=MISSING_OBJECT.replace("PREPARE","PRODUCT_REVIEW");
+        String more=CAPABILITIES.replace("CAPABILITIES","CONTINUE_TASK");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,RESOLVE_OBJECT,more,more,more,more);
+                var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("筛选产品",null);request.put("customerAlias","");
+            for(String text:List.of("筛选产品","synthetic-a","10万元","改为20万元","12个月")) {
+                var result=session.call("chat",request.deepCopy().put("query",text).put("runId",UUID.randomUUID().toString()));
+                assertEquals("NEED_CLARIFICATION",result.get("status"));assertFalse(result.containsKey("confirmation"));
+                assertEquals(0,business.get());
+            }
+            var result=session.call("chat",request.deepCopy().put("query","手机银行").put("runId",UUID.randomUUID().toString()));
+            String id=planId(result);
+            assertTrue(result.get("response").toString().contains("200000"));
+            var plan=(Map<?,?>)result.get("confirmation");
+            var execute=body((String)plan.get("query"),id);
+            var executed=session.call("chat",execute);
+            assertNotNull(executed.get("report"));
+            assertEquals(Map.of("amount",200000.0,"horizonMonths",12,"channel","手机银行"),productRequest.get());
+            assertEquals(2,business.get());
+            assertEquals(6,model.requests.size(),"Confirmation must not invoke the intent model again");
+            assertTrue(executed.get("response").toString().contains("未完整完成"));
+            assertThrows(SecurityException.class,()->session.call("chat",body((String)plan.get("query"),id)));
+            assertEquals(2,business.get());
+        }
+    }
+    @Test @Timeout(30) void productCustomerChangeDropsOldParametersAndDoesNotDispatch() throws Exception {
+        installedActions=Set.of(ConversationIntent.Kind.PRODUCT_REVIEW);
+        customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
+        String product=PROPOSAL.replace("PREPARE","PRODUCT_REVIEW");
+        String other=RESOLVE_OBJECT.replace("synthetic-a","synthetic-b");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,other);var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("为synthetic-a筛选10万元、12个月的产品",null);request.put("customerAlias","");
+            assertEquals(List.of("channel"),session.call("chat",request).get("missingInputs"));
+            var result=session.call("chat",request.deepCopy().put("query","换成synthetic-b").put("runId",UUID.randomUUID().toString()));
+            assertEquals(List.of("amount","horizonMonths","channel"),result.get("missingInputs"));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+        }
+    }
+    @Test @Timeout(30) void invalidIntentDiscardsPendingGoalSoNextSupplementCannotExecuteIt() throws Exception {
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(MISSING_OBJECT,"{}",RESOLVE_OBJECT,"请说明本次目标");
+                var session=session(model.proposer())) {
+            var request=(com.fasterxml.jackson.databind.node.ObjectNode)body("准备回访",null);request.put("customerAlias","");
+            session.call("chat",request);
+            assertThrows(IllegalArgumentException.class,()->session.call("chat",request.deepCopy().put("query","补充").put("runId",UUID.randomUUID().toString())));
+            var result=session.call("chat",request.deepCopy().put("query","synthetic-a").put("runId",UUID.randomUUID().toString()));
+            assertFalse(result.containsKey("confirmation"));assertEquals(0,business.get());
+            var input=HarnessJson.mapper().readTree(model.requests.get(2).path("messages").get(1).path("content").asText());
+            assertTrue(input.path("pendingRequest").isNull());
+        }
+    }
+    @Test @Timeout(30) void unchangedOldUiSelectionDoesNotEraseNewConversationalProductTarget() throws Exception {
+        installedActions=Set.of(ConversationIntent.Kind.PRODUCT_REVIEW);
+        customerMapping=Map.of("synthetic-a","customer-a","synthetic-b","customer-b");
+        String product=PROPOSAL.replace("PREPARE","PRODUCT_REVIEW").replace("synthetic-a","synthetic-b");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,CAPABILITIES.replace("CAPABILITIES","CONTINUE_TASK"));
+                var session=session(model.proposer())) {
+            assertEquals(List.of("channel"),session.call("chat",body("为synthetic-b筛选10万元、12个月的产品",null)).get("missingInputs"));
+            var result=session.call("chat",body("手机银行",null));
+            planId(result);
+            assertEquals("synthetic-b",((Map<?,?>)result.get("confirmation")).get("customerAlias"));
+            assertEquals(0,business.get());
         }
     }
     @Test @Timeout(30) void clarificationObjectStillRequiresLiveAuthorityAndCannotSurviveRevocation() throws Exception {
