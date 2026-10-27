@@ -74,6 +74,14 @@ question and conditional next step, and explicitly separates source preference p
 Frozen failures and subsequent verification remain in the release receipts; this prompt correction is not a
 claim that arbitrary model output is valid. Final qualification and deployment remain conditional on verification.
 
+The next frozen response was rejected for a fabricated nested snapshot-date reference. The model-facing
+catalog now pairs each authorized leaf path with its actual value; it does not invent aliases or repair
+unknown output references. The saved-report contract and the rejection boundary remain unchanged.
+Manual review also found unsupported redemption and horizon-match claims. Generation now explicitly
+separates maturity dates, redemption terms, customer preferences and verified suitability findings.
+These instructions are not a universal semantic validator: the real-model quality gate still checks the
+first response, and frozen invalid responses must continue to be rejected without rewriting old reports.
+
 ## 本轮结论
 
 确有我们自身实现造成的信息损失，不只是开发者的 SOP 问题：生成提示过度收缩业务内容，数值判断使用字符串包含，前端遗漏已取得的资产与持仓。

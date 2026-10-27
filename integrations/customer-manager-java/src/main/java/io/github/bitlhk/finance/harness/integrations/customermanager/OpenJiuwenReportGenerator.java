@@ -35,8 +35,15 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             + "例如直接写‘只有历史快照，当前资金去向待核实’，不要解释某字段为某状态；"
             + "没有比例就只写已取得的金额，不解释缺少哪个计算字段。不要复述这些写作指令。";
     static final String FACT_REFERENCE_INSTRUCTION =
-            "factRefs只能逐字复制factReferenceCatalog中列出的叶字段路径；"
+            "factReferenceCatalog逐项给出ref及其value，引用某项值时，factRefs只能逐字复制该项的ref；"
+            + "日期引用必须取实际日期值对应的ref，不能移到其他对象之下。"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";
+    static final String CONTRACT_BOUNDARY_INSTRUCTION =
+            "到期日不是赎回合同：只有到期日而没有提前赎回条款时，不得断言可或不可提前赎回、动用或锁定。"
+            + "客户期限偏好不是匹配结论：没有经过核验的适配结果时，不得断言某持仓期限满足或匹配客户偏好。"
+            + "上述缺项应写成待确认的问题，不得把问题的假设当成事实。"
+            + "比例包括中文的‘一半’、‘两成’等表达；没有对应宿主计算项时同样不得自行推算。"
+            + "不要自行计算时间间隔；按来源写明具体日期即可。";
     private final ReActAgent agent;
 
     OpenJiuwenReportGenerator(String provider, String key, String base, String model) {
@@ -50,6 +57,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + FACT_REFERENCE_INSTRUCTION
                 + DELIVERY_INSTRUCTION
                 + BUSINESS_LANGUAGE_INSTRUCTION
+                + CONTRACT_BOUNDARY_INSTRUCTION
                 + "涉及产品时，只有productReview.eligibleProducts中的产品可以作为候选；excludedProducts只能说明排除原因，不得推荐。"
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
                 + "不得把eligibleProducts描述为不满足请求，也不得声称没有合格候选。"
@@ -115,7 +123,9 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             if(id==null||id.isBlank())continue;
             JsonNode value=context.at(id);
             if(value.isMissingNode()||value.isContainerNode())continue;
-            catalog.add(id);
+            var entry=catalog.addObject();
+            entry.put("ref",id);
+            entry.set("value",value.deepCopy());
         }
         return catalog;
     }
