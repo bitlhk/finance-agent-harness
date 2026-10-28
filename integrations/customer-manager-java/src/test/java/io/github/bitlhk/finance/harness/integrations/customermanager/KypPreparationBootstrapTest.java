@@ -140,9 +140,27 @@ class KypPreparationBootstrapTest {
                 .anyMatch(cap -> cap.capabilityId().equals(KypProductFactory.CAPABILITY)));
     }
     @Test void selectedProductRequiresSeparateCurrentGrant() throws Exception {
-        assertThrows(SecurityException.class, () -> open("owner-a", null));
-        assertThrows(SecurityException.class, () -> open("another-owner", authority));
+        var without = open("owner-a", null);
+        var other = open("another-owner", authority);
+        assertThrows(SecurityException.class, () -> query(without));
+        assertThrows(SecurityException.class, () -> query(other));
         assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
+    }
+    @Test void unrelatedCrmReadDoesNotAcquireProductGrant() throws Exception {
+        var access = open("owner-a", null);
+        assertEquals(0, crmCalls.get()); assertEquals(0, productCalls.get());
+        var result = access.query("crm-only", "trace", "customer-a", CustomerCrmProvider.CAPABILITY, Map.of());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertTrue(crmCalls.get() > 0); assertEquals(0, productCalls.get());
+    }
+    @Test void expiredProductGrantDoesNotPreventSessionConstruction() throws Exception {
+        var value = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(authority.toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)value.path("grants").get(0)).put("expiresAt", "2000-01-01T00:00:00Z");
+        write(authority, value);
+        var access = open("owner-a", authority);
+        assertEquals(0, crmCalls.get()); assertEquals(0, productCalls.get());
+        assertThrows(SecurityException.class, () -> query(access));
+        assertEquals(0, crmCalls.get()); assertEquals(0, productCalls.get());
     }
     @Test void tamperedLockedSourceIsRejectedBeforeNetwork() throws Exception {
         Files.writeString(root.resolve(KypPreparationBootstrap.SOURCE), "{}");
@@ -166,13 +184,13 @@ class KypPreparationBootstrapTest {
     }
     @Test void authorityLinkAndArtifactOwnedGrantAreRejected() throws Exception {
         Path linked = directory.resolve("linked-policy.json"); Files.createSymbolicLink(linked, authority);
-        assertThrows(SecurityException.class, () -> open("owner-a", linked));
+        assertThrows(SecurityException.class, () -> query(open("owner-a", linked)));
         Path inside = root.resolve("grant.json"); Files.copy(authority, inside);
-        assertThrows(SecurityException.class, () -> open("owner-a", inside));
+        assertThrows(SecurityException.class, () -> query(open("owner-a", inside)));
     }
     @Test void duplicatePolicyKeysFailClosed() throws Exception {
         String bytes = Files.readString(authority);
         Files.writeString(authority, bytes.replace("\"revision\":", "\"revision\":\"duplicate\",\"revision\":"));
-        assertThrows(SecurityException.class, () -> open("owner-a", authority));
+        assertThrows(SecurityException.class, () -> query(open("owner-a", authority)));
     }
 }

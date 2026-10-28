@@ -37,6 +37,9 @@ Deployment configuration has two separate meanings:
   `wealth:products:read` scope and `WEALTH_PRODUCT_REVIEW` purpose. CRM grants
   do not imply this product grant. It is rechecked during access and release;
   missing, malformed, expired, changed or linked authority fails closed.
+  Product authority is acquired only for a product query, not session creation,
+  greetings or independent CRM reads; revoking one source does not grant or
+  disable the other source's unrelated operations.
 
 The installed `wealth-product-facts/source.v1.json` pins endpoint, tool and input
 schema digest. Sales trust is explicitly DEMO. No CRM credentials, customer

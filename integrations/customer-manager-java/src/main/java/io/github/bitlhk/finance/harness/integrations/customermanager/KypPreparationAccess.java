@@ -55,6 +55,7 @@ public final class KypPreparationAccess implements PreparationAccess {
         BigDecimal horizon = positive(arguments.get("horizonMonths"), new BigDecimal("1200"));
         if (!(arguments.get("channel") instanceof String channel) || channel.isBlank() || channel.length() > 64)
             throw new IllegalArgumentException("ALLOCATION_CHANNEL_REQUIRED");
+        var productGrant = productGrants.get();
         var before = authorize(customer);
         var facts = crm.query(requestId + "-crm", traceId, customer, CustomerCrmProvider.CAPABILITY, Map.of());
         if (facts.status() != CapabilityResultV1.Status.COMPLETED)
@@ -78,7 +79,6 @@ public final class KypPreparationAccess implements PreparationAccess {
         var productRequest = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, sourceContext,
                 Map.of(), null, null, Map.of(), null);
-        var productGrant = productGrants.get();
         productCurrent(productRequest, productGrant);
         var result = products.query(productRequest);
         productCurrent(productRequest, productGrant);

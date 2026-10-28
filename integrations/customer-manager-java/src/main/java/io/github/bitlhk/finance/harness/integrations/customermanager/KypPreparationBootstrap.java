@@ -36,13 +36,17 @@ final class KypPreparationBootstrap {
         var target = installed.target();
         var policy = installed.policy();
         String connectionRef = installed.connectionRef();
-        if (authorityFile == null) throw new SecurityException("KYP_READ_AUTHORITY_REQUIRED");
-        Path authority = authorityFile.toAbsolutePath().normalize();
-        if (authority.startsWith(root) || authority.toRealPath().startsWith(root.toRealPath()))
-            throw new SecurityException("KYP_READ_AUTHORITY_OUTSIDE_ARTIFACT_REQUIRED");
-        Supplier<BoundFinanceProvider.Grant> grants = () -> grant(authority, context.ownerRef(), session,
-                connectionRef, policy.sourceId());
-        grants.get();
+        Supplier<BoundFinanceProvider.Grant> grants = () -> {
+            if (authorityFile == null) throw new SecurityException("KYP_READ_AUTHORITY_REQUIRED");
+            Path authority = authorityFile.toAbsolutePath().normalize();
+            try {
+                if (authority.startsWith(root) || authority.toRealPath().startsWith(root.toRealPath()))
+                    throw new SecurityException("KYP_READ_AUTHORITY_OUTSIDE_ARTIFACT_REQUIRED");
+            } catch (java.io.IOException missing) {
+                throw new SecurityException("KYP_READ_AUTHORITY_INVALID");
+            }
+            return grant(authority, context.ownerRef(), session, connectionRef, policy.sourceId());
+        };
         var audit = new ScenarioEvidence(context.privateStateRoot().resolve("service-preparation-reports"),
                 ScenarioEvidence.host(context));
         var factory = new KypProductFactory(target, policy, grants, event -> {
