@@ -130,8 +130,11 @@ class KypManagedIntegrationTest {
                 () -> { throw new AssertionError("Public product transport must never acquire a CRM credential"); }, () -> null, attempts::add);
         var registry = new ManagedProviderFactoriesV01(List.of(new CustomerCrmFactoryV01(), kyp));
         var ids = Set.of(CRM_ID, KypProductFactory.ID);
-        return registry.createBound(Map.of(CRM_ID, new ManagedProviderFactoriesV01.Binding(crmConnection, crmGrant::get),
-                        KypProductFactory.ID, new ManagedProviderFactoriesV01.Binding(productConnection, productGrant::get)),
+        return registry.createReferenced(Map.of(
+                        CRM_ID, new ManagedProviderFactoriesV01.ConnectionReference("crm-source", crmConnection.kind()),
+                        KypProductFactory.ID, new ManagedProviderFactoriesV01.ConnectionReference("product-source", productConnection.kind())),
+                Map.of("crm-source", crmConnection, "product-source", productConnection),
+                Map.of(CRM_ID, crmGrant::get, KypProductFactory.ID, productGrant::get),
                 ids, registry.configurationDigests(ids), Map.of(CRM_ID, ManagedProviderFactoriesV01.connectionDigest(crmConnection),
                         KypProductFactory.ID, ManagedProviderFactoriesV01.connectionDigest(productConnection)));
     }

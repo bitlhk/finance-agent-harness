@@ -68,6 +68,44 @@ class ManagedProviderFactoriesTest {
         assertEquals(Set.of("source", "projection"), providers.keySet());
         assertEquals(0, identities.get()); assertEquals(0, reads.get());
     }
+
+    @Test void logicalReferencesResolveOnlyHostSourcesAndKeepProviderGrantsSeparate() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("source-a", "controlled-http", Set.of(), "facts:read"),
+                factory("source-b", "controlled-http", Set.of(), "facts:read")));
+        var refs = Map.of("source-a", new ManagedProviderFactoriesV01.ConnectionReference("shared-source", connection.kind()),
+                "source-b", new ManagedProviderFactoriesV01.ConnectionReference("shared-source", connection.kind()));
+        var scopes = new java.util.concurrent.atomic.AtomicReference<>(Set.of("facts:read"));
+        Map<String, java.util.function.Supplier<BoundFinanceProvider.Grant>> grants = Map.of(
+                "source-a", () -> grant(scopes.get()), "source-b", () -> grant(Set.of("facts:read")));
+        String pin = ManagedProviderFactoriesV01.connectionDigest(connection);
+        var providers = registry.createReferenced(refs, Map.of("shared-source", connection), grants,
+                Set.of("source-a", "source-b"), Map.of(), Map.of("source-a", pin, "source-b", pin));
+        assertEquals(0, identities.get());
+        providers.get("source-a").query(request()); scopes.set(Set.of());
+        assertThrows(SecurityException.class, () -> providers.get("source-a").query(request()));
+        providers.get("source-b").query(request()); assertEquals(2, reads.get());
+    }
+
+    @Test void referenceDriftMissingAuthorityAndEndpointDriftRejectBeforeInvocation() {
+        var registry = new ManagedProviderFactoriesV01(List.of(factory("a", "controlled-http", Set.of(), "facts:read")));
+        var ref = new ManagedProviderFactoriesV01.ConnectionReference("source", connection.kind());
+        Map<String, java.util.function.Supplier<BoundFinanceProvider.Grant>> grants = Map.of(
+                "a", () -> { throw new AssertionError("No authority acquisition at installation"); });
+        var pin = Map.of("a", ManagedProviderFactoriesV01.connectionDigest(connection));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of(), grants, Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of("source", connection), Map.of(), Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a",
+                new ManagedProviderFactoriesV01.ConnectionReference("source", "wrong-kind")),
+                Map.of("source", connection), grants, Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of("source", connection), grants, Set.of("a"), Map.of(), Map.of("a", "0".repeat(64))));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+        assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01.ConnectionReference(
+                "https://untrusted.invalid", "controlled-http"));
+    }
     @Test void configurationIdentityCoversSelectedDependencyClosureOnly() {
         var registry = new ManagedProviderFactoriesV01(List.of(
                 factory("projection", "controlled-http", Set.of("source"), "source:read"),

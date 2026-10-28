@@ -70,6 +70,37 @@ public final class ManagedProviderFactoriesV01 {
         @Override public String toString() { return "Binding[redacted]"; }
     }
 
+    /** Logical selection from a verified plan. It is neither a URL nor an authority grant. */
+    public record ConnectionReference(String connectionRef, String kind) {
+        public ConnectionReference {
+            if (connectionRef == null || !connectionRef.matches("[a-z][a-z0-9-]{0,63}")
+                    || kind == null || kind.isBlank())
+                throw new IllegalArgumentException("PROVIDER_CONNECTION_REFERENCE_INVALID");
+        }
+    }
+
+    /** Resolve only Host-owned sources; keep grants independently bound to each Provider. */
+    public Map<String, FinanceProvider> createReferenced(Map<String, ConnectionReference> plan,
+            Map<String, ManagedProviderFactoryV01.Connection> sources,
+            Map<String, Supplier<BoundFinanceProvider.Grant>> grants,
+            Set<String> selectedProviders, Map<String, Map<String, String>> expectedConfiguration,
+            Map<String, String> expectedConnectionDigests) {
+        plan = Map.copyOf(plan); sources = Map.copyOf(sources); grants = Map.copyOf(grants);
+        var required = closure(selectedProviders).keySet();
+        if (!plan.keySet().equals(required) || !grants.keySet().equals(required))
+            throw new IllegalArgumentException("PROVIDER_CONNECTION_BINDING_SET_MISMATCH");
+        var bindings = new LinkedHashMap<String, Binding>();
+        for (var entry : plan.entrySet()) {
+            var reference = entry.getValue();
+            var source = sources.get(reference.connectionRef());
+            if (source == null) throw new IllegalArgumentException("PROVIDER_CONNECTION_REFERENCE_UNKNOWN");
+            if (!reference.kind().equals(source.kind()))
+                throw new IllegalArgumentException("PROVIDER_CONNECTION_REFERENCE_KIND_MISMATCH");
+            bindings.put(entry.getKey(), new Binding(source, grants.get(entry.getKey())));
+        }
+        return createBound(bindings, selectedProviders, expectedConfiguration, expectedConnectionDigests);
+    }
+
     /** Candidate opt-in path. The reviewed Host must lock the complete dependency closure. */
     public Map<String, FinanceProvider> createBound(Map<String, Binding> bindings,
             Set<String> selectedProviders, Map<String, Map<String, String>> expectedConfiguration,

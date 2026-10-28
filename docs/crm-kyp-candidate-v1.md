@@ -26,6 +26,15 @@ entrypoint retains single-connection semantics. Connection hashes identify
 reviewed configuration, not authenticity or permission; the Host must supply
 trusted bindings and the reviewed manifest, never request-supplied hashes.
 
+`createReferenced` resolves the verified plan's logical references through a
+Host-owned source map. Required Provider and grant coverage is exact, including
+dependencies. Connection kind and pinned connection/configuration identities
+are checked before factory construction. Extra Host sources are not selected
+implicitly. Grants remain per Provider, even when two Providers explicitly use
+the same source. Installation does not acquire sessions or grants. The caller
+must obtain pins from trusted installation, not recompute them from arbitrary
+request configuration to make a mismatch pass.
+
 `providers/wealth-product-mcp/ProductCatalog` is a contract adapter. It accepts the reviewed nested EA envelope
 (`data.products` or `data.items`, `productFacts`, `salesEligibility`). It does not
 guess all historical aliases. Missing business timestamps are not substituted
@@ -143,6 +152,22 @@ model settings through the generated Host and employee-agent comparison; check
 useful customer insights, missing-fact disclosure, product provenance and sales
 eligibility separately. Preserving fields in integration tests does not prove
 report quality parity. Avoid a second manager-specific runtime or UI.
+
+Connection-reference follow-up: `mvn -o -pl providers/wealth-product-mcp -am test -q`
+passed 107 tests (Core 70, transport 6, CRM 9, KYP 22), zero skipped. All 14
+CRM/MCP integration cases now construct through `createReferenced`, not a
+pre-resolved Provider binding map. Added checks prove independently revocable
+grants on a shared source and rejection of unknown references, missing grants,
+wrong kinds and mismatched endpoint pins. A first test fixture used an invalid
+one-letter Provider ID; production validation correctly rejected it. The test
+IDs alone were corrected; original XML is retained as
+`/home/ubuntu/outputs/crm-kyp-candidate-20261028/first-failure/reference-provider-id.xml`.
+
+Builder's candidate `ReadOnlyProviders.createReferenced` now consumes its locked
+plan and delegates to this API, retaining existing query guards. Its explicit
+injection SPI is tested, but the normal session bootstrap is not switched to it.
+Product registration and complete generated-Agent/service-identity admission
+remain open; a helper method passing does not establish their completion.
 
 Builder: `PYTHONPATH=src:../base/src /tmp/finance-builder-business-domain-venv/bin/python
 -m pytest tests/test_provider_connections.py tests/test_component_assembly.py
