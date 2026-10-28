@@ -34,6 +34,10 @@ class OpenJiuwenReportGeneratorTest {
             assertTrue(report.at("/preparationAdvice/0/text").asText().contains("面谈问题"));
             assertEquals(1,fixture.requests.size());
             var request=fixture.requests.getFirst();
+            String instructions=request.path("messages").get(0).path("content").asText();
+            assertTrue(instructions.contains("当eligibleProducts非空时"));
+            assertTrue(instructions.contains("不能断言全市场没有合适产品"));
+            assertTrue(instructions.contains("不是获准销售或推荐清单"));
             assertEquals(3200,request.path("max_tokens").asInt(),request.toString());
             assertTrue(request.path("tools").isMissingNode()||request.path("tools").isEmpty());
             var payload=HarnessJson.mapper().readTree(request.path("messages").get(1).path("content").asText());

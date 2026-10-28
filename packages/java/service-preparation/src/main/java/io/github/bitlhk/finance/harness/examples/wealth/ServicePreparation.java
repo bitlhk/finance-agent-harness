@@ -234,7 +234,12 @@ public final class ServicePreparation implements AutoCloseable {
                         if(allocation.error()!=null)report.put("failureCode",allocation.error().sourceCode());
                     } else {
                         JsonNode productReview=HarnessJson.mapper().valueToTree(allocation.data());
+                        if(!allocation.missingInputs().isEmpty()) {
+                            missing.add("产品来源信息或销售资格尚未完整核实");
+                            report.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
+                        }
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
@@ -642,8 +647,19 @@ public final class ServicePreparation implements AutoCloseable {
         if(!insurance.isMissingNode()&&!insurance.isNull())
             addAvailable(available,"INSURANCE_PROFILE","存在保险领域档案",List.of(profilePath(facts,"life_insurance")+"/profileType"));
         if(productReview!=null&&productReview.isObject()&&!productReview.isEmpty()) {
-            addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",List.of("/productReview/policySource/ruleVersion","/productReview/policySource/catalogVersion"));
-            for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            var policyRefs=new ArrayList<String>();
+            for(String field:List.of("ruleVersion","catalogVersion","catalogDigest"))
+                if(!productReview.path("policySource").path(field).asText().isBlank())
+                    policyRefs.add("/productReview/policySource/"+field);
+            boolean screened=Set.of("ready","no_eligible_products").contains(productReview.path("status").asText())
+                    &&productReview.path("eligibleProducts").isArray()&&productReview.path("excludedProducts").isArray()
+                    &&!policyRefs.isEmpty();
+            if(screened) {
+                addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",policyRefs);
+                for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            } else {
+                addMissing(missing,"PRODUCT_POLICY_NOT_VERIFIED","产品来源信息或销售资格尚未完整核实","来源返回不代表产品适合推荐或已获准销售");
+            }
         }
         result.put("goal",goal);result.put("status",missing.isEmpty()?"READY":"PARTIAL");
         return result;

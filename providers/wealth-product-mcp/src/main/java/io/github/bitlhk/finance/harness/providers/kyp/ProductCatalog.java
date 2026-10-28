@@ -30,7 +30,7 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
         public boolean eligibleForScreening() { return issues.isEmpty(); }
     }
 
-    /** Supports the reviewed EA nested productFacts/salesEligibility envelope only. */
+    /** Nested details and reviewed search summaries retain distinct completeness levels. */
     public static ProductCatalog parse(byte[] bytes, SourcePolicy policy, Instant now) {
         Objects.requireNonNull(policy); Objects.requireNonNull(now);
         if (bytes == null || bytes.length == 0 || bytes.length > 262144)
@@ -47,6 +47,16 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
             if (!rows.isArray() || rows.size() > 50 || data.path("hasMore").asBoolean(false)
                     || data.hasNonNull("nextCursor"))
                 throw new IllegalArgumentException("KYP_RESULT_INCOMPLETE_OR_OVERSIZED");
+            if (payload.has("ok") && !payload.path("ok").asBoolean(false))
+                throw new IllegalArgumentException("KYP_SOURCE_REJECTED");
+            if (data.has("pagination")) {
+                JsonNode page = data.path("pagination");
+                if (!page.isObject() || !page.path("page").isIntegralNumber() || page.path("page").asInt() != 1
+                        || !page.path("totalPages").isIntegralNumber() || page.path("totalPages").asInt() != 1
+                        || !page.path("total").isIntegralNumber() || !page.path("total").canConvertToInt()
+                        || page.path("total").asInt() != rows.size())
+                    throw new IllegalArgumentException("KYP_RESULT_INCOMPLETE_OR_OVERSIZED");
+            }
             var products = new ArrayList<Product>();
             var ids = new HashSet<String>();
             for (JsonNode row : rows) {
@@ -55,6 +65,12 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
                     throw new IllegalArgumentException("KYP_PRODUCT_ID_INVALID");
                 var issues = new ArrayList<String>();
                 JsonNode facts = row.path("productFacts"), sales = row.path("salesEligibility");
+                boolean summary = !row.has("productFacts") && !row.has("salesEligibility") && data.has("items");
+                if (summary) {
+                    // Search fields are useful facts, never proof of bank sales eligibility.
+                    facts = row;
+                    issues.add("PRODUCT_SEARCH_SUMMARY_ONLY");
+                }
                 if (!facts.isObject()) issues.add("PRODUCT_FACTS_MISSING");
                 if (!sales.isObject()) issues.add("BANK_SALES_ELIGIBILITY_MISSING");
                 String type = text(row, "dataSourceType"), name = text(facts, "name");

@@ -67,4 +67,32 @@ class ProductCatalogTest {
         assertThrows(IllegalArgumentException.class, () -> ProductCatalog.parse("{}".getBytes(), verified, now));
         assertThrows(IllegalArgumentException.class, () -> ProductCatalog.parse(new byte[262145], verified, now));
     }
+
+    @Test void actualSearchShapePreservesFactsWithoutInventingEligibilityOrDates() throws Exception {
+        var item = Map.of("productId", "P001", "name", "Demo product", "riskLevel", "R2",
+                "minPurchaseAmount", 5000, "dataSourceType", "demo", "salesStatus", "on_sale");
+        var bytes = HarnessJson.mapper().writeValueAsBytes(Map.of("ok", true, "asOf", "2026-08-20",
+                "updatedAt", now.toString(), "data", Map.of("items", List.of(item),
+                        "pagination", Map.of("page", 1, "totalPages", 1, "total", 1))));
+        var product = ProductCatalog.parse(bytes, verified, now).products().getFirst();
+        assertEquals("Demo product", product.name());
+        assertEquals(2, product.riskLevel());
+        assertEquals(0, new java.math.BigDecimal("5000").compareTo(product.minimumAmount()));
+        assertNull(product.factsAsOf()); assertNull(product.salesAsOf());
+        assertTrue(product.issues().contains("PRODUCT_SEARCH_SUMMARY_ONLY"));
+        assertTrue(product.issues().contains("BANK_SALES_ELIGIBILITY_MISSING"));
+        assertFalse(product.eligibleForScreening());
+    }
+
+    @Test void paginationAndSourceFailureCannotLookLikeCompleteCatalog() throws Exception {
+        for (var pagination : List.of(Map.of("page", 1, "totalPages", 2, "total", 51),
+                Map.of("page", 2, "totalPages", 2, "total", 2),
+                Map.of("page", 1, "totalPages", 1, "total", 2))) {
+            var bytes = HarnessJson.mapper().writeValueAsBytes(Map.of("data",
+                    Map.of("items", List.of(row()), "pagination", pagination)));
+            assertThrows(IllegalArgumentException.class, () -> ProductCatalog.parse(bytes, verified, now));
+        }
+        var failed = HarnessJson.mapper().writeValueAsBytes(Map.of("ok", false, "data", Map.of("items", List.of())));
+        assertThrows(IllegalArgumentException.class, () -> ProductCatalog.parse(failed, verified, now));
+    }
 }

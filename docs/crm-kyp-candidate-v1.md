@@ -173,3 +173,117 @@ Builder: `PYTHONPATH=src:../base/src /tmp/finance-builder-business-domain-venv/b
 -m pytest tests/test_provider_connections.py tests/test_component_assembly.py
 tests/test_managed_selection.py -q -p no:cacheprovider`: 62 passed. The interpreter
 path is local test infrastructure, not a production dependency or deployment step.
+
+## Authorized Demo source compatibility check (2026-10-28)
+
+The user approved read-only access to
+`https://mcp.demo.linggan.top/wealth/product-data/mcp` with no purchase,
+transaction or CRM-write permission. Unverified products must not become
+recommendable candidates. No credentials were read, copied or added.
+
+Three direct read-only protocol requests completed: initialize, tools/list,
+and wealth_assistant_product_search (empty keyword, page 1, pageSize 50).
+The server identified itself as wealth-assistant-product 2.2.0, negotiated
+2025-06-18, and returned SSE-wrapped JSON-RPC messages. Search returned 15
+flat items in one page, not nested productFacts/salesEligibility details.
+This is protocol/source evidence only, not generated Host admission evidence.
+
+Search declares eight demo wealth products and seven fund entries marked real;
+that declaration does not establish bank sales authority. Some on_sale flags
+coexist with past sales-period end dates. Its top-level business asOf is
+2026-08-20 while updatedAt is the request-time refresh. Neither is silently
+converted into a per-product verified business timestamp.
+
+ProductCatalog now preserves search names, risks and supplied minimum amounts,
+while explicitly retaining summary-only, missing sales eligibility and missing
+dates as limitations. Unknown facts types stay unknown. Pagination with omitted
+rows or additional pages and explicit source failure are rejected. Two new
+tests cover these cases without calling the external source.
+
+Validation executed: `mvn -o -pl providers/wealth-product-mcp -am test -q`
+completed successfully; `mvn -o -pl integrations/customer-manager-java -am test
+-q -DskipTests` compiled integration and test sources successfully, but did not
+execute integration tests. KypPreparationAccess is still an uncommitted draft;
+normal-session wiring, independent grant provisioning, generated-Agent
+admission, report-quality validation and release are NOT complete. Production
+was not changed by this compatibility check.
+
+## Architecture review and release decision (2026-10-28)
+
+Decision: the layering is appropriate, but the candidate is NOT release-ready.
+Do not equate the new SPI or source connectivity with normal Build support.
+
+Ownership remains:
+
+1. Core SPI owns connection references, exact dependency closure, independent
+   grants and locked configuration identity; it must not depend on an MCP SDK,
+   product schema, risk matching or UI.
+2. The shared mcp-transport module owns bounded protocol exchange, timeout,
+   cancellation, target/schema pins and rejection of unsupported sessions.
+3. The wealth-product-mcp Provider owns this source's schema normalization,
+   provenance, completeness and sales-trust interpretation. CRM credentials and
+   customer facts are not remote product search arguments.
+4. Domain preparation composes customer and product facts; the reference UI only
+   projects its result. It does not grant access or select arbitrary endpoints.
+5. Host startup must resolve the installed plan using trusted source settings
+   and independent authority. Build freezes the logical references and digests;
+   a Skill declaring a dependency does not grant it.
+
+Review fixes in this working candidate:
+
+- Product-source missingInputs survive into the stored report and model context.
+  Partial/unknown product status cannot erase missing CRM facts or be described
+  as a completed suitability result. Policy references no longer invent a
+  catalogVersion when only catalogDigest exists.
+- KypPreparationAccess now requires an independently supplied product grant and
+  InvocationAccess, checks it before/after querying and before returning, rejects
+  mismatched request/trace results, and rejects missing CRM receipts explicitly.
+  This is a candidate composition seam, not production authorization wiring.
+- Report instructions distinguish nonempty eligible candidates from partial
+  evidence. Source products, Demo products and excluded products cannot be
+  promoted to recommendations. Prompt instructions are not a substitute for
+  deterministic authorization or output validation.
+
+Unclosed release requirements (implementation work, not a request for broader
+user permissions):
+
+- CustomerManagerScenarioExtension.open still constructs DirectCrmPreparationAccess;
+  it does not construct the KYP composition. LocalAgentHost opens the scenario
+  through Context, whose current contract does not inject independently bound
+  Providers. ReadOnlyProviders.createReferenced is not called by this path.
+- No normal asset registration/Build selection yet freezes the real KYP source
+  and independent grant binding. Do not solve this by deriving KYP permissions
+  from the CRM grant, reading model-supplied URLs or silently overriding old Locks.
+- Product authority must also be checked at report release/history checkpoints
+  under the existing history policy; source-return checks alone do not prove
+  revocation during model generation is handled.
+- The reviewed Demo source is usable for incomplete product facts, not proven
+  bank sales eligibility. Detail/pagination/session-auth support is not implied
+  by the first-page public-stateless transport. Additional MCPs reuse transport
+  and binding mechanisms, but still need reviewed tool/schema contracts,
+  credential ownership and authority policy, source normalization and tests.
+- A newly generated Agent must pass actual service-identity installation, use
+  both independent sources through its normal application entry and preserve
+  both evidence sets. Report quality parity is not proven by fixture tests.
+  Final generation-input identities, affected qualification, protected merge,
+  drain and compatible rollback are still required before deployment.
+
+No production configuration, permissions, credentials, release or Agent state
+was changed by this review. The user has already authorized the stated Demo
+read-only scope; that authorization is not bank sales verification.
+
+Review verification: the offline customer-manager reactor test run exited 0.
+After the report-instruction adjustment, the focused command below passed 36
+tests, zero failures/errors/skips (ProductCatalog 10, KypPreparationAccess 7,
+PrevisitDeliveryQuality 11, OpenJiuwenReportGenerator 8). The model test uses
+the actual SDK against a loopback deterministic model fixture, not the online
+model and not an independent report-quality acceptance.
+
+```sh
+mvn -o -pl integrations/customer-manager-java -am test -q \
+  -Dtest=KypPreparationAccessTest,OpenJiuwenReportGeneratorTest,PrevisitDeliveryQualityTest,ProductCatalogTest \
+  -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+Evidence is the corresponding module target/surefire-reports XML and text files.
+No production Build, online business query or deployment was run during review.
