@@ -318,3 +318,34 @@ final affected qualification and normal publication. No production feature flag,
 grant, credential, config, Agent or release was modified. A read-only systemd
 check still found Finance Studio active, PID 3569646, release
 20261028-platform-ops-feedback-68b265a2-6ca66171.
+
+## Catalog and managed-selection continuation
+
+Registered `wealth-product-facts@0.1.0` and the independent
+`wealth-product-mcp@0.1.0-SNAPSHOT` provider. The query-only pack declares
+`wealth:products:read`; declaring this requirement does not grant it. Its
+`provider-connections.v1` requirement deliberately rejects existing single-source
+Hosts. The managed observation selection now includes the new capability's
+required result evidence, rather than silently omitting it at admission.
+
+Catalog 0.2.16 and its example proposal digest were synchronized. The first
+contract failure was `Proposal catalog digest does not match the published
+Catalog`; the check was retained, not relaxed. Contract verification subsequently
+passed 31 schemas / 130 fixtures-assets-state probes and 16 selected observation
+unit declarations. Component assembly verification passed 35 declarations,
+24 pack declarations and 36 supported capability declarations; these are offline
+declaration counts, not runtime qualification counts.
+
+Builder's `resolve_selection`, `solution_from_selection` and `build_managed` now
+carry host-supplied connection bindings through actual selection, validation and
+source generation. Selection payloads still cannot provide these bindings.
+The generated-source regression uses `build_managed`, validates the component
+plan digest in the generated Lock, and explicitly asserts `NOT_RUN` installation.
+The focused Builder suite passed 89 tests. No production Host feature declaration
+was enabled by this change.
+
+Release remains NOT_READY: the web workbench caller still needs trusted source
+provisioning, the actual scenario bootstrap still constructs the CRM-only access,
+and final connection/configuration pins and service-account installation have not
+been verified. Do not merge/deploy this candidate as working CRM+KYP integration
+or reuse prior installation qualification for its changed generation inputs.

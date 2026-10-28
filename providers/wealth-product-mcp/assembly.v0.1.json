@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "wealth-product-mcp", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-wealth-product-mcp:0.1.0-SNAPSHOT",
+  "connectionKind": "wealth-product-mcp.v1",
+  "supports": [{
+    "pack": {"id": "wealth-product-facts", "version": "0.1.0"},
+    "capabilityIds": ["wealth.products.query"],
+    "operation": "QUERY"
+  }]
+}

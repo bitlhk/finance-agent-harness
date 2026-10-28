@@ -1,0 +1,23 @@
+schemaVersion: finance-capability-pack.v1
+packId: wealth-product-facts
+version: 0.1.0
+systemPrompt: |
+  Query only the installed product source through wealth_products_query.
+  Returned product facts do not establish bank sales eligibility or suitability.
+  Preserve source, business dates, missing information and Demo boundaries.
+  Never forward CRM records, customer identifiers or credentials as keywords.
+  Do not purchase products, initiate transactions or write CRM records.
+capabilities:
+  - capabilityId: wealth.products.query
+    toolName: wealth_products_query
+    name: 产品来源事实查询
+    description: 读取已接入产品来源的目录摘要，保留来源与缺项；不代表银行在售资格或推荐结论。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        keyword:
+          type: string
+          maxLength: 120
+    requiredScopes: [wealth:products:read]

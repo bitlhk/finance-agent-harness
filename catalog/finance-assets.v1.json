@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.15",
+  "catalogVersion": "0.2.16",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -538,6 +538,15 @@
       }
     },
     {
+      "id": "wealth-product-facts",
+      "version": "0.1.0",
+      "displayName": "产品来源事实（待运行接线验收）",
+      "source": "repo://capability-packs/wealth-product-facts",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["wealth.products.query"],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "wealth-allocation-context",
       "version": "0.1.0",
       "displayName": "财富产品候选依据（待运行接线验收）",
@@ -897,6 +906,15 @@
       "compatibility": {"profiles":["post-loan-risk-review"]}
     },
     {
+      "id": "wealth-product-mcp",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "产品来源 MCP 只读 Provider",
+      "source": "repo://providers/wealth-product-mcp",
+      "capabilities": ["wealth.products.query"],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "customer-crm-readonly",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "客户经理 CRM 只读 Provider",
@@ -1034,7 +1052,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-26.main-consolidation-1",
+  "catalogRevision": "2026-10-28.crm-kyp-candidate-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
