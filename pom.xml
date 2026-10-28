@@ -16,6 +16,7 @@
         <module>packages/java/quotation</module>
         <module>providers/quotation-reference</module>
         <module>packages/java/core</module>
+        <module>packages/java/mcp-transport</module>
         <module>packages/java/execution</module>
         <module>packages/java/assembly</module>
         <module>packages/java/service-preparation</module>

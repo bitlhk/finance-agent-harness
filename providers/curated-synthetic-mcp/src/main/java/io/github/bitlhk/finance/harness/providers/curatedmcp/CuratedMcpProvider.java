@@ -1,5 +1,7 @@
 package io.github.bitlhk.finance.harness.providers.curatedmcp;
 
+import io.github.bitlhk.finance.harness.mcp.BoundedHttpClient;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;

@@ -1,4 +1,4 @@
-package io.github.bitlhk.finance.harness.providers.curatedmcp;
+package io.github.bitlhk.finance.harness.mcp;
 
 import java.io.IOException;
 import java.net.*;
@@ -11,13 +11,20 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.*;
 
 /** Counts wire body bytes before the SDK's line/JSON subscribers can buffer them. */
-final class BoundedHttpClient extends HttpClient {
-    static final int MAX_BODY_BYTES = 256 * 1024;
+public final class BoundedHttpClient extends HttpClient {
+    public static final int MAX_BODY_BYTES = 256 * 1024;
+    public interface Observation {
+        Attempt start(String method);
+        interface Attempt {
+            void headers(int status);
+            void finish(Throwable failure);
+        }
+    }
     private final HttpClient delegate;
     private final Duration timeout;
     private final boolean requireStateless;
     private final String sourceIdentity;
-    private final McpHttpObservation observation;
+    private final Observation observation;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         var thread = new Thread(r, "curated-mcp-http-deadline");
         thread.setDaemon(true);
@@ -27,7 +34,7 @@ final class BoundedHttpClient extends HttpClient {
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private volatile boolean stopping;
 
-    private BoundedHttpClient(HttpClient delegate, Duration timeout, boolean requireStateless, String sourceIdentity, McpHttpObservation observation) {
+    private BoundedHttpClient(HttpClient delegate, Duration timeout, boolean requireStateless, String sourceIdentity, Observation observation) {
         this.delegate = delegate;
         this.timeout = timeout;
         this.requireStateless = requireStateless;
@@ -35,13 +42,13 @@ final class BoundedHttpClient extends HttpClient {
         this.observation = observation;
     }
 
-    void checkHealthy() {
+    public void checkHealthy() {
         var cause = failure.get();
         if (cause instanceof SecurityException denied) throw denied;
         if (cause != null) throw new IllegalStateException("CURATED_HTTP_INGRESS_FAILED", cause);
     }
 
-    void stopReads() {
+    public void stopReads() {
         stopping = true;
         active.stream().filter(e -> !e.cleanup).forEach(e -> e.abort(new CancellationException("CURATED_READ_CLOSED"), false));
     }
@@ -98,7 +105,7 @@ final class BoundedHttpClient extends HttpClient {
         volatile CompletableFuture<?> upstream;
         volatile LimitedSubscriber<T> subscriber;
         volatile ScheduledFuture<?> deadline;
-        volatile McpHttpObservation.Attempt observation;
+        volatile Observation.Attempt observation;
         private boolean ending;
         Exchange(boolean cleanup) {
             this.cleanup = cleanup;
@@ -221,25 +228,25 @@ final class BoundedHttpClient extends HttpClient {
     @Override public Optional<Executor> executor() { return delegate.executor(); }
 
     /** Official SDK clientBuilder extension, delegating configuration to the JDK. */
-    static final class Builder implements HttpClient.Builder, AutoCloseable {
+    public static final class Builder implements HttpClient.Builder, AutoCloseable {
         private final HttpClient.Builder delegate = HttpClient.newBuilder().followRedirects(Redirect.NEVER).version(Version.HTTP_1_1);
         private final Duration timeout;
         private final boolean requireStateless;
         private final String sourceIdentity;
-        private McpHttpObservation observation;
+        private Observation observation;
         private BoundedHttpClient client;
-        Builder(Duration timeout) { this(timeout, false); }
-        Builder(Duration timeout, boolean requireStateless) {
+        public Builder(Duration timeout) { this(timeout, false); }
+        public Builder(Duration timeout, boolean requireStateless) {
             this(timeout, requireStateless, null);
         }
-        Builder(Duration timeout, boolean requireStateless, String sourceIdentity) {
+        public Builder(Duration timeout, boolean requireStateless, String sourceIdentity) {
             this.timeout = timeout; this.requireStateless = requireStateless;
             if (sourceIdentity != null && (!requireStateless || !sourceIdentity.matches("[a-f0-9]{64}")))
                 throw new IllegalArgumentException("CURATED_SOURCE_IDENTITY_INVALID");
             this.sourceIdentity = sourceIdentity;
         }
-        BoundedHttpClient client() { return Objects.requireNonNull(client); }
-        Builder observations(McpHttpObservation value) { observation = value; return this; }
+        public BoundedHttpClient client() { return Objects.requireNonNull(client); }
+        public Builder observations(Observation value) { observation = value; return this; }
         @Override public HttpClient build() {
             if (client != null) throw new IllegalStateException("CURATED_HTTP_CLIENT_ALREADY_BUILT");
             client = new BoundedHttpClient(delegate.build(), timeout, requireStateless, sourceIdentity, observation);
