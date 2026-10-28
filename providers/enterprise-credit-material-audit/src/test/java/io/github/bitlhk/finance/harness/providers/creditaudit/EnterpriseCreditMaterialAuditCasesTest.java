@@ -135,6 +135,27 @@ class EnterpriseCreditMaterialAuditCasesTest {
         assertEquals("READ_ONLY_PROVIDER", task.error().sourceCode());
     }
 
+    @Test void currentRuleEvidenceIsReturnedOnlyAfterMaterialScopeAndValidityChecks() throws Exception {
+        MaterialSet set = materialSet("amount-difference");
+        write(set);
+        var rules = DemoRuleSet.load(Path.of("../../domain-packs/credit/enterprise-material-review/rules/demo-enterprise-material-verification.v0.1.json"));
+        var provider = new EnterpriseCreditMaterialAuditProvider(new MaterialSetRepository(root), rules);
+        var result = provider.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(), context()));
+        assertEquals(rules.evidence(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL), result.data().get("ruleEvidence"));
+        var denied = provider.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(),
+                changedContext("another-owner", "reviewer-1", "session-a", "enterprise-credit-material-review")));
+        assertEquals(CapabilityResultV1.Status.FAILED, denied.status());
+        assertTrue(denied.data().isEmpty());
+        var expired = new DemoRuleSet(rules.schemaVersion(), rules.ruleSetId(), rules.version(), rules.classification(),
+                rules.lifecycle(), rules.effectiveFrom(), LocalDate.of(2026, 6, 30), rules.amountScale(),
+                rules.roundingMode(), rules.capabilities(), rules.clauses());
+        var unavailable = new EnterpriseCreditMaterialAuditProvider(new MaterialSetRepository(root), expired)
+                .query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(), context()));
+        assertEquals("NEEDS_HUMAN_REVIEW", unavailable.data().get("status"));
+        assertFalse(unavailable.data().containsKey("ruleEvidence"));
+        assertFalse(unavailable.data().containsKey("values"));
+    }
+
     private void assertDenied(EnterpriseCreditMaterialAuditProvider provider, FinanceContextV1 context) {
         CapabilityResultV1 result = provider.query(request(EnterpriseCreditMaterialAuditProvider.FINANCIAL,
                 "material-a", context));

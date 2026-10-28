@@ -86,6 +86,7 @@ final class DeterministicMaterialEvaluator {
                 "difference", difference.toPlainString(),
                 "subject", application.subject(),
                 "currency", application.currency(),
+                "unit", application.unit(),
                 "businessBasis", application.businessBasis());
         return new Evaluation(status, "application-contract-consistency", rules.ruleSetId(), rules.version(),
                 status == AuditStatus.CONSISTENT
