@@ -1,7 +1,60 @@
 # CRM + KYP multi-source candidate
 
-Status: foundation and isolated CRM HTTP + product MCP integration implemented;
-NOT registered, generated-Host qualified, deployed or enabled.
+## Current checkpoint (2026-10-28, runtime wiring)
+
+The dated sections below retain the earlier foundation ledger. They do not
+describe the current completion state. Registration and normal Build/runtime
+wiring are now implemented; production publication is still pending.
+
+The normal catalog selection generates a three-capability employee Agent:
+CRM previsit, allocation preparation, and independently bound product facts.
+`KypPreparationBootstrap` consumes the Lock-verified plan and source descriptor.
+The configured factory is constructed through the existing generic registry;
+its no-argument discovery form cannot query without that configuration.
+The additive `ManagedScenarioExtensionV01.installationProviders` SPI constructs
+actual descriptors without acquiring grants or calling sources. Other scenario
+extensions retain the empty default and existing installation path.
+
+Actual generated Java Host evidence is under
+`/home/ubuntu/outputs/crm-kyp-candidate-20261028/runtime-build-02/`.
+The first Build failed closed on missing new collector qualification; that
+original FAILED report is preserved. Recording actual generated-package tests
+through the existing evidence recorder enabled a separate installation check.
+The generated Host then used synthetic CRM and a deterministic local model,
+and queried the approved HTTPS Demo MCP. It returned 15 source products and
+zero eligible/recommendable products. This is not ordinary SSO, live-model
+quality, final frozen-source qualification, or deployment evidence.
+
+Deployment configuration has two separate meanings:
+
+- `FH_PROVIDER_CONNECTIONS_FILE`: server-owned logical reference registry,
+  schema `finance-provider-connection-registry.v1`; no grants/URLs/credentials.
+  It is applied only when `wealth-product-mcp` is selected; old single-source
+  selections do not acquire an extra connection.
+- `FH_PRODUCT_READ_AUTHORITY`: external host-owned file, schema
+  `finance-product-read-authority.v1`, containing revision and grants bound to
+  ownerRef, principalId, connectionRef, sourceId, subjects, expiry, exact
+  `wealth:products:read` scope and `WEALTH_PRODUCT_REVIEW` purpose. CRM grants
+  do not imply this product grant. It is rechecked during access and release;
+  missing, malformed, expired, changed or linked authority fails closed.
+
+The installed `wealth-product-facts/source.v1.json` pins endpoint, tool and input
+schema digest. Sales trust is explicitly DEMO. No CRM credentials, customer
+identifier or customer facts are sent to the product search. The current
+composition sends an empty search keyword. Existing Agent Locks keep their
+original source and behavior. New bindings require a new Build.
+
+Remaining publication gates: freeze clean sources, two independent candidates
+per affected representative group including the new composition, final
+service-account admission and complete qualification attachments, protected
+merge, current drain/rollback checks, read-only source-policy provisioning,
+then deployment and ordinary SSO acceptance. New source schemas/transports or
+bank-verified sales policies require review; this is not arbitrary MCP support.
+
+## Earlier foundation checkpoint
+
+At the initial checkpoint only isolated integration existed. The following
+ledger preserves that historical scope and its first failures.
 
 ## Frozen scope
 

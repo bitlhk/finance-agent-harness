@@ -21,6 +21,9 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
 
     @Override public String id() { return ID; }
     @Override public Set<String> actions() { return ACTIONS; }
+    @Override public Map<String, io.github.bitlhk.finance.harness.core.spi.FinanceProvider> installationProviders(Path root) throws Exception {
+        return KypPreparationBootstrap.installation(root);
+    }
 
     @Override public Session open(Context context) throws Exception {
         Path mappingFile = outsideArtifact(requiredPath("FH_CRM_EMPLOYEE_MAPPING"), context.artifactRoot());
@@ -32,7 +35,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 () -> requiredEnv("FH_CRM_SERVICE_TOKEN"));
         CustomerCrmProvider provider = new CustomerCrmProvider(owner, client, () -> mapping.get().authority(), Clock.systemUTC());
         String sessionId = UUID.randomUUID().toString();
-        var access = new DirectCrmPreparationAccess(owner, sessionId, provider);
+        String productAuthority = System.getenv("FH_PRODUCT_READ_AUTHORITY");
+        PreparationAccess access = KypPreparationBootstrap.open(context, sessionId,
+                new DirectCrmPreparationAccess(owner, sessionId, provider),
+                productAuthority == null || productAuthority.isBlank() ? null : Path.of(productAuthority));
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
         var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
         ServicePreparation task = new ServicePreparation(owner, access,

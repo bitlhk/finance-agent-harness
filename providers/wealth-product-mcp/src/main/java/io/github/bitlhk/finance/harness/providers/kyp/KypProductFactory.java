@@ -7,7 +7,7 @@ import java.time.Clock;
 import java.util.*;
 import java.util.function.*;
 
-/** Explicit candidate installation only. No ServiceLoader entry or environment-driven credentials. */
+/** Configuration comes from reviewed installation; ServiceLoader discovery grants no source access. */
 public final class KypProductFactory implements ManagedProviderFactoryV01 {
     public static final String ID = "wealth-product-mcp", CAPABILITY = "wealth.products.query", SCOPE = "wealth:products:read";
     private final PinnedMcpReader.Target target;
@@ -15,6 +15,10 @@ public final class KypProductFactory implements ManagedProviderFactoryV01 {
     private final Supplier<BoundFinanceProvider.Grant> grants;
     private final Predicate<Map<String,String>> audit;
     private final Clock clock;
+
+    public KypProductFactory() {
+        target = null; policy = null; grants = null; audit = null; clock = null;
+    }
 
     public KypProductFactory(PinnedMcpReader.Target target, ProductCatalog.SourcePolicy policy,
             Supplier<BoundFinanceProvider.Grant> grants, Predicate<Map<String,String>> audit, Clock clock) {
@@ -28,12 +32,14 @@ public final class KypProductFactory implements ManagedProviderFactoryV01 {
     public String connectionKind() { return "wealth-product-mcp.v1"; }
     public Map<String,Set<String>> requirements() { return Map.of(CAPABILITY, Set.of(SCOPE)); }
     public Map<String,String> configurationDigests() {
+        if (target == null) throw new SecurityException("KYP_LOCKED_SOURCE_REQUIRED");
         return Map.of("source", PinnedMcpReader.schemaDigest(Map.of("endpoint", target.endpoint().toString(),
                 "tool", target.tool(), "schemaPin", target.inputSchemaSha256(), "timeout", target.timeout().toString(),
                 "sourceId", policy.sourceId(), "salesTrust", policy.salesTrust().name(), "maximumAge", policy.maximumAge().toString(),
                 "transportMode", "STATELESS_PUBLIC_NO_CREDENTIALS", "outputContract", "kyp-product-context.v1")));
     }
     public DescribedFinanceProvider create(Connection connection, Map<String,BoundFinanceProvider> dependencies) {
+        if (target == null) throw new SecurityException("KYP_LOCKED_SOURCE_REQUIRED");
         if (!dependencies.isEmpty() || !connection.kind().equals(connectionKind())
                 || !connection.endpoint().equals(target.endpoint()) || !connection.timeout().equals(target.timeout()))
             throw new IllegalArgumentException("KYP_CONNECTION_MISMATCH");
