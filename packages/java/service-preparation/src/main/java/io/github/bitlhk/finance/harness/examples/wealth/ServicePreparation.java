@@ -193,7 +193,8 @@ public final class ServicePreparation implements AutoCloseable {
         var proof=evidence.begin(run,owner,s.customer(),s.goal(),CAPABILITY,
                 Map.of("customerRef",s.customer(),"taskContext",s.taskContext()),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
         report.set("executionBinding",proof.binding());
-        Runnable authorize=()->{synchronized(this){current(s,run);}};
+        var sourceRelease=new java.util.concurrent.atomic.AtomicReference<Runnable>(() -> {});
+        Runnable authorize=()->{synchronized(this){current(s,run);sourceRelease.get().run();}};
         try {
             proof.check("ENTRY",authorize,null);proof.invoked();
             businessProviderCalls.incrementAndGet();
@@ -228,6 +229,8 @@ public final class ServicePreparation implements AutoCloseable {
                     productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
                     CapabilityResultV1 allocation=querySource(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments,productProof);
+                    if(allocation.status()==CapabilityResultV1.Status.COMPLETED)
+                        sourceRelease.set(access.resultReleaseGuard(s.customer(),allocation));
                     productProof.returned();productProof.check("RETURN",authorize,allocation);
                     if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
                         missing.add("产品适当性筛选未完成");
@@ -282,7 +285,7 @@ public final class ServicePreparation implements AutoCloseable {
                 modelDiagnostics.put("status","RUNNING");modelDiagnostics.put("stage","MODEL_DISPATCH");
                 modelDiagnostics.put("startedAt",Instant.now().toString());modelDiagnostics.put("provisionalDeltaCount",0);
                 report.withArray("events").add("FACTS_PRESERVED");
-                synchronized (this) { current(s,run); persist(report); }
+                synchronized (this) { authorize.run(); persist(report); }
                 proof.check("FACTS_RELEASE",authorize,report);listener.stage("FACTS_READY", report.deepCopy());
                 var provisionalDeltas=new AtomicLong();
                 var firstDeltaAt=new java.util.concurrent.atomic.AtomicReference<String>();
@@ -340,7 +343,7 @@ public final class ServicePreparation implements AutoCloseable {
             report.put("finishedAt",Instant.now().toString());
             report.withArray("events").add("FACT_QUERY_FINISHED").add("REPORT_GENERATED");
             synchronized (this) {
-                current(s,run); persist(report); proof.check("PAGE_RELEASE",authorize,report);
+                proof.check("REPORT_COMMIT",authorize,report); persist(report); proof.check("PAGE_RELEASE",authorize,report);
                 s.completion().finished = true;
                 return report.deepCopy();
             }
@@ -382,7 +385,8 @@ public final class ServicePreparation implements AutoCloseable {
     private synchronized void retainDiscarded(ObjectNode report,Selection selection) throws Exception {
         if(selection.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
         ObjectNode discarded=report.deepCopy();
-        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
+        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion",
+                "productReview","fallbackSuggestion","factState","derivedObservations","factPresentation"));
         discarded.put("status","DISCARDED");discarded.withArray("events").add("LATE_RESULT_DISCARDED");
         persist(discarded);
     }

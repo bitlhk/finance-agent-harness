@@ -254,9 +254,13 @@ user permissions):
 - No normal asset registration/Build selection yet freezes the real KYP source
   and independent grant binding. Do not solve this by deriving KYP permissions
   from the CRM grant, reading model-supplied URLs or silently overriding old Locks.
-- Product authority must also be checked at report release/history checkpoints
-  under the existing history policy; source-return checks alone do not prove
-  revocation during model generation is handled.
+- Product authority is now checked through a result-bound release guard at model,
+  delta, report-commit and page-release checkpoints. The authority digest is a
+  binding identifier, not a permission or signature. An actual ServicePreparation
+  test revokes product access inside the generator and verifies no completed
+  explanation is persisted/released, with no additional product query. Existing
+  CRM-authorized saved-history policy remains unchanged; this public Demo source
+  does not silently introduce a new history grant requirement.
 - The reviewed Demo source is usable for incomplete product facts, not proven
   bank sales eligibility. Detail/pagination/session-auth support is not implied
   by the first-page public-stateless transport. Additional MCPs reuse transport
@@ -287,3 +291,30 @@ mvn -o -pl integrations/customer-manager-java -am test -q \
 
 Evidence is the corresponding module target/surefire-reports XML and text files.
 No production Build, online business query or deployment was run during review.
+
+## Release-guard and public Build-entry follow-up
+
+Added PreparationAccess.resultReleaseGuard with a compatible CRM-only default.
+KYP binds the independently supplied grant to each query result, rejecting grant
+replacement between query return and guard capture. ServicePreparation checks
+the guard through existing audited release checkpoints and strips product facts
+from the discarded final snapshot. Earlier private snapshots are retained as
+evidence, not rewritten or deleted. The normal existing saved-report policy is
+unchanged. KypPreparationAccessTest now has 10 passing tests, including the real
+ServicePreparation/model-callback revoke path; PrevisitDeliveryQualityTest has
+11 passing tests. The customer-manager offline reactor test run also exited 0.
+
+Builder's SolutionBuilder.build now forwards the host-owned provider_connections
+parameter through validation and generation. Non-managed requests and unreviewed
+runtime bindings reject it before work; Python cannot silently ignore it. The
+public-entry forwarding test uses isolated mocked entry boundaries, while the
+existing generated-source test executes the real generator and verifies its
+locked connection plan. Neither is a production Build/admission test. The focused
+Builder regression command passed 86 tests.
+
+Still unclosed: workbench caller provisioning, actual scenario session bootstrap,
+registered source dependencies/pins, actual service-account artifact admission,
+final affected qualification and normal publication. No production feature flag,
+grant, credential, config, Agent or release was modified. A read-only systemd
+check still found Finance Studio active, PID 3569646, release
+20261028-platform-ops-feedback-68b265a2-6ca66171.

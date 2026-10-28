@@ -101,4 +101,40 @@ class KypPreparationAccessTest {
                 CustomerCrmProvider.ALLOCATION_CAPABILITY, Map.of("amount", 100, "horizonMonths", 12, "channel", "branch")));
         assertEquals(0, products.calls);
     }
+    @Test void productRevocationAfterQueryBlocksReportReleaseWithoutAnotherQuery() {
+        var access=access();
+        var result=access.query("request-fixture","trace-fixture","customer-fixture",
+                CustomerCrmProvider.ALLOCATION_CAPABILITY,Map.of("amount",100000,"horizonMonths",12,"channel","branch"));
+        var release=access.resultReleaseGuard("customer-fixture",result);
+        release.run();
+        grant.set(null);
+        assertThrows(SecurityException.class,release::run);
+        assertEquals(1,products.calls);
+    }
+    @Test void replacementGrantBetweenQueryAndGuardCaptureIsRejected() {
+        var result=query();
+        var old=grant.get();
+        grant.set(new BoundFinanceProvider.Grant(old.principalId(),old.principalType(),old.subjects(),
+                old.purposes(),old.scopes(),old.sessionRef(),"replacement",old.expiresAt()));
+        assertThrows(SecurityException.class,()->access().resultReleaseGuard("customer-fixture",result));
+    }
+    @Test void modelTimeRevocationBlocksActualPreparationRelease(@org.junit.jupiter.api.io.TempDir java.nio.file.Path records) throws Exception {
+        var task=new io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation("owner-fixture",access(),
+                ()->new io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation.Mapping("mapping-1",Map.of("Fixture","customer-fixture")),
+                (goal,refs,facts)->{ grant.set(null); return List.of("/customer/customerId"); },records,Map.of());
+        long generation=task.select("owner-fixture","Fixture","Product review");
+        assertThrows(SecurityException.class,()->task.prepareProduct("owner-fixture",generation,
+                Map.of("amount",100000,"horizonMonths",12,"channel","branch"),
+                io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation.PreparationListener.NONE));
+        assertEquals(1,products.calls);
+        try(var files=java.nio.file.Files.walk(records)) {
+            var snapshots=files.filter(p->p.getFileName().toString().matches("v[0-9]+\\.json")).toList();
+            assertFalse(snapshots.isEmpty());
+            for(var file:snapshots) {
+                var value=HarnessJson.mapper().readTree(java.nio.file.Files.readAllBytes(file));
+                assertNotEquals("READY",value.path("explanationStatus").asText());
+                if("DISCARDED".equals(value.path("status").asText())) assertFalse(value.has("productReview"));
+            }
+        }
+    }
 }

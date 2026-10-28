@@ -138,11 +138,41 @@ public final class KypPreparationAccess implements PreparationAccess {
         if (!(facts.data().get("hostEvidence") instanceof Map<?,?> receipt) || receipt.isEmpty())
             throw new IllegalStateException("CRM_SOURCE_RECEIPT_MISSING");
         data.put("sourceEvidence", Map.of("crm", receipt, "kyp", result.data()));
+        data.put("productAuthorityBinding", grantDigest(productGrant));
         productCurrent(productRequest, productGrant);
         unchanged(customer, before);
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, requestId, traceId, CapabilityResultV1.Status.COMPLETED,
                 "Product facts screened against authorized customer context; no purchase or CRM write.", Map.copyOf(data),
                 List.copyOf(missing), List.of(), source.path("sourceId").asText(), result.asOf(), null, null);
+    }
+    @Override public Runnable resultReleaseGuard(String customer, CapabilityResultV1 result) {
+        Runnable customerGuard = crm.resultReleaseGuard(customer, result);
+        if (!result.data().containsKey("productAuthorityBinding"))
+            throw new SecurityException("KYP_RESULT_AUTHORITY_BINDING_MISSING");
+        var initial = productGrants.get();
+        if (initial == null || !grantDigest(initial).equals(result.data().get("productAuthorityBinding")))
+            throw new SecurityException("KYP_AUTHORITY_CHANGED");
+        var snapshot = authorize(customer);
+        var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, result.requestId(), result.traceId(),
+                snapshot.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
+                "WEALTH_PRODUCT_REVIEW", customer, sessionRef, snapshot.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
+        var request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, KypProductFactory.CAPABILITY,
+                CapabilityRequestV1.Operation.QUERY, context, Map.of(), null, null, Map.of(), null);
+        Runnable guard = () -> { customerGuard.run(); productCurrent(request, initial); };
+        guard.run();
+        return guard;
+    }
+    private static String grantDigest(BoundFinanceProvider.Grant grant) {
+        var fields = new TreeMap<String,Object>();
+        fields.put("principal", grant.principalId()); fields.put("type", grant.principalType().name());
+        fields.put("subjects", grant.subjects().stream().sorted().toList());
+        fields.put("purposes", grant.purposes().stream().sorted().toList());
+        fields.put("scopes", grant.scopes().stream().sorted().toList());
+        fields.put("session", grant.sessionRef()); fields.put("authority", grant.authorityRef());
+        fields.put("expiresAt", grant.expiresAt().toString());
+        try { return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(HarnessJson.mapper().writeValueAsBytes(fields))); }
+        catch (Exception failure) { throw new IllegalStateException("KYP_AUTHORITY_BINDING_FAILED"); }
     }
     private void productCurrent(CapabilityRequestV1 request, BoundFinanceProvider.Grant initial) {
         BoundFinanceProvider.checkContext(initial, request.context());
