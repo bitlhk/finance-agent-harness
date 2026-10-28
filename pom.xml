@@ -16,6 +16,7 @@
         <module>packages/java/quotation</module>
         <module>providers/quotation-reference</module>
         <module>packages/java/core</module>
+        <module>packages/java/mcp-transport</module>
         <module>packages/java/execution</module>
         <module>packages/java/assembly</module>
         <module>packages/java/service-preparation</module>
@@ -34,6 +35,7 @@
         <module>providers/enterprise-credit-material-audit</module>
         <module>providers/employee-agent</module>
         <module>providers/customer-crm</module>
+        <module>providers/wealth-product-mcp</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>

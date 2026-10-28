@@ -6,6 +6,34 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PrevisitDeliveryQualityTest {
+    @Test void partialProductSourceDoesNotEraseMissingCustomerEvidence() throws Exception {
+        var review=HarnessJson.mapper().readTree("""
+          {"status":"partial","eligibleProducts":[],"excludedProducts":[],
+           "policySource":{"ruleVersion":"fixture","catalogDigest":"abc"}}
+          """);
+        var result=ServicePreparation.assessFacts("product review",facts(),review);
+        assertEquals("PARTIAL",result.path("status").asText());
+        assertTrue(result.path("missing").toString().contains("PRODUCT_POLICY_NOT_VERIFIED"));
+        assertTrue(result.path("missing").toString().contains("RISK_ASSESSMENT_NOT_PROVIDED"));
+        assertFalse(result.path("available").toString().contains("PRODUCT_POLICY_RESULT"));
+    }
+
+    @Test void policyReferencesOnlyPointToFieldsActuallyReturned() throws Exception {
+        var review=HarnessJson.mapper().readTree("""
+          {"status":"no_eligible_products","eligibleProducts":[],"excludedProducts":[],
+           "policySource":{"ruleVersion":"fixture","catalogDigest":"abc"}}
+          """);
+        var result=ServicePreparation.assessFacts("product review",facts(),review);
+        assertTrue(result.path("available").toString().contains("/productReview/policySource/catalogDigest"));
+        assertFalse(result.path("available").toString().contains("catalogVersion"));
+    }
+
+    @Test void unknownProductStatusCannotClaimScreeningCompleted() throws Exception {
+        var review=HarnessJson.mapper().readTree("{\"status\":\"unknown\",\"policySource\":{\"ruleVersion\":\"fixture\"}}");
+        var result=ServicePreparation.assessFacts("product review",facts(),review);
+        assertTrue(result.path("missing").toString().contains("PRODUCT_POLICY_NOT_VERIFIED"));
+    }
+
     private ObjectNode facts() throws Exception {
         return (ObjectNode) HarnessJson.mapper().readTree("""
           {"dataAsOf":"2026-08-27T12:00:00Z","profiles":[{"profileType":"wealth","detail":{

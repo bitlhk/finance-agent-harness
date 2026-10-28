@@ -50,7 +50,9 @@ record ConversationCapabilities(Set<ConversationIntent.Kind> actions, List<Strin
         if (actions.contains(ConversationIntent.Kind.PREPARE))
             result += "；在用户明确提出回访准备目标和客户后汇集客户资料与持仓事实，生成待复核的回访准备建议。没有独立的只查资料或持仓动作，不能将它列成可直接执行的选项；用户只想查看时应说明此边界，询问是否改为回访准备，不能自动替用户执行";
         if (actions.contains(ConversationIntent.Kind.PRODUCT_REVIEW))
-            result += "；在金额、期限和渠道明确后，从合成产品目录筛选待复核候选";
+            result += capabilityIds.contains("wealth.products.query")
+                    ? "；在金额、期限和渠道明确后，结合授权客户事实读取独立产品来源并核对条件。当前为Demo/Shadow来源，未核实银行在售资格的产品只展示为待核实事实，不是可推荐或可购买候选"
+                    : "；在金额、期限和渠道明确后，从合成产品目录筛选待复核候选";
         return result + "。以上为本制品已装配能力，实际执行仍需核验当前授权。我不会执行购买、CRM写入、消息发送或交易办理。";
     }
 }

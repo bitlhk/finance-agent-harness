@@ -1,4 +1,4 @@
-package io.github.bitlhk.finance.harness.providers.curatedmcp;
+package io.github.bitlhk.finance.harness.mcp;
 
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;

@@ -28,6 +28,7 @@ class ManagedProviderFactoriesTest {
             public Map<String, Set<String>> requirements() { return Map.of("facts.query", Set.of("facts:read")); }
             public Set<String> sourceScopes(Set<String> caps) { return Set.of(sourceScope); }
             public DescribedFinanceProvider create(Connection value, Map<String, BoundFinanceProvider> installed) {
+                assertEquals(kind, value.kind());
                 assertEquals(dependencies, installed.keySet());
                 return new DescribedFinanceProvider() {
                     public ProviderDescriptorV1 descriptor() {
@@ -66,6 +67,44 @@ class ManagedProviderFactoriesTest {
         var providers = registry.create(connection, () -> { throw new AssertionError("No grant during construction"); }, Set.of("projection"));
         assertEquals(Set.of("source", "projection"), providers.keySet());
         assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
+
+    @Test void logicalReferencesResolveOnlyHostSourcesAndKeepProviderGrantsSeparate() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("source-a", "controlled-http", Set.of(), "facts:read"),
+                factory("source-b", "controlled-http", Set.of(), "facts:read")));
+        var refs = Map.of("source-a", new ManagedProviderFactoriesV01.ConnectionReference("shared-source", connection.kind()),
+                "source-b", new ManagedProviderFactoriesV01.ConnectionReference("shared-source", connection.kind()));
+        var scopes = new java.util.concurrent.atomic.AtomicReference<>(Set.of("facts:read"));
+        Map<String, java.util.function.Supplier<BoundFinanceProvider.Grant>> grants = Map.of(
+                "source-a", () -> grant(scopes.get()), "source-b", () -> grant(Set.of("facts:read")));
+        String pin = ManagedProviderFactoriesV01.connectionDigest(connection);
+        var providers = registry.createReferenced(refs, Map.of("shared-source", connection), grants,
+                Set.of("source-a", "source-b"), Map.of(), Map.of("source-a", pin, "source-b", pin));
+        assertEquals(0, identities.get());
+        providers.get("source-a").query(request()); scopes.set(Set.of());
+        assertThrows(SecurityException.class, () -> providers.get("source-a").query(request()));
+        providers.get("source-b").query(request()); assertEquals(2, reads.get());
+    }
+
+    @Test void referenceDriftMissingAuthorityAndEndpointDriftRejectBeforeInvocation() {
+        var registry = new ManagedProviderFactoriesV01(List.of(factory("a", "controlled-http", Set.of(), "facts:read")));
+        var ref = new ManagedProviderFactoriesV01.ConnectionReference("source", connection.kind());
+        Map<String, java.util.function.Supplier<BoundFinanceProvider.Grant>> grants = Map.of(
+                "a", () -> { throw new AssertionError("No authority acquisition at installation"); });
+        var pin = Map.of("a", ManagedProviderFactoriesV01.connectionDigest(connection));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of(), grants, Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of("source", connection), Map.of(), Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a",
+                new ManagedProviderFactoriesV01.ConnectionReference("source", "wrong-kind")),
+                Map.of("source", connection), grants, Set.of("a"), Map.of(), pin));
+        assertThrows(IllegalArgumentException.class, () -> registry.createReferenced(Map.of("a", ref),
+                Map.of("source", connection), grants, Set.of("a"), Map.of(), Map.of("a", "0".repeat(64))));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+        assertThrows(IllegalArgumentException.class, () -> new ManagedProviderFactoriesV01.ConnectionReference(
+                "https://untrusted.invalid", "controlled-http"));
     }
     @Test void configurationIdentityCoversSelectedDependencyClosureOnly() {
         var registry = new ManagedProviderFactoriesV01(List.of(
@@ -136,5 +175,58 @@ class ManagedProviderFactoriesTest {
     @Test void credentialsNotRendered() {
         var session = new ManagedProviderFactoryV01.SourceSession("sensitive", "customer", "actor", "session", Instant.now());
         assertEquals("SourceSession[redacted]", session.toString());
+    }
+
+    ManagedProviderFactoryV01.Connection productConnection() {
+        return new ManagedProviderFactoryV01.Connection("product-http", URI.create("https://products.invalid/mcp"),
+                Duration.ofSeconds(2), () -> { throw new AssertionError("No credentials during assembly"); },
+                () -> null, ignored -> {});
+    }
+
+    @Test void distinctConnectionsAndGrantsStayIsolatedAndRevocationIsImmediate() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("crm", "controlled-http", Set.of(), "crm:read"),
+                factory("kyp", "product-http", Set.of(), "product:read")));
+        var current = new java.util.concurrent.atomic.AtomicReference<>(grant(Set.of("facts:read")));
+        var product = productConnection();
+        var bindings = Map.of("crm", new ManagedProviderFactoriesV01.Binding(connection, () -> grant(Set.of())),
+                "kyp", new ManagedProviderFactoriesV01.Binding(product, current::get));
+        var pins = Map.of("crm", ManagedProviderFactoriesV01.connectionDigest(connection),
+                "kyp", ManagedProviderFactoriesV01.connectionDigest(product));
+        var providers = registry.createBound(bindings, Set.of("crm", "kyp"), Map.of(), pins);
+        assertEquals(0, identities.get());
+        assertThrows(SecurityException.class, () -> providers.get("crm").query(request()));
+        assertEquals(CapabilityResultV1.Status.COMPLETED, providers.get("kyp").query(request()).status());
+        current.set(grant(Set.of()));
+        assertThrows(SecurityException.class, () -> providers.get("kyp").query(request()));
+        assertEquals(1, reads.get());
+    }
+
+    @Test void connectionPinsAndExactDependencyBindingsAreRequired() {
+        var registry = new ManagedProviderFactoriesV01(List.of(
+                factory("crm", "controlled-http", Set.of("kyp"), "crm:read"),
+                factory("kyp", "product-http", Set.of(), "product:read")));
+        var product = productConnection();
+        var bindings = Map.of("crm", new ManagedProviderFactoriesV01.Binding(connection, () -> null),
+                "kyp", new ManagedProviderFactoriesV01.Binding(product, () -> null));
+        var pins = Map.of("crm", ManagedProviderFactoriesV01.connectionDigest(connection),
+                "kyp", ManagedProviderFactoriesV01.connectionDigest(product));
+        assertEquals(2, registry.createBound(bindings, Set.of("crm"), Map.of(), pins).size());
+        assertThrows(IllegalArgumentException.class, () -> registry.createBound(bindings, Set.of("crm"), Map.of(), Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> registry.createBound(Map.of("crm", bindings.get("crm")), Set.of("crm"), Map.of(), pins));
+        var extra = new HashMap<>(bindings); extra.put("unused", bindings.get("crm"));
+        assertThrows(IllegalArgumentException.class, () -> registry.createBound(extra, Set.of("crm"), Map.of(), pins));
+        var swapped = Map.of("crm", bindings.get("kyp"), "kyp", bindings.get("crm"));
+        assertThrows(IllegalArgumentException.class, () -> registry.createBound(swapped, Set.of("crm"), Map.of(), pins));
+        var changed = new ManagedProviderFactoryV01.Connection(product.kind(), URI.create("https://other.invalid/mcp"),
+                product.timeout(), product.currentSession(), product.observation(), product.attempts());
+        assertThrows(IllegalArgumentException.class, () -> registry.createBound(Map.of("crm", bindings.get("crm"),
+                "kyp", new ManagedProviderFactoriesV01.Binding(changed, () -> null)), Set.of("crm"), Map.of(), pins));
+        assertEquals(0, identities.get()); assertEquals(0, reads.get());
+    }
+
+    @Test void legacyConnectionCannotAccidentallyEnableHeterogeneousProviders() {
+        var registry = new ManagedProviderFactoriesV01(List.of(factory("kyp", "product-http", Set.of(), "product:read")));
+        assertThrows(IllegalArgumentException.class, () -> registry.create(connection, () -> grant(Set.of("facts:read")), Set.of("kyp")));
     }
 }

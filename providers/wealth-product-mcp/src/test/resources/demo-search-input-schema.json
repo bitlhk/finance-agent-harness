@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "keyword": {"type": "string", "description": "关键词（产品名称/编号/基金代码），留空返回全部"},
+    "type": {"type": "string", "description": "产品类型：基金/理财"},
+    "risk_level": {"type": "string", "description": "风险等级 R1-R5"},
+    "sales_status": {"type": "string", "description": "在售状态：on_sale（在售）/ suspended（停售），留空返回全部"},
+    "page": {"type": "number", "description": "页码，默认1"},
+    "pageSize": {"type": "number", "description": "每页数量，默认20"}
+  }
+}

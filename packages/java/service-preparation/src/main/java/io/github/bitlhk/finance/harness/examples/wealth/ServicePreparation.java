@@ -193,7 +193,8 @@ public final class ServicePreparation implements AutoCloseable {
         var proof=evidence.begin(run,owner,s.customer(),s.goal(),CAPABILITY,
                 Map.of("customerRef",s.customer(),"taskContext",s.taskContext()),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
         report.set("executionBinding",proof.binding());
-        Runnable authorize=()->{synchronized(this){current(s,run);}};
+        var sourceRelease=new java.util.concurrent.atomic.AtomicReference<Runnable>(() -> {});
+        Runnable authorize=()->{synchronized(this){current(s,run);sourceRelease.get().run();}};
         try {
             proof.check("ENTRY",authorize,null);proof.invoked();
             businessProviderCalls.incrementAndGet();
@@ -228,13 +229,20 @@ public final class ServicePreparation implements AutoCloseable {
                     productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
                     CapabilityResultV1 allocation=querySource(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments,productProof);
+                    if(allocation.status()==CapabilityResultV1.Status.COMPLETED)
+                        sourceRelease.set(access.resultReleaseGuard(s.customer(),allocation));
                     productProof.returned();productProof.check("RETURN",authorize,allocation);
                     if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
                         missing.add("产品适当性筛选未完成");
                         if(allocation.error()!=null)report.put("failureCode",allocation.error().sourceCode());
                     } else {
                         JsonNode productReview=HarnessJson.mapper().valueToTree(allocation.data());
+                        if(!allocation.missingInputs().isEmpty()) {
+                            missing.add("产品来源信息或销售资格尚未完整核实");
+                            report.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
+                        }
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
@@ -277,7 +285,7 @@ public final class ServicePreparation implements AutoCloseable {
                 modelDiagnostics.put("status","RUNNING");modelDiagnostics.put("stage","MODEL_DISPATCH");
                 modelDiagnostics.put("startedAt",Instant.now().toString());modelDiagnostics.put("provisionalDeltaCount",0);
                 report.withArray("events").add("FACTS_PRESERVED");
-                synchronized (this) { current(s,run); persist(report); }
+                synchronized (this) { authorize.run(); persist(report); }
                 proof.check("FACTS_RELEASE",authorize,report);listener.stage("FACTS_READY", report.deepCopy());
                 var provisionalDeltas=new AtomicLong();
                 var firstDeltaAt=new java.util.concurrent.atomic.AtomicReference<String>();
@@ -335,7 +343,7 @@ public final class ServicePreparation implements AutoCloseable {
             report.put("finishedAt",Instant.now().toString());
             report.withArray("events").add("FACT_QUERY_FINISHED").add("REPORT_GENERATED");
             synchronized (this) {
-                current(s,run); persist(report); proof.check("PAGE_RELEASE",authorize,report);
+                proof.check("REPORT_COMMIT",authorize,report); persist(report); proof.check("PAGE_RELEASE",authorize,report);
                 s.completion().finished = true;
                 return report.deepCopy();
             }
@@ -377,7 +385,8 @@ public final class ServicePreparation implements AutoCloseable {
     private synchronized void retainDiscarded(ObjectNode report,Selection selection) throws Exception {
         if(selection.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
         ObjectNode discarded=report.deepCopy();
-        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
+        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion",
+                "productReview","fallbackSuggestion","factState","derivedObservations","factPresentation"));
         discarded.put("status","DISCARDED");discarded.withArray("events").add("LATE_RESULT_DISCARDED");
         persist(discarded);
     }
@@ -642,8 +651,19 @@ public final class ServicePreparation implements AutoCloseable {
         if(!insurance.isMissingNode()&&!insurance.isNull())
             addAvailable(available,"INSURANCE_PROFILE","存在保险领域档案",List.of(profilePath(facts,"life_insurance")+"/profileType"));
         if(productReview!=null&&productReview.isObject()&&!productReview.isEmpty()) {
-            addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",List.of("/productReview/policySource/ruleVersion","/productReview/policySource/catalogVersion"));
-            for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            var policyRefs=new ArrayList<String>();
+            for(String field:List.of("ruleVersion","catalogVersion","catalogDigest"))
+                if(!productReview.path("policySource").path(field).asText().isBlank())
+                    policyRefs.add("/productReview/policySource/"+field);
+            boolean screened=Set.of("ready","no_eligible_products").contains(productReview.path("status").asText())
+                    &&productReview.path("eligibleProducts").isArray()&&productReview.path("excludedProducts").isArray()
+                    &&!policyRefs.isEmpty();
+            if(screened) {
+                addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",policyRefs);
+                for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            } else {
+                addMissing(missing,"PRODUCT_POLICY_NOT_VERIFIED","产品来源信息或销售资格尚未完整核实","来源返回不代表产品适合推荐或已获准销售");
+            }
         }
         result.put("goal",goal);result.put("status",missing.isEmpty()?"READY":"PARTIAL");
         return result;

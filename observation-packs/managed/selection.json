@@ -57,6 +57,13 @@
       "source": "repo://capability-packs/wealth-manager-previsit/observation.v0.1.json"
     },
     {
+      "id": "wealth-product-facts",
+      "capabilityIds": [
+        "wealth.products.query"
+      ],
+      "source": "repo://capability-packs/wealth-product-facts/observation.v0.1.json"
+    },
+    {
       "id": "wealth-allocation-context",
       "capabilityIds": [
         "wealth.allocation-context.query"

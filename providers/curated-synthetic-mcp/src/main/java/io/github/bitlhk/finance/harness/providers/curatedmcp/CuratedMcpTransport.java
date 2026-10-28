@@ -1,5 +1,7 @@
 package io.github.bitlhk.finance.harness.providers.curatedmcp;
 
+import io.github.bitlhk.finance.harness.mcp.BoundedHttpClient;
+
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;

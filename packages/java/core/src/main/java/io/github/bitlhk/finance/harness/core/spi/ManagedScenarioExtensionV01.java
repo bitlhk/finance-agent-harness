@@ -13,6 +13,8 @@ public interface ManagedScenarioExtensionV01 {
     String id();
     Set<String> actions();
     Session open(Context context) throws Exception;
+    /** Locked-plan metadata construction only; must not acquire authority or contact a source. */
+    default Map<String, FinanceProvider> installationProviders(Path artifactRoot) throws Exception { return Map.of(); }
 
     record ModelConnection(String clientProvider, String apiKey, String apiBase, String modelName) {
         @Override public String toString() {

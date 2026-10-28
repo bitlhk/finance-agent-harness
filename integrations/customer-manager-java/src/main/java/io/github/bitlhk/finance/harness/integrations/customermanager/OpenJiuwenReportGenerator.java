@@ -60,7 +60,9 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + CONTRACT_BOUNDARY_INSTRUCTION
                 + "涉及产品时，只有productReview.eligibleProducts中的产品可以作为候选；excludedProducts只能说明排除原因，不得推荐。"
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
-                + "不得把eligibleProducts描述为不满足请求，也不得声称没有合格候选。"
+                + "当eligibleProducts非空时，不得把其中产品描述为不满足请求，也不得声称没有合格候选。"
+                + "当产品结果为partial或productMissingInputs非空时，只能说明尚不能确认可推荐候选；不能断言全市场没有合适产品。"
+                + "sourceProducts是来源返回的待核实事实，不是获准销售或推荐清单；DEMO、未核实或被排除产品均不得升级为推荐。"
                 + "temporalAssessment是宿主按当前业务时间计算的时态结论；当effectiveStatus为PAST_DUE_UNVERIFIED时，"
                 + "只能说明到期日已过且状态待核实，不得写成即将到期、临近到期或快到期。"
                 + "taskContext.facts中source.kind=USER_STATEMENT的值才可称为客户口述；"

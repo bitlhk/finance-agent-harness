@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "finance-kyp-source.v1",
+  "connectionRef": "product-demo-readonly",
+  "endpoint": "https://mcp.demo.linggan.top/wealth/product-data/mcp",
+  "tool": "wealth_assistant_product_search",
+  "inputSchemaSha256": "002acd481def43e05d618c72565519a7d1dff13e146fb56cabc411e5b5072992",
+  "timeoutMillis": 15000,
+  "sourceId": "employee-product-demo-shadow",
+  "salesTrust": "DEMO",
+  "maximumAgeSeconds": 86400
+}
