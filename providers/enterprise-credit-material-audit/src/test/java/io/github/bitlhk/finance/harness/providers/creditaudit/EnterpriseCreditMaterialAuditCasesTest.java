@@ -135,11 +135,76 @@ class EnterpriseCreditMaterialAuditCasesTest {
         assertEquals("READ_ONLY_PROVIDER", task.error().sourceCode());
     }
 
+    @Test void currentRuleEvidenceIsReturnedOnlyAfterMaterialScopeAndValidityChecks() throws Exception {
+        MaterialSet set = materialSet("amount-difference");
+        write(set);
+        var rules = DemoRuleSet.load(Path.of("../../domain-packs/credit/enterprise-material-review/rules/demo-enterprise-material-verification.v0.1.json"));
+        var provider = new EnterpriseCreditMaterialAuditProvider(new MaterialSetRepository(root), rules);
+        var result = provider.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(), context()));
+        assertEquals(rules.evidence(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL), result.data().get("ruleEvidence"));
+        var denied = provider.query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(),
+                changedContext("another-owner", "reviewer-1", "session-a", "enterprise-credit-material-review")));
+        assertEquals(CapabilityResultV1.Status.FAILED, denied.status());
+        assertTrue(denied.data().isEmpty());
+        var expired = new DemoRuleSet(rules.schemaVersion(), rules.ruleSetId(), rules.version(), rules.classification(),
+                rules.lifecycle(), rules.effectiveFrom(), LocalDate.of(2026, 6, 30), rules.amountScale(),
+                rules.roundingMode(), rules.capabilities(), rules.clauses());
+        var unavailable = new EnterpriseCreditMaterialAuditProvider(new MaterialSetRepository(root), expired)
+                .query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL, set.materialSetId(), context()));
+        assertEquals("NEEDS_HUMAN_REVIEW", unavailable.data().get("status"));
+        assertFalse(unavailable.data().containsKey("ruleEvidence"));
+        assertFalse(unavailable.data().containsKey("values"));
+    }
+
     private void assertDenied(EnterpriseCreditMaterialAuditProvider provider, FinanceContextV1 context) {
         CapabilityResultV1 result = provider.query(request(EnterpriseCreditMaterialAuditProvider.FINANCIAL,
                 "material-a", context));
         assertEquals(CapabilityResultV1.Status.FAILED, result.status());
         assertEquals("MATERIAL_SET_SCOPE_MISMATCH", result.error().sourceCode());
+    }
+
+    @Test void duplicateCategoriesNeverSelectFirstOrProduceADifference() throws Exception {
+        for (String variant : List.of("balanced", "equal")) {
+            MaterialSet original = materialSet(variant);
+            for (MaterialSet.Material source : original.materials()) {
+                var duplicate = new MaterialSet.Material(source.materialId() + "-second", source.category(),
+                        "2", source.sha256(), source.subject(), source.period(), source.currency(), source.unit(),
+                        source.businessBasis(), source.declaredFormat(), source.fields());
+                var items = new java.util.ArrayList<>(original.materials());
+                items.add(duplicate);
+                var set = new MaterialSet(original.schemaVersion(), original.materialSetId(), original.ownerRef(),
+                        original.principalId(), original.taskRef(), original.sessionRef(), original.trustedBusinessDate(), items);
+                write(set);
+                String capability = "balanced".equals(variant) ? EnterpriseCreditMaterialAuditProvider.FINANCIAL
+                        : EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL;
+                var result = provider().query(request(capability, set.materialSetId(), context()));
+                assertEquals("NEEDS_HUMAN_REVIEW", result.data().get("status"));
+                assertEquals(Map.of(), result.data().get("values"));
+                assertEquals("AMBIGUOUS", ((Map<?, ?>) result.data().get("verificationBasis")).get("outcome"));
+                var evidence = (List<Map<String, Object>>) result.data().get("evidence");
+                assertEquals(2, evidence.size());
+                assertTrue(evidence.stream().anyMatch(item -> duplicate.materialId().equals(item.get("materialId"))));
+                assertFalse(result.data().get("reviewGuidance").toString().contains("风险等级为"));
+            }
+        }
+    }
+
+    @Test void reviewGuidanceIsBoundedByActualFindingsNotGenericRequiredMaterials() throws Exception {
+        for (String variant : List.of("equal", "amount-difference", "contract-missing", "period-mismatch")) {
+            MaterialSet set = materialSet(variant);
+            write(set);
+            var result = provider().query(request(EnterpriseCreditMaterialAuditProvider.CROSS_MATERIAL,
+                    set.materialSetId(), context()));
+            var guidance = (Map<?, ?>) result.data().get("reviewGuidance");
+            assertEquals("finance-audit-review-guidance.v1", guidance.get("schemaVersion"));
+            assertEquals(result.data().get("status"), guidance.get("status"));
+            assertEquals(result.missingInputs(), guidance.get("missingInputs"));
+            assertEquals(result.data().get("evidence"), guidance.get("evidence"));
+            assertEquals(false, guidance.get("approvalDecision"));
+            assertFalse(guidance.toString().contains("营业执照"));
+            if ("equal".equals(variant)) assertTrue(guidance.get("nextStep").toString().contains("无需"));
+            if ("contract-missing".equals(variant)) assertEquals(List.of("USE_CONTRACT"), guidance.get("missingInputs"));
+        }
     }
 
     private EnterpriseCreditMaterialAuditProvider provider() {

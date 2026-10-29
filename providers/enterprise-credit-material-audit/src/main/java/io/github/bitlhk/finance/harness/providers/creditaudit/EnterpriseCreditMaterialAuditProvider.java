@@ -93,6 +93,8 @@ public final class EnterpriseCreditMaterialAuditProvider implements DescribedFin
         data.put("values", evaluation.values());
         data.put("verificationBasis", evaluation.verificationBasis());
         data.put("evidence", evaluation.evidence());
+        data.put("ruleEvidence", rules.evidence(request.capabilityId()));
+        data.put("reviewGuidance", AuditReviewGuidance.from(evaluation));
         addDecisionBoundaries(data);
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
                 request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.COMPLETED,
