@@ -38,18 +38,20 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 
 ## 尚未证明的范围
 
-新增[面客反诈专业方法候选](../domain-packs/anti-fraud-customer/README.md)
-以 `transfer-anti-fraud@0.1.1-rc.1` 与旧 0.1.0 并存；依赖独立只读
-`fraud-risk-readonly@0.1.0-rc.1`，Pack 与 fraud-mining Provider 均有通用装配声明。
-旧混合 risk-review-basics 保持不变，不由反诈 Provider 声称完整覆盖。派生来源固定，六项内容边界
-已由业务 Owner 接受。它仍需维护者审核与固定提交发布。安装回归不证明真实模型遵循、
-客户效果或生产授权；金融合同、Provider 与可信 Host 的交易/确认权不变。
+### 报价与优惠咨询候选（2026-10-19）
 
-新增面客反诈转账案例资产见 [受控合同验证定义](../evaluation-packs/anti-fraud-transfer/README.md)。
-它定义合成场景下的确认、幂等、未知结果和所有权断言；离线门禁只验证资产结构。
-现场 Builder 的 Java Host 接线与逐案例运行证据仍需单独交付；不据此宣称真实模型
-反诈效果或生产授权验收通过。既有 Query/Task、Provider SPI 与金融规则不变。
+新增[只读报价合同](quotation-readonly-v01.md)与[Harness FEAT-001](features/FEAT-001.md)：quotation领域包提供严格版本事实、整数分金额关系、绑定及有效期验证；quotation-reference通过既有受管Factory提供无网络合成源，只有quotation.offer.query。依赖方向为Provider→Core/quotation，领域不依赖SDK、Host或UI；Core/SPI/Execution不改。
+
+装配要求新增quotation-disclosure.v0.1。这不是既有Host支持声明：H1组件通过不代表公开出口、动态授权或原生SDK已验收。具体Host必须在每个公开分片发送前重新校验权限、主体、事实及有效期；H2实际接线、H3 Builder交付、上游维护者接纳和发布分别验收。下述历史范围及基线不被新候选替换。
 
 适配完成、指定版本通过、当前部署可构建是三种状态。Python 观测资格等运行前提见指南第 13.5 节。未接入 Runtime、任意包自动发现执行、跨版本图节点完整隔离、所有企业接口通用适配及非原作者真人独立接入均不能据此宣布完成。
 
 本轮只整理文档，不修观测资格、不扩展 Runtime，也不改历史 Agent 或运行证据。
+
+
+### PR44 反诈只读资产主线适配
+
+`fraud-risk-readonly@0.1.0-rc.1` 通过 `fraud-mining-readonly.v1` 装配，默认关联
+`transfer-anti-fraud@0.1.1-rc.1`；现有 `fraud.risk-evidence.query` 及其分页完整性语义保留。
+受管 Provider 在转账前查询和证据分页前均从宿主 `Connection.currentSession` 读取并核对
+当前权限，续期可生效，撤权失败关闭。候选资产未表示发布或生产准入。

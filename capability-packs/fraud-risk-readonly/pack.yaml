@@ -24,4 +24,4 @@ capabilities:
       anyOf:
         - required: [accountRef]
         - required: [customerRef]
-    requiredScopes: [fraud-risk:read]
+    requiredScopes: [fraud:read]

@@ -7,6 +7,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.ManagedProviderFactoryV01.SourceSession;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -22,20 +23,46 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /** Maps the fraud-mining service into a runtime-neutral transfer-risk capability. */
 public final class FraudMiningProvider implements DescribedFinanceProvider {
     public static final String PROVIDER_ID = "fraud-mining-reference";
     public static final String PROVIDER_VERSION = "0.1.0-SNAPSHOT";
     public static final String TRANSFER_RISK_ASSESS = "fraud.transfer-risk.assess";
+    public static final String RISK_EVIDENCE_QUERY = "fraud.risk-evidence.query";
+    public static final String FRAUD_SOURCE_CINO = "FRAUD_SOURCE_CINO";
 
     private final Config config;
     private final HttpClient http;
     private final ObjectMapper json;
+    private final Supplier<SourceSession> currentSession;
 
     public FraudMiningProvider(Config config) {
+        this(config, null, false);
+    }
+
+    /** Managed connections resolve host-owned authority anew before each source request. */
+    public FraudMiningProvider(Config config, Supplier<SourceSession> currentSession) {
+        this(config, Objects.requireNonNull(currentSession, "currentSession"), true);
+    }
+
+    private FraudMiningProvider(Config config, Supplier<SourceSession> currentSession, boolean managed) {
+        Objects.requireNonNull(config, "config");
+        if (managed) {
+            URI uri = config.baseUri();
+            boolean loopback = "http".equalsIgnoreCase(uri.getScheme())
+                    && ("127.0.0.1".equals(uri.getHost()) || "[::1]".equals(uri.getHost()));
+            if (!("https".equalsIgnoreCase(uri.getScheme()) || loopback)
+                    || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null) {
+                throw new IllegalArgumentException("FRAUD_MANAGED_ENDPOINT_INVALID");
+            }
+        }
+        this.currentSession = currentSession;
         this.config = Objects.requireNonNull(config, "config");
-        this.http = HttpClient.newBuilder().connectTimeout(config.timeout()).build();
+        this.http = HttpClient.newBuilder().connectTimeout(config.timeout())
+                .followRedirects(HttpClient.Redirect.NEVER).build();
         this.json = HarnessJson.mapper();
     }
 
@@ -45,8 +72,11 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
                 ProviderDescriptorV1.SCHEMA_VERSION,
                 PROVIDER_ID,
                 PROVIDER_VERSION,
-                List.of(new ProviderDescriptorV1.CapabilitySupport(
-                        TRANSFER_RISK_ASSESS, CapabilityRequestV1.Operation.QUERY)));
+                List.of(
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                TRANSFER_RISK_ASSESS, CapabilityRequestV1.Operation.QUERY),
+                        new ProviderDescriptorV1.CapabilitySupport(
+                                RISK_EVIDENCE_QUERY, CapabilityRequestV1.Operation.QUERY)));
     }
 
     @Override
@@ -55,6 +85,9 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         if (request.operation() != CapabilityRequestV1.Operation.QUERY) {
             return failure(request, "INVALID_INPUT", "QUERY_OPERATION_REQUIRED", false,
                     "transfer risk assessment requires operation QUERY");
+        }
+        if (RISK_EVIDENCE_QUERY.equals(request.capabilityId())) {
+            return queryEvidence(request);
         }
         if (!TRANSFER_RISK_ASSESS.equals(request.capabilityId())) {
             return failure(request, "INVALID_INPUT", "UNSUPPORTED_CAPABILITY", false,
@@ -72,6 +105,9 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
 
         try {
             return assess(request, subjectRef);
+        } catch (SourceAuthorizationFailure denied) {
+            return failure(request, "AUTHORIZATION", "FRAUD_SOURCE_AUTHORIZATION_DENIED", false,
+                    "current source session is unavailable or unauthorized");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_INTERRUPTED", true,
@@ -79,6 +115,36 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         } catch (Exception exception) {
             return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_UNAVAILABLE", true,
                     "fraud service did not return a usable assessment");
+        }
+    }
+
+    private CapabilityResultV1 queryEvidence(CapabilityRequestV1 request) {
+        if (!request.context().scopes().contains("fraud-risk:read")) {
+            return failure(request, "AUTHORIZATION", "FRAUD_RISK_READ_REQUIRED", false,
+                    "fraud-risk:read scope is required");
+        }
+        String subjectType = text(request.parameters().get("subjectType"));
+        String subjectRef = text(request.parameters().get("subjectRef"));
+        if (!FRAUD_SOURCE_CINO.equals(subjectType)) {
+            return failure(request, "INVALID_INPUT", "FRAUD_SUBJECT_TYPE_UNSUPPORTED", false,
+                    "subjectType must be FRAUD_SOURCE_CINO");
+        }
+        if (subjectRef == null) {
+            return failure(request, "INVALID_INPUT", "FRAUD_SUBJECT_REQUIRED", false,
+                    "subjectRef is required");
+        }
+        try {
+            return evidence(request, subjectRef);
+        } catch (SourceAuthorizationFailure denied) {
+            return failure(request, "AUTHORIZATION", "FRAUD_SOURCE_AUTHORIZATION_DENIED", false,
+                    "current source session is unavailable or unauthorized");
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_INTERRUPTED", true,
+                    "fraud evidence query was interrupted");
+        } catch (Exception exception) {
+            return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_UNAVAILABLE", true,
+                    "fraud evidence source did not return usable evidence");
         }
     }
 
@@ -91,20 +157,7 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
     private CapabilityResultV1 assess(CapabilityRequestV1 request, String subjectRef) throws Exception {
         String path = "/api/v1/samples?page=1&page_size=20&keyword="
                 + URLEncoder.encode(subjectRef, StandardCharsets.UTF_8);
-        HttpRequest.Builder upstream = HttpRequest.newBuilder(config.baseUri().resolve(path))
-                .timeout(config.timeout())
-                .header("Accept", "application/json")
-                .GET();
-        HostSession session = config.hostSession();
-        if (session != null) {
-            if (!Instant.now().isBefore(session.expiresAt())) {
-                return failure(request, "AUTHORIZATION_REQUIRED", "FRAUD_SESSION_EXPIRED", false,
-                        "host session is no longer valid");
-            }
-            upstream.header("X-Session-Id", session.sessionId());
-        }
-        HttpRequest upstreamRequest = upstream.build();
-        HttpResponse<String> response = http.send(upstreamRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = send(request, path, config.timeout());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("fraud service returned HTTP " + response.statusCode());
         }
@@ -172,6 +225,188 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
                 null);
     }
 
+    private CapabilityResultV1 evidence(CapabilityRequestV1 request, String subjectRef) throws Exception {
+        List<Map<String, Object>> signals = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        List<String> completenessReasons = new ArrayList<>();
+        Integer expectedTotal = null;
+        int scanned = 0;
+        int pagesRead = 0;
+        boolean complete = false;
+        String sourceVersion = null;
+        String snapshotConsistency = null;
+        Instant newestEvidence = Instant.EPOCH;
+        long deadline = System.nanoTime() + config.timeout().toNanos();
+
+        for (int page = 1; page <= config.maxPages(); page++) {
+            if (scanned >= config.maxRecords() || System.nanoTime() >= deadline) {
+                completenessReasons.add(scanned >= config.maxRecords() ? "RECORD_LIMIT_REACHED" : "TOTAL_TIME_LIMIT_REACHED");
+                break;
+            }
+            JsonNode data;
+            try {
+                data = page(request, subjectRef, page, deadline);
+            } catch (SourceAuthorizationFailure denied) {
+                throw denied;
+            } catch (Exception failure) {
+                if (pagesRead == 0) throw failure;
+                completenessReasons.add("SOURCE_FAILED_AFTER_PARTIAL_EVIDENCE");
+                break;
+            }
+            pagesRead++;
+            int total = data.path("total").asInt(-1);
+            if (total < 0) {
+                completenessReasons.add("SOURCE_TOTAL_MISSING");
+                break;
+            }
+            if (expectedTotal == null) expectedTotal = total;
+            else if (expectedTotal != total) {
+                completenessReasons.add("SOURCE_TOTAL_CHANGED");
+                break;
+            }
+            String pageSourceVersion = text(data, "source_version", "sourceVersion", "UNKNOWN");
+            String pageSnapshotConsistency = text(
+                    data, "snapshot_consistency", "snapshotConsistency", "NOT_GUARANTEED_BY_SOURCE");
+            if (sourceVersion == null) sourceVersion = pageSourceVersion;
+            else if (!sourceVersion.equals(pageSourceVersion)) {
+                completenessReasons.add("SOURCE_VERSION_CHANGED");
+                break;
+            }
+            if (snapshotConsistency == null) snapshotConsistency = pageSnapshotConsistency;
+            else if (!snapshotConsistency.equals(pageSnapshotConsistency)) {
+                completenessReasons.add("SOURCE_SNAPSHOT_CONSISTENCY_CHANGED");
+                break;
+            }
+            JsonNode items = data.path("items");
+            if (!items.isArray()) throw new IllegalStateException("fraud evidence items are missing");
+            if (items.isEmpty() && scanned < total) {
+                completenessReasons.add("SOURCE_PAGE_ENDED_EARLY");
+                break;
+            }
+            for (JsonNode item : items) {
+                scanned++;
+                if (scanned > config.maxRecords()) {
+                    completenessReasons.add("RECORD_LIMIT_REACHED");
+                    break;
+                }
+                if (!subjectRef.equals(item.path("cino").asText())) continue;
+                String sampleId = item.path("id").asText(null);
+                if (sampleId == null || sampleId.isBlank()) completenessReasons.add("SOURCE_RECORD_ID_MISSING");
+                else if (!seen.add(sampleId)) continue;
+                Instant observedAt = instant(item.path("created_at").asText(null));
+                if (observedAt == null) completenessReasons.add("SOURCE_EVIDENCE_TIME_MISSING");
+                if (observedAt != null && observedAt.isAfter(newestEvidence)) newestEvidence = observedAt;
+                Map<String, Object> signal = new LinkedHashMap<>();
+                if (sampleId != null && !sampleId.isBlank()) signal.put("sampleId", sampleId);
+                signal.put("recordLabel", item.path("label").isIntegralNumber() ? item.path("label").asInt() : "UNKNOWN");
+                signal.put("matchStatus", item.path("match_status").asText("unknown"));
+                signal.put("matchScore", item.path("match_confidence").isNumber() ? item.path("match_confidence").numberValue() : "UNKNOWN");
+                signal.put("modelLabel", item.path("prediction_result").asText("unknown"));
+                signal.put("modelScore", item.path("prediction_score").isNumber() ? item.path("prediction_score").numberValue() : "UNKNOWN");
+                signal.put("scoreMeaning", "SOURCE_SIGNAL_NOT_CALIBRATED_FRAUD_PROBABILITY");
+                signal.put("observedAt", observedAt == null ? "UNKNOWN" : observedAt.toString());
+                signals.add(Map.copyOf(signal));
+            }
+            if (!completenessReasons.isEmpty()) break;
+            if (scanned >= total) { complete = true; break; }
+        }
+        if (!complete && completenessReasons.isEmpty()) completenessReasons.add("PAGE_LIMIT_REACHED");
+
+        boolean knownMatch = signals.stream().anyMatch(signal ->
+                Integer.valueOf(1).equals(signal.get("recordLabel"))
+                        && "matched".equalsIgnoreCase(String.valueOf(signal.get("matchStatus"))));
+        String verificationStatus = knownMatch ? "KNOWN_RISK_MATCH"
+                : complete ? "NO_KNOWN_MATCH_COMPLETE" : "VERIFICATION_INCOMPLETE";
+        Map<String, Object> queryScope = new LinkedHashMap<>();
+        queryScope.put("pagesRead", pagesRead);
+        queryScope.put("recordsScanned", scanned);
+        queryScope.put("reportedTotal", expectedTotal == null ? -1 : expectedTotal);
+        queryScope.put("pageSize", config.pageSize());
+        queryScope.put("maxPages", config.maxPages());
+        queryScope.put("maxRecords", config.maxRecords());
+        queryScope.put("complete", complete);
+        queryScope.put("completenessReasons", List.copyOf(completenessReasons));
+        queryScope.put("snapshotConsistency", snapshotConsistency == null
+                ? "NOT_GUARANTEED_BY_SOURCE" : snapshotConsistency);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("subjectType", FRAUD_SOURCE_CINO);
+        data.put("subjectRef", subjectRef);
+        data.put("verificationStatus", verificationStatus);
+        data.put("knownRiskMatch", knownMatch);
+        data.put("queryComplete", complete);
+        data.put("queryScope", Map.copyOf(queryScope));
+        data.put("signals", List.copyOf(signals));
+        data.put("sourceVersion", sourceVersion == null ? "UNKNOWN" : sourceVersion);
+        data.put("sourceSystemMeaning", "KNOWN_FRAUD_RECORD_SOURCE");
+        String content = switch (verificationStatus) {
+            case "KNOWN_RISK_MATCH" -> complete
+                    ? "命中来源中的已知涉诈记录；仅供人工核验，不代表对对象作出诈骗认定。"
+                    : "命中来源中的已知涉诈记录，但查询未完整；已保留命中证据并等待人工核验。";
+            case "NO_KNOWN_MATCH_COMPLETE" -> "在已记录的完整查询范围内未命中已知涉诈记录；不代表对象安全或允许交易。";
+            default -> "风险来源查询未完整，不能得出未命中结论；请人工核验。";
+        };
+        Instant asOf = newestEvidence.equals(Instant.EPOCH) ? Instant.now() : newestEvidence;
+        return new CapabilityResultV1(
+                CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(), request.context().traceId(),
+                CapabilityResultV1.Status.COMPLETED, content, data, List.of(),
+                List.of("MANUAL_EVIDENCE_REVIEW"), "fraud-mining", asOf, null, null);
+    }
+
+    private JsonNode page(CapabilityRequestV1 request, String subjectRef, int page, long deadline) throws Exception {
+        String path = "/api/v1/samples?page=" + page + "&page_size=" + config.pageSize() + "&keyword="
+                + URLEncoder.encode(subjectRef, StandardCharsets.UTF_8);
+        long remainingNanos = deadline - System.nanoTime();
+        if (remainingNanos <= 0) throw new java.net.http.HttpTimeoutException("total query time exceeded");
+        HttpResponse<String> response = send(request, path, Duration.ofNanos(remainingNanos));
+        if (response.statusCode() < 200 || response.statusCode() >= 300)
+            throw new IllegalStateException("fraud service returned HTTP " + response.statusCode());
+        JsonNode root = json.readTree(response.body());
+        if (root.path("code").asInt(500) != 200 || !root.path("data").isObject())
+            throw new IllegalStateException("fraud service response does not match its contract");
+        return root.path("data");
+    }
+
+    private HttpResponse<String> send(CapabilityRequestV1 request, String path, Duration timeout)
+            throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(config.baseUri().resolve(path))
+                .timeout(timeout).header("Accept", "application/json").GET();
+        if (currentSession != null) {
+            SourceSession session;
+            try {
+                session = currentSession.get();
+                if (session == null || !session.expiresAt().isAfter(Instant.now())
+                        || !Objects.equals(session.principalId(), request.context().principalId())
+                        || !Objects.equals(session.hostSessionRef(), request.context().sessionRef())
+                        || !Objects.equals(session.subjectRef(), request.context().subjectRef())) {
+                    throw new SourceAuthorizationFailure();
+                }
+                // Validate without rendering the credential in an exception or result.
+                if (session.credential().chars().anyMatch(c -> c < 0x20 || c == 0x7f)) {
+                    throw new SourceAuthorizationFailure();
+                }
+                builder.header("X-Session-Id", session.credential());
+            } catch (RuntimeException unavailable) {
+                throw new SourceAuthorizationFailure();
+            }
+        }
+        HttpResponse<String> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 401 || response.statusCode() == 403) {
+            throw new SourceAuthorizationFailure();
+        }
+        return response;
+    }
+
+    private static final class SourceAuthorizationFailure extends RuntimeException {
+        private SourceAuthorizationFailure() { super("FRAUD_SOURCE_AUTHORIZATION_DENIED"); }
+    }
+
+    private static String text(JsonNode node, String snakeCase, String camelCase, String fallback) {
+        String value = node.path(snakeCase).asText("").trim();
+        if (value.isEmpty()) value = node.path(camelCase).asText("").trim();
+        return value.isEmpty() ? fallback : value;
+    }
+
     private static CapabilityResultV1 failure(
             CapabilityRequestV1 request,
             String failureClass,
@@ -214,32 +449,8 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         }
     }
 
-    /** Private credential supplied by the trusted Host, never request parameters or model output. */
-    public record HostSession(String sessionId, Instant expiresAt) {
-        public HostSession {
-            if (sessionId == null || !sessionId.matches("[A-Za-z0-9_-]{16,256}")) {
-                throw new IllegalArgumentException("host session identifier is invalid");
-            }
-            Objects.requireNonNull(expiresAt, "expiresAt");
-        }
-
-        @Override
-        public String toString() {
-            return "HostSession[credential=redacted]";
-        }
-    }
-
-    public record Config(URI baseUri, Duration timeout, HostSession hostSession) {
-        /** Preserve anonymous legacy integrations; protected services reject this mode themselves. */
-        public Config(URI baseUri, Duration timeout) {
-            this(baseUri, timeout, null);
-        }
-
-        /** Authenticated integrations cannot silently fall back to an anonymous request. */
-        public static Config authenticated(URI baseUri, Duration timeout, HostSession hostSession) {
-            return new Config(baseUri, timeout, Objects.requireNonNull(hostSession, "hostSession"));
-        }
-
+    public record Config(URI baseUri, Duration timeout, int pageSize, int maxPages, int maxRecords) {
+        public Config(URI baseUri, Duration timeout) { this(baseUri, timeout, 100, 10, 1000); }
         public Config {
             Objects.requireNonNull(baseUri, "baseUri");
             Objects.requireNonNull(timeout, "timeout");
@@ -249,13 +460,8 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             if (timeout.isZero() || timeout.isNegative()) {
                 throw new IllegalArgumentException("timeout must be positive");
             }
-            if (hostSession != null && (baseUri.getRawUserInfo() != null
-                    || baseUri.getRawQuery() != null || baseUri.getRawFragment() != null
-                    || !("https".equalsIgnoreCase(baseUri.getScheme())
-                    || ("http".equalsIgnoreCase(baseUri.getScheme())
-                    && List.of("127.0.0.1", "[::1]", "::1").contains(baseUri.getHost()))))) {
-                throw new IllegalArgumentException("authenticated service URI must use HTTPS or numeric loopback");
-            }
+            if (pageSize < 1 || pageSize > 500 || maxPages < 1 || maxPages > 100 || maxRecords < 1)
+                throw new IllegalArgumentException("bounded pagination limits are invalid");
             String normalized = baseUri.toString().endsWith("/")
                     ? baseUri.toString()
                     : baseUri + "/";

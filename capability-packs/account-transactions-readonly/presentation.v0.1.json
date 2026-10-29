@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-pack-presentation.v0.1",
+  "views": [
+    {
+      "capabilityId": "account.transaction.query",
+      "factsVersion": "account-history-facts.v1",
+      "title": "账户流水（当前页）",
+      "scope": "仅展示指定 UTC 日期范围内的当前页，不代表全部流水；不自动翻页。",
+      "rows": "items",
+      "fields": {
+        "bookedAt": "入账时间",
+        "direction": "方向",
+        "amount": "金额",
+        "currency": "币种",
+        "summary": "摘要",
+        "status": "状态"
+      }
+    }
+  ]
+}

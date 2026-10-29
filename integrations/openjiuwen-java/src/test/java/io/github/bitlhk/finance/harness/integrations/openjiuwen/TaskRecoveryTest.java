@@ -23,6 +23,15 @@ class TaskRecoveryTest {
     private static final String HANDLE = "financeTaskHandle";
     @TempDir Path temp;
 
+    @Test void posixCheckpointKeepsOwnerOnlyDirectoryAndPayload() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(temp.getFileSystem().supportedFileAttributeViews().contains("posix"));
+        String handle = start(controller(new FileTaskCheckpointStore(temp), new Bank(), "session"));
+        assertEquals(java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"),
+                java.nio.file.Files.getPosixFilePermissions(temp));
+        assertEquals(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"),
+                java.nio.file.Files.getPosixFilePermissions(temp.resolve(handle + ".json")));
+    }
+
     @Test void filesFromOldCoordinatorResumeWithoutChangingTaskIdentity() throws Exception {
         var json = io.github.bitlhk.finance.harness.core.HarnessJson.mapper();
         var resource = getClass().getResourceAsStream("/task-checkpoints/legacy-89d0ad1.json");

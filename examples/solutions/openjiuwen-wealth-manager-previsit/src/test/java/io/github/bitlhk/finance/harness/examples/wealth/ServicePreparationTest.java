@@ -1,6 +1,7 @@
 package io.github.bitlhk.finance.harness.examples.wealth;
 
 import com.sun.net.httpserver.HttpServer;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
 import io.github.bitlhk.finance.harness.integrations.employeeagent.EmployeeAgentWealthSession;
@@ -16,6 +17,17 @@ import java.util.concurrent.atomic.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ServicePreparationTest {
+    @Test void modelTransportObservationIsRedactedAndKeepsUnknownEvidenceUnknown() {
+        var observed=ServicePreparation.modelTransportObservation(new IllegalStateException("PRIVATE_CUSTOMER_TEXT",new java.net.SocketTimeoutException("secret")));
+        assertEquals("READ_TIMEOUT",observed.path("terminationReason").asText());
+        assertFalse(observed.path("httpStatusObserved").asBoolean());
+        assertFalse(observed.path("httpSendCountObserved").asBoolean());
+        assertFalse(observed.toString().contains("PRIVATE_CUSTOMER_TEXT"));assertFalse(observed.toString().contains("secret"));
+        var unknown=ServicePreparation.modelTransportObservation(new IllegalStateException("unknown"));
+        assertEquals("UNKNOWN_RUNTIME_FAILURE",unknown.path("terminationReason").asText());
+        var unspecifiedTimeout=ServicePreparation.modelTransportObservation(new TimeoutException("synthetic failure"));
+        assertEquals("TIMEOUT_SOURCE_UNSPECIFIED",unspecifiedTimeout.path("terminationReason").asText());
+    }
     @Test void previewAllowsOnlyExplicitLoopbackOriginsAndUnambiguousSessionCookie() {
         var origins=ServicePreparationDemo.previewOrigins(18741,"http://localhost:49291");
         assertTrue(origins.contains("http://localhost:49291"));
@@ -167,6 +179,46 @@ class ServicePreparationTest {
             """);
         assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics("该计划即将到期",facts));
         assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("该计划到期日已过，状态待核实",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不得表述为即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("确认核实口径，避免误述为即将到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("避免将该事项误写为快到期",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateTemporalSemantics("不是即将到期，而是已过期待核实",facts));
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateTemporalSemantics(
+                "不得把旧状态表述为即将到期，但该产品即将到期",facts));
+    }
+    @Test void derivedAmountsCannotBeFlattenedIntoDirectCustomerStatements() throws Exception {
+        ObjectNode facts=HarnessJson.mapper().createObjectNode();
+        var context=facts.putObject("taskContext");var values=context.putArray("facts");
+        var total=values.addObject();total.put("key","visit.discussionAmount");total.put("value",1200000);
+        total.putObject("source").put("kind","USER_STATEMENT");total.putObject("verification").put("status","UNVERIFIED");
+        var remaining=values.addObject();remaining.put("key","visit.remainingDiscussionAmount");remaining.put("value",800000);
+        remaining.putObject("source").put("kind","DETERMINISTIC_DERIVATION");
+        remaining.putObject("verification").put("status","DERIVED_FROM_UNVERIFIED_INPUT");
+        assertThrows(IllegalArgumentException.class,()->ServicePreparation.validateProvenanceSemantics(
+                "120万元和80万元均为客户口述未核验。",facts));
+        assertDoesNotThrow(()->ServicePreparation.validateProvenanceSemantics(
+                "120万元为客户口述；80万元依据口述金额计算得出，尚未独立核验。",facts));
+    }
+    @Test void approvedAggregateFactRefsExpandToLeavesButUnknownParentsRemainRejected() {
+        var ids=List.of(
+                "/taskContext/facts/0/key","/taskContext/facts/0/value",
+                "/profiles/1/detail/portfolioSummary/totalAssets",
+                "/profiles/1/detail/riskAssessment/riskLevel",
+                "/temporalAssessment/maturities/0/effectiveStatus");
+        assertEquals(List.of("/taskContext/facts/0/key","/taskContext/facts/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/taskContext/facts/0"),ids));
+        assertEquals(List.of("/profiles/1/detail/portfolioSummary/totalAssets"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/1/detail/portfolioSummary"),ids));
+        assertEquals(List.of("/temporalAssessment/maturities/0/effectiveStatus"),
+                ServicePreparation.normalizeFactRefs(List.of("/temporalAssessment/maturities/0"),ids));
+        assertEquals(List.of("/profiles/1/detail"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/1/detail"),ids));
+        assertEquals(List.of("/profiles/9/detail/riskAssessment"),
+                ServicePreparation.normalizeFactRefs(List.of("/profiles/9/detail/riskAssessment"),ids));
+        assertEquals(List.of("/factState/items/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/factState/items/0/value"),ids));
+        assertEquals(List.of("/taskContext/facts/0/value"),
+                ServicePreparation.normalizeFactRefs(List.of("/taskContext/facts/0/value"),ids));
     }
     @Test void emptyModelOutputHasDeterministicFailureCodeAndFallback() throws Exception {
         explainEmpty=true;var report=prepare();
@@ -238,7 +290,8 @@ class ServicePreparationTest {
                 assertTrue(entered.await(5,TimeUnit.SECONDS));
                 String id;
                 try(var paths=Files.list(store)) {
-                    id=paths.filter(Files::isDirectory).findFirst().orElseThrow().getFileName().toString();
+                    id=paths.filter(Files::isDirectory).filter(p->Files.isRegularFile(p.resolve("latest.json")))
+                            .findFirst().orElseThrow().getFileName().toString();
                 }
                 var partial=pending.read("owner-a",id);
                 assertEquals(1000,partial.at("/facts/customer/totalAssets").asInt());
@@ -250,6 +303,54 @@ class ServicePreparationTest {
             var saved=pending.review("owner-a",done.path("reportId").asText(),done.path("reportRevision").asInt(),"完成后复核");
             assertEquals("完成后复核",saved.path("reviewOpinion").asText());assertEquals(1,calls.get());
         }
+    }
+    @Test void cancellationPreservesFactsAndCannotCommitLateModelOrReplaceNextReport() throws Exception {
+        var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
+        var count=new AtomicInteger();
+        Path store=files.resolve("cancelled");
+        try(var pending=new ServicePreparation("owner-a",new EmployeeAgentPreparationAccess(session),mapping::get,(g,ids,c)->{
+                if(count.incrementAndGet()==1) { entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS)); }
+                return List.of("/customer/totalAssets");
+            },store,Map.of());var executor=Executors.newVirtualThreadPerTaskExecutor()) {
+            long first=pending.select("owner-a","客户甲","核实资金");
+            var future=executor.submit(()->pending.prepare("owner-a",first));
+            try {
+                assertTrue(entered.await(5,TimeUnit.SECONDS));
+                var snapshot=pending.latest("owner-a").orElseThrow();
+                String id=snapshot.path("reportId").asText();
+                assertThrows(SecurityException.class,()->pending.cancel("another-owner",first));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",first+1));
+                assertEquals("CANCELLED",pending.cancel("owner-a",first));
+                assertEquals("CANCELLED",pending.cancel("owner-a",first));
+                var cancelled=pending.read("owner-a",id);
+                assertEquals("CANCELLED",cancelled.path("status").asText());
+                assertEquals("CANCELLED",cancelled.at("/modelDiagnostics/status").asText());
+                assertFalse(cancelled.at("/modelDiagnostics/upstreamTerminationObserved").asBoolean());
+                assertEquals(1000,cancelled.at("/facts/customer/totalAssets").asInt());
+                assertFalse(cancelled.has("modelSuggestion"));
+                long next=pending.select("owner-a","客户甲","新的核实任务");
+                var completed=pending.prepare("owner-a",next);
+                var durable=pending.read("owner-a",completed.path("reportId").asText());
+                byte[] frozen=Files.readAllBytes(store.resolve(id).resolve("latest.json"));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",next));
+                assertEquals("NOT_ACTIVE",pending.cancel("owner-a",first));
+                release.countDown();
+                assertInstanceOf(CancellationException.class,assertThrows(ExecutionException.class,
+                        ()->future.get(5,TimeUnit.SECONDS)).getCause());
+                assertArrayEquals(frozen,Files.readAllBytes(store.resolve(id).resolve("latest.json")));
+                assertEquals(durable,pending.read("owner-a",completed.path("reportId").asText()));
+                assertEquals(completed.path("reportId"),pending.latest("owner-a").orElseThrow().path("reportId"));
+            } finally { release.countDown(); }
+        }
+    }
+    @Test void cancellationBeforeDispatchDoesNotQueryOrModifyExistingHistory() throws Exception {
+        var generated=prepare(); var previous=host.read("owner-a",generated.path("reportId").asText());
+        int before=calls.get();
+        long next=host.select("owner-a","客户甲","新任务");
+        assertEquals("CANCELLED",host.cancel("owner-a",next));
+        assertThrows(CancellationException.class,()->host.prepare("owner-a",next));
+        assertEquals(before,calls.get());
+        assertEquals(previous,host.read("owner-a",previous.path("reportId").asText()));
     }
     @Test void missingBusinessDateIsNotReplacedByReceiptTime() throws Exception {
         missingDate=true;var r=prepare();assertEquals("",r.path("dataAsOf").asText());assertEquals("PARTIAL",r.path("status").asText());
@@ -345,6 +446,8 @@ class ServicePreparationTest {
         server.createContext("/v1/chat/completions",x->{
             modelCalls.incrementAndGet();String request=new String(x.getRequestBody().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(request.contains("独特服务准备方法"));assertTrue(request.contains(digest));assertTrue(request.contains("核实资金"));
+            assertTrue(request.contains("factRefs必须逐字复制输入factIds中的叶路径"));
+            assertTrue(request.contains("不得缩写为父对象路径"));
             String generated=HarnessJson.mapper().writeValueAsString(Map.of(
                 "communicationFocus",List.of(Map.of("text","结合已核实资产事实准备沟通","factRefs",List.of("/customer/totalAssets"))),
                 "preparationAdvice",List.of(Map.of("text","先向客户确认当前服务目标","factRefs",List.of("/customer/totalAssets"))),

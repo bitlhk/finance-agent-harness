@@ -17,6 +17,9 @@ class NonAiBankingFactoryTest {
                 () -> { throw new AssertionError("No grant during assembly"); }, Set.of(NonAiBankingProvider.PROVIDER_ID));
         assertEquals(Set.of(NonAiBankingProvider.PROVIDER_ID), result.keySet());
         var described = (DescribedFinanceProvider) result.get(NonAiBankingProvider.PROVIDER_ID);
-        assertEquals(6, described.descriptor().capabilities().size());
+        assertEquals(Set.of("account.balance.query", "account.statement.query", "account.transaction.query",
+                        "wealth.customer-context.query", "finance.transaction-summary.query", "finance.spending-analysis.query",
+                        "channel.preferences.update", "transfer.internal.create"),
+                described.descriptor().capabilities().stream().map(c -> c.capabilityId()).collect(java.util.stream.Collectors.toSet()));
     }
 }

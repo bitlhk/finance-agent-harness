@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.14",
+  "catalogVersion": "0.2.16",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -49,6 +49,19 @@
         "runtimeLanguages": ["java"],
         "profiles": ["employee-assisted"]
       }
+    },
+    {
+      "id": "fraud-verification-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "Fraud Verification Assistance Java Integration",
+      "source": "repo://integrations/fraud-verification-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-fraud-verification-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"],
+        "profiles": ["fraud-investigation"]
+      }
     }
   ],
   "profiles": [
@@ -78,6 +91,20 @@
       "version": "0.1.0",
       "displayName": "内部审核",
       "source": "repo://profiles/internal-control.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "fraud-investigation",
+      "version": "0.1.0",
+      "displayName": "电诈风险核验辅助",
+      "source": "repo://profiles/fraud-investigation.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "post-loan-risk-review",
+      "version": "0.1.0",
+      "displayName": "贷后风险核验辅助",
+      "source": "repo://profiles/post-loan-risk-review.md",
       "governanceRef": "finance-harness-core"
     },
     {
@@ -235,6 +262,36 @@
       }
     },
     {
+      "id": "fraud-verification-assistance",
+      "version": "0.1.0",
+      "displayName": "电诈风险核验辅助",
+      "profile": "fraud-investigation",
+      "source": "repo://domain-packs/risk/fraud-verification-assistance",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["fraud.risk-evidence.query"],
+      "dependencies": [{
+        "kind": "capability-pack",
+        "id": "fraud-risk-evidence-query",
+        "version": "0.1.0"
+      }],
+      "compatibility": {
+        "profiles": ["fraud-investigation"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
+    },
+    {
+      "id": "post-loan-risk-verification",
+      "version": "0.1.0",
+      "displayName": "贷后风险核验辅助",
+      "profile": "post-loan-risk-review",
+      "source": "repo://domain-packs/risk/post-loan-risk-verification",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "dependencies": [{"kind":"capability-pack","id":"post-loan-risk-snapshot","version":"0.1.0"}],
+      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+    },
+    {
       "id": "transfer-anti-fraud",
       "version": "0.1.0",
       "displayName": "面客转账反诈",
@@ -256,17 +313,6 @@
           "customer-self-service"
         ]
       }
-    },
-    {
-      "id": "transfer-anti-fraud",
-      "version": "0.1.1-rc.1",
-      "displayName": "面客转账前风险解释（发布候选）",
-      "profile": "customer-self-service",
-      "source": "repo://domain-packs/anti-fraud-customer",
-      "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["fraud.transfer-risk.assess"],
-      "dependencies": [{"kind": "capability-pack", "id": "fraud-risk-readonly", "version": "0.1.0-rc.1"}],
-      "compatibility": {"profiles": ["customer-self-service", "local-read-only", "local-simulator-task"]}
     },
     {
       "id": "cashflow-customer-self-service",
@@ -314,20 +360,50 @@
         "runtimeFamilies": ["openjiuwen"],
         "runtimeLanguages": ["java"]
       }
+    },
+    {
+      "id": "transfer-anti-fraud",
+      "version": "0.1.1-rc.1",
+      "displayName": "面客转账前风险解释（发布候选）",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/anti-fraud-customer",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "fraud.transfer-risk.assess"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "fraud-risk-readonly",
+          "version": "0.1.0-rc.1"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
     }
   ],
   "capabilityPacks": [
     {
-      "id": "fraud-risk-readonly",
-      "version": "0.1.0-rc.1",
-      "displayName": "转账涉诈风险只读能力（发布候选）",
-      "source": "repo://capability-packs/fraud-risk-readonly",
+      "id": "quotation-consultation-readonly",
+      "version": "0.1.0",
+      "displayName": "只读报价咨询（候选，需实际披露控制）",
+      "source": "repo://capability-packs/quotation-consultation-readonly",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["fraud.transfer-risk.assess"],
+      "capabilities": [
+        "quotation.offer.query"
+      ],
       "compatibility": {
-        "profiles": ["customer-self-service", "local-read-only", "local-simulator-task"],
-        "runtimeFamilies": ["openjiuwen", "agentscope"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -487,6 +563,15 @@
       }
     },
     {
+      "id": "wealth-product-facts",
+      "version": "0.1.0",
+      "displayName": "产品来源事实（待运行接线验收）",
+      "source": "repo://capability-packs/wealth-product-facts",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["wealth.products.query"],
+      "compatibility": {"profiles": ["employee-assisted"]}
+    },
+    {
       "id": "wealth-allocation-context",
       "version": "0.1.0",
       "displayName": "财富产品候选依据（待运行接线验收）",
@@ -604,6 +689,28 @@
       }
     },
     {
+      "id": "fraud-risk-evidence-query",
+      "version": "0.1.0",
+      "displayName": "已知涉诈记录核验",
+      "source": "repo://capability-packs/fraud-risk-evidence-query",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["fraud.risk-evidence.query"],
+      "compatibility": {
+        "profiles": ["fraud-investigation"],
+        "runtimeFamilies": ["openjiuwen"],
+        "runtimeLanguages": ["java"]
+      }
+    },
+    {
+      "id": "post-loan-risk-snapshot",
+      "version": "0.1.0",
+      "displayName": "贷后风险快照与确定性预警",
+      "source": "repo://capability-packs/post-loan-risk-snapshot",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+    },
+    {
       "id": "cashflow-readonly",
       "version": "0.1.0",
       "displayName": "摘要与分类趋势只读能力（候选）",
@@ -637,6 +744,24 @@
           "local-simulator-task"
         ]
       }
+    },
+    {
+      "id": "account-statement-readonly",
+      "version": "0.1.0",
+      "displayName": "Account monthly summary",
+      "source": "repo://capability-packs/account-statement-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["account.statement.query"],
+      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
+    },
+    {
+      "id": "account-transactions-readonly",
+      "version": "0.1.0",
+      "displayName": "Account transaction page",
+      "source": "repo://capability-packs/account-transactions-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["account.transaction.query"],
+      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
     },
     {
       "id": "channel-preferences",
@@ -678,9 +803,52 @@
         "runtimeFamilies": ["openjiuwen"],
         "runtimeLanguages": ["java"]
       }
+    },
+    {
+      "id": "fraud-risk-readonly",
+      "version": "0.1.0-rc.1",
+      "displayName": "转账涉诈风险只读能力（发布候选）",
+      "source": "repo://capability-packs/fraud-risk-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "fraud.transfer-risk.assess"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen",
+          "agentscope"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     }
   ],
   "providers": [
+    {
+      "id": "quotation-synthetic-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "合成报价参考源（候选，非银行授权）",
+      "source": "repo://providers/quotation-reference",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-quotation-reference:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "quotation.offer.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
     {
       "id": "curated-synthetic-mcp",
       "version": "0.1.0-SNAPSHOT",
@@ -743,6 +911,8 @@
       "capabilities": [
         "account.balance.query",
         "transfer.internal.create",
+        "account.statement.query",
+        "account.transaction.query",
         "wealth.customer-context.query",
         "channel.preferences.update",
         "finance.transaction-summary.query",
@@ -763,17 +933,35 @@
       "displayName": "反诈风险参考 Provider",
       "source": "repo://providers/fraud-mining",
       "capabilities": [
-        "fraud.transfer-risk.assess"
+        "fraud.transfer-risk.assess",
+        "fraud.risk-evidence.query"
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
         "profiles": [
           "internal-control",
           "customer-self-service",
-          "local-read-only",
-          "local-simulator-task"
+          "fraud-investigation"
         ]
       }
+    },
+    {
+      "id": "post-loan-risk-reference",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "贷后风险合成参考 Provider",
+      "source": "repo://providers/post-loan-risk-reference",
+      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles":["post-loan-risk-review"]}
+    },
+    {
+      "id": "wealth-product-mcp",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "产品来源 MCP 只读 Provider",
+      "source": "repo://providers/wealth-product-mcp",
+      "capabilities": ["wealth.products.query"],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles": ["employee-assisted"]}
     },
     {
       "id": "customer-crm-readonly",
@@ -842,16 +1030,6 @@
   ],
   "evalPacks": [
     {
-      "id": "anti-fraud-transfer",
-      "version": "0.1.0",
-      "displayName": "面客反诈转账受控合同案例（非模型质量评测）",
-      "source": "repo://evaluation-packs/anti-fraud-transfer",
-      "governanceRef": "finance-harness-core",
-      "compatibility": {
-        "profiles": ["customer-self-service"]
-      }
-    },
-    {
       "id": "wealth-facts-controlled",
       "version": "0.1.0",
       "displayName": "共同财富合同受控案例（非模型质量评测）",
@@ -896,6 +1074,18 @@
       }
     },
     {
+      "id": "anti-fraud-transfer-controlled",
+      "version": "0.1.0",
+      "displayName": "手机银行反诈转账受控案例",
+      "source": "repo://conformance/fixtures/anti-fraud-transfer/v0.1",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
+    },
+    {
       "id": "cashflow-controlled",
       "version": "0.1.0",
       "displayName": "收支合同受控案例（非模型质量评测）",
@@ -909,9 +1099,21 @@
       "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
       "governanceRef": "finance-harness-core",
       "compatibility": {"profiles": ["internal-control"]}
+    },
+    {
+      "id": "anti-fraud-transfer",
+      "version": "0.1.0",
+      "displayName": "面客反诈转账受控合同案例（非模型质量评测）",
+      "source": "repo://evaluation-packs/anti-fraud-transfer",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-10-11.antifraud-component-admission-rc-1",
+  "catalogRevision": "2026-10-29.pr44-main-compat-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

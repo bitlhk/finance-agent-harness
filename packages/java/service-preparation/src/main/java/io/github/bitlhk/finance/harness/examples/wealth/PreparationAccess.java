@@ -25,6 +25,14 @@ public interface PreparationAccess extends AutoCloseable {
     CapabilityResultV1 query(String requestId, String traceId, String customerRef,
                              String capabilityId, Map<String, Object> arguments);
 
+    /** Captures source authority for this result; checked through model and page release. */
+    default Runnable resultReleaseGuard(String customerRef, CapabilityResultV1 result) {
+        Snapshot initial = authorize(customerRef);
+        return () -> {
+            if (!initial.equals(authorize(customerRef))) throw new SecurityException("RESULT_AUTHORITY_CHANGED");
+        };
+    }
+
     @Override
     void close();
 }

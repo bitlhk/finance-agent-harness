@@ -34,14 +34,16 @@ class DevelopmentSupportTests(unittest.TestCase):
         self.schema = json.loads((SCHEMAS / "finance-component-development-support.v0.1.schema.json").read_text())
         self.index_schema = json.loads((SCHEMAS / "finance-development-support-index.v0.1.schema.json").read_text())
         self.index = json.loads((ROOT / "metadata/development-support/index.v0.1.json").read_text())
-        self.declarations = [json.loads((ROOT / r["source"].removeprefix("repo://")).read_text())
-                             for r in self.index["declarations"]]
+        self.all_declarations = [json.loads((ROOT / r["source"].removeprefix("repo://")).read_text())
+                                 for r in self.index["declarations"]]
+        self.declarations = [d for d in self.all_declarations
+                             if d["subject"]["kind"] in {"capability-pack", "domain-pack"}]
 
     def test_formal_schemas_and_independent_index(self):
         for schema in (self.schema, self.index_schema):
             jsonschema.Draft202012Validator.check_schema(schema)
         jsonschema.validate(self.index, self.index_schema)
-        for ref, declaration in zip(self.index["declarations"], self.declarations):
+        for ref, declaration in zip(self.index["declarations"], self.all_declarations):
             jsonschema.validate(declaration, self.schema)
             path = ROOT / ref["source"].removeprefix("repo://")
             self.assertEqual(ref["digest"], digest(path.read_bytes()))
@@ -49,8 +51,11 @@ class DevelopmentSupportTests(unittest.TestCase):
             root = ROOT / subject["source"].removeprefix("repo://")
             self.assertFalse(path.is_relative_to(root))
             self.assertEqual(subject["digest"], tree_digest(root))
-            manifest = yaml.safe_load((root / "pack.yaml").read_text())
-            self.assertEqual((subject["id"], subject["version"]), (manifest["packId"], manifest["version"]))
+            if subject["kind"] in {"capability-pack", "domain-pack"}:
+                manifest = yaml.safe_load((root / "pack.yaml").read_text())
+                self.assertEqual((subject["id"], subject["version"]), (manifest["packId"], manifest["version"]))
+            else:
+                self.assertEqual(subject["kind"], "runtime-integration")
             for case_ref in declaration["caseRefs"]:
                 case = ROOT / case_ref["source"].removeprefix("repo://")
                 self.assertEqual(case_ref["digest"], digest(case.read_bytes()))
@@ -62,6 +67,29 @@ class DevelopmentSupportTests(unittest.TestCase):
         self.assertIn("-Dtest=CashflowProviderTest", cashflow["commands"][0]["command"])
         self.assertIn("-Dtest=CashflowContractTest", cashflow["commands"][1]["command"])
         self.assertEqual(len(cashflow["caseRefs"]), 5)
+
+    def test_native_observation_support_is_not_a_business_pack(self):
+        integrations = [d for d in self.all_declarations
+                        if d["subject"]["kind"] == "runtime-integration"]
+        self.assertEqual(len(integrations), 1)
+        declaration = integrations[0]
+        self.assertEqual(declaration["subject"]["id"], "native-bridge")
+        self.assertEqual(declaration["subject"]["version"], "0.1.0")
+        self.assertEqual(declaration["subject"]["source"],
+                         "repo://integrations/openjiuwen-java-otel/src/main/java")
+        self.assertEqual(declaration["scope"], {
+            "capabilityIds": [], "runtimeId": "openjiuwen-java",
+            "integratorId": "finance-harness-openjiuwen-java-otel",
+        })
+        self.assertEqual(declaration["methodCases"], [])
+        self.assertEqual([r["format"] for r in declaration["caseRefs"]], [
+            "finance.native-observation-cases.v1", "finance.observation-analysis-cases.v1",
+        ])
+        self.assertEqual([c["command"] for c in declaration["commands"]], [
+            "mvn -B -ntp -f integrations/openjiuwen-java-otel/pom.xml test",
+            "mvn -B -ntp -f packages/java/observation-analysis/pom.xml test",
+        ])
+        self.assertNotIn("status", declaration)
 
     def test_actual_three_businesses_have_generic_defaults(self):
         self.assertEqual({d["subject"]["id"] for d in self.declarations},

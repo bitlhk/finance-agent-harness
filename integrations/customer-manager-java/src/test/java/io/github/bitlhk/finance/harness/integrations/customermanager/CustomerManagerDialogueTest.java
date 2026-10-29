@@ -7,6 +7,26 @@ import static org.junit.jupiter.api.Assertions.*;
 class CustomerManagerDialogueTest {
     private static final List<String> CUSTOMERS=List.of("周明远","沈嘉禾","赵婉清");
 
+    @Test void aSelectedCustomerIsNotPermissionToExecuteEveryUtterance() {
+        for (String query : List.of("你好", "解释刚才报告的70万元", "帮我订机票", "帮周明远分析理财")) {
+            assertNotEquals(CustomerManagerDialogue.Action.PREPARE,
+                    CustomerManagerDialogue.resolve(query,CUSTOMERS,"周明远").action(), query);
+        }
+    }
+
+    @Test void greetingsCannotResumeAnEarlierTask() {
+        for (String query : List.of("你好", "您好！", "谢谢", "再见")) {
+            assertEquals("GREETING",CustomerManagerDialogue.resolve(query,CUSTOMERS,"周明远").action().name());
+        }
+    }
+
+    @Test void explicitPreparationStillSelectsOnlyAnAuthorizedAlias() {
+        assertEquals(CustomerManagerDialogue.Action.PREPARE,
+                CustomerManagerDialogue.resolve("请为周明远准备回访",CUSTOMERS,null).action());
+        assertNotEquals(CustomerManagerDialogue.Action.PREPARE,
+                CustomerManagerDialogue.resolve("不要准备回访",CUSTOMERS,"周明远").action());
+    }
+
     @Test void listsAuthorizedCustomersWithoutPreparing() {
         assertEquals(CustomerManagerDialogue.Action.LIST_CUSTOMERS,
                 CustomerManagerDialogue.resolve("我负责哪些客户？",CUSTOMERS,null).action());
@@ -40,5 +60,21 @@ class CustomerManagerDialogueTest {
                 CustomerManagerDialogue.resolve("给周明远推荐理财产品",CUSTOMERS,null).action());
         assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
                 CustomerManagerDialogue.resolve("为周明远筛选10万元的产品候选",CUSTOMERS,null).action());
+    }
+
+    @Test void negatedProductLanguageDoesNotOverrideExplicitPreparation() {
+        var result=CustomerManagerDialogue.resolve(
+                "只做澄清性回访，不正式推荐或业务写回",CUSTOMERS,"周明远");
+        assertEquals(CustomerManagerDialogue.Action.PREPARE,result.action());
+        assertEquals("周明远",result.customer());
+        assertTrue(CustomerManagerDialogue.rejectsProductSelection("先不推荐产品，帮我准备回访"));
+        assertTrue(CustomerManagerDialogue.requestsPreparation("先不推荐产品，帮我准备回访"));
+    }
+
+    @Test void explicitCancellationClosesProductTaskInsteadOfPreparingAReport() {
+        assertEquals(CustomerManagerDialogue.Action.CANCEL_PRODUCT,
+                CustomerManagerDialogue.resolve("取消产品筛选",CUSTOMERS,"周明远").action());
+        assertEquals(CustomerManagerDialogue.Action.CANCEL_PRODUCT,
+                CustomerManagerDialogue.resolve("暂不推荐产品",CUSTOMERS,"周明远").action());
     }
 }

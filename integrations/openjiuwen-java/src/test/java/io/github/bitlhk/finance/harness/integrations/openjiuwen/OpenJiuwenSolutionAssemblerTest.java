@@ -767,8 +767,10 @@ class OpenJiuwenSolutionAssemblerTest {
         String source = Files.readString(
                 root.resolve("examples/solutions/openjiuwen-risk-review/solution.yaml"));
         Path solutionFile = temporaryDirectory.resolve("missing-capability-binding.yaml");
-        Files.writeString(solutionFile, source.replace(
-                "  fraud.transfer-risk.assess: fraud-mining-reference\n", ""));
+        String withoutBinding = source.replace(
+                "  fraud.transfer-risk.assess: fraud-mining-reference", "");
+        assertTrue(!source.equals(withoutBinding), "fixture must remove the binding on CRLF or LF checkouts");
+        Files.writeString(solutionFile, withoutBinding);
         FinanceProvider accountProvider = describedProvider(
                 "non-ai-banking-reference",
                 "account.balance.query",

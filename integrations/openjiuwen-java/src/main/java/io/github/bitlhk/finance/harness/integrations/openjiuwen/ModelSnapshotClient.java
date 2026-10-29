@@ -4,7 +4,14 @@ import com.openjiuwen.core.foundation.llm.Model;
 import com.openjiuwen.core.foundation.llm.model_clients.*;
 import com.openjiuwen.core.foundation.llm.schema.*;
 import com.openjiuwen.core.foundation.llm.output_parsers.BaseOutputParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeoutException;
 
 /** Opt-in, synchronous client boundary. The host owns redaction, storage and permissions. */
 public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
@@ -40,6 +47,75 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         try { receiver.capture(call, boundary, state, value); }
         catch (RuntimeException ignored) { /* Optional observation cannot change the business outcome. */ }
     }
+    static Map<String,Object> streamTermination(Throwable failure, String phase, int chunksObserved) {
+        var value = new LinkedHashMap<String,Object>();
+        value.put("schemaVersion", "model-stream-termination.v0.1");
+        value.put("terminationReason", failure == null ? "ITERATOR_EXHAUSTED" : terminationReason(failure));
+        value.put("phase", phase);
+        value.put("chunksObserved", chunksObserved);
+        value.put("threadInterruptedObserved", Thread.currentThread().isInterrupted() || causedBy(failure, InterruptedException.class));
+        value.put("iteratorExhaustedObserved", failure == null);
+        value.put("normalCompletionMarkerObserved", false);
+        value.put("cancellationSource", cancellationSource(failure));
+        value.put("httpStatusObserved", false);
+        value.put("upstreamRequestIdObserved", false);
+        value.put("httpSendCountObserved", false);
+        value.put("downstreamDisconnectObserved", false);
+        if (failure != null) value.put("causeChain", redactedCauseChain(failure));
+        return Map.copyOf(value);
+    }
+    private static String cancellationSource(Throwable failure) {
+        if (causedBy(failure, CancellationException.class)) return "EXCEPTION_CHAIN";
+        if (causedBy(failure, InterruptedException.class) || Thread.currentThread().isInterrupted()) return "THREAD_INTERRUPT_SIGNAL";
+        return "NOT_OBSERVED";
+    }
+    private static String terminationReason(Throwable failure) {
+        if (causedBy(failure, SocketTimeoutException.class)) return "READ_TIMEOUT";
+        if (causedBy(failure, TimeoutException.class)) return "TIMEOUT_SOURCE_UNSPECIFIED";
+        if (causedBy(failure, CancellationException.class)) return "EXPLICIT_CANCELLATION";
+        if (causedBy(failure, InterruptedException.class)) return "THREAD_INTERRUPTED";
+        if (causedBy(failure, JsonProcessingException.class)) return "MALFORMED_STREAM_PAYLOAD";
+        if (causedBy(failure, EOFException.class)) return "UNEXPECTED_EOF";
+        SocketException socket = firstCause(failure, SocketException.class);
+        if (socket != null) {
+            String message = String.valueOf(socket.getMessage()).toLowerCase(Locale.ROOT);
+            if (message.contains("reset") || message.contains("broken pipe") || message.contains("closed")) return "SOCKET_RESET_OR_CLOSED";
+            return "SOCKET_FAILURE";
+        }
+        if (causedBy(failure, IOException.class)) return "IO_FAILURE";
+        return "UNKNOWN_RUNTIME_FAILURE";
+    }
+    private static List<Map<String,String>> redactedCauseChain(Throwable failure) {
+        var result = new ArrayList<Map<String,String>>();
+        var seen = Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for (Throwable current=failure; current!=null && result.size()<8 && seen.add(current); current=current.getCause()) {
+            result.add(Map.of("type", safeType(current), "category", terminationReasonForSingleCause(current)));
+        }
+        return List.copyOf(result);
+    }
+    private static String safeType(Throwable failure) {
+        String name=failure.getClass().getSimpleName();
+        return name.matches("[A-Za-z0-9_$]{1,96}") ? name : "Throwable";
+    }
+    private static String terminationReasonForSingleCause(Throwable failure) {
+        if (failure instanceof SocketTimeoutException) return "READ_TIMEOUT";
+        if (failure instanceof TimeoutException) return "TIMEOUT_SOURCE_UNSPECIFIED";
+        if (failure instanceof CancellationException) return "EXPLICIT_CANCELLATION";
+        if (failure instanceof InterruptedException) return "THREAD_INTERRUPTED";
+        if (failure instanceof JsonProcessingException) return "MALFORMED_STREAM_PAYLOAD";
+        if (failure instanceof EOFException) return "UNEXPECTED_EOF";
+        if (failure instanceof SocketException) return "SOCKET_FAILURE";
+        if (failure instanceof IOException) return "IO_FAILURE";
+        return "RUNTIME_FAILURE";
+    }
+    private static <T extends Throwable> boolean causedBy(Throwable failure, Class<T> type) {
+        return firstCause(failure,type)!=null;
+    }
+    private static <T extends Throwable> T firstCause(Throwable failure, Class<T> type) {
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause())if(type.isInstance(current))return type.cast(current);
+        return null;
+    }
     @Override public AssistantMessage invoke(Object messages, Object tools, Float temperature, Float topP,
             String model, Integer maxTokens, String stop, BaseOutputParser parser, Float frequencyPenalty,
             Map<String,Object> kwargs) throws Exception {
@@ -73,28 +149,33 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
             Iterator<AssistantMessageChunk> delegate = withRequestTraceCallback(
                     request -> capture(receiver, call, "CLIENT_REQUEST_PREPARED", "CAPTURED", request),
                     () -> super.stream(messages, tools, temperature, topP, model, maxTokens, stop, parser, frequencyPenalty, kwargs));
-            return new Iterator<>() {
+            class ObservedStream implements Iterator<AssistantMessageChunk>, AutoCloseable {
                 private final StringBuilder content = new StringBuilder();
                 private boolean captured;
+                private boolean closed;
+                private int chunksObserved;
                 public boolean hasNext() {
+                    if (closed) return false;
                     try {
                         boolean more=delegate.hasNext();
                         if(!more)complete();
                         return more;
                     } catch(RuntimeException failed) {
-                        capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
+                        failed(failed,"ITERATOR_HAS_NEXT");
                         if(Thread.currentThread()!=context.owner())CURRENT.remove();
                         throw failed;
                     }
                 }
                 public AssistantMessageChunk next() {
+                    if (closed) throw new NoSuchElementException();
                     try {
                         AssistantMessageChunk chunk=delegate.next();
+                        chunksObserved++;
                         Object value=chunk.toApiFormat().get("content");
                         if(value!=null)content.append(value);
                         return chunk;
                     } catch(RuntimeException failed) {
-                        capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
+                        failed(failed,"ITERATOR_NEXT");
                         if(Thread.currentThread()!=context.owner())CURRENT.remove();
                         throw failed;
                     }
@@ -102,11 +183,39 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
                 private void complete() {
                     if(captured)return;captured=true;
                     capture(receiver,call,"PARSED_MODEL_RESPONSE","CAPTURED",Map.of("role","assistant","content",content.toString()));
+                    capture(receiver,call,"MODEL_STREAM_TERMINATION","OBSERVED",streamTermination(null,"ITERATOR_HAS_NEXT",chunksObserved));
                     if(Thread.currentThread()!=context.owner())CURRENT.remove();
                 }
-            };
+                private void failed(RuntimeException failure,String phase) {
+                    if(captured)return;captured=true;
+                    capture(receiver,call,"PARSED_MODEL_RESPONSE","NOT_CAPTURED",Map.of("reason","MODEL_CALL_FAILED"));
+                    capture(receiver,call,"MODEL_STREAM_TERMINATION","OBSERVED",streamTermination(failure,phase,chunksObserved));
+                }
+                public void close() throws Exception {
+                    if (closed) return;
+                    closed = true;
+                    try {
+                        if (delegate instanceof AutoCloseable closeable) closeable.close();
+                    } finally {
+                        if (!captured) {
+                            captured = true;
+                            capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED",
+                                    Map.of("reason", "STREAM_CLOSED_BEFORE_EXHAUSTION"));
+                            var termination = new LinkedHashMap<String,Object>(streamTermination(null, "STREAM_CLOSE", chunksObserved));
+                            termination.put("terminationReason", "CALLER_CLOSED");
+                            termination.put("iteratorExhaustedObserved", false);
+                            // Closing may follow cancellation, revocation or an evidence failure;
+                            // this observer does not know which and must not invent that cause.
+                            capture(receiver, call, "MODEL_STREAM_TERMINATION", "OBSERVED", Map.copyOf(termination));
+                        }
+                        if (Thread.currentThread() != context.owner()) CURRENT.remove();
+                    }
+                }
+            }
+            return new ObservedStream();
         } catch (Exception failed) {
             capture(receiver, call, "PARSED_MODEL_RESPONSE", "NOT_CAPTURED", Map.of("reason", "MODEL_CALL_FAILED"));
+            capture(receiver,call,"MODEL_STREAM_TERMINATION","OBSERVED",streamTermination(failed,"STREAM_OPEN",0));
             throw failed;
         }
     }

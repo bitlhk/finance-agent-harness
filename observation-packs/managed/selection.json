@@ -57,11 +57,47 @@
       "source": "repo://capability-packs/wealth-manager-previsit/observation.v0.1.json"
     },
     {
+      "id": "wealth-product-facts",
+      "capabilityIds": [
+        "wealth.products.query"
+      ],
+      "source": "repo://capability-packs/wealth-product-facts/observation.v0.1.json"
+    },
+    {
       "id": "wealth-allocation-context",
       "capabilityIds": [
         "wealth.allocation-context.query"
       ],
       "source": "repo://capability-packs/wealth-allocation-context/observation.v0.1.json"
+    },
+    {
+      "id": "enterprise-financial-statement-verification",
+      "capabilityIds": [
+        "enterprise.financial-statement.verify"
+      ],
+      "source": "repo://capability-packs/enterprise-financial-statement-verification/observation.v0.1.json"
+    },
+    {
+      "id": "enterprise-application-contract-verification",
+      "capabilityIds": [
+        "enterprise.application-contract.verify"
+      ],
+      "source": "repo://capability-packs/enterprise-application-contract-verification/observation.v0.1.json"
+    },
+    {
+      "id": "fraud-risk-evidence-query",
+      "capabilityIds": [
+        "fraud.risk-evidence.query"
+      ],
+      "source": "repo://capability-packs/fraud-risk-evidence-query/observation.v0.1.json"
+    },
+    {
+      "id": "post-loan-risk-snapshot",
+      "capabilityIds": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "source": "repo://capability-packs/post-loan-risk-snapshot/observation.v0.1.json"
     }
   ]
 }

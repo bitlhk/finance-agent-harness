@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.examples.wealth;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.bitlhk.finance.harness.core.*;
+import io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence;
 import java.nio.file.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,8 +45,10 @@ public final class ServicePreparation implements AutoCloseable {
         default void stage(String stage, JsonNode snapshot) throws Exception {}
         default void reportDelta(ReportDelta delta) throws Exception {}
     }
+    private static final class Completion { boolean cancelled; boolean finished; }
     private record Selection(long generation, String alias, String customer, String goal,
-                             JsonNode taskContext, Mapping mapping, PreparationAccess.Snapshot authority) {}
+                             JsonNode taskContext, Mapping mapping, PreparationAccess.Snapshot authority,
+                             Completion completion) {}
     private final String owner;
     private final PreparationAccess access;
     private final Supplier<Mapping> mappings;
@@ -53,6 +56,7 @@ public final class ServicePreparation implements AutoCloseable {
     private final InstalledPreparationMethod method;
     private final Path records;
     private final Map<String,String> versions;
+    private final ScenarioEvidence evidence;
     private final AtomicLong businessProviderCalls = new AtomicLong();
     private final AtomicLong modelGenerationCalls = new AtomicLong();
     private long generation;
@@ -69,10 +73,16 @@ public final class ServicePreparation implements AutoCloseable {
     public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
             ReportGenerator generator, Path records, Map<String,String> versions,
             InstalledPreparationMethod method) throws Exception {
+        this(owner,access,mappings,generator,records,versions,method,Map::of);
+    }
+    public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
+            ReportGenerator generator, Path records, Map<String,String> versions,
+            InstalledPreparationMethod method, Supplier<Map<String,String>> trustedHost) throws Exception {
         this.owner = Objects.requireNonNull(owner); this.access = Objects.requireNonNull(access);
         this.mappings = Objects.requireNonNull(mappings); this.generator = Objects.requireNonNull(generator);
         this.method = Objects.requireNonNull(method);
         this.records = records.toAbsolutePath(); this.versions = Map.copyOf(versions);
+        this.evidence = new ScenarioEvidence(this.records,trustedHost);
         Files.createDirectories(this.records);
         if (Files.isSymbolicLink(this.records)) throw new SecurityException("UNSAFE_RECORD_DIRECTORY");
         Files.setPosixFilePermissions(this.records, java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
@@ -85,8 +95,17 @@ public final class ServicePreparation implements AutoCloseable {
         if (m == null) throw new SecurityException("CUSTOMER_MAPPING_MISSING");
         return m.customers().entrySet().stream().filter(e -> {
             try { access.authorize(e.getValue()); return true; }
-            catch (SecurityException denied) { return false; }
+            catch (SecurityException denied) {
+                if ("CRM_EMPLOYEE_SCOPE_EXPIRED".equals(denied.getMessage())) throw denied;
+                return false;
+            }
         }).map(Map.Entry::getKey).sorted().toList();
+    }
+    /** Server mapping hints for intent resolution only, not current CRM grants or a releasable customer list. */
+    public synchronized Set<String> conversationCandidates(String caller) {
+        owner(caller); Mapping mapping = mappings.get();
+        if (mapping == null) throw new SecurityException("CUSTOMER_MAPPING_MISSING");
+        return Set.copyOf(mapping.customers().keySet());
     }
     public synchronized long select(String caller, String alias, String goal) {
         return select(caller, alias, goal, HarnessJson.mapper().createObjectNode());
@@ -101,10 +120,34 @@ public final class ServicePreparation implements AutoCloseable {
         String customer = m.customers().get(alias);
         var authority = access.authorize(customer);
         if (taskContext == null || !taskContext.isObject()) throw new IllegalArgumentException("TASK_CONTEXT_INVALID");
-        selected = new Selection(generation, alias, customer, goal, taskContext.deepCopy(), m, authority);
+        selected = new Selection(generation, alias, customer, goal, taskContext.deepCopy(), m, authority, new Completion());
         return generation;
     }
+    public synchronized String cancel(String caller, long expectedGeneration) throws Exception {
+        owner(caller);
+        if (selected == null || selected.generation() != expectedGeneration) return "NOT_ACTIVE";
+        if (selected.completion().cancelled) return "CANCELLED";
+        if (selected.completion().finished) return "NOT_ACTIVE";
+        if (activeRun != null) {
+            // Only the last durable snapshot is retained; a late model result cannot rewrite it.
+            ObjectNode saved = (ObjectNode) HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(activeRun)));
+            saved.remove(List.of("modelSuggestion", "fallbackSuggestion"));
+            saved.put("status", "CANCELLED"); saved.put("explanationStatus", "CANCELLED");
+            saved.put("finishedAt", Instant.now().toString());
+            if (saved.path("modelDiagnostics").isObject()) {
+                ObjectNode diagnostics=(ObjectNode)saved.get("modelDiagnostics");
+                diagnostics.put("status","CANCELLED");diagnostics.put("stage","RESULT_RELEASE_CANCELLED");
+                diagnostics.put("terminationSource","USER_REQUEST");
+                diagnostics.put("upstreamTerminationObserved",false);
+            }
+            saved.withArray("events").add("USER_CANCELLED_RESULT_RELEASE");
+            persist(saved);
+        }
+        selected.completion().cancelled = true;
+        return "CANCELLED";
+    }
     private void current(Selection s, String run) {
+        if (s.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
         if (closed || selected != s || !Objects.equals(run, activeRun)
                 || !s.mapping().equals(mappings.get())
                 || !s.authority().equals(access.authorize(s.customer()))) {
@@ -147,11 +190,16 @@ public final class ServicePreparation implements AutoCloseable {
                     "digest", method.digest(), "lockDigest", method.lockDigest())));
             report.putArray("events").add("RUN_STARTED"); persist(report);
         }
+        var proof=evidence.begin(run,owner,s.customer(),s.goal(),CAPABILITY,
+                Map.of("customerRef",s.customer(),"taskContext",s.taskContext()),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        report.set("executionBinding",proof.binding());
+        var sourceRelease=new java.util.concurrent.atomic.AtomicReference<Runnable>(() -> {});
+        Runnable authorize=()->{synchronized(this){current(s,run);sourceRelease.get().run();}};
         try {
-            synchronized (this) { current(s,run); }
+            proof.check("ENTRY",authorize,null);proof.invoked();
             businessProviderCalls.incrementAndGet();
-            CapabilityResultV1 result = access.query(run,run,s.customer(),CAPABILITY,Map.of());
-            synchronized (this) { current(s,run); }
+            CapabilityResultV1 result = querySource(run,run,s.customer(),CAPABILITY,Map.of(),proof);
+            proof.returned();proof.check("RETURN",authorize,result);
             JsonNode data = HarnessJson.mapper().valueToTree(result.data());
             JsonNode context = data.path("previsitContext");
             report.set("execution",HarnessJson.mapper().valueToTree(result));
@@ -175,16 +223,26 @@ public final class ServicePreparation implements AutoCloseable {
                 generationContext.set("taskContext",s.taskContext().deepCopy());
                 collectFactRefs(s.taskContext(),"/taskContext",ids,ids.size()+100);
                 if(productArguments!=null) {
-                    synchronized(this){current(s,run);}
+                    var productProof=evidence.begin(run+"-products",owner,s.customer(),s.goal(),"wealth.allocation-context.query",
+                            Map.of("customerRef",s.customer(),"arguments",productArguments),s.authority(),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+                    report.set("productExecutionBinding",productProof.binding());
+                    productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
-                    CapabilityResultV1 allocation=access.query(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments);
-                    synchronized(this){current(s,run);}
+                    CapabilityResultV1 allocation=querySource(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments,productProof);
+                    if(allocation.status()==CapabilityResultV1.Status.COMPLETED)
+                        sourceRelease.set(access.resultReleaseGuard(s.customer(),allocation));
+                    productProof.returned();productProof.check("RETURN",authorize,allocation);
                     if(allocation.status()!=CapabilityResultV1.Status.COMPLETED) {
                         missing.add("产品适当性筛选未完成");
                         if(allocation.error()!=null)report.put("failureCode",allocation.error().sourceCode());
                     } else {
                         JsonNode productReview=HarnessJson.mapper().valueToTree(allocation.data());
+                        if(!allocation.missingInputs().isEmpty()) {
+                            missing.add("产品来源信息或销售资格尚未完整核实");
+                            report.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
+                        }
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
@@ -208,6 +266,10 @@ public final class ServicePreparation implements AutoCloseable {
                 ObjectNode temporalAssessment=temporalAssessment(factPresentation);
                 generationContext.set("temporalAssessment",temporalAssessment.deepCopy());
                 collectFactRefs(temporalAssessment,"/temporalAssessment",ids,ids.size()+40);
+                ObjectNode derivedObservations=PrevisitDerivedFacts.derive(context);
+                report.set("derivedObservations",derivedObservations.deepCopy());
+                generationContext.set("derivedObservations",derivedObservations.deepCopy());
+                collectFactRefs(derivedObservations,"/derivedObservations",ids,ids.size()+100);
                 report.set("factRefs",HarnessJson.mapper().valueToTree(ids));
                 if(productArguments==null) {
                     if (!"READY".equals(context.path("readiness").path("status").asText())) missing.add("来源未声明准备条件全部就绪");
@@ -223,26 +285,28 @@ public final class ServicePreparation implements AutoCloseable {
                 modelDiagnostics.put("status","RUNNING");modelDiagnostics.put("stage","MODEL_DISPATCH");
                 modelDiagnostics.put("startedAt",Instant.now().toString());modelDiagnostics.put("provisionalDeltaCount",0);
                 report.withArray("events").add("FACTS_PRESERVED");
-                synchronized (this) { current(s,run); persist(report); }
-                listener.stage("FACTS_READY", report.deepCopy());
+                synchronized (this) { authorize.run(); persist(report); }
+                proof.check("FACTS_RELEASE",authorize,report);listener.stage("FACTS_READY", report.deepCopy());
                 var provisionalDeltas=new AtomicLong();
                 var firstDeltaAt=new java.util.concurrent.atomic.AtomicReference<String>();
                 var modelStage=new java.util.concurrent.atomic.AtomicReference<>("MODEL_DISPATCH");
                 try {
-                    synchronized (this) { current(s,run); }
+                    proof.check("MODEL_RELEASE",authorize,generationContext);
                     listener.stage("REPORT_GENERATION_STARTED", report.deepCopy());
                     modelGenerationCalls.incrementAndGet();
                     modelStage.set("MODEL_STREAM");
                     ObjectNode generated = generator.generateStreaming(method, s.goal(), List.copyOf(ids), generationContext.deepCopy(), delta -> {
                         modelStage.set("STREAM_DELTA_VALIDATION");
-                        validateDelta(delta, ids, generationContext, s.goal());
+                        ReportDelta normalized=normalizeDeltaFactRefs(delta,ids);
+                        validateDelta(normalized, ids, generationContext, s.goal());
                         firstDeltaAt.compareAndSet(null,Instant.now().toString());provisionalDeltas.incrementAndGet();
                         modelStage.set("MODEL_STREAM");
-                        try { listener.reportDelta(delta); }
+                        try { proof.check("DELTA_RELEASE",authorize,normalized);listener.reportDelta(normalized); }
                         catch (RuntimeException failure) { throw failure; }
                         catch (Exception failure) { throw new ListenerFailure(failure); }
                     });
                     modelStage.set("FINAL_OUTPUT_VALIDATION");
+                    normalizeGeneratedFactRefs(generated,ids);
                     validateGenerated(generated, ids, generationContext, s.goal());
                     report.set("modelSuggestion", generated.deepCopy());
                     report.put("explanationStatus","READY");
@@ -253,6 +317,8 @@ public final class ServicePreparation implements AutoCloseable {
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
                     report.withArray("events").add("MODEL_SUGGESTION_COMMITTED");
                 } catch (Exception failure) {
+                    if(failure instanceof SecurityException || failure instanceof ScenarioEvidence.Unavailable
+                            || failure instanceof java.util.concurrent.CancellationException)throw failure;
                     if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                     report.put("explanationStatus","FAILED"); report.put("status","PARTIAL");
                     boolean timedOut = causedByTimeout(failure);
@@ -261,6 +327,9 @@ public final class ServicePreparation implements AutoCloseable {
                     String reason=modelFailureReason(failure),stage=modelFailureStage(failure,modelStage.get());
                     modelDiagnostics.put("status","FAILED");modelDiagnostics.put("stage",stage);
                     modelDiagnostics.put("failureReasonCode",reason);modelDiagnostics.put("completedAt",Instant.now().toString());
+                    String validationDetail=modelValidationDetail(failure,reason);
+                    if(validationDetail!=null)modelDiagnostics.put("validationDetail",validationDetail);
+                    modelDiagnostics.set("transportObservation",modelTransportObservation(failure));
                     modelDiagnostics.put("provisionalDeltaCount",provisionalDeltas.get());
                     modelDiagnostics.put("discardedProvisionalDeltaCount",provisionalDeltas.get());
                     if(firstDeltaAt.get()!=null)modelDiagnostics.put("firstDeltaAt",firstDeltaAt.get());
@@ -273,19 +342,85 @@ public final class ServicePreparation implements AutoCloseable {
             }
             report.put("finishedAt",Instant.now().toString());
             report.withArray("events").add("FACT_QUERY_FINISHED").add("REPORT_GENERATED");
-            synchronized (this) { current(s,run); persist(report); return report.deepCopy(); }
-        } catch (SecurityException stale) {
             synchronized (this) {
-                ObjectNode discarded = report.deepCopy();
-                discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion"));
-                discarded.put("status","DISCARDED"); discarded.withArray("events").add("LATE_RESULT_DISCARDED");
-                persist(discarded);
+                proof.check("REPORT_COMMIT",authorize,report); persist(report); proof.check("PAGE_RELEASE",authorize,report);
+                s.completion().finished = true;
+                return report.deepCopy();
             }
+        } catch (SourceCallFailure failure) {
+            // A local exception does not prove whether an external HTTP request was sent.
+            report.put("status",report.has("facts")?"PARTIAL":"FAILED");
+            report.put("explanationStatus","NOT_RUN");
+            report.put("failureCode","PREPARATION_SOURCE_CALL_FAILED");
+            report.put("failureStage","PROVIDER_CALL");
+            report.put("failedCapability",failure.capability);
+            report.put("providerDispatch","INVOKED_SEND_UNOBSERVED");
+            report.put("finishedAt",Instant.now().toString());
+            report.withArray("events").add("PROVIDER_CALL_FAILED_NO_AUTOMATIC_RETRY");
+            try {
+                synchronized(this) {
+                    current(s,run);
+                    failure.proof.check("PROVIDER_FAILURE",authorize,report);
+                    persist(report);
+                    proof.check("PAGE_RELEASE",authorize,report);
+                    return report.deepCopy();
+                }
+            } catch(ScenarioEvidence.Unavailable unavailable) {
+                retainEvidenceFailure(report,s,unavailable);
+                throw unavailable;
+            } catch(SecurityException stale) {
+                retainDiscarded(report,s);
+                throw stale;
+            }
+        } catch (ScenarioEvidence.Unavailable unavailable) {
+            retainEvidenceFailure(report,s,unavailable);
+            throw unavailable;
+        } catch (SecurityException stale) {
+            retainDiscarded(report,s);
             throw stale;
+        } finally {
+            synchronized (this) { s.completion().finished = true; }
+        }
+    }
+    private synchronized void retainDiscarded(ObjectNode report,Selection selection) throws Exception {
+        if(selection.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+        ObjectNode discarded=report.deepCopy();
+        discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion",
+                "productReview","fallbackSuggestion","factState","derivedObservations","factPresentation"));
+        discarded.put("status","DISCARDED");discarded.withArray("events").add("LATE_RESULT_DISCARDED");
+        persist(discarded);
+    }
+    private static final class SourceCallFailure extends RuntimeException {
+        final String capability;
+        final ScenarioEvidence.Run proof;
+        SourceCallFailure(String capability,ScenarioEvidence.Run proof) {
+            super("PREPARATION_SOURCE_CALL_FAILED"); this.capability=capability; this.proof=proof;
+        }
+    }
+    private CapabilityResultV1 querySource(String request,String trace,String customer,String capability,
+            Map<String,Object> arguments,ScenarioEvidence.Run proof) {
+        try { return access.query(request,trace,customer,capability,arguments); }
+        catch(SecurityException|java.util.concurrent.CancellationException|ScenarioEvidence.Unavailable protectedFailure) {
+            throw protectedFailure;
+        }
+        catch(RuntimeException sourceFailure) { throw new SourceCallFailure(capability,proof); }
+    }
+    private void retainEvidenceFailure(ObjectNode report,Selection selection,ScenarioEvidence.Unavailable unavailable) {
+        report.put("status","PARTIAL");report.put("explanationStatus","FAILED");
+        report.put("failureCode","SCENARIO_EVIDENCE_UNAVAILABLE");report.put("failureStage",unavailable.stage());
+        report.put("providerDispatch",unavailable.providerDispatch());report.put("releaseStatus","WITHHELD");
+        synchronized(this) {
+            if(!selection.completion().cancelled) {
+                try { persist(report); } catch(Exception storageFailure) { /* A failed store cannot promise a retained receipt. */ }
+            }
         }
     }
     public synchronized ObjectNode read(String caller, String id) throws Exception {
         owner(caller); ObjectNode r = (ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+        releaseSaved(r);
+        return r;
+    }
+    private void authorizeReport(ObjectNode r) {
         if (!owner.equals(r.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
         var a = access.authorize(r.path("customerRef").asText());
         Mapping m = mappings.get();
@@ -293,7 +428,11 @@ public final class ServicePreparation implements AutoCloseable {
                 || !r.path("customerRef").asText().equals(m.customers().get(r.path("customerAlias").asText()))
                 || !a.authorityRef().equals(r.path("authorityRef").asText()))
             throw new SecurityException("REPORT_AUTHORITY_CHANGED");
-        return r;
+    }
+    private void releaseSaved(ObjectNode r) {
+        authorizeReport(r);
+        evidence.releaseSaved(owner,r.path("customerRef").asText(),r.path("reportId").asText(),r.path("reportRevision").asInt(),
+                access.authorize(r.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY",()->authorizeReport(r),r);
     }
     public synchronized ObjectNode review(String caller, String id, int revision, String opinion) throws Exception {
         ObjectNode r = read(caller,id);
@@ -309,7 +448,7 @@ public final class ServicePreparation implements AutoCloseable {
         entry.put("revision",revision+1); entry.put("reviewerRef",r.path("reviewerRef").asText());
         entry.put("opinion",opinion); entry.put("reviewedAt",r.path("reviewedAt").asText());
         r.withArray("events").add("MANAGER_REVIEW_SAVED");
-        persist(r);return r.deepCopy(); // Review never upgrades execution or explanation status.
+        persist(r);releaseSaved(r);return r.deepCopy(); // Review never upgrades execution or explanation status.
     }
     public synchronized ObjectNode readVersion(String caller, String id, int revision) throws Exception {
         read(caller,id); // Recheck current owner, mapping and CRM authority before historical access.
@@ -317,8 +456,50 @@ public final class ServicePreparation implements AutoCloseable {
         Path file = reportDirectory(id).resolve(String.format("v%06d.json", revision));
         if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) throw new IllegalArgumentException("REPORT_VERSION_NOT_FOUND");
         ObjectNode value = (ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(file));
-        if (!owner.equals(value.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
+        if(!id.equals(value.path("reportId").asText())||value.path("reportRevision").asInt()!=revision)
+            throw new SecurityException("REPORT_VERSION_BINDING_MISMATCH");
+        releaseSaved(value);
         return value;
+    }
+    @FunctionalInterface public interface SavedExplanation {
+        ObjectNode explain(ObjectNode report) throws Exception;
+    }
+    public ObjectNode explainSaved(String caller,String id,int revision,String question,
+            SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
+        ObjectNode snapshot=readVersion(caller,id,revision);
+        String snapshotDigest=ScenarioEvidence.digest(snapshot);
+        Runnable authorized=()-> {
+            if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())
+                throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            owner(caller);authorizeReport(snapshot);
+        };
+        var proof=evidence.begin(UUID.randomUUID().toString(),owner,snapshot.path("customerRef").asText(),
+                "EXPLAIN_SAVED_REPORT","scenario.report.explain",
+                Map.of("reportId",id,"revision",revision,"reportDigest",snapshotDigest,"questionDigest",ScenarioEvidence.digest(question)),
+                access.authorize(snapshot.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        proof.check("MODEL_ENTRY",authorized,Map.of("businessQueries",0,"explanationModelInvocations",0));
+        ObjectNode answer;
+        try { answer=model.explain(snapshot.deepCopy()); }
+        catch(java.util.concurrent.CancellationException cancelledFailure){throw cancelledFailure;}
+        catch(Exception failure) {
+            proof.check("MODEL_FAILED",authorized,Map.of("businessQueries",0,"explanationModelInvocations",1,"resultReleased",false));
+            throw new IllegalStateException("SAVED_REPORT_EXPLANATION_FAILED");
+        }
+        try {
+            ObjectNode again=readVersion(caller,id,revision);
+            if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
+            ObjectNode result=HarnessJson.mapper().createObjectNode();
+            result.set("interpretation",answer);
+            result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
+                    .put("customerAlias",snapshot.path("customerAlias").asText());
+            result.put("basis","SAVED_VERSION_ONLY").put("businessQueries",0).put("explanationModelInvocations",1)
+                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+            proof.check("EXPLANATION_RELEASE",authorized,result);
+            return result;
+        }catch(ScenarioEvidence.Unavailable failure) {
+            // No business Provider was invoked; the separate model attempt already happened.
+            throw new ScenarioEvidence.Unavailable("EXPLANATION_RELEASE_AFTER_MODEL","NOT_INVOKED");
+        }
     }
     public synchronized List<Integer> versions(String caller, String id) throws Exception {
         read(caller,id);
@@ -470,8 +651,19 @@ public final class ServicePreparation implements AutoCloseable {
         if(!insurance.isMissingNode()&&!insurance.isNull())
             addAvailable(available,"INSURANCE_PROFILE","存在保险领域档案",List.of(profilePath(facts,"life_insurance")+"/profileType"));
         if(productReview!=null&&productReview.isObject()&&!productReview.isEmpty()) {
-            addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",List.of("/productReview/policySource/ruleVersion","/productReview/policySource/catalogVersion"));
-            for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            var policyRefs=new ArrayList<String>();
+            for(String field:List.of("ruleVersion","catalogVersion","catalogDigest"))
+                if(!productReview.path("policySource").path(field).asText().isBlank())
+                    policyRefs.add("/productReview/policySource/"+field);
+            boolean screened=Set.of("ready","no_eligible_products").contains(productReview.path("status").asText())
+                    &&productReview.path("eligibleProducts").isArray()&&productReview.path("excludedProducts").isArray()
+                    &&!policyRefs.isEmpty();
+            if(screened) {
+                addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",policyRefs);
+                for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
+            } else {
+                addMissing(missing,"PRODUCT_POLICY_NOT_VERIFIED","产品来源信息或销售资格尚未完整核实","来源返回不代表产品适合推荐或已获准销售");
+            }
         }
         result.put("goal",goal);result.put("status",missing.isEmpty()?"READY":"PARTIAL");
         return result;
@@ -662,7 +854,7 @@ public final class ServicePreparation implements AutoCloseable {
                         ||!value.path("factRefs").isArray()||value.path("factRefs").isEmpty())
                     throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
                 Set<String> refs=new HashSet<>();value.path("factRefs").forEach(refsNode->refs.add(refsNode.asText()));
-                if(!ids.containsAll(refs))throw new IllegalArgumentException("UNKNOWN_FACT_REF");
+                if(!ids.containsAll(refs))throw unknownFactRef(refs,ids);
             }
         }
         for(String section:List.of("pendingItems","reviewChecklist")) {
@@ -670,11 +862,11 @@ public final class ServicePreparation implements AutoCloseable {
             for(JsonNode value:values)if(!value.isTextual()||value.asText().isBlank()||value.asText().length()>500)
                 throw new IllegalArgumentException("MODEL_REPORT_SHAPE_INVALID");
         }
-        String allowed=facts.toString()+" "+goal;
-        java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(generated.toString());
-        while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+        for(String section:expected) for(JsonNode item:generated.path(section))
+            ReportNumbers.validate(item.isTextual()?item.asText():item.path("text").asText(),facts,goal);
         validateProductSemantics(generated.toString(),facts);
         validateTemporalSemantics(generated.toString(),facts);
+        validateProvenanceSemantics(generated.toString(),facts);
     }
     private static void validateDelta(ReportDelta delta, List<String> ids, JsonNode facts, String goal) {
         if (!Set.of("communicationFocus","preparationAdvice","pendingItems","reviewChecklist").contains(delta.section())
@@ -683,12 +875,11 @@ public final class ServicePreparation implements AutoCloseable {
         boolean evidenced=Set.of("communicationFocus","preparationAdvice").contains(delta.section());
         if (evidenced && (delta.factRefs().isEmpty() || !ids.containsAll(delta.factRefs()))
                 || !evidenced && !delta.factRefs().isEmpty())
-            throw new IllegalArgumentException("UNKNOWN_FACT_REF");
-        String allowed=facts.toString()+" "+goal;
-        var matcher=java.util.regex.Pattern.compile("(?<![A-Za-z])\\d+(?:\\.\\d+)?").matcher(delta.text());
-        while(matcher.find())if(!allowed.contains(matcher.group()))throw new IllegalArgumentException("UNSUPPORTED_NUMBER");
+            throw unknownFactRef(new LinkedHashSet<>(delta.factRefs()),ids);
+        ReportNumbers.validate(delta.text(),facts,goal);
         validateProductSemantics(delta.text(),facts);
         validateTemporalSemantics(delta.text(),facts);
+        validateProvenanceSemantics(delta.text(),facts);
     }
     static void validateProductSemantics(String text, JsonNode facts) {
         if(facts.path("productReview").path("eligibleProducts").isEmpty())return;
@@ -698,12 +889,82 @@ public final class ServicePreparation implements AutoCloseable {
     }
     static void validateTemporalSemantics(String text,JsonNode facts) {
         String compact=text.replaceAll("\\s+","");
-        if(!compact.contains("即将到期")&&!compact.contains("临近到期")&&!compact.contains("快到期"))return;
         JsonNode maturities=facts.path("temporalAssessment").path("maturities");
         boolean future=false;
         for(JsonNode item:maturities)
             if("NOT_PAST_DUE".equals(item.path("effectiveStatus").asText()))future=true;
-        if(!future&&!maturities.isEmpty())throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT");
+        if(future||maturities.isEmpty())return;
+        for(String marker:List.of("即将到期","临近到期","快到期")) {
+            for(int at=compact.indexOf(marker);at>=0;at=compact.indexOf(marker,at+marker.length()))
+                if(!negatedTemporalMention(compact,at))throw new IllegalArgumentException("TEMPORAL_STATUS_CONFLICT:"+marker);
+        }
+    }
+    static void validateProvenanceSemantics(String text,JsonNode facts) {
+        String compact=text.replaceAll("\\s+","");
+        for(JsonNode fact:facts.path("taskContext").path("facts")) {
+            if(!"DETERMINISTIC_DERIVATION".equals(fact.path("source").path("kind").asText()))continue;
+            for(String rendered:renderedNumbers(fact.path("value"))) {
+                for(String clause:compact.split("[。；;！!？?，,]")) {
+                    if(!clause.contains(rendered)||!mentionsDirectStatement(clause))continue;
+                    if(!mentionsDerivation(clause))throw new IllegalArgumentException("FACT_PROVENANCE_CONFLICT:"+fact.path("key").asText());
+                }
+            }
+        }
+    }
+    private static List<String> renderedNumbers(JsonNode value) {
+        if(!value.isNumber())return List.of();
+        double number=value.asDouble();var values=new LinkedHashSet<String>();
+        if(number==Math.rint(number))values.add(Long.toString((long)number));else values.add(Double.toString(number));
+        if(number%10000==0)values.add(Long.toString((long)(number/10000))+"万");
+        return List.copyOf(values);
+    }
+    private static boolean mentionsDirectStatement(String clause) {
+        return clause.contains("客户口述")||clause.contains("客户原话")||clause.contains("客户直接提供")
+                ||clause.contains("客户直接说明")||clause.contains("均为口述")||clause.contains("均由客户提供");
+    }
+    private static boolean mentionsDerivation(String clause) {
+        return clause.contains("推导")||clause.contains("计算")||clause.contains("相减")||clause.contains("据此得出")
+                ||clause.contains("由口述得出")||clause.contains("基于口述得出");
+    }
+    private static boolean negatedTemporalMention(String text,int markerAt) {
+        int boundary=-1;
+        for(char value:new char[]{'。','；',';','！','!','？','?','，',','})boundary=Math.max(boundary,text.lastIndexOf(value,markerAt-1));
+        String prefix=text.substring(boundary+1,markerAt);
+        for(String denial:List.of("不得表述为","不能表述为","不可表述为","不应表述为","不要表述为","避免表述为",
+                "避免误述为","避免误写为","避免误称为","避免说成",
+                "不得描述为","不能描述为","不可描述为","不得称为","不能称为","不可称为","不要说成",
+                "不是","并非","并不是","不属于","不应","不可","不能","不得","禁止","严禁"))
+            if(prefix.endsWith(denial))return true;
+        if(prefix.matches(".*避免(?:将.{0,24})?误(?:述|写|称)为$"))return true;
+        return false;
+    }
+    private static ReportDelta normalizeDeltaFactRefs(ReportDelta delta,List<String> ids) {
+        return new ReportDelta(delta.section(),delta.text(),normalizeFactRefs(delta.factRefs(),ids));
+    }
+    private static void normalizeGeneratedFactRefs(ObjectNode generated,List<String> ids) {
+        for(String section:List.of("communicationFocus","preparationAdvice"))
+            for(JsonNode value:generated.path(section))if(value instanceof ObjectNode item&&item.path("factRefs").isArray())
+                item.set("factRefs",HarnessJson.mapper().valueToTree(normalizeFactRefs(jsonStrings(item.path("factRefs")),ids)));
+    }
+    static List<String> normalizeFactRefs(List<String> refs,List<String> ids) {
+        var normalized=new LinkedHashSet<String>();
+        for(String ref:refs) {
+            if(ids.contains(ref)){normalized.add(ref);continue;}
+            if(!safeAggregateRef(ref)){normalized.add(ref);continue;}
+            String prefix=ref+"/";
+            List<String> leaves=ids.stream().filter(value->value.startsWith(prefix)).sorted().toList();
+            if(leaves.isEmpty())normalized.add(ref);else normalized.addAll(leaves);
+        }
+        return List.copyOf(normalized);
+    }
+    private static boolean safeAggregateRef(String ref) {
+        return ref.matches("/taskContext/facts/[0-9]+")
+                ||ref.matches("/profiles/[0-9]+/detail/(portfolioSummary|riskAssessment)")
+                ||ref.matches("/temporalAssessment/maturities/[0-9]+");
+    }
+    private static IllegalArgumentException unknownFactRef(Set<String> refs,List<String> ids) {
+        List<String> unknown=refs.stream().filter(ref->!ids.contains(ref)).sorted().limit(8).toList();
+        return new IllegalArgumentException("UNKNOWN_FACT_REF:"+String.join(",",unknown)+";allowed="+ids.size());
     }
     private static ObjectNode deterministicFallback(JsonNode facts) {
         ObjectNode fallback=HarnessJson.mapper().createObjectNode();
@@ -775,6 +1036,46 @@ public final class ServicePreparation implements AutoCloseable {
         if(failure instanceof ListenerFailure||causedBy(failure,"ListenerFailure"))return "STREAM_DELIVERY_FAILED";
         return "MODEL_PROVIDER_OR_RUNTIME_FAILED";
     }
+    static ObjectNode modelTransportObservation(Throwable failure) {
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.put("schemaVersion","model-transport-observation.v0.1");
+        result.put("terminationReason",transportTerminationReason(failure));
+        result.put("threadInterruptedObserved",Thread.currentThread().isInterrupted()||hasCauseType(failure,"InterruptedException"));
+        result.put("cancellationSource",hasCauseType(failure,"CancellationException")?"EXCEPTION_CHAIN":
+                hasCauseType(failure,"InterruptedException")||Thread.currentThread().isInterrupted()?"THREAD_INTERRUPT_SIGNAL":"NOT_OBSERVED");
+        result.put("httpStatusObserved",false);result.put("upstreamRequestIdObserved",false);
+        result.put("httpSendCountObserved",false);result.put("downstreamDisconnectObserved",false);
+        result.put("downstreamDeliveryFailureObserved",failure instanceof ListenerFailure||hasCauseType(failure,"ListenerFailure"));
+        var causes=result.putArray("causeChain");
+        Set<Throwable> seen=Collections.newSetFromMap(new IdentityHashMap<>());
+        for(Throwable current=failure;current!=null&&causes.size()<8&&seen.add(current);current=current.getCause()){
+            ObjectNode item=causes.addObject();String type=current.getClass().getSimpleName();
+            item.put("type",type.matches("[A-Za-z0-9_$]{1,96}")?type:"Throwable");
+            item.put("category",transportCategory(type));
+        }
+        return result;
+    }
+    private static String transportTerminationReason(Throwable failure) {
+        if(hasCauseType(failure,"SocketTimeoutException"))return "READ_TIMEOUT";
+        if(hasCauseType(failure,"TimeoutException"))return "TIMEOUT_SOURCE_UNSPECIFIED";
+        if(hasCauseType(failure,"CancellationException"))return "EXPLICIT_CANCELLATION";
+        if(hasCauseType(failure,"InterruptedException"))return "THREAD_INTERRUPTED";
+        if(hasCauseType(failure,"JsonProcessingException")||hasCauseType(failure,"JsonParseException"))return "MALFORMED_STREAM_PAYLOAD";
+        if(hasCauseType(failure,"EOFException"))return "UNEXPECTED_EOF";
+        if(hasCauseType(failure,"SocketException"))return "SOCKET_FAILURE";
+        if(hasCauseType(failure,"IOException"))return "IO_FAILURE";
+        return "UNKNOWN_RUNTIME_FAILURE";
+    }
+    private static boolean hasCauseType(Throwable failure,String simpleName){
+        Set<Throwable> seen=Collections.newSetFromMap(new IdentityHashMap<>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause())if(simpleName.equals(current.getClass().getSimpleName()))return true;
+        return false;
+    }
+    private static String transportCategory(String type){
+        if(type.contains("Timeout"))return "TIMEOUT";if(type.contains("Interrupt"))return "INTERRUPTION";
+        if(type.contains("Cancel"))return "CANCELLATION";if(type.contains("Socket")||type.contains("EOF")||type.contains("IO"))return "IO";
+        if(type.contains("Json")||type.contains("Parse"))return "PARSE";return "RUNTIME";
+    }
     private static String modelFailureStage(Throwable failure,String current) {
         String reason=modelFailureReason(failure);
         if("MODEL_TIMEOUT".equals(reason)||"MODEL_PROVIDER_OR_RUNTIME_FAILED".equals(reason))return "MODEL_TRANSPORT";
@@ -783,6 +1084,15 @@ public final class ServicePreparation implements AutoCloseable {
                 "MODEL_REPORT_EMPTY","MODEL_REPORT_SHAPE_INVALID").contains(reason))return "FINAL_OUTPUT_VALIDATION";
         if("STREAM_DELIVERY_FAILED".equals(reason))return "STREAM_DELIVERY";
         return current==null?"UNKNOWN":current;
+    }
+    private static String modelValidationDetail(Throwable failure,String reason) {
+        if(!Set.of("UNKNOWN_FACT_REF","UNSUPPORTED_NUMBER","PRODUCT_ELIGIBILITY_CONFLICT","TEMPORAL_STATUS_CONFLICT")
+                .contains(reason))return null;
+        for(Throwable current=failure;current!=null;current=current.getCause()) {
+            String message=current.getMessage();
+            if(message!=null&&message.contains(reason))return message.length()>600?message.substring(0,600):message;
+        }
+        return reason;
     }
     @Override public synchronized void close() { closed=true;generation++;selected=null;activeRun=null;access.close(); }
 }

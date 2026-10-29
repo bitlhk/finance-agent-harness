@@ -1,0 +1,176 @@
+{
+  "reportId": "4b9a1de3-4125-4199-bf7d-f9c5beedbda8",
+  "failureCode": "REPORT_MODEL_RULE_EVIDENCE_REJECTED",
+  "failureStage": "MODEL_RESPONSE_VALIDATION",
+  "failureDetail": {
+    "code": "REPORT_MODEL_RULE_EVIDENCE_REJECTED",
+    "section": "evidenceInterpretation",
+    "itemIndex": 1,
+    "rule": "FRESHNESS_RULE_EVIDENCE_REQUIRED",
+    "sentence": "数据时效未评估，仅展示截至时间，需核实数据有效性。"
+  },
+  "facts": {
+    "enterpriseName": "德信商业地产开发有限公司",
+    "sourceSystem": "post-loan-risk-reference",
+    "subjectType": "SYNTHETIC_ENTERPRISE_USCC",
+    "sourceRecordIds": {
+      "snapshot": "demo://post-loan/91440100MA5C00000B/snapshot"
+    },
+    "domains": {
+      "internalRating": "BB",
+      "overdueDays": 35,
+      "loanBalanceTenThousands": 100000,
+      "operatingCashflowTenThousands": -5000,
+      "fiveLevelClass": "次级",
+      "previousRating": "BBB",
+      "maxOverdueDays": 35,
+      "negativeOpinionCount": 8,
+      "collateralCoverageRatio": 1.1,
+      "industryName": "房地产业",
+      "assetsFrozen": true
+    },
+    "datasetVersion": "risk-demo-fixture-v2",
+    "subjectRef": "91440100MA5C00000B",
+    "sourceMode": "demo_fixture",
+    "queryComplete": true,
+    "completeness": {
+      "missingCriticalDomains": [],
+      "criticalComplete": true
+    },
+    "dataAsOf": "2026-08-25T00:00:00Z",
+    "purpose": "DOT-AB 合成验收：核验德信商业地产开发有限公司的贷后风险快照和确定性内部预警，生成有来源与缺项说明的待人工复核解释，不作还款保证或授信、交易决定。",
+    "deterministicWarning": {
+      "policyCode": "POST_LOAN_RISK_ESCALATION",
+      "schemaVersion": "postloan-risk-escalation.v1",
+      "formalConclusionAllowed": false,
+      "requiredActions": [
+        "提交人工风险复核",
+        "不得由 Agent 自动调整授信或分类"
+      ],
+      "ruleVersion": "2.0",
+      "level": "ORANGE",
+      "triggers": [
+        "OVERDUE_30_DAYS",
+        "FIVE_LEVEL_ADVERSE",
+        "MAJOR_JUDICIAL_EVENT"
+      ],
+      "requiresHumanEscalation": true,
+      "subjectRef": "91440100MA5C00000B",
+      "collateralCoverageRule": {
+        "operator": "LT",
+        "matched": false,
+        "ruleId": "COLLATERAL_COVERAGE_BELOW_1",
+        "applicableWhen": "担保覆盖率来源事实存在且口径可比",
+        "threshold": 1.0,
+        "ruleVersion": "2.0",
+        "actual": 1.1,
+        "factPath": "/domains/collateralCoverageRatio"
+      }
+    },
+    "freshnessAssessment": {
+      "dataAsOf": "2026-08-25T00:00:00Z",
+      "evaluatedAt": "2026-10-18T06:13:31.477739368Z",
+      "status": "NOT_EVALUATED",
+      "reasonCode": "FRESHNESS_RULE_NOT_PROVIDED"
+    }
+  },
+  "factRefs": [
+    "/enterpriseName",
+    "/sourceSystem",
+    "/subjectType",
+    "/sourceRecordIds/snapshot",
+    "/domains/internalRating",
+    "/domains/overdueDays",
+    "/domains/loanBalanceTenThousands",
+    "/domains/operatingCashflowTenThousands",
+    "/domains/fiveLevelClass",
+    "/domains/previousRating",
+    "/domains/maxOverdueDays",
+    "/domains/negativeOpinionCount",
+    "/domains/collateralCoverageRatio",
+    "/domains/industryName",
+    "/domains/assetsFrozen",
+    "/datasetVersion",
+    "/subjectRef",
+    "/sourceMode",
+    "/queryComplete",
+    "/completeness/criticalComplete",
+    "/dataAsOf",
+    "/purpose",
+    "/deterministicWarning/policyCode",
+    "/deterministicWarning/schemaVersion",
+    "/deterministicWarning/formalConclusionAllowed",
+    "/deterministicWarning/requiredActions/0",
+    "/deterministicWarning/requiredActions/1",
+    "/deterministicWarning/ruleVersion",
+    "/deterministicWarning/level",
+    "/deterministicWarning/triggers/0",
+    "/deterministicWarning/triggers/1",
+    "/deterministicWarning/triggers/2",
+    "/deterministicWarning/requiresHumanEscalation",
+    "/deterministicWarning/subjectRef",
+    "/deterministicWarning/collateralCoverageRule/operator",
+    "/deterministicWarning/collateralCoverageRule/matched",
+    "/deterministicWarning/collateralCoverageRule/ruleId",
+    "/deterministicWarning/collateralCoverageRule/applicableWhen",
+    "/deterministicWarning/collateralCoverageRule/threshold",
+    "/deterministicWarning/collateralCoverageRule/ruleVersion",
+    "/deterministicWarning/collateralCoverageRule/actual",
+    "/deterministicWarning/collateralCoverageRule/factPath",
+    "/freshnessAssessment/dataAsOf",
+    "/freshnessAssessment/evaluatedAt",
+    "/freshnessAssessment/status",
+    "/freshnessAssessment/reasonCode"
+  ],
+  "rawModelContent": "{\n  \"summary\": [\n    {\n      \"text\": \"企业基础信息与关键域完整，数据来源为演示快照，查询与关键字段完整。\",\n      \"factRefs\": [\n        \"/enterpriseName\",\n        \"/sourceSystem\",\n        \"/queryComplete\",\n        \"/completeness/criticalComplete\"\n      ]\n    },\n    {\n      \"text\": \"内部预警为ORANGE，触发逾期、五级分类和司法事件，需人工复核。\",\n      \"factRefs\": [\n        \"/deterministicWarning/level\",\n        \"/deterministicWarning/triggers/0\",\n        \"/deterministicWarning/triggers/1\",\n        \"/deterministicWarning/triggers/2\"\n      ]\n    }\n  ],\n  \"evidenceInterpretation\": [\n    {\n      \"text\": \"担保覆盖率1.1高于阈值1.0，规则未匹配，但仅展示数值，不构成担保充足结论。\",\n      \"factRefs\": [\n        \"/domains/collateralCoverageRatio\",\n        \"/deterministicWarning/collateralCoverageRule/threshold\",\n        \"/deterministicWarning/collateralCoverageRule/matched\"\n      ]\n    },\n    {\n      \"text\": \"数据时效未评估，仅展示截至时间，需核实数据有效性。\",\n      \"factRefs\": [\n        \"/freshnessAssessment/status\",\n        \"/freshnessAssessment/dataAsOf\"\n      ]\n    }\n  ],\n  \"pendingItems\": [\n    \"数据时效状态为NOT_EVALUATED，需核实截至2026-08-25的数据是否仍有效。\",\n    \"担保覆盖率规则未匹配，但缺少适用条件与阈值的完整依据，需补充判断依据。\",\n    \"负面舆情计数为8，需核实来源和时效，避免单一信号形成结论。\"\n  ],\n  \"reviewChecklist\": [\n    \"确认内部预警ORANGE的触发项与规则版本，不自行调整等级。\",\n    \"核实担保覆盖率1.1与规则阈值1.0的适用条件，判断是否需补充评估。\",\n    \"检查数据时效，确认截至时间2026-08-25的数据是否在有效期内。\",\n    \"复核司法舆情和资产冻结事实，确保来源可靠且不单独作为结论。\"\n  ]\n}",
+  "explanation": {
+    "summary": [
+      {
+        "text": "企业基础信息与关键域完整，数据来源为演示快照，查询与关键字段完整。",
+        "factRefs": [
+          "/enterpriseName",
+          "/sourceSystem",
+          "/queryComplete",
+          "/completeness/criticalComplete"
+        ]
+      },
+      {
+        "text": "内部预警为ORANGE，触发逾期、五级分类和司法事件，需人工复核。",
+        "factRefs": [
+          "/deterministicWarning/level",
+          "/deterministicWarning/triggers/0",
+          "/deterministicWarning/triggers/1",
+          "/deterministicWarning/triggers/2"
+        ]
+      }
+    ],
+    "evidenceInterpretation": [
+      {
+        "text": "担保覆盖率1.1高于阈值1.0，规则未匹配，但仅展示数值，不构成担保充足结论。",
+        "factRefs": [
+          "/domains/collateralCoverageRatio",
+          "/deterministicWarning/collateralCoverageRule/threshold",
+          "/deterministicWarning/collateralCoverageRule/matched"
+        ]
+      },
+      {
+        "text": "数据时效未评估，仅展示截至时间，需核实数据有效性。",
+        "factRefs": [
+          "/freshnessAssessment/status",
+          "/freshnessAssessment/dataAsOf"
+        ]
+      }
+    ],
+    "pendingItems": [
+      "数据时效状态为NOT_EVALUATED，需核实截至2026-08-25的数据是否仍有效。",
+      "担保覆盖率规则未匹配，但缺少适用条件与阈值的完整依据，需补充判断依据。",
+      "负面舆情计数为8，需核实来源和时效，避免单一信号形成结论。"
+    ],
+    "reviewChecklist": [
+      "确认内部预警ORANGE的触发项与规则版本，不自行调整等级。",
+      "核实担保覆盖率1.1与规则阈值1.0的适用条件，判断是否需补充评估。",
+      "检查数据时效，确认截至时间2026-08-25的数据是否在有效期内。",
+      "复核司法舆情和资产冻结事实，确保来源可靠且不单独作为结论。"
+    ]
+  }
+}

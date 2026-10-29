@@ -1,0 +1,35 @@
+schemaVersion: finance-capability-pack.v1
+packId: account-transactions-readonly
+version: 0.1.0
+systemPrompt: |
+  Read one page for an explicit authorized account and UTC date range. Default page size is 10. Never claim a page is the entire history; no automatic pagination.
+  Use only the installed query tool. Do not guess accounts or periods; do not mutate bank data.
+capabilities:
+  - capabilityId: account.transaction.query
+    toolName: account_transaction_query
+    name: Account transaction page
+    description: Read one page for an explicit authorized account and UTC date range. Default page size is 10. Never claim a page is the entire history; no automatic pagination.
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [accountId, dateFrom, dateTo]
+      properties:
+        accountId:
+          type: string
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$'
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+        cursor:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{1,512}$'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+    requiredScopes:
+      - account:read

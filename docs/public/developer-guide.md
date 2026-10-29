@@ -1,6 +1,8 @@
 # Finance Harness 开发指导
 
-**公开开发版 V1.2 · 接入套件候选 V0.1 · 2026-09-20**
+**公开开发版 V1.3 · 接入套件候选 V0.1 · 2026-10-18**
+
+本篇保留原有章节及锚点，作为架构、API、合同和版本历史参考。第一次开发请从[完成第一个 Agent](first-agent.md#step-1)开始，不必先读完本篇。当前实操基线与环境以[取得开发材料](first-agent.md#materials)为准；下文标日期的旧版本说明不代表当前运行状态。
 
 本版从开发者的第一步出发：使用已有能力、上传专业方法、交付新来源或新能力，再验证新 Agent 是否真的安装并使用它们。创建入口仍按场景模板、模板内业务模块、底层框架组织。26 个模块是来源目录，不代表已全部实现。文档版本不表示新的 SDK 或业务验收版本。
 
@@ -10,7 +12,7 @@
 
 第 16 章按已部署的业务资产 V0.2.2 说明真实依赖图、文件定位和修改流程；第 14.4 节提供一次修改方法、补案例、发布及验证的练习。本文和在线 HTML、离线 HTML、PDF 使用同一份受版本管理正文生成，不在服务器另改一份文档。
 
-**本版核对基线：**Builder `accdc9b2`（MR186 及其前置待维护者接纳），Harness 执行与 Packager `b8f15ff9`；文档更新不升级这些执行制品。部署、上游合入和真人独立接入是不同状态。没有获授权源码的同事可以先按页面练习；新增接口开发需向维护者取得固定开发包。
+**当前实操核对基线：**Harness `4771cfe5de94757d099daa44bbd41d3177311740`、Builder `0a38ec183c832eab847e60158e06271b14e25d6b`。本篇旧截图与历史条目仍对应 Builder `accdc9b2`（当时 MR186 及其前置待维护者接纳）、Harness `b8f15ff9`，不冒充新版本截图。文档更新不升级执行制品；取得材料和准入交接见新教程，公开版不附私仓源码。
 
 ## 0. 从哪条路径开始
 
@@ -785,7 +787,7 @@ mvn -B -ntp -pl providers/non-ai-banking -am -Dtest=CashflowProviderTest,NonAiBa
 
 核对 `providers/non-ai-banking/target/surefire-reports/` 中这两个测试类实际执行且数量非零。命令允许依赖模块没有匹配测试，**不允许目标测试缺失被当通过**。
 
-然后在实际 Provider 模块添加自己的测试类，并把定向命令中的测试名换成新增类。命令中仅有旧类就不能证明新特性已验证。新增字段应有正常、缺失和非法值；新来源补身份、授权、坏响应；新办理补确认、冻结、查证和恢复。临时故意破坏映射，确认新增测试失败，再恢复自己的改动并重跑。最后执行第 10 章全量基线。
+然后在实际 Provider 模块添加自己的测试类，并把定向命令中的测试名换成新增类。命令中仅有旧类就不能证明新特性已验证。新增字段应有正常、缺失和非法值；新来源补身份、授权、坏响应；新办理补确认、冻结、查证和恢复。在隔离副本中验证负例，保留首败。按真实共享影响选择定向回归；第 10 章全量基线供维护者建立发布基线，不是每次小改动的默认要求。
 
 观测回归参考 `packages/java/core/src/test/java/io/github/bitlhk/finance/harness/core/ObservedFinanceProviderTest.java` 和 `integrations/openjiuwen-java/src/test/java/io/github/bitlhk/finance/harness/integrations/openjiuwen/OpenJiuwenObservationAdapterTest.java`。新增来源阶段仍需专属断言，不能用公共测试代替。
 

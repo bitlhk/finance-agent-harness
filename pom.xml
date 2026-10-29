@@ -13,7 +13,10 @@
     <description>Runtime-neutral contracts for connecting financial agents to bank capabilities.</description>
 
     <modules>
+        <module>packages/java/quotation</module>
+        <module>providers/quotation-reference</module>
         <module>packages/java/core</module>
+        <module>packages/java/mcp-transport</module>
         <module>packages/java/execution</module>
         <module>packages/java/assembly</module>
         <module>packages/java/service-preparation</module>
@@ -23,12 +26,16 @@
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>integrations/customer-manager-java</module>
+        <module>integrations/fraud-verification-java</module>
+        <module>integrations/post-loan-risk-java</module>
         <module>providers/non-ai-banking</module>
         <module>providers/curated-synthetic-mcp</module>
         <module>providers/fraud-mining</module>
+        <module>providers/post-loan-risk-reference</module>
         <module>providers/enterprise-credit-material-audit</module>
         <module>providers/employee-agent</module>
         <module>providers/customer-crm</module>
+        <module>providers/wealth-product-mcp</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>

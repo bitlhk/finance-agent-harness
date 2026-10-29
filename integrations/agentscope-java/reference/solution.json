@@ -35,7 +35,7 @@
       "id": "non-ai-banking-reference",
       "version": "0.1.0-SNAPSHOT",
       "source": "repo://providers/non-ai-banking/assembly.v0.1.json",
-      "digest": "sha256:77f3324c33b41baf2e2fd3983ec362fff1ad4df36190ac8f9d0d1de4e3a1e9ca"
+      "digest": "sha256:9be66eca3e7dfacbf903ec87d172d22b5283c2ee60b0a44d5cf3900bb66ecd93"
     }
   ],
   "capabilityBindings": {},

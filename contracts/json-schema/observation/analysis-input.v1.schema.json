@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-harness.local/schemas/analysis-input.v1.schema.json",
+  "title": "Metadata-only normalized single-run snapshot; digest is provenance, not authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "instanceId",
+    "processBootId",
+    "runtimeLockDigest",
+    "snapshotDigest",
+    "ruleVersion",
+    "steps",
+    "coverage",
+    "evidence",
+    "terminal"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "finance.observation-analysis-input.v1"
+    },
+    "requestId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "instanceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "processBootId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "runtimeLockDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "snapshotDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ruleVersion": {
+      "const": "finance-single-run.v1"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "outcome",
+          "dispatch",
+          "evidenceIds"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "source": {
+            "enum": [
+              "HOST_FINANCIAL",
+              "SDK_NATIVE"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "CONTROL",
+              "PROVIDER",
+              "CAPABILITY",
+              "MODEL",
+              "TOOL",
+              "RUN",
+              "WORKFLOW",
+              "OTHER"
+            ]
+          },
+          "outcome": {
+            "enum": [
+              "PENDING",
+              "RETURNED",
+              "COMPLETED",
+              "ERROR",
+              "DENIED",
+              "SKIPPED",
+              "INCOMPLETE",
+              "CANCEL_REQUESTED",
+              "CANCELLED",
+              "UNKNOWN"
+            ]
+          },
+          "dispatch": {
+            "enum": [
+              "NOT_OBSERVED",
+              "NOT_SENT",
+              "SENT"
+            ]
+          },
+          "businessStatus": {
+            "enum": [
+              "COMPLETED",
+              "FAILED",
+              "DENIED",
+              "CANCELLED",
+              "UNKNOWN"
+            ]
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clockGroup": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "durationNanos": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "dependentRequired": {
+          "durationNanos": [
+            "clockGroup"
+          ]
+        }
+      },
+      "maxItems": 128
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "sampled",
+        "complete",
+        "gaps",
+        "evidenceIds"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "off",
+            "sample",
+            "full",
+            "UNKNOWN"
+          ]
+        },
+        "sampled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "MISSING_TERMINAL",
+              "MISSING_PARENT",
+              "TRUNCATED",
+              "ARCHIVE_DEGRADED",
+              "HISTORY_INCOMPLETE",
+              "NATIVE_UNAVAILABLE",
+              "NATIVE_LINK_UNVERIFIED",
+              "NATIVE_LIFECYCLE_GAP",
+              "NATIVE_PARENT_UNVERIFIED",
+              "NATIVE_SEQUENCE_GAP",
+              "NATIVE_COVERAGE_MISSING",
+              "NATIVE_CAPTURE_GAP",
+              "NATIVE_ARCHIVE_GAP"
+            ]
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "maxItems": 8,
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "kind": {
+            "enum": [
+              "HOST_EVENT",
+              "NATIVE_SPAN",
+              "TERMINAL",
+              "COVERAGE"
+            ]
+          }
+        }
+      },
+      "maxItems": 256
+    },
+    "terminal": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidenceIds"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "COMPLETED",
+                "ERROR",
+                "DENIED",
+                "SKIPPED",
+                "CANCELLED",
+                "INCOMPLETE"
+              ]
+            },
+            "evidenceIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

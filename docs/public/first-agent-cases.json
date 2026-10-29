@@ -1,0 +1,30 @@
+{
+  "recordType": "MANUAL_ACCEPTANCE_RECORD",
+  "scope": "SYNTHETIC_READONLY_OPENJIUWEN_JAVA_MOBILE_ATM_WEB",
+  "harnessCommit": "4771cfe5de94757d099daa44bbd41d3177311740",
+  "builderCommit": "0a38ec183c832eab847e60158e06271b14e25d6b",
+  "cases": [
+    {
+      "id": "normal-period",
+      "input": "查询2026-09收入、支出与净额，注明币种、统计范围和历史覆盖缺口。",
+      "expected": "金额、币种、期间与来源一致；无依据不推断全月无交易。",
+      "status": "NOT_RUN", "observed": null, "requestId": null, "evidence": null
+    },
+    {
+      "id": "missing-period",
+      "input": "查询收支",
+      "precondition": "没有其他可信期间上下文；主体和实授有效。",
+      "expected": "澄清期间；工具缺参保留NEED_USER和missingInputs，不默认月份。",
+      "status": "NOT_RUN", "observed": null, "requestId": null, "evidence": null
+    },
+    {
+      "id": "unknown-coverage",
+      "input": "查询2026-08收支汇总，注明覆盖缺口。",
+      "sourceFiles": ["conformance/fixtures/cashflow/source/summary.json", "conformance/fixtures/cashflow/source/summary-policy.json"],
+      "fixtureLoader": "Builder src/finance_solution_builder/method_trials.py:fixture_module",
+      "precondition": "维护者交付文件摘要、隔离fixture连接与候选入口回执；缺失则BLOCKED_FIXTURE_BINDING，不改线上数据。",
+      "expected": "coverage=OWN_BANK_ACCOUNT_STATEMENT；gaps包含PERIOD_COVERAGE_NOT_VERIFIED；income/expense/netCashflow=10000.00/1250.50/8749.50 CNY；Consumer为PARTIAL，不宣称完整月份。",
+      "status": "NOT_RUN", "observed": null, "requestId": null, "evidence": null
+    }
+  ]
+}

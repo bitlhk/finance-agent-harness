@@ -32,15 +32,20 @@ class AntifraudAssemblyAssetTest(unittest.TestCase):
             identity = declaration["owner"]
             matches = [a for a in self.catalog[group] if (a["id"], a["version"]) == (identity["id"], identity["version"])]
             self.assertEqual(len(matches), 1)
-            self.assertEqual(matches[0]["capabilities"], [CAPABILITY])
+            self.assertEqual(set(matches[0]["capabilities"]),
+                             {CAPABILITY} if group == "capabilityPacks" else {CAPABILITY, "fraud.risk-evidence.query"})
 
     def test_provider_covers_whole_pack_without_balance_or_task(self):
         self.assertEqual([c["capabilityId"] for c in self.pack["capabilities"]], [CAPABILITY])
         self.assertEqual(self.pack["capabilities"][0]["operation"], "QUERY")
-        self.assertEqual(self.pack["capabilities"][0]["requiredScopes"], ["fraud-risk:read"])
-        self.assertEqual(self.declarations[1]["supports"], [{
+        self.assertEqual(self.pack["capabilities"][0]["requiredScopes"], ["fraud:read"])
+        self.assertIn({
             "pack": {"id": self.pack["packId"], "version": self.pack["version"]},
-            "capabilityIds": [CAPABILITY], "operation": "QUERY"}])
+            "capabilityIds": [CAPABILITY], "operation": "QUERY"}, self.declarations[1]["supports"])
+        self.assertIn({"pack": {"id": "fraud-risk-evidence-query", "version": "0.1.0"},
+                       "capabilityIds": ["fraud.risk-evidence.query"], "operation": "QUERY"},
+                      self.declarations[1]["supports"])
+        self.assertEqual(len(self.declarations[1]["supports"]), 2)
 
     def test_candidate_domain_depends_only_on_readonly_pack(self):
         domain = yaml.safe_load((ROOT / "domain-packs/anti-fraud-customer/pack.yaml").read_text(encoding="utf-8"))
@@ -77,14 +82,14 @@ class RealBuilderAntifraudAssemblyTest(unittest.TestCase):
                         "templateRef": "test-template@1.0", "integrationRef": "openjiuwen-java@0.1.0-SNAPSHOT"},
             "profile": "customer-self-service",
             "features": ["query.v1", "trusted-grants.v1", "observation.v0.1"],
-            "operations": ["QUERY"], "connectionKinds": ["synthetic-bank-http.v1"],
+            "operations": ["QUERY"], "connectionKinds": ["fraud-mining-readonly.v1"],
         }
         self.selection = [{"pack": {"id": "fraud-risk-readonly", "version": "0.1.0-rc.1"},
                            "provider": {"id": "fraud-mining-reference", "version": "0.1.0-SNAPSHOT"}}]
 
     def select(self, selection=None):
         return self.assembly_class(self.root).select(selection or self.selection, host=self.host,
-                                                   connection_kind="synthetic-bank-http.v1")
+                                                   connection_kind="fraud-mining-readonly.v1")
 
     def test_real_generic_builder_selects_pack_provider_and_default_domain(self):
         result = self.select()
@@ -92,17 +97,26 @@ class RealBuilderAntifraudAssemblyTest(unittest.TestCase):
         self.assertEqual(result["capabilityPackRefs"][0]["id"], "fraud-risk-readonly")
         self.assertEqual(result["providerRefs"][0]["id"], "fraud-mining-reference")
 
-    def test_create_agent_host_profiles_can_select_default_method(self):
-        for profile in ("customer-self-service", "local-read-only", "local-simulator-task"):
+    def test_main_provider_profiles_are_not_silently_widened(self):
+        self.assertEqual(self.select()["domainPackRefs"][0]["version"], "0.1.1-rc.1")
+        for profile in ("local-read-only", "local-simulator-task"):
             with self.subTest(profile=profile):
                 self.host["profile"] = profile
-                result = self.select()
-                self.assertEqual(result["domainPackRefs"][0]["version"], "0.1.1-rc.1")
+                with self.assertRaisesRegex(self.rejected, "ASSEMBLY_ASSET_INCOMPATIBLE"):
+                    self.select()
 
-    def test_actual_create_agent_catalog_discovers_antifraud(self):
+    def test_generic_builder_catalog_with_matching_host_declaration(self):
         from finance_solution_builder import managed_selection
 
-        project = Path(managed_selection.__file__).resolve().parents[2]
+        # Exercise real Builder code with an explicit deployment-owned declaration.
+        # This is not proof that a generated Host is installed or qualified.
+        source_project = Path(managed_selection.__file__).resolve().parents[2]
+        project = self.root / "builder-project"
+        template = project / "templates/local-readonly-service"
+        template.mkdir(parents=True)
+        (template / "host-support.v0.1.json").write_text(json.dumps(self.host), encoding="utf-8")
+        shutil.copyfile(source_project / "templates/local-readonly-service/selection-support.v0.1.json",
+                        template / "selection-support.v0.1.json")
         catalog = managed_selection.selection_catalog(project, ROOT)
         entries = [entry for entry in catalog["entries"] if entry["pack"] == self.selection[0]["pack"]]
         self.assertEqual(len(entries), 1)
@@ -134,7 +148,7 @@ class RealBuilderAntifraudAssemblyTest(unittest.TestCase):
         self.select()
         selection = deepcopy(self.selection)
         selection[0]["provider"]["id"] = "non-ai-banking-reference"
-        with self.assertRaisesRegex(self.rejected, "ASSEMBLY_PROVIDER_SUPPORT_MISMATCH"):
+        with self.assertRaisesRegex(self.rejected, "ASSEMBLY_PROVIDER_(CONNECTION|SUPPORT)_MISMATCH"):
             self.select(selection)
 
     def test_historical_mixed_pack_not_admitted(self):

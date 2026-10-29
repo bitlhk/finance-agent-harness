@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.14",
-    "catalogRevision": "2026-10-11.antifraud-component-admission-rc-1",
-    "harnessRevision": "c224c9a109812cdf186ee7c709cd2dd463783b8a",
+    "catalogVersion": "0.2.16",
+    "catalogRevision": "2026-10-29.pr44-main-compat-1",
+    "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:6a41ae18081421aceef6d146bc032d6a577d06396c5e49abc02208f6af058905"
+    "digest": "sha256:645b7f3477427526b27662b28b74764739fdd0fe6f393e47a447ad599ed4e99d"
   },
   "target": {
     "kind": "domain-pack",

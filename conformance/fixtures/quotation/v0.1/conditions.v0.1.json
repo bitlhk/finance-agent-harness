@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "quotation-conditions.v0.1",
+  "conditions": [
+    {
+      "code": "DEMO_MEMBER_ELIGIBLE",
+      "label": "合成会员资格满足"
+    }
+  ],
+  "grantsPermissions": false
+}

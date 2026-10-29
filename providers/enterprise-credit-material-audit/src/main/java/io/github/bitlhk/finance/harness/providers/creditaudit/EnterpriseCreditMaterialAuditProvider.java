@@ -93,9 +93,9 @@ public final class EnterpriseCreditMaterialAuditProvider implements DescribedFin
         data.put("values", evaluation.values());
         data.put("verificationBasis", evaluation.verificationBasis());
         data.put("evidence", evaluation.evidence());
-        data.put("advisoryOnly", true);
-        data.put("authenticityVerified", false);
-        data.put("approvalDecision", false);
+        data.put("ruleEvidence", rules.evidence(request.capabilityId()));
+        data.put("reviewGuidance", AuditReviewGuidance.from(evaluation));
+        addDecisionBoundaries(data);
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
                 request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.COMPLETED,
                 evaluation.summary(), Map.copyOf(data), evaluation.missingInputs(),
@@ -103,18 +103,23 @@ public final class EnterpriseCreditMaterialAuditProvider implements DescribedFin
     }
 
     private CapabilityResultV1 unavailableRule(CapabilityRequestV1 request, MaterialSet set) {
-        Map<String, Object> data = Map.of(
-                "materialSetRef", set.materialSetId(),
-                "status", AuditStatus.NEEDS_HUMAN_REVIEW.name(),
-                "rule", Map.of("id", rules.ruleSetId(), "version", rules.version(),
-                        "classification", "DEMO", "businessDate", set.trustedBusinessDate().toString()),
-                "advisoryOnly", true,
-                "approvalDecision", false);
+        var data = new LinkedHashMap<String,Object>();
+        data.put("materialSetRef",set.materialSetId());data.put("status",AuditStatus.NEEDS_HUMAN_REVIEW.name());
+        data.put("rule",Map.of("id",rules.ruleSetId(),"version",rules.version(),
+                "classification","DEMO","businessDate",set.trustedBusinessDate().toString()));
+        addDecisionBoundaries(data);
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,
                 request.context().requestId(), request.context().traceId(), CapabilityResultV1.Status.COMPLETED,
                 "当前业务日期没有可用的锁定演示规则，保留材料事实并转人工判断。", data, List.of(),
                 List.of("CHECK_RULE_VERSION", "HUMAN_REVIEW"), "synthetic-enterprise-materials",
                 Instant.now(), null, null);
+    }
+
+    private static void addDecisionBoundaries(Map<String,Object> data) {
+        data.put("advisoryOnly",true);data.put("authenticityVerified",false);data.put("authenticityStatus","NOT_VERIFIED");
+        data.put("authenticityAssessment",Map.of("status","NOT_VERIFIED","basis","NOT_PERFORMED_BY_THIS_CAPABILITY",
+                "meaning","真实性尚未核验；不得解释为核验失败或材料虚假"));
+        data.put("approvalDecision",false);
     }
 
     private static List<String> nextActions(AuditStatus status) {

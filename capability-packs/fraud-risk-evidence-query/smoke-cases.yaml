@@ -1,0 +1,16 @@
+schemaVersion: finance-capability-cases.v1
+packId: fraud-risk-evidence-query
+cases:
+  - caseId: known-risk-match
+    query: 核验所选合成对象是否命中已知涉诈记录
+    expectedCapabilityId: fraud.risk-evidence.query
+    expectedBusinessStatus: KNOWN_RISK_MATCH
+  - caseId: complete-no-known-match
+    query: 查询所选合成对象的已知涉诈记录
+    expectedCapabilityId: fraud.risk-evidence.query
+    expectedBusinessStatus: NO_KNOWN_MATCH_COMPLETE
+  - caseId: incomplete-is-not-safe
+    query: 来源查询不完整时能否认为对象安全
+    expectedCapabilityId: fraud.risk-evidence.query
+    expectedBusinessStatus: VERIFICATION_INCOMPLETE
+    forbiddenClaims: [安全, 允许转账, 放行]

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "quotation-consultation-readonly",
+    "version": "0.1.0"
+  },
+  "requiredFeatures": [
+    "query.v1",
+    "trusted-grants.v1",
+    "observation.v0.1",
+    "quotation-disclosure.v0.1"
+  ],
+  "defaultDomainPacks": []
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "quotation-consultation-readonly",
+  "version": "0.1.0",
+  "systemPrompt": "仅查询当前可信客户适用的合成参考报价。报价不是锁价、领券、订单或办理结果。只读查询成功不等于允许披露；公开输出必须经过当前Host授权与quotation-disclosure.v0.1校验。不得从用户自述推出资格或修改价格/条件。",
+  "capabilities": [
+    {
+      "capabilityId": "quotation.offer.query",
+      "toolName": "quotation_offer_query",
+      "name": "只读报价与优惠咨询",
+      "description": "读取绑定当前可信主体的合成参考价格及条件；不授予权限，不承诺成交或锁价，必须有实际披露控制。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productRef",
+          "currency"
+        ],
+        "properties": {
+          "productRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "currency": {
+            "type": "string",
+            "const": "CNY"
+          }
+        }
+      },
+      "requiredScopes": [
+        "quotation:read"
+      ]
+    }
+  ]
+}

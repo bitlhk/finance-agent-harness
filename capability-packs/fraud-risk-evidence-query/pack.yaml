@@ -1,0 +1,25 @@
+schemaVersion: finance-capability-pack.v1
+packId: fraud-risk-evidence-query
+version: 0.1.0
+systemPrompt: |
+  只查询服务端已经授权并映射的反诈来源对象。工具结果表示已知涉诈记录来源中的证据，
+  不代表对象安全、实施诈骗、允许交易或应当阻断交易。查询不完整时不得输出未命中结论。
+capabilities:
+  - capabilityId: fraud.risk-evidence.query
+    toolName: fraud_risk_evidence_query
+    name: 已知涉诈记录核验
+    description: 对服务端授权映射的合成 CINO 执行只读、有界且可说明完整性的已知涉诈记录查询。
+    operation: QUERY
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        subjectType:
+          type: string
+          const: FRAUD_SOURCE_CINO
+          description: 反诈来源中的对象类型，由宿主固定。
+        subjectRef:
+          type: string
+          description: 服务端白名单映射后的合成 CINO，不接受姓名或账户推断。
+      required: [subjectType, subjectRef]
+    requiredScopes: [fraud-risk:read]

@@ -1,0 +1,22 @@
+schemaVersion: finance-domain-pack.v1
+packId: fraud-verification-assistance
+version: 0.1.0
+profile: fraud-investigation
+capabilities:
+  - fraud.risk-evidence.query
+capabilityPackRefs:
+  - id: fraud-risk-evidence-query
+    version: 0.1.0
+skills:
+  - directory: fraud-risk-verification
+    entry: skills/fraud-risk-verification/SKILL.md
+scope:
+  - 授权合成 CINO 的已知涉诈记录只读核验
+  - 查询完整性、来源证据与缺项说明
+  - 面向核验人员的待复核调查辅助报告
+outOfScope:
+  - 认定对象实施诈骗或不存在诈骗风险
+  - 自动放行、阻断或执行转账
+  - 新增风险预测模型或把来源分数解释成诈骗概率
+sourceReferences:
+  - finance-agent-harness/fraud-mining-reference@0.1.0-SNAPSHOT

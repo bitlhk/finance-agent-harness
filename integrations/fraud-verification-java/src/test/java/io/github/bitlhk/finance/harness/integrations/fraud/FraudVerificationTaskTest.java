@@ -1,0 +1,255 @@
+package io.github.bitlhk.finance.harness.integrations.fraud;
+
+import com.sun.net.httpserver.HttpServer;
+import io.github.bitlhk.finance.harness.core.HarnessJson;
+import io.github.bitlhk.finance.harness.core.observation.*;
+import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
+import io.github.bitlhk.finance.harness.providers.fraud.FraudMiningProvider;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.Duration;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+class FraudVerificationTaskTest {
+    @Test void confirmedAliasMustStillResolveToTheSameRevisionAndResource() throws Exception {
+        try(var task=task()) {
+            assertThrows(SecurityException.class,()->task.select("owner","合成核验对象甲","核验","old-revision","SYN-CINO-001"));
+            assertThrows(SecurityException.class,()->task.select("owner","合成核验对象甲","核验","rev-1","OTHER-CINO"));
+            assertTrue(task.latest("owner").isEmpty());
+            long generation=task.select("owner","合成核验对象甲","核验","rev-1","SYN-CINO-001");
+            assertEquals("SYN-CINO-001",task.verify("owner",generation,FraudVerificationTask.Listener.NONE).path("subjectRef").asText());
+        }
+    }
+    @Test void necessaryEntryFailurePreventsQueryAndExplanation() throws Exception {
+        try(var task=task()) {
+            long selected=task.select("owner","合成核验对象甲","synthetic verification");
+            Files.writeString(temp.resolve("reports/decision-evidence"),"blocked storage");
+            var error=assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->task.verify("owner",selected,FraudVerificationTask.Listener.NONE));
+            assertEquals("ENTRY",error.stage());assertEquals("NOT_INVOKED",error.providerDispatch());
+        }
+    }
+
+    @Test void savedEvidenceIsNotReleasedWhenDecisionStoreFails() throws Exception {
+        try(var task=task()) {
+            var report=task.verify("owner",task.select("owner","合成核验对象甲","synthetic verification"),FraudVerificationTask.Listener.NONE);
+            Files.move(temp.resolve("reports/decision-evidence"),temp.resolve("retained-decisions"));
+            Files.writeString(temp.resolve("reports/decision-evidence"),"blocked storage");
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,
+                    ()->task.replay("owner",report.path("reportId").asText(),null));
+            assertThrows(io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.Unavailable.class,()->task.latest("owner"));
+        }
+    }
+
+    @Test void modelPromptRequiresExactLeafReferencesAndRejectsEmptyContainers(){
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("逐字选择输入 factIds"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("空数组、空对象"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("/sourceSignalCount"));
+        assertTrue(OpenJiuwenFraudReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("不得引用 signals"));
+    }
+
+    @Test void modelFactProjectionRemovesEmptyContainersButKeepsDeterministicSignalCount(){
+        var facts=HarnessJson.mapper().createObjectNode();
+        facts.putArray("signals");facts.put("sourceSignalCount",0);
+        facts.putObject("emptyObject");facts.putObject("scope").putArray("reasons");
+        facts.withObject("scope").put("complete",true);
+        var projected=FraudVerificationTask.modelFacts(facts);
+        assertFalse(projected.has("signals"));assertFalse(projected.has("emptyObject"));
+        assertFalse(projected.path("scope").has("reasons"));assertTrue(projected.path("scope").path("complete").asBoolean());
+        assertEquals(0,projected.path("sourceSignalCount").asInt());
+    }
+
+    @Test void completeNoMatchUsesScalarSignalCountAndStillRejectsEmptyContainerReference()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("no-match.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("未命中对象","SYN-CINO-CLEAR-001")),
+                (m,p,refs,facts)->{
+                    assertFalse(facts.has("signals"));assertEquals(0,facts.path("sourceSignalCount").asInt());
+                    assertTrue(refs.contains("/sourceSignalCount"));assertFalse(refs.contains("/signals"));
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","完整查询范围内未命中已知记录。");summary.putArray("factRefs").add("/queryComplete");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源信号数量为0。");evidence.putArray("factRefs").add("/signals");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("no-match-reports"),Map.of())){
+            long generation=task.select("owner","未命中对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals(0,report.path("facts").path("sourceSignalCount").asInt());
+            assertTrue(report.path("facts").path("signals").isArray());
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertEquals("PARTIAL",report.path("status").asText());
+        }
+    }
+
+    @Test void completeNoMatchAcceptsDeterministicSignalCountReference()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("no-match-valid.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("未命中对象","SYN-CINO-CLEAR-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","授权对象在已知记录源中完成查询，未命中已知记录。");summary.putArray("factRefs").add("/subjectRef").add("/queryComplete");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源信号数量为0，不构成安全结论。");evidence.putArray("factRefs").add("/sourceSignalCount");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("no-match-valid-reports"),Map.of())){
+            long generation=task.select("owner","未命中对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("READY",report.path("explanationStatus").asText());
+            assertEquals("READY_FOR_REVIEW",report.path("status").asText());
+        }
+    }
+
+    @TempDir Path temp;
+    HttpServer server;
+    final java.util.concurrent.CountDownLatch slowEntered=new java.util.concurrent.CountDownLatch(1);
+    final java.util.concurrent.CountDownLatch releaseSlow=new java.util.concurrent.CountDownLatch(1);
+    @BeforeEach void start()throws Exception{
+        server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/api/v1/samples",exchange->{
+            if(exchange.getRequestURI().getRawQuery().contains("keyword=SLOW-CINO")){
+                slowEntered.countDown();
+                try{if(!releaseSlow.await(5,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("test release timeout");}
+                catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IllegalStateException(interrupted);}
+            }
+            byte[] body="""
+                {"code":200,"data":{"total":1,"page":1,"page_size":100,"items":[
+                {"id":7,"cino":"%s","label":1,"match_status":"matched","match_confidence":0.91,
+                "prediction_result":"fraud","prediction_score":0.78,"created_at":"2026-10-01T00:00:00"}]}}
+                """.formatted(exchange.getRequestURI().getRawQuery().contains("keyword=SLOW-CINO")?"SLOW-CINO":"SYN-CINO-001").getBytes(StandardCharsets.UTF_8);exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);exchange.close();});server.start();
+    }
+    @AfterEach void stop(){server.stop(0);}
+    FraudVerificationTask task()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var mapping=(java.util.function.Supplier<FraudSubjectMapping>)()->new FraudSubjectMapping("owner","rev-1",Map.of("合成核验对象甲","SYN-CINO-001"));
+        var methodFile=temp.resolve("SKILL.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        return new FraudVerificationTask("owner",provider,mapping,(m,p,refs,facts)->{
+            var value=HarnessJson.mapper().createObjectNode();
+            assertTrue(refs.contains("/purpose"));assertEquals(p,facts.path("purpose").asText());
+            var summary=value.putArray("summary").addObject();summary.put("text","按本次核验目的发现来源中的已知记录，需人工复核。");summary.putArray("factRefs").add("/purpose").add("/verificationStatus");
+            var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源分数未校准为诈骗概率，仅作人工核验线索。");evidence.putArray("factRefs").add("/queryComplete");
+            value.putArray("pendingItems").add("核对对象与来源记录");value.putArray("reviewChecklist").add("不得据此自动放行或阻断");return value;
+        },method,temp.resolve("reports"),Map.of("provider","test"));
+    }
+    @Test void immutableReviewAndReplayDoNotExecute()throws Exception{
+        try(var task=task()){
+            long generation=task.select("owner","合成核验对象甲","核验已知涉诈记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("KNOWN_RISK_MATCH",report.path("verificationStatus").asText());assertTrue(report.path("queryComplete").asBoolean());
+            assertEquals("核验已知涉诈记录",report.path("facts").path("purpose").asText());
+            int initial=report.path("reportRevision").asInt();var reviewed=task.review("owner",report.path("reportId").asText(),initial,"已核对，需继续人工调查");
+            assertEquals(initial+1,reviewed.path("reportRevision").asInt());assertEquals("PENDING",task.readVersion("owner",report.path("reportId").asText(),initial).path("reviewStatus").asText());
+            assertEquals(List.of(initial,initial+1),task.versions("owner",report.path("reportId").asText()));
+            var replay=task.replay("owner",report.path("reportId").asText(),initial);
+            assertEquals(0,replay.path("replayEvidence").path("businessProviderCalls").asInt());assertEquals(0,replay.path("replayEvidence").path("modelGenerationCalls").asInt());
+        }
+    }
+    @Test void verificationUsesTheHostRequestObservationScope()throws Exception{
+        var events=new ArrayList<ObservationEventV01>();
+        var run=new ObservationRun("request","boot","instance",events::add);
+        var source=new FraudMiningProvider(new FraudMiningProvider.Config(
+                URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var provider=new io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider(
+                source,FraudMiningProvider.PROVIDER_ID,()->run);
+        var methodFile=temp.resolve("observed.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","需人工核验");summary.putArray("factRefs").add("/verificationStatus");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","查询已完成");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("observed-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+        }
+        var capability=events.stream().filter(event->"capability".equals(event.component())&&"query".equals(event.operation())).toList();
+        assertEquals(2,capability.size());
+        assertEquals(ObservationEventV01.Phase.START,capability.getFirst().phase());
+        assertEquals(ObservationEventV01.Phase.END,capability.getLast().phase());
+        assertEquals(ObservationEventV01.Outcome.RETURNED,capability.getLast().outcome());
+        assertEquals(FraudMiningProvider.RISK_EVIDENCE_QUERY,capability.getLast().links().get("capabilityId"));
+    }
+    @Test void positiveFraudProbabilityClaimIsRejectedWithoutDroppingFacts()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("unsafe.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","该对象诈骗概率为76%。");summary.putArray("factRefs").add("/signals/0/modelScore");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成。");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("unsafe-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertEquals("PARTIAL",report.path("status").asText());
+            assertTrue(report.path("facts").path("knownRiskMatch").asBoolean());
+        }
+    }
+    @Test void knownRecordSourceCannotBePresentedAsTheSubjectsIdentity()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var methodFile=temp.resolve("subject-source.md");Files.writeString(methodFile,"只读核验方法");
+        var method=InstalledPreparationMethod.load("fraud-risk-verification","0.1.0",methodFile,digest(methodFile),"sha256:lock");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("对象","SYN-CINO-001")),
+                (m,p,refs,facts)->{
+                    var value=HarnessJson.mapper().createObjectNode();
+                    var summary=value.putArray("summary").addObject();summary.put("text","核验对象为合成来源中的已知涉诈记录。");summary.putArray("factRefs").add("/subjectRef");
+                    var evidence=value.putArray("evidenceInterpretation").addObject();evidence.put("text","来源查询已完成。");evidence.putArray("factRefs").add("/queryComplete");
+                    value.putArray("pendingItems");value.putArray("reviewChecklist");return value;
+                },method,temp.resolve("subject-source-reports"),Map.of())){
+            long generation=task.select("owner","对象","核验已知记录");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            assertEquals("FAILED",report.path("explanationStatus").asText());
+            assertTrue(report.path("facts").path("knownRiskMatch").asBoolean());
+        }
+    }
+    @Test void authorityRevisionChangeRejectsReadAndLateCommit()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(2)));
+        var revision=new java.util.concurrent.atomic.AtomicReference<>("rev-1");
+        var methodFile=temp.resolve("M.md");Files.writeString(methodFile,"方法");var method=InstalledPreparationMethod.load("m","1",methodFile,digest(methodFile),"sha256:l");
+        try(var task=new FraudVerificationTask("owner",provider,()->new FraudSubjectMapping("owner",revision.get(),Map.of("对象","SYN-CINO-001")),
+                (m,p,r,f)->{revision.set("revoked");return HarnessJson.mapper().createObjectNode();},method,temp.resolve("r"),Map.of())){
+            long generation=task.select("owner","对象","核验");assertThrows(SecurityException.class,()->task.verify("owner",generation,FraudVerificationTask.Listener.NONE));
+        }
+    }
+    @Test void historicalVersionTamperingIsDetected()throws Exception{
+        try(var task=task()){
+            long generation=task.select("owner","合成核验对象甲","核验");
+            var report=task.verify("owner",generation,FraudVerificationTask.Listener.NONE);
+            Path version=temp.resolve("reports").resolve(report.path("reportId").asText())
+                    .resolve(String.format("v%06d.json",report.path("reportRevision").asInt()));
+            Files.writeString(version,"{}",StandardOpenOption.TRUNCATE_EXISTING);
+            assertThrows(SecurityException.class,()->task.readVersion("owner",report.path("reportId").asText(),report.path("reportRevision").asInt()));
+        }
+    }
+    @Test void objectSwitchRejectsLateResultAndDoesNotPromoteDiscardedReport()throws Exception{
+        var provider=new FraudMiningProvider(new FraudMiningProvider.Config(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),Duration.ofSeconds(5)));
+        var methodFile=temp.resolve("switch.md");Files.writeString(methodFile,"方法");
+        var method=InstalledPreparationMethod.load("m","1",methodFile,digest(methodFile),"sha256:l");
+        try(var task=new FraudVerificationTask("owner",provider,
+                ()->new FraudSubjectMapping("owner","rev-1",Map.of("慢对象","SLOW-CINO","新对象","SYN-CINO-001")),
+                (m,p,r,f)->HarnessJson.mapper().createObjectNode(),method,temp.resolve("switch-reports"),Map.of())){
+            long old=task.select("owner","慢对象","核验旧对象");
+            try(var executor=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()){
+                var future=executor.submit(()->task.verify("owner",old,FraudVerificationTask.Listener.NONE));
+                assertTrue(slowEntered.await(5,java.util.concurrent.TimeUnit.SECONDS));
+                task.select("owner","新对象","核验新对象");releaseSlow.countDown();
+                var failure=assertThrows(java.util.concurrent.ExecutionException.class,future::get);
+                assertInstanceOf(SecurityException.class,failure.getCause());
+                assertTrue(task.latest("owner").isEmpty());
+            }
+        }finally{releaseSlow.countDown();}
+    }
+    private static String digest(Path file)throws Exception{return "sha256:"+HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)));}
+}

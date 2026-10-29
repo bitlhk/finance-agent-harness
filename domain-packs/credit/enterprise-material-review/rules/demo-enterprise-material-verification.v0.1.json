@@ -1,7 +1,7 @@
 {
   "schemaVersion": "finance-audit-demo-rules.v0.1",
   "ruleSetId": "demo-enterprise-material-verification",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "classification": "DEMO",
   "lifecycle": "ACTIVE",
   "effectiveFrom": "2026-01-01",
@@ -11,5 +11,25 @@
   "capabilities": [
     "enterprise.financial-statement.verify",
     "enterprise.application-contract.verify"
+  ],
+  "clauses": [
+    {
+      "id": "FIN-01",
+      "title": "财报勾稽",
+      "text": "对同一份财报的资产、负债和所有者权益按已记录币种及单位核对，差额为资产减去负债与权益合计。差额不为零时核对原始字段及原因；差额为零仅表示这组字段勾稽一致，不证明财报真实。金额按两位小数四舍五入。",
+      "capabilities": ["enterprise.financial-statement.verify"]
+    },
+    {
+      "id": "CROSS-01",
+      "title": "申请与用途合同对照",
+      "text": "先核对申请与用途合同的主体、期间、币种、单位和业务口径；均一致且金额已提供才计算申请金额减去合同金额。口径不同或未记录时不能认定金额冲突。存在差额时请核对用途范围及差额说明，不据此作出授信决定。",
+      "capabilities": ["enterprise.application-contract.verify"]
+    },
+    {
+      "id": "LIMIT-01",
+      "title": "缺项与核验边界",
+      "text": "缺少必要材料、字段或字段提取失败时，不将缺失视为零，不补造数值。只要求补充当前核验所缺材料或澄清不可比口径。上述核验没有验证材料真实性，也不形成审批、放款或欺诈结论。本说明为演示核验说明，不是银行制度。",
+      "capabilities": ["enterprise.financial-statement.verify", "enterprise.application-contract.verify"]
+    }
   ]
 }
