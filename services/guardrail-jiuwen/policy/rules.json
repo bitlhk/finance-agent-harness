@@ -1,0 +1,94 @@
+{
+  "version": "guardrail-jiuwen-v1",
+  "rules": [
+    {
+      "id": "financial_fraud",
+      "name": "金融欺诈",
+      "description": "检测金融欺诈意图",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(fake|forged|false|伪造|假造|虚假).*(document|id|income|bank.*statement|流水)",
+        "(?i)(launder|wash|clean|洗钱).*(money|funds|资金)",
+        "(?i)(avoid|evade|bypass|规避|绕过).*(tax|audit|regulation|审核|监管)",
+        "(?i)(unauthorized|illegal|非法).*(transfer|withdrawal|transaction|转账|取款)"
+      ],
+      "response_message": "检测到金融欺诈意图：伪造、洗钱、规避监管等行为涉嫌违法，请求已被安全护栏拦截。"
+    },
+    {
+      "id": "data_privacy",
+      "name": "数据隐私",
+      "description": "保护个人隐私和财务数据",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(获取|查询|搜索).*(someone.*else|other.*person|他人|对方).*(ssn|social.*security|身份证|银行卡|密码|pin|验证码|cvv)",
+        "(?i)(get|obtain|retrieve|获取|查询).*(someone.*else|other.*person|他人).*(info|information|data|信息|资料)"
+      ],
+      "response_message": "检测到试图获取他人隐私数据，请求已被安全护栏拦截。"
+    },
+    {
+      "id": "malicious_instruction",
+      "name": "恶意指令",
+      "description": "检测恶意代码或指令",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(delete|remove|format|rm|del|删除|格式化).*(file|system|data|all|everything|文件|系统|数据)",
+        "(?i)(virus|malware|trojan|worm|ransomware|病毒|木马|蠕虫)",
+        "(?i)(sql.*injection|xss|cross.*site|scripting|攻击|注入)"
+      ],
+      "response_message": "检测到恶意指令或攻击意图，请求已被安全护栏拦截。"
+    },
+    {
+      "id": "social_engineering",
+      "name": "社会工程",
+      "description": "检测社会工程攻击意图",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(urgent|emergency|immediate|紧急|立刻|马上).*(action|transfer|payment|操作|转账|付款)",
+        "(?i)(verify|confirm|认证|确认).*(account|identity|账户|身份).*(now|immediately|立即)"
+      ],
+      "response_message": "检测到社会工程攻击特征（紧急施压/身份诱导），请求已被安全护栏拦截。"
+    },
+    {
+      "id": "illegal_loan_fraud",
+      "name": "违法欺诈",
+      "description": "申请材料造假",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(包装资料|伪造流水|假公章|假合同|骗贷|骗银行贷款)"
+      ],
+      "response_message": "特别提示：尊敬的客户，根据《中华人民共和国刑法》第175条：以欺骗手段取得银行或其他金融机构贷款，将承担法律责任。任何声称'包装资料可贷款'的宣传均涉嫌诈骗，请勿轻信。\n\n您需要贷款支持，请通过XX银行官方APP/小程序提交贷款申请/意向，或前往就近营业网点进行咨询。"
+    },
+    {
+      "id": "financial_misleading",
+      "name": "金融误导",
+      "description": "检测保本高收益等金融误导话术，排除教育/否定/引用场景",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(?<!如何识别)(?<!警惕)(?<!不可能)(?<!请勿)(?<!避免)(?<!没有)(?<!不存在)(?<!不是)(?<!并非)(?<!不要)(?<!切勿)(稳赚不赔|稳赚不亏|包赚不赔|稳赚不损|只赚不赔|只赚不亏|必定赚钱|绝对赚钱).{0,6}(理财|投资|收益|产品|基金|股票)(?!.*(如何识别|警惕|不可能|请勿|避免|没有|不存在|不是|并非|不要|切勿))",
+        "(?i)(理财|投资|产品|基金|股票).{0,6}(稳赚不赔|稳赚不亏|包赚不赔|稳赚不损|只赚不赔|只赚不亏|必定赚钱|绝对赚钱)(?!.*(如何识别|警惕|不可能|请勿|避免|没有|不存在|不是|并非|不要|切勿))",
+        "(?i)(?<!没有)(?<!不存在)(?<!不是)(?<!并非)(保本保息|保本理财|零风险|无风险).{0,6}(理财|投资|收益|产品|基金|推荐|介绍)(?!.*(没有|不存在|不是|并非))",
+        "(?i)(高收益|高回报|暴利).{0,6}(零风险|无风险|保本|稳赚|包赚)",
+        "(?i)(年化.*(?:[0-9]+%).*(?:保本|零风险|稳赚|包赚))",
+        "(?i)(推荐|帮我|有什么|有没有).{0,10}(稳赚不赔|稳赚不亏|保本理财|零风险.*理财|包赚不赔|只赚不赔|只赚不亏)(?!.*(如何识别|警惕|不可能|请勿|避免))"
+      ],
+      "response_message": "金融产品不存在'稳赚不赔'。任何承诺保本保息、零风险高收益的宣传均涉嫌虚假宣传或诈骗。请求已被安全护栏拦截。"
+    },
+    {
+      "id": "illegal_credit_repair",
+      "name": "非法征信干预",
+      "description": "征信异常行为",
+      "decision": "block",
+      "output_enabled": true,
+      "patterns": [
+        "(?i)(征信修复|铲单|征信洗白|异议造假)"
+      ],
+      "response_message": "征信报告是由中国人民银行征信中心统一生成和管理的，任何机构和个人都无权私自修改、删除、洗白、铲单或修复征信记录。\n\n凡是声称可以'花钱修复征信''铲单''洗白逾期''代办异议造假'的行为，均属于违法行为和诈骗。\n\n如果您对自己的征信信息有异议，可以按照以下途径处理：\n1.向中国人民银行征信中心或报送数据的金融机构提出正规征信异议申请\n2.提供真实、合法的证明材料，由官方按流程核实处理\n\n请您一定提高警惕，切勿相信任何中介承诺，以免造成资金损失和个人信息泄露，同时避免因参与造假而承担法律责任。"
+    }
+  ]
+}
