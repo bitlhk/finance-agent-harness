@@ -13,6 +13,8 @@ final class DeterministicMaterialEvaluator {
     static final String CROSS_MATERIAL = "enterprise.application-contract.verify";
 
     Evaluation evaluateFinancial(MaterialSet set, DemoRuleSet rules) {
+        Evaluation ambiguous = ambiguous(set, rules, "financial-statement-equation", List.of("FINANCIAL_STATEMENT"));
+        if (ambiguous != null) return ambiguous;
         var statement = one(set, "FINANCIAL_STATEMENT");
         if (statement == null) return missing("financial-statement-equation", rules,
                 List.of("FINANCIAL_STATEMENT"), emptyBasis("SINGLE_MATERIAL"));
@@ -50,6 +52,9 @@ final class DeterministicMaterialEvaluator {
     }
 
     Evaluation evaluateCrossMaterial(MaterialSet set, DemoRuleSet rules) {
+        Evaluation ambiguous = ambiguous(set, rules, "application-contract-consistency",
+                List.of("CREDIT_APPLICATION", "USE_CONTRACT"));
+        if (ambiguous != null) return ambiguous;
         var application = one(set, "CREDIT_APPLICATION");
         var contract = one(set, "USE_CONTRACT");
         var missingMaterials = new ArrayList<String>();
@@ -110,6 +115,20 @@ final class DeterministicMaterialEvaluator {
 
     private static MaterialSet.Material one(MaterialSet set, String category) {
         return set.materials().stream().filter(m -> category.equals(m.category())).findFirst().orElse(null);
+    }
+
+    private static Evaluation ambiguous(MaterialSet set, DemoRuleSet rules, String check, List<String> categories) {
+        var conflicts = categories.stream().filter(category -> set.materials().stream()
+                .filter(material -> category.equals(material.category())).count() > 1).toList();
+        if (conflicts.isEmpty()) return null;
+        var references = set.materials().stream().filter(material -> conflicts.contains(material.category()))
+                .map(material -> Map.<String, Object>of("materialId", material.materialId(),
+                        "materialVersion", material.version(), "materialDigest", material.sha256(),
+                        "category", material.category())).toList();
+        return new Evaluation(AuditStatus.NEEDS_HUMAN_REVIEW, check, rules.ruleSetId(), rules.version(),
+                "同类材料存在多份，尚未明确本次采用哪一份；未选择首份、合并或计算差额。",
+                Map.of(), references, List.of(), Map.of("mode", "MATERIAL_SELECTION",
+                        "outcome", "AMBIGUOUS", "categories", conflicts, "dimensions", List.of()));
     }
 
     private static BigDecimal amount(MaterialSet.Material material, String name, List<String> missing) {
