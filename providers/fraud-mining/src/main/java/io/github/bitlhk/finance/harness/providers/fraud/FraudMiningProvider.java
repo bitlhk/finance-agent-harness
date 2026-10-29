@@ -7,6 +7,7 @@ import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.core.ProviderDescriptorV1;
 import io.github.bitlhk.finance.harness.core.spi.DescribedFinanceProvider;
+import io.github.bitlhk.finance.harness.core.spi.ManagedProviderFactoryV01.SourceSession;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -22,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /** Maps the fraud-mining service into a runtime-neutral transfer-risk capability. */
 public final class FraudMiningProvider implements DescribedFinanceProvider {
@@ -34,10 +36,33 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
     private final Config config;
     private final HttpClient http;
     private final ObjectMapper json;
+    private final Supplier<SourceSession> currentSession;
 
     public FraudMiningProvider(Config config) {
+        this(config, null, false);
+    }
+
+    /** Managed connections resolve host-owned authority anew before each source request. */
+    public FraudMiningProvider(Config config, Supplier<SourceSession> currentSession) {
+        this(config, Objects.requireNonNull(currentSession, "currentSession"), true);
+    }
+
+    private FraudMiningProvider(Config config, Supplier<SourceSession> currentSession, boolean managed) {
+        Objects.requireNonNull(config, "config");
+        if (managed) {
+            URI uri = config.baseUri();
+            boolean loopback = "http".equalsIgnoreCase(uri.getScheme())
+                    && ("127.0.0.1".equals(uri.getHost()) || "[::1]".equals(uri.getHost()));
+            if (!("https".equalsIgnoreCase(uri.getScheme()) || loopback)
+                    || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null) {
+                throw new IllegalArgumentException("FRAUD_MANAGED_ENDPOINT_INVALID");
+            }
+        }
+        this.currentSession = currentSession;
         this.config = Objects.requireNonNull(config, "config");
-        this.http = HttpClient.newBuilder().connectTimeout(config.timeout()).build();
+        this.http = HttpClient.newBuilder().connectTimeout(config.timeout())
+                .followRedirects(HttpClient.Redirect.NEVER).build();
         this.json = HarnessJson.mapper();
     }
 
@@ -80,6 +105,9 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
 
         try {
             return assess(request, subjectRef);
+        } catch (SourceAuthorizationFailure denied) {
+            return failure(request, "AUTHORIZATION", "FRAUD_SOURCE_AUTHORIZATION_DENIED", false,
+                    "current source session is unavailable or unauthorized");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_INTERRUPTED", true,
@@ -107,6 +135,9 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         }
         try {
             return evidence(request, subjectRef);
+        } catch (SourceAuthorizationFailure denied) {
+            return failure(request, "AUTHORIZATION", "FRAUD_SOURCE_AUTHORIZATION_DENIED", false,
+                    "current source session is unavailable or unauthorized");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return failure(request, "TEMPORARY_FAILURE", "FRAUD_SERVICE_INTERRUPTED", true,
@@ -126,12 +157,7 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
     private CapabilityResultV1 assess(CapabilityRequestV1 request, String subjectRef) throws Exception {
         String path = "/api/v1/samples?page=1&page_size=20&keyword="
                 + URLEncoder.encode(subjectRef, StandardCharsets.UTF_8);
-        HttpRequest upstreamRequest = HttpRequest.newBuilder(config.baseUri().resolve(path))
-                .timeout(config.timeout())
-                .header("Accept", "application/json")
-                .GET()
-                .build();
-        HttpResponse<String> response = http.send(upstreamRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = send(request, path, config.timeout());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("fraud service returned HTTP " + response.statusCode());
         }
@@ -219,7 +245,9 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             }
             JsonNode data;
             try {
-                data = page(subjectRef, page, deadline);
+                data = page(request, subjectRef, page, deadline);
+            } catch (SourceAuthorizationFailure denied) {
+                throw denied;
             } catch (Exception failure) {
                 if (pagesRead == 0) throw failure;
                 completenessReasons.add("SOURCE_FAILED_AFTER_PARTIAL_EVIDENCE");
@@ -325,20 +353,52 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
                 List.of("MANUAL_EVIDENCE_REVIEW"), "fraud-mining", asOf, null, null);
     }
 
-    private JsonNode page(String subjectRef, int page, long deadline) throws Exception {
+    private JsonNode page(CapabilityRequestV1 request, String subjectRef, int page, long deadline) throws Exception {
         String path = "/api/v1/samples?page=" + page + "&page_size=" + config.pageSize() + "&keyword="
                 + URLEncoder.encode(subjectRef, StandardCharsets.UTF_8);
         long remainingNanos = deadline - System.nanoTime();
         if (remainingNanos <= 0) throw new java.net.http.HttpTimeoutException("total query time exceeded");
-        HttpRequest upstreamRequest = HttpRequest.newBuilder(config.baseUri().resolve(path))
-                .timeout(Duration.ofNanos(remainingNanos)).header("Accept", "application/json").GET().build();
-        HttpResponse<String> response = http.send(upstreamRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = send(request, path, Duration.ofNanos(remainingNanos));
         if (response.statusCode() < 200 || response.statusCode() >= 300)
             throw new IllegalStateException("fraud service returned HTTP " + response.statusCode());
         JsonNode root = json.readTree(response.body());
         if (root.path("code").asInt(500) != 200 || !root.path("data").isObject())
             throw new IllegalStateException("fraud service response does not match its contract");
         return root.path("data");
+    }
+
+    private HttpResponse<String> send(CapabilityRequestV1 request, String path, Duration timeout)
+            throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(config.baseUri().resolve(path))
+                .timeout(timeout).header("Accept", "application/json").GET();
+        if (currentSession != null) {
+            SourceSession session;
+            try {
+                session = currentSession.get();
+                if (session == null || !session.expiresAt().isAfter(Instant.now())
+                        || !Objects.equals(session.principalId(), request.context().principalId())
+                        || !Objects.equals(session.hostSessionRef(), request.context().sessionRef())
+                        || !Objects.equals(session.subjectRef(), request.context().subjectRef())) {
+                    throw new SourceAuthorizationFailure();
+                }
+                // Validate without rendering the credential in an exception or result.
+                if (session.credential().chars().anyMatch(c -> c < 0x20 || c == 0x7f)) {
+                    throw new SourceAuthorizationFailure();
+                }
+                builder.header("X-Session-Id", session.credential());
+            } catch (RuntimeException unavailable) {
+                throw new SourceAuthorizationFailure();
+            }
+        }
+        HttpResponse<String> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 401 || response.statusCode() == 403) {
+            throw new SourceAuthorizationFailure();
+        }
+        return response;
+    }
+
+    private static final class SourceAuthorizationFailure extends RuntimeException {
+        private SourceAuthorizationFailure() { super("FRAUD_SOURCE_AUTHORIZATION_DENIED"); }
     }
 
     private static String text(JsonNode node, String snakeCase, String camelCase, String fallback) {

@@ -47,3 +47,11 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 适配完成、指定版本通过、当前部署可构建是三种状态。Python 观测资格等运行前提见指南第 13.5 节。未接入 Runtime、任意包自动发现执行、跨版本图节点完整隔离、所有企业接口通用适配及非原作者真人独立接入均不能据此宣布完成。
 
 本轮只整理文档，不修观测资格、不扩展 Runtime，也不改历史 Agent 或运行证据。
+
+
+### PR44 反诈只读资产主线适配
+
+`fraud-risk-readonly@0.1.0-rc.1` 通过 `fraud-mining-readonly.v1` 装配，默认关联
+`transfer-anti-fraud@0.1.1-rc.1`；现有 `fraud.risk-evidence.query` 及其分页完整性语义保留。
+受管 Provider 在转账前查询和证据分页前均从宿主 `Connection.currentSession` 读取并核对
+当前权限，续期可生效，撤权失败关闭。候选资产未表示发布或生产准入。

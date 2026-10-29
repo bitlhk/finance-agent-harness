@@ -29,6 +29,7 @@ public final class FraudMiningFactoryV01 implements ManagedProviderFactoryV01 {
         if (!CONNECTION_KIND.equals(connection.kind())) {
             throw new IllegalArgumentException("FRAUD_CONNECTION_KIND_UNSUPPORTED");
         }
-        return new FraudMiningProvider(new FraudMiningProvider.Config(connection.endpoint(), connection.timeout()));
+        return new FraudMiningProvider(new FraudMiningProvider.Config(connection.endpoint(), connection.timeout()),
+                connection.currentSession());
     }
 }

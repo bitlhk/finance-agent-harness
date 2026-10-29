@@ -1,12 +1,32 @@
 {
   "schemaVersion": "finance-component-assembly.v0.1",
   "kind": "provider",
-  "owner": {"id": "fraud-mining-reference", "version": "0.1.0-SNAPSHOT"},
+  "owner": {
+    "id": "fraud-mining-reference",
+    "version": "0.1.0-SNAPSHOT"
+  },
   "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-fraud-mining:0.1.0-SNAPSHOT",
   "connectionKind": "fraud-mining-readonly.v1",
-  "supports": [{
-    "pack": {"id": "fraud-risk-evidence-query", "version": "0.1.0"},
-    "capabilityIds": ["fraud.risk-evidence.query"],
-    "operation": "QUERY"
-  }]
+  "supports": [
+    {
+      "pack": {
+        "id": "fraud-risk-evidence-query",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "fraud.risk-evidence.query"
+      ],
+      "operation": "QUERY"
+    },
+    {
+      "pack": {
+        "id": "fraud-risk-readonly",
+        "version": "0.1.0-rc.1"
+      },
+      "capabilityIds": [
+        "fraud.transfer-risk.assess"
+      ],
+      "operation": "QUERY"
+    }
+  ]
 }

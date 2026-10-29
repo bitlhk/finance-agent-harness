@@ -360,6 +360,31 @@
         "runtimeFamilies": ["openjiuwen"],
         "runtimeLanguages": ["java"]
       }
+    },
+    {
+      "id": "transfer-anti-fraud",
+      "version": "0.1.1-rc.1",
+      "displayName": "面客转账前风险解释（发布候选）",
+      "profile": "customer-self-service",
+      "source": "repo://domain-packs/anti-fraud-customer",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "fraud.transfer-risk.assess"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "fraud-risk-readonly",
+          "version": "0.1.0-rc.1"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
     }
   ],
   "capabilityPacks": [
@@ -778,6 +803,30 @@
         "runtimeFamilies": ["openjiuwen"],
         "runtimeLanguages": ["java"]
       }
+    },
+    {
+      "id": "fraud-risk-readonly",
+      "version": "0.1.0-rc.1",
+      "displayName": "转账涉诈风险只读能力（发布候选）",
+      "source": "repo://capability-packs/fraud-risk-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "fraud.transfer-risk.assess"
+      ],
+      "compatibility": {
+        "profiles": [
+          "customer-self-service",
+          "local-read-only",
+          "local-simulator-task"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen",
+          "agentscope"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1050,9 +1099,21 @@
       "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
       "governanceRef": "finance-harness-core",
       "compatibility": {"profiles": ["internal-control"]}
+    },
+    {
+      "id": "anti-fraud-transfer",
+      "version": "0.1.0",
+      "displayName": "面客反诈转账受控合同案例（非模型质量评测）",
+      "source": "repo://evaluation-packs/anti-fraud-transfer",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "customer-self-service"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-10-28.crm-kyp-candidate-1",
+  "catalogRevision": "2026-10-29.pr44-main-compat-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
