@@ -78,7 +78,11 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                 evidence=context.privateStateRoot().resolve("knowledge").resolve(context.instanceId()).resolve(session);
                 Files.createDirectories(evidence);
                 synchronized(SDK_LOCK) {
-                    try(var installed=mount()) { lock=installed.lock(); installed.writeLock(evidence.resolve("agent-installation-lock.json")); }
+                    try(var installed=mount()) {
+                        lock=installed.lock();
+                        Files.write(evidence.resolve("agent-installation-lock.json"), HarnessJson.mapper().writeValueAsBytes(lock),
+                            StandardOpenOption.CREATE_NEW);
+                    }
                 }
             } catch(Exception failure) { authority.close(); throw failure; }
         }
@@ -106,6 +110,7 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
             if(observation==null)throw new SecurityException("OBSERVATION_REQUIRED");
             var span=observation.start(null,"host","knowledge-agent",Map.of());observer.attach(observation,span.id());
             try(var installed=mount()) {
+                requireSameInstallation(lock, installed.lock());
                 var response=Runner.runAgent(agent,Map.of("query",body.path("query").asText(),"conversation_id",session),session,null);
                 current();if(denied)throw new SecurityException("AUTHORIZATION_REJECTED");
                 var result=new LinkedHashMap<String,Object>();
@@ -115,7 +120,8 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                     : "PARTIAL".equals(outcome)
                         ? "知识查询未完整完成，不能据此确认文档结论。" : "本轮没有取得可用知识依据。");
                 result.put("toolResults",List.copyOf(toolResults));
-                result.put("sourceCalls",List.copyOf(attempts));result.put("runtimeLock",installed.lock());
+                result.put("sourceCalls",List.copyOf(attempts));result.put("runtimeLock",lock);
+                result.put("mountResolvedAt",installed.lock().resolvedAt());
                 result.put("manifest",authority.text("manifest"));result.put("productId",authority.text("productId"));
                 result.put("buildId",context.buildId());result.put("instanceId",context.instanceId());result.put("runId",run);
                 result.put("status",outcome);
@@ -130,6 +136,16 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                 "buildId",context.buildId(),"instanceId",context.instanceId(),"leaseReleased",true,"status","CLOSED")); }
             catch(Exception failure){throw new IllegalStateException("KNOWLEDGE_RELEASE_RECEIPT_UNKNOWN");}
         }
+    }
+
+    static void requireSameInstallation(OpenJiuwenSolutionAssembler.SolutionLock original,
+                                        OpenJiuwenSolutionAssembler.SolutionLock current) {
+        // Remounting the same prepared SDK tools has a new check time, not a new
+        // installation identity. Never tolerate asset/provider/runtime drift.
+        var identity = new OpenJiuwenSolutionAssembler.SolutionLock(current.schemaVersion(), current.solutionId(),
+            original.resolvedAt(), current.runtime(), current.assets(), current.domainInstallations(),
+            current.installations(), current.capabilityDescriptions());
+        if (!original.equals(identity)) throw new SecurityException("KNOWLEDGE_INSTALLATION_CHANGED");
     }
 
     static String toolOutcome(List<?> results) {
