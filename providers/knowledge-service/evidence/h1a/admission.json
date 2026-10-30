@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "knowledge-h1a-admission.v0.1",
+  "solution": {
+    "schemaVersion": "finance-agent-solution-build.v1",
+    "solutionId": "knowledge-evidence-h1a",
+    "displayName": "Isolated Knowledge Evidence Agent",
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "profileRef": {
+      "id": "local-read-only",
+      "version": "0.1.0",
+      "source": "repo://profiles/local-read-only.md"
+    },
+    "domainPackRefs": [],
+    "capabilityPackRefs": [
+      {
+        "id": "knowledge-evidence-readonly",
+        "version": "0.1.0",
+        "source": "repo://capability-packs/knowledge-evidence-readonly"
+      }
+    ],
+    "providerRefs": [
+      {
+        "id": "knowledge-service",
+        "version": "0.1.0-probe.1",
+        "source": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1"
+      }
+    ],
+    "modelRef": "config://local-model",
+    "evaluationPackRef": {
+      "id": "wealth-facts-controlled",
+      "version": "0.1.0",
+      "source": "repo://conformance/fixtures/wealth/v0.1"
+    },
+    "capabilityBindings": {
+      "knowledge.evidence.search": "knowledge-service"
+    }
+  },
+  "builderCommit": "9d33295f74ff663c16579febd120b586c791280f",
+  "harnessParent": "df7b08b",
+  "level": "REAL_BUILDER_ADMISSION_NOT_AGENT_INSTALL",
+  "installationLock": null,
+  "agentUiToolCall": "NOT_RUN",
+  "productionModified": false,
+  "hostFiles": {
+    "host-support.v0.1.json": "6938471f85840316b3f20cdbff32fa510b93f06df69b2c83b8c3cf8451532561",
+    "src/main/java/io/github/bitlhk/finance/builder/local/ReadOnlyProviders.java": "30a8f8fb12b657a1a0ab67fdfe0f13a6db3267bf854d525b48a77de77a194cf5",
+    "src/main/java/io/github/bitlhk/finance/builder/local/NativeRuntime.java": "84404f84a3ebce5d3ab36b4e031ac3775896e2bb77ef68b5148bdd36ac722fc1",
+    "src/main/java/io/github/bitlhk/finance/builder/local/LocalAgentHost.java": "d242e9980ef8d74a15acc8f97ff68ae170d15acfd04b90c6b7048a46b2dc6fc4"
+  },
+  "status": "ADMISSION_BLOCKED",
+  "error": "ASSEMBLY_PROVIDER_CONNECTION_MISMATCH",
+  "candidateCreated": false
+}

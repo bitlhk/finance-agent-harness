@@ -1,0 +1,6 @@
+{
+  "schemaVersion":"finance-component-assembly.v0.1", "kind":"capability-pack",
+  "owner":{"id":"knowledge-evidence-readonly","version":"0.1.0"},
+  "requiredFeatures":["query.v1","trusted-grants.v1","observation.v0.1","knowledge-binding.v0.1"],
+  "defaultDomainPacks":[]
+}

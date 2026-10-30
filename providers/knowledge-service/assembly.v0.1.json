@@ -4,5 +4,6 @@
   "artifactRef":"maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1",
   "connectionKind":"knowledge-http.v0.1",
   "configurationFiles":[{"id":"knowledge-binding","pathEnvironment":"FH_KNOWLEDGE_BINDING","digestEnvironment":"FH_KNOWLEDGE_BINDING_SHA256","maxBytes":8192}],
-  "supports":[{"pack":{"id":"knowledge-readonly","version":"0.1.0"},"capabilityIds":["knowledge.evidence.search","knowledge.rule.evaluate"],"operation":"QUERY"}]
+  "supports":[{"pack":{"id":"knowledge-readonly","version":"0.1.0"},"capabilityIds":["knowledge.evidence.search","knowledge.rule.evaluate"],"operation":"QUERY"},
+    {"pack":{"id":"knowledge-evidence-readonly","version":"0.1.0"},"capabilityIds":["knowledge.evidence.search"],"operation":"QUERY"}]
 }
