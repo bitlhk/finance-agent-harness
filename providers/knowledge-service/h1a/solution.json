@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "finance-agent-solution-build.v1",
+  "solutionId": "knowledge-evidence-h1a",
+  "displayName": "Isolated Knowledge Evidence Agent",
+  "runtime": {
+    "family": "openjiuwen", "language": "java",
+    "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+    "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+  },
+  "profileRef": {"id":"local-read-only","version":"0.1.0","source":"repo://profiles/local-read-only.md"},
+  "domainPackRefs": [],
+  "capabilityPackRefs": [{"id":"knowledge-evidence-readonly","version":"0.1.0","source":"repo://capability-packs/knowledge-evidence-readonly"}],
+  "providerRefs": [{"id":"knowledge-service","version":"0.1.0-probe.1","source":"maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1"}],
+  "modelRef": "config://knowledge-host-model",
+  "evaluationPackRef": {"id":"knowledge-evidence-h1a","version":"0.1.0","source":"repo://conformance/knowledge-evidence-h1a"},
+  "capabilityBindings": {"knowledge.evidence.search":"knowledge-service"}
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "knowledge-h1a-admission.v0.1",
+  "solution": {
+    "schemaVersion": "finance-agent-solution-build.v1",
+    "solutionId": "knowledge-evidence-h1a",
+    "displayName": "Isolated Knowledge Evidence Agent",
+    "runtime": {
+      "family": "openjiuwen",
+      "language": "java",
+      "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+      "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+    },
+    "profileRef": {
+      "id": "local-read-only",
+      "version": "0.1.0",
+      "source": "repo://profiles/local-read-only.md"
+    },
+    "domainPackRefs": [],
+    "capabilityPackRefs": [
+      {
+        "id": "knowledge-evidence-readonly",
+        "version": "0.1.0",
+        "source": "repo://capability-packs/knowledge-evidence-readonly"
+      }
+    ],
+    "providerRefs": [
+      {
+        "id": "knowledge-service",
+        "version": "0.1.0-probe.1",
+        "source": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1"
+      }
+    ],
+    "modelRef": "config://knowledge-host-model",
+    "evaluationPackRef": {
+      "id": "knowledge-evidence-h1a",
+      "version": "0.1.0",
+      "source": "repo://conformance/knowledge-evidence-h1a"
+    },
+    "capabilityBindings": {
+      "knowledge.evidence.search": "knowledge-service"
+    }
+  },
+  "builderCommit": "9d33295f74ff663c16579febd120b586c791280f",
+  "harnessCommit": "bd7244b3adf76e172d8cc37ef1a97bf5d4ccd727",
+  "builderDirty": true,
+  "harnessDirty": true,
+  "level": "REAL_BUILDER_ADMISSION_NOT_AGENT_INSTALL",
+  "installationLock": null,
+  "agentUiToolCall": "NOT_RUN",
+  "productionModified": false,
+  "hostFiles": {
+    "host-support.v0.1.json": "6938471f85840316b3f20cdbff32fa510b93f06df69b2c83b8c3cf8451532561",
+    "src/main/java/io/github/bitlhk/finance/builder/local/ReadOnlyProviders.java": "59d112a3ff6e89e72ed7364e8588128b1279a4be1e3f2af200c19da6d5b691e1",
+    "src/main/java/io/github/bitlhk/finance/builder/local/NativeRuntime.java": "84404f84a3ebce5d3ab36b4e031ac3775896e2bb77ef68b5148bdd36ac722fc1",
+    "src/main/java/io/github/bitlhk/finance/builder/local/LocalAgentHost.java": "22c159876653c86431972c18efa2097e722eb9ea0fa1c137917deb59e4dd8656"
+  },
+  "solutionSha256": "34e3ab84ba337286d0c84be911b3460fa3e67b749fe9f7739337ee0d0b52c6c4",
+  "status": "ADMISSION_BLOCKED",
+  "error": "ASSEMBLY_PROVIDER_CONNECTION_MISMATCH",
+  "candidateCreated": false
+}

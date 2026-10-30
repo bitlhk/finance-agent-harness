@@ -60,3 +60,27 @@ python engineering/verify_component_assembly.py
 
 The reproduction intentionally stops at the real admission error. Do not call
 this an installed Agent or an end-to-end Knowledge Factory/Harness result.
+
+## Subsequent isolated implementation (not H1a acceptance)
+
+The admission input is now the explicit `h1a/solution.json`, with its independent
+`conformance/knowledge-evidence-h1a` test set. It contains no bank domain pack or
+wealth evaluation reference. Original admission evidence remains unchanged.
+
+`InstalledKnowledgeProvider` reads fixed per-Provider configuration from Builder
+service file-Lock entries and checks exact evidence-only selection. It uses the
+existing `createReferenced` managed registry. Preparation acquires no SourceSession
+or Grant and makes no HTTP call; runtime suppliers are explicit Host inputs.
+This reader does not install an Agent, create authority, or qualify a collector.
+
+Local Maven result: 27 knowledge tests passed, including 6 new installed-binding
+tests. The Maven repository was isolated at
+`/home/ubuntu/outputs/knowledge-h1a-maven-cache`; shared SNAPSHOTs were not replaced.
+Knowledge Core's real fixed M2 product was separately queried through a bounded
+consumption adapter, not through an installed Java Agent.
+
+Still required: reviewed Host/knowledge connection admission, runtime authority
+supplier, real scenario implementation, qualified installation, existing Agent
+UI invocation and same-instance stop/history receipts. The new configuration
+reader and Builder opt-in SPI cannot substitute for any of these gates. H1a is
+still blocked; no claim of full compatibility or production deployment is made.
