@@ -1,5 +1,31 @@
 # H1a evidence-only selection: installation still blocked
 
+## Latest Host implementation checkpoint
+
+The earlier rejection/evidence below remains historical. The current independent
+Profile is `knowledge-read-only`; the new `integrations/knowledge-java` scenario
+implements the existing preparation/open/session SPI and uses the managed
+Knowledge Provider with an independent private Host authority. It cannot grant
+Core permissions, activate sources, publish, or use a bank session.
+
+The Host supplies currently qualified collectors through Context, whose older
+constructors remain supported. Knowledge startup refuses an empty collector list.
+Build preparation never reads the private authority file or issues a session.
+Runtime leases have a maximum 15-minute life and are deleted on session close;
+this is not evidence that all OS resources have been cleaned.
+
+The actual Builder build now passes contracts, Harness tests and packaging,
+then fails `OBSERVATION_REQUIREMENTS_UNMET`. REQUIRED Provider collection stays
+enabled. There is no accepted Agent Installation Lock or UI invocation yet.
+Six new authority tests pass; these do not constitute Agent acceptance.
+
+Use Builder `engineering/build_knowledge_h1a.py` for current admission attempts.
+The older `probe_h1a.py` is tied to the earlier Host rejection and is not the
+current installation acceptance runner. Refer to Knowledge Factory
+`docs/H1A-HOST-CANDIDATE.md` for exact boundaries and retained failed attempts.
+
+---
+
 2026-10-30. This is a follow-up candidate to H0 / PR #95, not a deployment.
 
 ## Delivered

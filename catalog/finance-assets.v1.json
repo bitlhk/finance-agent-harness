@@ -66,6 +66,11 @@
   ],
   "profiles": [
     {
+      "id": "knowledge-read-only", "version": "0.1.0",
+      "displayName": "知识证据只读（隔离候选）",
+      "source": "repo://profiles/knowledge-read-only.md", "governanceRef": "finance-harness-core"
+    },
+    {
       "id": "shared-read-only",
       "version": "0.1.0",
       "displayName": "共同财富只读（候选）",
@@ -368,7 +373,7 @@
       "displayName": "文档知识证据（隔离候选，Host 安装待验收）",
       "source": "repo://capability-packs/knowledge-evidence-readonly", "governanceRef": "finance-harness-core",
       "capabilities": ["knowledge.evidence.search"],
-      "compatibility": {"profiles": ["local-read-only"], "runtimeLanguages": ["java"]}
+      "compatibility": {"profiles": ["local-read-only", "knowledge-read-only"], "runtimeLanguages": ["java"]}
     },
     {
       "id": "knowledge-readonly", "version": "0.1.0",
@@ -801,7 +806,7 @@
       "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1",
       "governanceRef": "finance-harness-core",
       "capabilities": ["knowledge.evidence.search", "knowledge.rule.evaluate"],
-      "compatibility": {"profiles": ["local-read-only"], "runtimeLanguages": ["java"]}
+      "compatibility": {"profiles": ["local-read-only", "knowledge-read-only"], "runtimeLanguages": ["java"]}
     },
     {
       "id": "quotation-synthetic-reference",
@@ -1074,7 +1079,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-30.knowledge-evidence-h1a-1",
+  "catalogRevision": "2026-10-30.knowledge-host-h1a-2",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

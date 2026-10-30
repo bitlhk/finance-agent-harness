@@ -27,6 +27,7 @@
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>integrations/customer-manager-java</module>
+        <module>integrations/knowledge-java</module>
         <module>integrations/fraud-verification-java</module>
         <module>integrations/post-loan-risk-java</module>
         <module>providers/non-ai-banking</module>
