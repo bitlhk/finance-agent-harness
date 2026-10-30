@@ -1,0 +1,1411 @@
+[ {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+    "traceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+    "status" : "COMPLETED",
+    "content" : "合成知识查询完成，不代表真实制度判断或审批。",
+    "data" : {
+      "decision" : "MET",
+      "evidence" : [ {
+        "sourceId" : "synthetic-source-1",
+        "synthetic" : true,
+        "sourceVersion" : "1",
+        "locator" : "$.clauses[0]",
+        "quote" : "合成测试条款：期限上限36个月。"
+      } ],
+      "knowledgeReceipt" : {
+        "schemaVersion" : "knowledge-receipt.v0.1",
+        "receiptId" : "kr-55b18e9e-3c24-4436-b55c-979f7d7d15bc",
+        "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+        "traceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+        "productId" : "synthetic-policy",
+        "manifest" : "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+        "businessDate" : "2026-10-30"
+      },
+      "bindingSha256" : "87474349c60f0faa135c2707957560558d5f8694f96ef99adbaf897bf0cf5b96",
+      "testOnly" : true
+    },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.021831712Z"
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "e870ee70-58c4-4712-937a-dd4bf2df40b7",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:42.936304196Z",
+    "elapsedNanos" : 702558,
+    "links" : {
+      "harnessTraceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+      "harnessRequestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "e870ee70-58c4-4712-937a-dd4bf2df40b7",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.021924194Z",
+    "elapsedNanos" : 86320296,
+    "durationNanos" : 86029949,
+    "links" : {
+      "harnessTraceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "harnessRequestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  } ],
+  "case" : "months-36",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.011147631Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+    "traceId" : "trace-009a6c54-276d-4378-8fa9-9e9e2eacc19b",
+    "status" : "COMPLETED",
+    "content" : "合成知识查询完成，不代表真实制度判断或审批。",
+    "data" : {
+      "decision" : "NOT_MET",
+      "evidence" : [ {
+        "sourceId" : "synthetic-source-1",
+        "synthetic" : true,
+        "sourceVersion" : "1",
+        "locator" : "$.clauses[0]",
+        "quote" : "合成测试条款：期限上限36个月。"
+      } ],
+      "knowledgeReceipt" : {
+        "schemaVersion" : "knowledge-receipt.v0.1",
+        "receiptId" : "kr-dd2ad58a-d48a-489e-8a3c-62d4ee4d961d",
+        "requestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+        "traceId" : "trace-009a6c54-276d-4378-8fa9-9e9e2eacc19b",
+        "productId" : "synthetic-policy",
+        "manifest" : "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+        "businessDate" : "2026-10-30"
+      },
+      "bindingSha256" : "87474349c60f0faa135c2707957560558d5f8694f96ef99adbaf897bf0cf5b96",
+      "testOnly" : true
+    },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.054728935Z"
+  },
+  "httpCalls" : 2,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "e870ee70-58c4-4712-937a-dd4bf2df40b7",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:42.936304196Z",
+    "elapsedNanos" : 702558,
+    "links" : {
+      "harnessTraceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+      "harnessRequestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "e870ee70-58c4-4712-937a-dd4bf2df40b7",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.021924194Z",
+    "elapsedNanos" : 86320296,
+    "durationNanos" : 86029949,
+    "links" : {
+      "harnessTraceId" : "trace-67cf6ae0-d01a-484a-b27c-0ee0cc9a3cc2",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "harnessRequestId" : "request-d4c96e91-7bbc-4585-8f1f-1c5f10d0edf9",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "13451a8d-6d68-470c-b70a-7a1bcb5d1ca8",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.050735364Z",
+    "elapsedNanos" : 53001,
+    "links" : {
+      "harnessTraceId" : "trace-009a6c54-276d-4378-8fa9-9e9e2eacc19b",
+      "harnessRequestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "13451a8d-6d68-470c-b70a-7a1bcb5d1ca8",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.054761236Z",
+    "elapsedNanos" : 4076533,
+    "durationNanos" : 4027642,
+    "links" : {
+      "harnessTraceId" : "trace-009a6c54-276d-4378-8fa9-9e9e2eacc19b",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "harnessRequestId" : "request-761317ff-5cf5-46bc-910c-1cd1025aab9d",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  } ],
+  "case" : "months-37",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.011147631Z"
+  }, {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.054324715Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-d7beeeac-582b-46df-9a17-e7a7bb52d63d",
+    "traceId" : "trace-d755800e-1f2d-4527-a128-3672fca2ad84",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.128152005Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_BUSINESS_REJECTED",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d7beeeac-582b-46df-9a17-e7a7bb52d63d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "d87bed46-51b3-45ce-ae7e-87abf964e6e9",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.124536873Z",
+    "elapsedNanos" : 72882,
+    "links" : {
+      "harnessTraceId" : "trace-d755800e-1f2d-4527-a128-3672fca2ad84",
+      "harnessRequestId" : "request-d7beeeac-582b-46df-9a17-e7a7bb52d63d",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d7beeeac-582b-46df-9a17-e7a7bb52d63d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "d87bed46-51b3-45ce-ae7e-87abf964e6e9",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.128206016Z",
+    "elapsedNanos" : 3740005,
+    "durationNanos" : 3670313,
+    "links" : {
+      "harnessTraceId" : "trace-d755800e-1f2d-4527-a128-3672fca2ad84",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-d7beeeac-582b-46df-9a17-e7a7bb52d63d",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "revoked",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.128061492Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-de515d8f-4745-4269-a7dd-04a34c095e3a",
+    "traceId" : "trace-50c890bf-ba0b-4211-b1c4-a40c166bbc0e",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.151487176Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_BUSINESS_REJECTED",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-de515d8f-4745-4269-a7dd-04a34c095e3a",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "abd247c7-8e9b-4574-a10c-29ec7f223949",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.147412222Z",
+    "elapsedNanos" : 40361,
+    "links" : {
+      "harnessTraceId" : "trace-50c890bf-ba0b-4211-b1c4-a40c166bbc0e",
+      "harnessRequestId" : "request-de515d8f-4745-4269-a7dd-04a34c095e3a",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-de515d8f-4745-4269-a7dd-04a34c095e3a",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "abd247c7-8e9b-4574-a10c-29ec7f223949",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.151535017Z",
+    "elapsedNanos" : 4160886,
+    "durationNanos" : 4123575,
+    "links" : {
+      "harnessTraceId" : "trace-50c890bf-ba0b-4211-b1c4-a40c166bbc0e",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-de515d8f-4745-4269-a7dd-04a34c095e3a",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "business403",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.151398503Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-87ce7db3-5617-4411-8caf-833dfd3fe010",
+    "traceId" : "trace-686be733-d171-4c88-a9a1-615f49e4970b",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.170806805Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_RECEIPT_MISMATCH",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-87ce7db3-5617-4411-8caf-833dfd3fe010",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "c3d39a60-1ce5-444b-bf30-ee06c6929b1e",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.166745302Z",
+    "elapsedNanos" : 70742,
+    "links" : {
+      "harnessTraceId" : "trace-686be733-d171-4c88-a9a1-615f49e4970b",
+      "harnessRequestId" : "request-87ce7db3-5617-4411-8caf-833dfd3fe010",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-87ce7db3-5617-4411-8caf-833dfd3fe010",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "c3d39a60-1ce5-444b-bf30-ee06c6929b1e",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.170856716Z",
+    "elapsedNanos" : 4180146,
+    "durationNanos" : 4113064,
+    "links" : {
+      "harnessTraceId" : "trace-686be733-d171-4c88-a9a1-615f49e4970b",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-87ce7db3-5617-4411-8caf-833dfd3fe010",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "manifest",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.170660791Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-42804042-0278-450c-8e76-f9f915461b5d",
+    "traceId" : "trace-7799e173-805c-4c36-85e0-bb0577654e78",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.198594319Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_RECEIPT_MISMATCH",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-42804042-0278-450c-8e76-f9f915461b5d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "5f202331-5912-4817-8a43-cc162cf5a2d3",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.194792162Z",
+    "elapsedNanos" : 38670,
+    "links" : {
+      "harnessTraceId" : "trace-7799e173-805c-4c36-85e0-bb0577654e78",
+      "harnessRequestId" : "request-42804042-0278-450c-8e76-f9f915461b5d",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-42804042-0278-450c-8e76-f9f915461b5d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "5f202331-5912-4817-8a43-cc162cf5a2d3",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.198625059Z",
+    "elapsedNanos" : 3869477,
+    "durationNanos" : 3834227,
+    "links" : {
+      "harnessTraceId" : "trace-7799e173-805c-4c36-85e0-bb0577654e78",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-42804042-0278-450c-8e76-f9f915461b5d",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "request",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.198437825Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-6e38dd1d-9673-46fe-8ca1-bda552ada6d7",
+    "traceId" : "trace-7bd1e319-e17f-480f-acae-749c8b3bd11e",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.220610706Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_UNAVAILABLE",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-6e38dd1d-9673-46fe-8ca1-bda552ada6d7",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "f449289b-b36f-4645-a254-ae917e9f8c1f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.210665474Z",
+    "elapsedNanos" : 53381,
+    "links" : {
+      "harnessTraceId" : "trace-7bd1e319-e17f-480f-acae-749c8b3bd11e",
+      "harnessRequestId" : "request-6e38dd1d-9673-46fe-8ca1-bda552ada6d7",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-6e38dd1d-9673-46fe-8ca1-bda552ada6d7",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "f449289b-b36f-4645-a254-ae917e9f8c1f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.220672418Z",
+    "elapsedNanos" : 10058825,
+    "durationNanos" : 10008274,
+    "links" : {
+      "harnessTraceId" : "trace-7bd1e319-e17f-480f-acae-749c8b3bd11e",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-6e38dd1d-9673-46fe-8ca1-bda552ada6d7",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "oversize",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-1400b3de-437a-4311-97d3-7cbc2173d610",
+    "traceId" : "trace-7d1e4b51-c300-4645-af21-8723a71230c6",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.239453613Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-1400b3de-437a-4311-97d3-7cbc2173d610",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "008d4397-247c-4514-b2fa-42eec23cab4d",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.239258689Z",
+    "elapsedNanos" : 118973,
+    "links" : {
+      "harnessTraceId" : "trace-7d1e4b51-c300-4645-af21-8723a71230c6",
+      "harnessRequestId" : "request-1400b3de-437a-4311-97d3-7cbc2173d610",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-1400b3de-437a-4311-97d3-7cbc2173d610",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "008d4397-247c-4514-b2fa-42eec23cab4d",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.239476744Z",
+    "elapsedNanos" : 334378,
+    "durationNanos" : 220146,
+    "links" : {
+      "harnessTraceId" : "trace-7d1e4b51-c300-4645-af21-8723a71230c6",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-1400b3de-437a-4311-97d3-7cbc2173d610",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-serviceUrl",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-239e0b1d-0112-474c-99c0-a6db9804f97d",
+    "traceId" : "trace-4267296c-64ae-4580-bafb-40b8cfdddc2f",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.256306340Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-239e0b1d-0112-474c-99c0-a6db9804f97d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "a45c3635-61b2-43f0-9d57-4862a48b0660",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.256119506Z",
+    "elapsedNanos" : 106173,
+    "links" : {
+      "harnessTraceId" : "trace-4267296c-64ae-4580-bafb-40b8cfdddc2f",
+      "harnessRequestId" : "request-239e0b1d-0112-474c-99c0-a6db9804f97d",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-239e0b1d-0112-474c-99c0-a6db9804f97d",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "a45c3635-61b2-43f0-9d57-4862a48b0660",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.256374802Z",
+    "elapsedNanos" : 358789,
+    "durationNanos" : 262467,
+    "links" : {
+      "harnessTraceId" : "trace-4267296c-64ae-4580-bafb-40b8cfdddc2f",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-239e0b1d-0112-474c-99c0-a6db9804f97d",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-manifest",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-57e92ebb-434f-446e-9c76-9aedd8708e35",
+    "traceId" : "trace-9bae9aa7-7dea-4cbb-94f9-06c5436f329d",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.270386117Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-57e92ebb-434f-446e-9c76-9aedd8708e35",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "616d8039-4838-4895-bea3-abdc4e63854f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.270238333Z",
+    "elapsedNanos" : 46401,
+    "links" : {
+      "harnessTraceId" : "trace-9bae9aa7-7dea-4cbb-94f9-06c5436f329d",
+      "harnessRequestId" : "request-57e92ebb-434f-446e-9c76-9aedd8708e35",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-57e92ebb-434f-446e-9c76-9aedd8708e35",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "616d8039-4838-4895-bea3-abdc4e63854f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.270415778Z",
+    "elapsedNanos" : 222146,
+    "durationNanos" : 179335,
+    "links" : {
+      "harnessTraceId" : "trace-9bae9aa7-7dea-4cbb-94f9-06c5436f329d",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-57e92ebb-434f-446e-9c76-9aedd8708e35",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-productId",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-5d997354-0f43-4270-91d4-b773afbfb6e8",
+    "traceId" : "trace-bad76fa0-9920-4acb-985f-1d257e162391",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.283758386Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-5d997354-0f43-4270-91d4-b773afbfb6e8",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "df2c49a5-766c-4cae-9c55-904b0ff5df4f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.283625632Z",
+    "elapsedNanos" : 59331,
+    "links" : {
+      "harnessTraceId" : "trace-bad76fa0-9920-4acb-985f-1d257e162391",
+      "harnessRequestId" : "request-5d997354-0f43-4270-91d4-b773afbfb6e8",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-5d997354-0f43-4270-91d4-b773afbfb6e8",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "df2c49a5-766c-4cae-9c55-904b0ff5df4f",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.283777456Z",
+    "elapsedNanos" : 210105,
+    "durationNanos" : 153734,
+    "links" : {
+      "harnessTraceId" : "trace-bad76fa0-9920-4acb-985f-1d257e162391",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-5d997354-0f43-4270-91d4-b773afbfb6e8",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-principalId",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-d230b0ca-3ceb-4dce-aeb5-c034e224e8ea",
+    "traceId" : "trace-dcd4de18-0340-40ed-9e65-d014c71bdbc5",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.296359865Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d230b0ca-3ceb-4dce-aeb5-c034e224e8ea",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "a6d6c9d2-49d8-41c3-8587-9195c0382602",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.296238372Z",
+    "elapsedNanos" : 53172,
+    "links" : {
+      "harnessTraceId" : "trace-dcd4de18-0340-40ed-9e65-d014c71bdbc5",
+      "harnessRequestId" : "request-d230b0ca-3ceb-4dce-aeb5-c034e224e8ea",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-d230b0ca-3ceb-4dce-aeb5-c034e224e8ea",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "a6d6c9d2-49d8-41c3-8587-9195c0382602",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.296376655Z",
+    "elapsedNanos" : 190075,
+    "durationNanos" : 140153,
+    "links" : {
+      "harnessTraceId" : "trace-dcd4de18-0340-40ed-9e65-d014c71bdbc5",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-d230b0ca-3ceb-4dce-aeb5-c034e224e8ea",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-scopes",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-e1959638-9c8a-46dc-b3fb-a00d9ea7ab02",
+    "traceId" : "trace-8d7e8a22-03d8-4e01-ba3b-72a84ee60875",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.305932297Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-e1959638-9c8a-46dc-b3fb-a00d9ea7ab02",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "4ea800ab-0a66-4043-920e-f5cc07308e78",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.305835715Z",
+    "elapsedNanos" : 47401,
+    "links" : {
+      "harnessTraceId" : "trace-8d7e8a22-03d8-4e01-ba3b-72a84ee60875",
+      "harnessRequestId" : "request-e1959638-9c8a-46dc-b3fb-a00d9ea7ab02",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-e1959638-9c8a-46dc-b3fb-a00d9ea7ab02",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "4ea800ab-0a66-4043-920e-f5cc07308e78",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.305947038Z",
+    "elapsedNanos" : 157444,
+    "durationNanos" : 112583,
+    "links" : {
+      "harnessTraceId" : "trace-8d7e8a22-03d8-4e01-ba3b-72a84ee60875",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-e1959638-9c8a-46dc-b3fb-a00d9ea7ab02",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "override-businessDate",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+    "traceId" : "trace-f77811c1-5aab-44d6-b903-6a728fcb4269",
+    "status" : "COMPLETED",
+    "content" : "合成知识查询完成，不代表真实制度判断或审批。",
+    "data" : {
+      "decision" : "UNKNOWN",
+      "evidence" : [ {
+        "sourceId" : "synthetic-source-1",
+        "synthetic" : true,
+        "sourceVersion" : "1",
+        "locator" : "$.clauses[0]",
+        "quote" : "合成测试条款：期限上限36个月。"
+      } ],
+      "knowledgeReceipt" : {
+        "schemaVersion" : "knowledge-receipt.v0.1",
+        "receiptId" : "kr-d20ec3a1-c9d8-42ab-8a0f-2070a49497cd",
+        "requestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+        "traceId" : "trace-f77811c1-5aab-44d6-b903-6a728fcb4269",
+        "productId" : "synthetic-policy",
+        "manifest" : "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+        "businessDate" : "2026-10-30"
+      },
+      "bindingSha256" : "87474349c60f0faa135c2707957560558d5f8694f96ef99adbaf897bf0cf5b96",
+      "testOnly" : true
+    },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.318781523Z"
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "04934a18-f1aa-4c2c-98d6-0b68a2f9e0b6",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.314467293Z",
+    "elapsedNanos" : 44211,
+    "links" : {
+      "harnessTraceId" : "trace-f77811c1-5aab-44d6-b903-6a728fcb4269",
+      "harnessRequestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "04934a18-f1aa-4c2c-98d6-0b68a2f9e0b6",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.318805433Z",
+    "elapsedNanos" : 4381881,
+    "durationNanos" : 4338550,
+    "links" : {
+      "harnessTraceId" : "trace-f77811c1-5aab-44d6-b903-6a728fcb4269",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "harnessRequestId" : "request-1a958f53-edf9-4d18-a958-b72e9dcdddfb",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  } ],
+  "case" : "unknown-rule-input",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.318487525Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-16d334ca-9ecf-47d6-a6fa-6a729e269306",
+    "traceId" : "trace-64cf4d6e-7a90-46d3-b6b1-de59570eff92",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.337432055Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "KNOWLEDGE_UNAVAILABLE",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-bff0219a-eb17-4816-a669-742ae34d4448",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "01f528b4-c6cd-4bd5-b52a-40a91726fd7b",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.331982177Z",
+    "elapsedNanos" : 104323,
+    "links" : {
+      "harnessTraceId" : "trace-42419af4-7080-4e3b-93a6-446245fb5a73",
+      "harnessRequestId" : "request-bff0219a-eb17-4816-a669-742ae34d4448",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-bff0219a-eb17-4816-a669-742ae34d4448",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "01f528b4-c6cd-4bd5-b52a-40a91726fd7b",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "DENIED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.332193072Z",
+    "elapsedNanos" : 314868,
+    "durationNanos" : 259247,
+    "links" : {
+      "harnessTraceId" : "trace-42419af4-7080-4e3b-93a6-446245fb5a73",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-bff0219a-eb17-4816-a669-742ae34d4448",
+      "providerId" : "knowledge-service",
+      "exceptionType" : "SecurityException"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-16d334ca-9ecf-47d6-a6fa-6a729e269306",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "bf8b6672-1370-4590-b6d8-261f35e6d8e9",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.332610523Z",
+    "elapsedNanos" : 51931,
+    "links" : {
+      "harnessTraceId" : "trace-64cf4d6e-7a90-46d3-b6b1-de59570eff92",
+      "harnessRequestId" : "request-16d334ca-9ecf-47d6-a6fa-6a729e269306",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-16d334ca-9ecf-47d6-a6fa-6a729e269306",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "bf8b6672-1370-4590-b6d8-261f35e6d8e9",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.337461696Z",
+    "elapsedNanos" : 4902574,
+    "durationNanos" : 4852373,
+    "links" : {
+      "harnessTraceId" : "trace-64cf4d6e-7a90-46d3-b6b1-de59570eff92",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-16d334ca-9ecf-47d6-a6fa-6a729e269306",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "late-revocation",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.337186749Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+    "traceId" : "trace-56066736-5f02-43cd-9f6d-a35cb226e260",
+    "status" : "COMPLETED",
+    "content" : "合成知识查询完成，不代表真实制度判断或审批。",
+    "data" : {
+      "decision" : "EVIDENCE_FOUND",
+      "evidence" : [ {
+        "sourceId" : "synthetic-source-1",
+        "synthetic" : true,
+        "sourceVersion" : "1",
+        "locator" : "$.clauses[0]",
+        "quote" : "合成测试条款：期限上限36个月。"
+      } ],
+      "knowledgeReceipt" : {
+        "schemaVersion" : "knowledge-receipt.v0.1",
+        "receiptId" : "kr-ab4b0ad3-01bb-4554-9caf-d442c0f002e7",
+        "requestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+        "traceId" : "trace-56066736-5f02-43cd-9f6d-a35cb226e260",
+        "productId" : "synthetic-policy",
+        "manifest" : "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+        "businessDate" : "2026-10-30"
+      },
+      "bindingSha256" : "87474349c60f0faa135c2707957560558d5f8694f96ef99adbaf897bf0cf5b96",
+      "testOnly" : true
+    },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.362008367Z"
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "de547094-17cf-4167-8e73-7515e6004d11",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.358826037Z",
+    "elapsedNanos" : 94982,
+    "links" : {
+      "harnessTraceId" : "trace-56066736-5f02-43cd-9f6d-a35cb226e260",
+      "harnessRequestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "de547094-17cf-4167-8e73-7515e6004d11",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.362023488Z",
+    "elapsedNanos" : 3291213,
+    "durationNanos" : 3198631,
+    "links" : {
+      "harnessTraceId" : "trace-56066736-5f02-43cd-9f6d-a35cb226e260",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-fd026647-4833-45f3-9dac-d5a95eaf927a",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  } ],
+  "case" : "evidence-query",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.361833583Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+    "traceId" : "trace-9c5a7c48-42fa-43a1-bd32-bb364cfb86f4",
+    "status" : "COMPLETED",
+    "content" : "合成知识查询完成，不代表真实制度判断或审批。",
+    "data" : {
+      "decision" : "EVIDENCE_FOUND",
+      "evidence" : [ {
+        "sourceId" : "synthetic-source-1",
+        "synthetic" : true,
+        "sourceVersion" : "1",
+        "locator" : "$.clauses[0]",
+        "quote" : "合成测试条款：期限上限36个月。"
+      } ],
+      "knowledgeReceipt" : {
+        "schemaVersion" : "knowledge-receipt.v0.1",
+        "receiptId" : "kr-abe75745-6725-433d-b7e0-32c76cfb701a",
+        "requestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+        "traceId" : "trace-9c5a7c48-42fa-43a1-bd32-bb364cfb86f4",
+        "productId" : "synthetic-faq",
+        "manifest" : "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+        "businessDate" : "2026-10-30"
+      },
+      "bindingSha256" : "1e5a2ab5d5882c5b78f083cfd0a636c0fc5fbbc2f1aad5c9873827292344516f",
+      "testOnly" : true
+    },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.386029736Z"
+  },
+  "httpCalls" : 1,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "09322beb-d94d-4026-962b-bc334721ef1e",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.374983616Z",
+    "elapsedNanos" : 88032,
+    "links" : {
+      "harnessTraceId" : "trace-9c5a7c48-42fa-43a1-bd32-bb364cfb86f4",
+      "harnessRequestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+      "capabilityId" : "knowledge.evidence.search",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "09322beb-d94d-4026-962b-bc334721ef1e",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.386051976Z",
+    "elapsedNanos" : 11155452,
+    "durationNanos" : 11068840,
+    "links" : {
+      "harnessTraceId" : "trace-9c5a7c48-42fa-43a1-bd32-bb364cfb86f4",
+      "capabilityId" : "knowledge.evidence.search",
+      "harnessRequestId" : "request-12d115ef-77bd-40c9-af73-af98742c274e",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "COMPLETED"
+    }
+  } ],
+  "case" : "faq-same-provider",
+  "httpAttempts" : [ {
+    "method" : "POST",
+    "route" : "/query",
+    "status" : 200,
+    "observedAt" : "2026-10-30T08:33:43.385802260Z"
+  } ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+}, {
+  "result" : {
+    "schemaVersion" : "capability-result.v1",
+    "requestId" : "request-b6cc50a7-f0b6-4a32-8c29-4ed7e9117a6c",
+    "traceId" : "trace-d121eff1-62e8-4c20-b8ea-f48f099af12e",
+    "status" : "FAILED",
+    "content" : "知识查询未完成。",
+    "data" : { },
+    "missingInputs" : [ ],
+    "nextActions" : [ ],
+    "sourceSystem" : "knowledge-service",
+    "asOf" : "2026-10-30T08:33:43.394910161Z",
+    "error" : {
+      "failureClass" : "REJECTED",
+      "sourceCode" : "INVALID_INPUT",
+      "retryable" : false,
+      "message" : "知识查询未完成。",
+      "fieldErrors" : [ ]
+    }
+  },
+  "httpCalls" : 0,
+  "observationEvents" : [ {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-b6cc50a7-f0b6-4a32-8c29-4ed7e9117a6c",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 1,
+    "spanId" : "0e20bf62-fe18-4744-ab00-1d4fcb9b78f1",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "START",
+    "outcome" : "PENDING",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.394784138Z",
+    "elapsedNanos" : 32061,
+    "links" : {
+      "harnessTraceId" : "trace-d121eff1-62e8-4c20-b8ea-f48f099af12e",
+      "harnessRequestId" : "request-b6cc50a7-f0b6-4a32-8c29-4ed7e9117a6c",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "providerId" : "knowledge-service"
+    }
+  }, {
+    "schemaVersion" : "finance-observation.v0.1",
+    "requestId" : "request-b6cc50a7-f0b6-4a32-8c29-4ed7e9117a6c",
+    "processBootId" : "knowledge-probe-boot",
+    "instanceId" : "knowledge-probe-instance",
+    "sequence" : 2,
+    "spanId" : "0e20bf62-fe18-4744-ab00-1d4fcb9b78f1",
+    "component" : "capability",
+    "operation" : "query",
+    "phase" : "END",
+    "outcome" : "RETURNED",
+    "dispatch" : "NOT_OBSERVED",
+    "at" : "2026-10-30T08:33:43.394933251Z",
+    "elapsedNanos" : 180224,
+    "durationNanos" : 150063,
+    "links" : {
+      "harnessTraceId" : "trace-d121eff1-62e8-4c20-b8ea-f48f099af12e",
+      "capabilityId" : "knowledge.rule.evaluate",
+      "harnessRequestId" : "request-b6cc50a7-f0b6-4a32-8c29-4ed7e9117a6c",
+      "providerId" : "knowledge-service",
+      "businessStatus" : "FAILED"
+    }
+  } ],
+  "case" : "boolean-months",
+  "httpAttempts" : [ ],
+  "level" : "H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL"
+} ]

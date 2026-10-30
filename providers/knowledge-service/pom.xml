@@ -1,0 +1,7 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
+<parent><groupId>io.github.bitlhk.finance</groupId><artifactId>finance-agent-harness-parent</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent>
+<artifactId>finance-provider-knowledge-service</artifactId><version>0.1.0-probe.1</version>
+<dependencies>
+<dependency><groupId>io.github.bitlhk.finance</groupId><artifactId>finance-harness-core</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+<dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+</dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId></plugin></plugins></build></project>

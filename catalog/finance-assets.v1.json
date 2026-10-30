@@ -364,6 +364,13 @@
   ],
   "capabilityPacks": [
     {
+      "id": "knowledge-readonly", "version": "0.1.0",
+      "displayName": "只读知识服务（隔离候选，尚未完成 Host 准入）",
+      "source": "repo://capability-packs/knowledge-readonly", "governanceRef": "finance-harness-core",
+      "capabilities": ["knowledge.evidence.search", "knowledge.rule.evaluate"],
+      "compatibility": {"profiles": ["local-read-only"], "runtimeLanguages": ["java"]}
+    },
+    {
       "id": "quotation-consultation-readonly",
       "version": "0.1.0",
       "displayName": "只读报价咨询（候选，需实际披露控制）",
@@ -782,6 +789,14 @@
   ],
   "providers": [
     {
+      "id": "knowledge-service", "version": "0.1.0-probe.1",
+      "displayName": "受管知识服务（隔离候选）", "source": "repo://providers/knowledge-service",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.1",
+      "governanceRef": "finance-harness-core",
+      "capabilities": ["knowledge.evidence.search", "knowledge.rule.evaluate"],
+      "compatibility": {"profiles": ["local-read-only"], "runtimeLanguages": ["java"]}
+    },
+    {
       "id": "quotation-synthetic-reference",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "合成报价参考源（候选，非银行授权）",
@@ -1052,7 +1067,7 @@
       "compatibility": {"profiles": ["internal-control"]}
     }
   ],
-  "catalogRevision": "2026-10-28.crm-kyp-candidate-1",
+  "catalogRevision": "2026-10-30.knowledge-provider-probe-1",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

@@ -1,0 +1,28 @@
+schemaVersion: finance-capability-pack.v1
+packId: knowledge-readonly
+version: 0.1.0
+systemPrompt: "合成知识服务隔离探针。仅引用实际返回的证据；数值子条件不代表整体合规或审批。不允许选择服务地址、身份、版本、权限或业务日期。"
+capabilities:
+  - capabilityId: knowledge.evidence.search
+    toolName: knowledge_evidence_search
+    name: 知识证据查询
+    description: 查询受管绑定知识产品的合成证据，不办理业务。
+    operation: QUERY
+    requiredScopes: ["knowledge:read"]
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question: {type: string, minLength: 1, maxLength: 1000}
+  - capabilityId: knowledge.rule.evaluate
+    toolName: knowledge_rule_evaluate
+    name: 合成规则数值核验
+    description: 仅核验合成的36个月上限。未提供月份返回未知，不代表真实银行制度。
+    operation: QUERY
+    requiredScopes: ["knowledge:read", "knowledge:rule"]
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        months: {type: integer, minimum: 0, maximum: 1200}

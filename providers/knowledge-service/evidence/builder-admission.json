@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "knowledge-builder-probe.v0.1",
+  "builderCommit": "9d33295f74ff663c16579febd120b586c791280f",
+  "harnessBase": "e911c71bdd3404f450bf775f32ebe028f90fb475",
+  "selection": [
+    {
+      "pack": {
+        "id": "knowledge-readonly",
+        "version": "0.1.0"
+      },
+      "provider": {
+        "id": "knowledge-service",
+        "version": "0.1.0-probe.1"
+      }
+    }
+  ],
+  "hosts": [
+    {
+      "host": "community/finance/builder/finance-solution-builder/templates/agentscope-query-service/host-support.v0.1.json",
+      "hostSha256": "03478c2f020151badc46e896001e348cccd1702be4e3599d7e33cf5b4d675cb1",
+      "runtime": {
+        "family": "agentscope",
+        "language": "java",
+        "templateRef": "maven://io.agentscope:agentscope-core:2.0.3",
+        "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-agentscope-java:0.1.0-SNAPSHOT"
+      },
+      "connectionKind": "synthetic-bank-http.v1",
+      "status": "BLOCKED",
+      "code": "ASSEMBLY_PROVIDER_CONNECTION_MISMATCH"
+    },
+    {
+      "host": "community/finance/builder/finance-solution-builder/templates/local-readonly-service/host-support.v0.1.json",
+      "hostSha256": "6938471f85840316b3f20cdbff32fa510b93f06df69b2c83b8c3cf8451532561",
+      "runtime": {
+        "family": "openjiuwen",
+        "language": "java",
+        "templateRef": "maven://com.openjiuwen:agent-core-java:0.1.15",
+        "integrationRef": "maven://io.github.bitlhk.finance:finance-harness-openjiuwen-java:0.1.0-SNAPSHOT"
+      },
+      "connectionKind": "synthetic-bank-http.v1",
+      "status": "BLOCKED",
+      "code": "ASSEMBLY_PROVIDER_CONNECTION_MISMATCH"
+    }
+  ],
+  "installedAgent": null,
+  "installationLock": null,
+  "agentUiToolCall": "NOT_RUN_ADMISSION_BLOCKED",
+  "modelCalls": 0,
+  "productionModified": false
+}

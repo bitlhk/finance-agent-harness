@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "knowledge-h0-receipt.v0.1",
+  "baseline": "e911c71bdd3404f450bf775f32ebe028f90fb475",
+  "testCounts": {
+    "core": {
+      "tests": 70,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "knowledgeProvider": {
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "artifact": "finance-provider-knowledge-service-0.1.0-probe.1.jar",
+  "artifactSha256": "bf5736fee7189c7bf14cddc2680ae72f058c7b67830e5574c17c68566dde75dc",
+  "manifestSha256": "ee5527ada687fa1529264767e96a99c96b55aecae7eb8045dacc3e83cce1630f",
+  "level": "H0_ONLY",
+  "agentInstallationLock": null,
+  "agentUiToolCall": "NOT_RUN",
+  "modelCalls": 0,
+  "productionDeployment": false
+}

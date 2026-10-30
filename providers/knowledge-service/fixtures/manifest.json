@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "synthetic-knowledge-manifest.v0.1",
+  "testOnly": true,
+  "products": ["synthetic-policy", "synthetic-faq"],
+  "version": "0.1.0",
+  "source": {
+    "id": "synthetic-source-1",
+    "version": "1",
+    "clauses": ["合成测试条款：期限上限36个月。"]
+  },
+  "rule": {"id": "synthetic-max-months", "maxMonths": 36},
+  "trustedBusinessDate": "2026-10-30"
+}
