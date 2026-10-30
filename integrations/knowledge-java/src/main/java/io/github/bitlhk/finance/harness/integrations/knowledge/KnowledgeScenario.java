@@ -109,11 +109,16 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                 var response=Runner.runAgent(agent,Map.of("query",body.path("query").asText(),"conversation_id",session),session,null);
                 current();if(denied)throw new SecurityException("AUTHORIZATION_REJECTED");
                 var result=new LinkedHashMap<String,Object>();
-                result.put("response",response);result.put("toolResults",List.copyOf(toolResults));
+                String outcome=toolOutcome(toolResults);
+                var answer=HarnessJson.mapper().valueToTree(response);
+                result.put("response", "COMPLETED".equals(outcome) ? answer.path("output").asText("")
+                    : "PARTIAL".equals(outcome)
+                        ? "知识查询未完整完成，不能据此确认文档结论。" : "本轮没有取得可用知识依据。");
+                result.put("toolResults",List.copyOf(toolResults));
                 result.put("sourceCalls",List.copyOf(attempts));result.put("runtimeLock",installed.lock());
                 result.put("manifest",authority.text("manifest"));result.put("productId",authority.text("productId"));
                 result.put("buildId",context.buildId());result.put("instanceId",context.instanceId());result.put("runId",run);
-                result.put("status",toolResults.isEmpty()?"NO_EVIDENCE":"COMPLETED");
+                result.put("status",outcome);
                 span.finish(io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.RETURNED,Map.of());
                 return result;
             } finally { observer.detach();span.close();active=null; }
@@ -125,5 +130,19 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                 "buildId",context.buildId(),"instanceId",context.instanceId(),"leaseReleased",true,"status","CLOSED")); }
             catch(Exception failure){throw new IllegalStateException("KNOWLEDGE_RELEASE_RECEIPT_UNKNOWN");}
         }
+    }
+
+    static String toolOutcome(List<?> results) {
+        if(results.isEmpty())return "NO_EVIDENCE";
+        boolean found=false;
+        for(var result:results) {
+            var value=HarnessJson.mapper().valueToTree(result);
+            var data=value.path("data");
+            if(!"COMPLETED".equals(data.path("resultStatus").asText()))return "PARTIAL";
+            var evidence=data.path("result").path("evidence");
+            found |= "EVIDENCE_FOUND".equals(data.path("result").path("decision").asText())
+                && evidence.isArray() && !evidence.isEmpty();
+        }
+        return found ? "COMPLETED" : "NO_EVIDENCE";
     }
 }
