@@ -54,7 +54,8 @@ H0 的配置/连接摘要不是安装 Lock；未知 capability 被拒绝不等�
 ## 改动边界
 
 业务代码仅在 providers/knowledge-service 和 capability-packs/knowledge-readonly。
-公共文件只有 Maven 模块登记、资产目录候选登记/修订号，以及引用目录摘要的示例提案同步。
+公共文件包括 Maven 模块登记、资产目录候选登记/修订号、引用目录摘要的示例提案，
+以及观测装配声明中 parent-build-contract 的根 pom 摘要同步。未更新任何执行资格或通过记录。
 未改 Core、Runtime 接线、授权、现有 Host、Builder 页面或其他 Codex worktree。
 目录登记不是发布或准入；候选名称标明未完成 Host 准入。
 

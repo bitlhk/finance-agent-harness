@@ -55,6 +55,7 @@ class KnowledgeProviderTest {
             Map.of(KnowledgeProvider.ID,ManagedProviderFactoriesV01.connectionDigest(connection))).get(KnowledgeProvider.ID);
     }
     CapabilityRequestV1 request(String capability, Map<String,Object> args) {
+        events.clear(); attempts.clear();
         var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION,"request-"+UUID.randomUUID(),"trace-"+UUID.randomUUID(),
             "probe-principal",FinanceContextV1.PrincipalType.SYSTEM,"isolated-test","knowledge-probe","probe-subject",
             "probe-session",FinanceContextV1.AuthenticationLevel.STRONG,Set.of("knowledge:read","knowledge:rule"));
@@ -65,7 +66,7 @@ class KnowledgeProviderTest {
     CapabilityResultV1 search() { return provider.query(request(KnowledgeProvider.SEARCH,Map.of("question","合成期限上限是什么？"))); }
     void record(String name, CapabilityResultV1 result) {
         RECORDS.add(Map.of("case",name,"result",HarnessJson.mapper().convertValue(result,Map.class),
-            "httpCalls",service.calls.get(),"level","H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL",
+            "cumulativeServiceCalls",service.calls.get(),"level","H0_MANAGED_PROVIDER_HTTP_NOT_AGENT_INSTALL",
             "observationEvents",HarnessJson.mapper().convertValue(events,List.class),
             "httpAttempts",HarnessJson.mapper().convertValue(attempts,List.class)));
     }
