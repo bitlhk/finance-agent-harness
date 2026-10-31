@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "knowledge-h1a-cases.v0.1",
+  "id": "knowledge-evidence-h1a",
+  "version": "0.1.0",
+  "productionBaseline": "c2939742f211a1ed363dc792d3602d0098765a04",
+  "productId": "run-39d069d400924257a857cfa7ec64917b",
+  "manifest": "8f5dc67b321edb48b0636581d63834c62b175a90d5dcad624b6460ff989606f3",
+  "acceptance": "NOT_EXECUTED_BY_AGENT",
+  "queries": [
+    {"id":"K01","question":"合成客服服务时间是什么？","expectedClause":"第一条","requiredText":["09:00","17:00"]},
+    {"id":"K02","question":"客户如何申请历史对账单？","expectedClause":"第二条","requiredEvidence":"ORIGINAL_QUOTE_AND_ANCHORS"},
+    {"id":"K03","question":"信息缺失时如何处理？","expectedClause":"第三条","requiredEvidence":"ORIGINAL_QUOTE_AND_ANCHORS"}
+  ],
+  "denials": ["UNINSTALLED_TOOL","UNAUTHORIZED_PRINCIPAL","SOURCE_REVOKED","SOURCE_NOT_EFFECTIVE",
+    "MANIFEST_MISMATCH","MISSING_TRUSTED_CONTEXT","UPSTREAM_BUSINESS_ERROR","UPSTREAM_UNAVAILABLE","LATE_REVOCATION"],
+  "lifecycle": ["BUILDER_COMPILED","REQUIRED_OBSERVATION_QUALIFIED","REAL_INSTALLATION_LOCK",
+    "MY_AGENT_APPLICATION_TOOL_CALL","STOP_RECEIPT","HISTORY_RELOAD_WITHOUT_EXECUTION"],
+  "scope": "SYNTHETIC_M2_PRODUCT_NOT_BANK_BUSINESS_APPROVAL"
+}
