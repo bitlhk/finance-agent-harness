@@ -103,6 +103,16 @@ class KnowledgeProviderTest {
         service.fault.set(fault);var r=search();assertEquals(CapabilityResultV1.Status.FAILED,r.status());
         assertTrue(r.data().isEmpty());record(fault,r);
     }
+    @Test void preservesSafeHttpRejectionWithoutDisclosingEvidenceOrRetrying() {
+        service.fault.set("http-retrieval-error");
+        var result = search();
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("RAGFLOW_UNAVAILABLE", result.failure().sourceCode());
+        assertFalse(result.failure().retryable());
+        assertTrue(result.data().isEmpty());
+        assertEquals(1, service.calls.get());
+        record("http-retrieval-error", result);
+    }
     @ParameterizedTest @ValueSource(strings={"serviceUrl","manifest","productId","principalId","scopes","businessDate"})
     void modelCannotOverrideBinding(String key) {
         var r=provider.query(request(KnowledgeProvider.SEARCH,Map.of("question","test",key,"injected")));

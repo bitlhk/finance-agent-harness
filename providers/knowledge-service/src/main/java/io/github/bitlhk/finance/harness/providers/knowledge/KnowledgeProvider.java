@@ -56,7 +56,8 @@ public final class KnowledgeProvider implements DescribedFinanceProvider, Invoca
             finally { if (!pending.isDone()) pending.cancel(true); }
             byte[] bytes = response.body();
             connection.attempts().accept(new ManagedProviderFactoryV01.HttpAttempt("POST", "/query", response.statusCode(), Instant.now()));
-            if (response.statusCode() != 200 || bytes.length > 262144) return failed(r, "UPSTREAM_REJECTED");
+            if (response.statusCode() != 200) return failed(r, upstreamFailure(response.statusCode(), bytes));
+            if (bytes.length > 262144) return failed(r, "UPSTREAM_REJECTED");
             var result = KnowledgeBinding.JSON.readTree(bytes);
             if (!result.path("code").isIntegralNumber() || result.path("code").intValue() != 0)
                 return failed(r, "KNOWLEDGE_BUSINESS_REJECTED");
@@ -84,6 +85,25 @@ public final class KnowledgeProvider implements DescribedFinanceProvider, Invoca
         } catch (Exception error) { return failed(r, "KNOWLEDGE_UNAVAILABLE"); }
     }
     public CapabilityResultV1 executeTask(CapabilityRequestV1 r) { return failed(r, "READ_ONLY_REQUIRED"); }
+    // Preserve bounded protocol diagnostics, never arbitrary upstream text or credentials.
+    static String upstreamFailure(int status, byte[] bytes) {
+        if (status != 403 || bytes.length > 4096) return "UPSTREAM_REJECTED";
+        try {
+            var body = KnowledgeBinding.JSON.readTree(bytes);
+            if (!body.isObject() || body.size() != 2 || !body.path("code").isIntegralNumber()
+                    || body.path("code").intValue() != status || !body.path("error").isTextual())
+                return "UPSTREAM_REJECTED";
+            String code = body.path("error").asText();
+            return Set.of("KNOWLEDGE_AUTH_REQUIRED", "KNOWLEDGE_BINDING_MISMATCH",
+                "KNOWLEDGE_CONTEXT_MISMATCH", "KNOWLEDGE_SESSION_CHANGED", "FORBIDDEN",
+                "MANIFEST_MISMATCH", "KNOWLEDGE_NOT_APPLICABLE", "SOURCE_NOT_EFFECTIVE",
+                "SOURCE_SUPERSEDED_OR_REVOKED", "BINDING_CHANGED", "RETRIEVAL_UNAVAILABLE",
+                "RETRIEVAL_RESPONSE_INVALID", "RETRIEVAL_INDEX_MISMATCH", "RAGFLOW_AUTH_FAILED",
+                "RAGFLOW_BUSINESS_ERROR", "RAGFLOW_UNAVAILABLE", "RAGFLOW_RESPONSE_LIMIT",
+                "RAGFLOW_DATASET_MISMATCH", "RAGFLOW_RESPONSE_INVALID").contains(code)
+                    ? code : "UPSTREAM_REJECTED";
+        } catch (Exception ignored) { return "UPSTREAM_REJECTED"; }
+    }
     /** Bound response memory and cancel the upstream stream before accepting oversized data. */
     private static final class BoundedBody implements HttpResponse.BodySubscriber<byte[]> {
         private final CompletableFuture<byte[]> body = new CompletableFuture<>();
