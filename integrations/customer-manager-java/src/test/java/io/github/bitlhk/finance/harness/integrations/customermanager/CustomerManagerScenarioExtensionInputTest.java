@@ -9,6 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class CustomerManagerScenarioExtensionInputTest {
+    @Test void builderActionDeclarationMatchesActualExtension() throws Exception {
+        String builder = System.getenv("FH_H1B_BUILDER_ROOT");
+        org.junit.jupiter.api.Assumptions.assumeTrue(builder != null, "Cross-repository Builder checkout required");
+        var file = java.nio.file.Path.of(builder).resolve("community/finance/builder/finance-solution-builder/templates/local-readonly-service/employee-host-support.v0.1.json");
+        var declaration = HarnessJson.mapper().readTree(file.toFile()).path("scenarioExtension");
+        var actual = new CustomerManagerScenarioExtension();
+        var actions = new java.util.HashSet<String>();
+        declaration.path("actions").forEach(action -> assertTrue(actions.add(action.asText())));
+        assertEquals(actual.id(), declaration.path("id").asText());
+        assertEquals(actual.actions(), actions);
+    }
     @Test void confirmationScopeIncludesTrustedAliasToResourceMappingWithoutDependingOnMapOrder() {
         var authority=new io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmAuthority("owner-a","employee-a","r1",
                 java.util.Set.of("ref-a","ref-b"),java.time.Instant.parse("2030-01-01T00:00:00Z"),

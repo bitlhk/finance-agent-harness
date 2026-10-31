@@ -57,9 +57,11 @@ final class SyntheticKnowledgeService implements AutoCloseable {
             } catch (Exception failure) { result = Map.of("code",400); }
             afterRead.run();
             if ("oversize".equals(fault.get())) result=Map.of("code",0,"padding","x".repeat(262145));
+            boolean httpRejection = "http-retrieval-error".equals(fault.get());
+            if (httpRejection) result = Map.of("code", 403, "error", "RAGFLOW_UNAVAILABLE");
             byte[] output = KnowledgeBinding.JSON.writeValueAsBytes(result);
             exchange.getResponseHeaders().add("Content-Type","application/json");
-            exchange.sendResponseHeaders(200,output.length);
+            exchange.sendResponseHeaders(httpRejection ? 403 : 200,output.length);
             exchange.getResponseBody().write(output); exchange.close();
         });
         server.start();

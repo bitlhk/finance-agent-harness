@@ -90,15 +90,69 @@ public final class OpenJiuwenCapabilityInstaller {
             String hostSessionRef,
             CapabilityDescriptionCatalogV01 descriptions,
             boolean installTerminology) {
+        Objects.requireNonNull(defaults, "defaults");
+        var context = new ProviderInvocation(defaults, hostSessionRef);
+        return install(agent, providerBindings, pack, simulated, store, descriptions, installTerminology,
+                ignored -> context, null);
+    }
+
+    /** Host-owned contexts are selected by Provider, never by tool arguments. */
+    public Installation installWithProviderContexts(BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings, Map<String, ProviderInvocation> contexts,
+            FinanceCapabilityPackV1 pack, boolean simulated, TaskCheckpointStore store) {
+        return installWithProviderContexts(agent, providerBindings, contexts, pack, simulated, store, null, true);
+    }
+
+    Installation installWithProviderContexts(BaseAgent agent,
+            Map<String, ProviderBinding> providerBindings, Map<String, ProviderInvocation> contexts,
+            FinanceCapabilityPackV1 pack, boolean simulated, TaskCheckpointStore store,
+            CapabilityDescriptionCatalogV01 descriptions, boolean installTerminology) {
+        var frozen = exactContexts(providerBindings, contexts);
+        return install(agent, providerBindings, pack, simulated, store, descriptions, installTerminology,
+                frozen::get, frozen);
+    }
+
+    static Map<String, ProviderInvocation> exactContexts(Map<String, ProviderBinding> bindings,
+            Map<String, ProviderInvocation> contexts) {
+        var frozen = Map.copyOf(contexts);
+        var expected = new LinkedHashSet<String>();
+        bindings.values().forEach(binding -> expected.add(binding.providerId()));
+        if (!expected.equals(frozen.keySet()))
+            throw new IllegalArgumentException("PROVIDER_INVOCATION_CONTEXT_MISMATCH");
+        return frozen;
+    }
+
+    private Installation install(BaseAgent agent, Map<String, ProviderBinding> providerBindings,
+            FinanceCapabilityPackV1 pack, boolean simulated, TaskCheckpointStore store,
+            CapabilityDescriptionCatalogV01 descriptions, boolean installTerminology,
+            java.util.function.Function<String, ProviderInvocation> contextFor,
+            Map<String, ProviderInvocation> scopedContexts) {
         Objects.requireNonNull(agent, "agent");
         Objects.requireNonNull(pack, "pack");
         Objects.requireNonNull(providerBindings, "providerBindings");
+        // Validate every binding before mutating the SDK registry or prompt sections.
+        for (var capability : pack.capabilities()) {
+            var binding = providerBindings.get(capability.capabilityId());
+            if (binding == null) throw new IllegalArgumentException("Provider binding is missing for capability: " + capability.capabilityId());
+            Objects.requireNonNull(contextFor.apply(binding.providerId()), "Provider invocation context");
+        }
         String agentId = agent.getCard().getId();
-        if (hostSessionRef == null || hostSessionRef.isBlank()) throw new IllegalArgumentException("hostSessionRef is required");
-        String scope = OpenJiuwenFinanceBridge.fingerprint(List.of(agentId, defaults.principalId(),
-                defaults.subjectRef(), defaults.purpose(), defaults.channel(), hostSessionRef, pack.packId(), pack.version(),
-                providerBindings.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry ->
-                        List.of(entry.getKey(), entry.getValue().providerId(), entry.getValue().providerVersion())).toList()));
+        var identities = providerBindings.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry ->
+                List.of(entry.getKey(), entry.getValue().providerId(), entry.getValue().providerVersion())).toList();
+        String scope;
+        if (scopedContexts == null) {
+            var context = contextFor.apply(null);
+            var defaults = context.defaults();
+            // Preserve the scope of existing TASK checkpoints for legacy callers.
+            scope = OpenJiuwenFinanceBridge.fingerprint(List.of(agentId, defaults.principalId(),
+                    defaults.subjectRef(), defaults.purpose(), defaults.channel(), context.hostSessionRef(),
+                    pack.packId(), pack.version(), identities));
+        } else {
+            var scopes = scopedContexts.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                    .map(entry -> List.of(entry.getKey(), entry.getValue().scope())).toList();
+            scope = OpenJiuwenFinanceBridge.fingerprint(List.of("provider-contexts.v1", agentId,
+                    pack.packId(), pack.version(), identities, scopes));
+        }
         InstalledTaskController tasks = new InstalledTaskController(agentId, scope, Objects.requireNonNull(store));
         Map<String, Tool> installedTools = new LinkedHashMap<>();
         String promptSection = "finance-capability-pack:" + pack.packId();
@@ -125,9 +179,9 @@ public final class OpenJiuwenCapabilityInstaller {
                 OpenJiuwenFinanceBridge bridge = new OpenJiuwenFinanceBridge(
                         providerBinding.provider(),
                         providerBinding.providerId(),
-                        defaults,
+                        contextFor.apply(providerBinding.providerId()).defaults(),
                         Set.of(capability.capabilityId()),
-                        simulated).hostSession(hostSessionRef);
+                        simulated).hostSession(contextFor.apply(providerBinding.providerId()).hostSessionRef());
                 ensureAvailable(agent, capability.toolName());
                 tasks.register(capability, bridge);
                 Tool tool = tool(agentId, capability, bridge, tasks, descriptions);
@@ -238,6 +292,20 @@ public final class OpenJiuwenCapabilityInstaller {
 
     private static String text(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    public record ProviderInvocation(OpenJiuwenFinanceBridge.InvocationDefaults defaults, String hostSessionRef) {
+        public ProviderInvocation {
+            Objects.requireNonNull(defaults, "defaults");
+            if (hostSessionRef == null || hostSessionRef.isBlank())
+                throw new IllegalArgumentException("hostSessionRef is required");
+        }
+
+        private List<Object> scope() {
+            return List.of(defaults.principalId(), defaults.subjectRef(), defaults.principalType().name(),
+                    defaults.purpose(), defaults.channel(), defaults.authenticationLevel().name(),
+                    defaults.scopes().stream().sorted().toList(), defaults.strictReadOnlyQueries(), hostSessionRef);
+        }
     }
 
     public record ProviderBinding(

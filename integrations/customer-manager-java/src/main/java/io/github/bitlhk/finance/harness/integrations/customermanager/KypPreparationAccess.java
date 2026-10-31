@@ -41,6 +41,9 @@ public final class KypPreparationAccess implements PreparationAccess {
         return snapshot;
     }
     @Override public String providerId() { return crm.providerId(); }
+    FinanceProvider productProvider() { return products; }
+    String productSession() { return sessionRef; }
+    BoundFinanceProvider.Grant productGrant() { return productGrants.get(); }
     @Override public void close() { closed.set(true); crm.close(); }
 
     @Override public CapabilityResultV1 query(String requestId, String traceId, String customer,
@@ -147,6 +150,9 @@ public final class KypPreparationAccess implements PreparationAccess {
     }
     @Override public Runnable resultReleaseGuard(String customer, CapabilityResultV1 result) {
         Runnable customerGuard = crm.resultReleaseGuard(customer, result);
+        if (result.data().containsKey("previsitContext") && !result.data().containsKey("productAuthorityBinding")
+                && !result.data().containsKey("sourceEvidence") && !result.data().containsKey("eligibleProducts"))
+            return customerGuard;
         if (!result.data().containsKey("productAuthorityBinding"))
             throw new SecurityException("KYP_RESULT_AUTHORITY_BINDING_MISSING");
         var initial = productGrants.get();

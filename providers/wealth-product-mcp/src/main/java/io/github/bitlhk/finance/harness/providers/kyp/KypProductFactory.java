@@ -78,7 +78,7 @@ public final class KypProductFactory implements ManagedProviderFactoryV01 {
             record(request, "STARTED", Map.of());
             try {
                 byte[] bytes;
-                try (var observation = new KypHttpObservation(connection, request, policy.sourceId())) {
+                try (var observation = new KypHttpObservation(connection, request)) {
                     bytes = new PinnedMcpReader().read(target, args, guard, observation);
                     observation.returned();
                 }

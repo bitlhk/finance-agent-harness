@@ -5,9 +5,14 @@ import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.observation.ObservationRun;
 import io.github.bitlhk.finance.harness.core.spi.*;
 import io.github.bitlhk.finance.harness.examples.wealth.PreparationAccess;
+import io.github.bitlhk.finance.harness.examples.wealth.PreparationKnowledge;
+import io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation;
+import io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod;
 import io.github.bitlhk.finance.harness.mcp.PinnedMcpReader;
 import io.github.bitlhk.finance.harness.providers.customercrm.*;
 import io.github.bitlhk.finance.harness.providers.kyp.KypProductFactory;
+import io.github.bitlhk.finance.harness.providers.knowledge.KnowledgeProvider;
+import io.github.bitlhk.finance.harness.providers.knowledge.KnowledgeFactoryV01;
 import java.net.*;
 import java.nio.file.*;
 import java.time.*;
@@ -93,7 +98,9 @@ class KypPreparationBootstrapTest {
                 "endpoint", "http://127.0.0.1:" + products.getAddress().getPort() + "/mcp", "tool", "wealth_assistant_product_search",
                 "inputSchemaSha256", PinnedMcpReader.schemaDigest(SCHEMA), "timeoutMillis", 2000, "sourceId", "demo-source",
                 "salesTrust", "DEMO", "maximumAgeSeconds", 86400));
-        write(root.resolve("component-plan.json"), Map.of("capabilityBindings", Map.of(KypProductFactory.CAPABILITY, KypProductFactory.ID),
+        write(root.resolve("component-plan.json"), Map.of("capabilityBindings", Map.of(KypProductFactory.CAPABILITY, KypProductFactory.ID,
+                        CustomerCrmProvider.CAPABILITY, CustomerCrmProvider.PROVIDER_ID,
+                        CustomerCrmProvider.ALLOCATION_CAPABILITY, CustomerCrmProvider.PROVIDER_ID),
                 "providerConnections", Map.of(KypProductFactory.ID, Map.of("connectionRef", "product-source", "kind", "wealth-product-mcp.v1"),
                         CustomerCrmProvider.PROVIDER_ID, Map.of("connectionRef", "crm-current", "kind", "customer-crm-readonly.v1"))));
         lock(true);
@@ -128,6 +135,49 @@ class KypPreparationBootstrapTest {
         assertNotNull(result.data().get("sourceEvidence"));
         try(var files=Files.list(state.resolve("service-preparation-reports/decision-evidence"))) { assertTrue(files.count() >= 2); }
     }
+    @Test void businessFlowCombinesActualCrmAndProductHttpWithControlledKnowledgeEvidence() throws Exception {
+        var knowledgeCalls = new AtomicInteger();
+        PreparationKnowledge knowledge = new PreparationKnowledge() {
+            public CapabilityResultV1 query(String request, String trace, boolean product) {
+                assertTrue(product); knowledgeCalls.incrementAndGet();
+                return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, request, trace,
+                        CapabilityResultV1.Status.COMPLETED, "controlled knowledge fixture", Map.of(
+                            "decision", "EVIDENCE_FOUND", "evidence", List.of(Map.of("text", "需核实产品销售资格", "anchor", "clause-a")),
+                            "knowledgeReceipt", Map.of("requestId", request, "traceId", trace, "manifest", "a".repeat(64))),
+                        List.of(), List.of(), "fixture", now, null, null);
+            }
+            public void current() { }
+            public void authorizeSaved(com.fasterxml.jackson.databind.JsonNode report) {
+                throw new SecurityException("INDEPENDENT_HISTORY_REQUIRED");
+            }
+            public void close() { }
+        };
+        try (var service = new ServicePreparation("owner-a", open("owner-a", authority),
+                () -> new ServicePreparation.Mapping("mapping-a", Map.of("Synthetic customer", "customer-a")),
+                (method, goal, refs, facts) -> {
+                    assertEquals("customer-a", facts.at("/customer/customerId").asText());
+                    assertEquals("P001", facts.at("/productReview/sourceProducts/0/productId").asText());
+                    assertEquals("clause-a", facts.at("/knowledgeEvidence/evidence/0/anchor").asText());
+                    assertTrue(refs.contains("/productReview/sourceProducts/0/name"));
+                    assertTrue(refs.contains("/knowledgeEvidence/evidence/0/text"));
+                    var report = HarnessJson.mapper().createObjectNode();
+                    report.putArray("communicationFocus").addObject().put("text", "核实客户服务需求")
+                            .putArray("factRefs").add("/customer/customerId");
+                    report.putArray("preparationAdvice").addObject().put("text", "产品仅为合成资料，需核实销售资格")
+                            .putArray("factRefs").add("/productReview/sourceProducts/0/name").add("/knowledgeEvidence/evidence/0/text");
+                    report.putArray("pendingItems").add("核实产品销售资格"); report.putArray("reviewChecklist").add("经理复核");
+                    return report;
+                }, state.resolve("joint-reports"), Map.of(),
+                new InstalledPreparationMethod("fixture", "1", "sha256:fixture", "sha256:lock", "fixture"), Map::of, knowledge)) {
+            long selection = service.select("owner-a", "Synthetic customer", "检查产品并准备服务建议");
+            var report = service.prepareProduct("owner-a", selection,
+                    Map.of("amount", 100000, "horizonMonths", 12, "channel", "branch"), ServicePreparation.PreparationListener.NONE);
+            assertEquals("READY", report.path("explanationStatus").asText(), report.toString());
+            assertEquals("PARTIAL", report.path("status").asText());
+            assertTrue(report.at("/productReview/eligibleProducts").isEmpty());
+            assertEquals(1, productCalls.get()); assertEquals(1, knowledgeCalls.get()); assertTrue(crmCalls.get() > 0);
+        }
+    }
     @Test void legacyArtifactDoesNotReadOrAcquireProductAuthority() throws Exception {
         lock(false); assertSame(crm, open("owner-a", directory.resolve("missing.json"))); assertEquals(0, productCalls.get());
     }
@@ -138,6 +188,107 @@ class KypPreparationBootstrapTest {
         assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
         assertTrue(((DescribedFinanceProvider)providers.get(KypProductFactory.ID)).descriptor().capabilities().stream()
                 .anyMatch(cap -> cap.capabilityId().equals(KypProductFactory.CAPABILITY)));
+    }
+    void joint() throws Exception {
+        var plan = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(root.resolve("component-plan.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)plan.path("capabilityBindings")).put(KnowledgeProvider.SEARCH, KnowledgeProvider.ID);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)plan.path("providerConnections")).putObject(KnowledgeProvider.ID)
+                .put("connectionRef", "knowledge-isolated").put("kind", KnowledgeFactoryV01.KIND);
+        write(root.resolve("component-plan.json"), plan);
+        String config = "provider-configuration/knowledge-service/knowledge-binding.json";
+        write(root.resolve(config), Map.of("schemaVersion", "knowledge-binding.v0.1", "productId", "fixture-policy",
+                "manifest", "a".repeat(64), "businessDate", "2026-10-31"));
+        var providers = new HashMap<String, Object>();
+        for (String id : List.of(CustomerCrmProvider.PROVIDER_ID, KypProductFactory.ID, KnowledgeProvider.ID)) {
+            var reference = plan.path("providerConnections").path(id);
+            providers.put(id, Map.of("connectionRef", reference.path("connectionRef").asText(),
+                    "kind", reference.path("kind").asText(), "timeoutMillis", 2000,
+                    "endpoint", KnowledgeProvider.ID.equals(id) ? "http://127.0.0.1:1/query" :
+                            KypProductFactory.ID.equals(id) ? "http://127.0.0.1:" + products.getAddress().getPort() + "/mcp" :
+                                    "http://127.0.0.1:" + crmServer.getAddress().getPort(),
+                    "configuration", KnowledgeProvider.ID.equals(id) ? Map.of("knowledge-binding",
+                            Map.of("path", config, "sha256", digest(config))) : Map.of()));
+        }
+        write(root.resolve("provider-bindings.json"), Map.of("schemaVersion", "finance-host-provider-bindings.v0.1", "providers", providers));
+        lockJoint();
+    }
+    String digest(String name) throws Exception {
+        return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve(name))));
+    }
+    void lockJoint() throws Exception {
+        var plan = HarnessJson.mapper().readTree(root.resolve("component-plan.json").toFile());
+        var capabilities = new ArrayList<String>(); plan.path("capabilityBindings").fieldNames().forEachRemaining(capabilities::add);
+        var files = new HashMap<String, String>();
+        for (String file : List.of("component-plan.json", KypPreparationBootstrap.SOURCE, "provider-bindings.json",
+                "provider-configuration/knowledge-service/knowledge-binding.json")) files.put(file, digest(file));
+        write(root.resolve("service-lock.json"), Map.of("capabilities", capabilities, "files", files));
+    }
+    @Test void jointPreparationUsesThreeActualAdaptersWithoutBorrowingAuthority() throws Exception {
+        joint(); Files.delete(authority);
+        var providers = new CustomerManagerScenarioExtension().installationProviders(root);
+        assertEquals(Set.of(CustomerCrmProvider.PROVIDER_ID, KypProductFactory.ID, KnowledgeProvider.ID), providers.keySet());
+        var expected = Map.of(CustomerCrmProvider.PROVIDER_ID, Set.of(CustomerCrmProvider.CAPABILITY, CustomerCrmProvider.ALLOCATION_CAPABILITY),
+                KypProductFactory.ID, Set.of(KypProductFactory.CAPABILITY), KnowledgeProvider.ID, Set.of(KnowledgeProvider.SEARCH));
+        expected.forEach((id, capabilities) -> capabilities.forEach(capability -> assertTrue(
+                ((DescribedFinanceProvider) providers.get(id)).descriptor().supports(capability, CapabilityRequestV1.Operation.QUERY))));
+        assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
+    }
+    @Test void jointCrmReadDoesNotRequireProductOrKnowledgeAuthority() throws Exception {
+        joint();
+        var access = open("owner-a", null);
+        var result = access.query("crm-only", "trace", "customer-a", CustomerCrmProvider.CAPABILITY, Map.of());
+        assertEquals(CapabilityResultV1.Status.COMPLETED, result.status());
+        assertTrue(crmCalls.get() > 0); assertEquals(0, productCalls.get());
+    }
+    @Test void jointConnectionsCannotSilentlyUseAnUnselectedEndpointOrTimeout() throws Exception {
+        joint();
+        URI current = URI.create("http://127.0.0.1:" + crmServer.getAddress().getPort());
+        KypPreparationBootstrap.requireCrmConnection(root, current, Duration.ofMillis(2000));
+        assertThrows(SecurityException.class, () -> KypPreparationBootstrap.requireCrmConnection(root,
+                URI.create("http://127.0.0.1:1"), Duration.ofMillis(2000)));
+        assertThrows(SecurityException.class, () -> KypPreparationBootstrap.requireCrmConnection(root, current, Duration.ofMillis(1000)));
+        var binding = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(root.resolve("provider-bindings.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)binding.path("providers").path(KypProductFactory.ID))
+                .put("endpoint", "http://127.0.0.1:1/mcp");
+        write(root.resolve("provider-bindings.json"), binding); lockJoint();
+        assertEquals("PROVIDER_CONNECTION_LOCK_MISMATCH", assertThrows(SecurityException.class,
+                () -> new CustomerManagerScenarioExtension().installationProviders(root)).getMessage());
+        assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
+    }
+    @Test void lockedRootEndpointAcceptsOnlyTheEquivalentOptionalTrailingSlash() throws Exception {
+        joint();
+        URI current = URI.create("http://127.0.0.1:" + crmServer.getAddress().getPort());
+        var bindings = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(
+                root.resolve("provider-bindings.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)bindings.path("providers").path(CustomerCrmProvider.PROVIDER_ID))
+                .put("endpoint", current + "/");
+        write(root.resolve("provider-bindings.json"), bindings); lockJoint();
+        KypPreparationBootstrap.requireCrmConnection(root, current, Duration.ofMillis(2000));
+        assertEquals("PROVIDER_CONNECTION_LOCK_MISMATCH", assertThrows(SecurityException.class,
+                () -> KypPreparationBootstrap.requireCrmConnection(root, URI.create(current + "/other"),
+                        Duration.ofMillis(2000))).getMessage());
+    }
+    @Test void jointRegistryRejectsUnknownCapabilitiesAndTamperedKnowledgeConfiguration() throws Exception {
+        joint();
+        var plan = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(root.resolve("component-plan.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)plan.path("capabilityBindings")).put("unknown.write", CustomerCrmProvider.PROVIDER_ID);
+        write(root.resolve("component-plan.json"), plan); lockJoint();
+        assertThrows(IllegalArgumentException.class, () -> new CustomerManagerScenarioExtension().installationProviders(root));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)plan.path("capabilityBindings")).remove("unknown.write");
+        write(root.resolve("component-plan.json"), plan); lockJoint();
+        Files.writeString(root.resolve("provider-configuration/knowledge-service/knowledge-binding.json"), "{}");
+        assertThrows(IllegalArgumentException.class, () -> new CustomerManagerScenarioExtension().installationProviders(root));
+        assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
+    }
+    @Test void crmOnlyPreparationDoesNotRequireAnUnselectedProductSource() throws Exception {
+        write(root.resolve("component-plan.json"), Map.of("capabilityBindings", Map.of(CustomerCrmProvider.CAPABILITY, CustomerCrmProvider.PROVIDER_ID),
+                "providerConnections", Map.of(CustomerCrmProvider.PROVIDER_ID,
+                        Map.of("connectionRef", "crm-current", "kind", "customer-crm-readonly.v1"))));
+        write(root.resolve("service-lock.json"), Map.of("capabilities", List.of(CustomerCrmProvider.CAPABILITY),
+                "files", Map.of("component-plan.json", digest("component-plan.json"))));
+        Files.delete(root.resolve(KypPreparationBootstrap.SOURCE)); Files.delete(authority);
+        assertEquals(Set.of(CustomerCrmProvider.PROVIDER_ID), new CustomerManagerScenarioExtension().installationProviders(root).keySet());
+        assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
     }
     @Test void selectedProductRequiresSeparateCurrentGrant() throws Exception {
         var without = open("owner-a", null);

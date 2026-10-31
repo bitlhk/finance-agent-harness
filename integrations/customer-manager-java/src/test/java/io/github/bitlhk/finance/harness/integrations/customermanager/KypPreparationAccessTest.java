@@ -31,7 +31,9 @@ class KypPreparationAccessTest {
     }
     class Crm implements PreparationAccess {
         boolean receipt = true;
+        boolean revoked;
         public Snapshot authorize(String customer) {
+            if (revoked) throw new SecurityException("CRM_SCOPE_REJECTED");
             if (!"customer-fixture".equals(customer)) throw new SecurityException("CRM_SCOPE_REJECTED");
             return new Snapshot("crm-grant-1", "employee-fixture", FinanceContextV1.AuthenticationLevel.STRONG);
         }
@@ -73,6 +75,24 @@ class KypPreparationAccessTest {
         assertEquals(List.of(), result.data().get("eligibleProducts"));
         assertEquals(1, ((List<?>)result.data().get("excludedProducts")).size());
         assertNotNull(result.data().get("sourceEvidence"));
+    }
+    @Test void crmOnlyReportDoesNotRequireAnUnusedProductGrant() {
+        var access = access();
+        var result = access.query("crm-request", "crm-trace", "customer-fixture",
+                CustomerCrmProvider.CAPABILITY, Map.of());
+        grant.set(null);
+        var guard = access.resultReleaseGuard("customer-fixture", result);
+        assertDoesNotThrow(guard::run);
+        assertEquals(0, products.calls);
+        crm.revoked = true;
+        assertThrows(SecurityException.class, guard::run);
+    }
+    @Test void allocationCannotLoseItsProductAuthorityBinding() {
+        var result = query();
+        var data = new LinkedHashMap<>(result.data());
+        data.remove("productAuthorityBinding");
+        var missing = result(result.requestId(), result.traceId(), data, result.missingInputs());
+        assertThrows(SecurityException.class, () -> access().resultReleaseGuard("customer-fixture", missing));
     }
     @Test void crmGrantDoesNotGrantProductAccess() {
         grant.set(null);

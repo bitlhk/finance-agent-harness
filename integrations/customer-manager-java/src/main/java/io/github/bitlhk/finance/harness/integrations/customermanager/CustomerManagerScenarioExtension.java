@@ -30,28 +30,43 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         Path reports = outsideArtifact(context.privateStateRoot().resolve("service-preparation-reports"), context.artifactRoot());
         String owner = required(context.ownerRef(), "OWNER_REQUIRED");
         var mapping = (java.util.function.Supplier<CustomerCrmEmployeeMapping>) () -> CustomerCrmEmployeeMapping.load(mappingFile, owner);
-        CustomerCrmClient client = new CustomerCrmClient(URI.create(requiredEnv("FH_CRM_URL")),
-                Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000"))),
+        URI crmEndpoint = URI.create(requiredEnv("FH_CRM_URL"));
+        Duration crmTimeout = Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000")));
+        KypPreparationBootstrap.requireCrmConnection(context.artifactRoot(), crmEndpoint, crmTimeout);
+        CustomerCrmClient client = new CustomerCrmClient(crmEndpoint, crmTimeout,
                 () -> requiredEnv("FH_CRM_SERVICE_TOKEN"));
         CustomerCrmProvider provider = new CustomerCrmProvider(owner, client, () -> mapping.get().authority(), Clock.systemUTC());
         String sessionId = UUID.randomUUID().toString();
         String productAuthority = System.getenv("FH_PRODUCT_READ_AUTHORITY");
+        var crmAccess = new DirectCrmPreparationAccess(owner, sessionId, provider, context.currentObservation());
         PreparationAccess access = KypPreparationBootstrap.open(context, sessionId,
-                new DirectCrmPreparationAccess(owner, sessionId, provider),
+                crmAccess,
                 productAuthority == null || productAuthority.isBlank() ? null : Path.of(productAuthority));
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
         var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
-        ServicePreparation task = new ServicePreparation(owner, access,
+        JsonNode installedLock = HarnessJson.mapper().readTree(Files.readAllBytes(context.artifactRoot().resolve("service-lock.json")));
+        boolean knowledgeSelected = false;
+        for (var capability : installedLock.path("capabilities"))
+            knowledgeSelected |= "knowledge.evidence.search".equals(capability.asText());
+        ManagerKnowledgeEvidence knowledge = null;
+        try {
+        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context, crmAccess.invocationProvider(), access, sessionId);
+        ServicePreparation task = new ServicePreparation(owner, knowledge == null ? access : knowledge.installedAccess(),
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method,
-                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
-        return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
+        var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
+        return knowledge == null ? managed : knowledge.session(managed);
+        } catch (Exception failure) {
+            try { access.close(); } finally { if (knowledge != null) knowledge.close(); }
+            throw failure;
+        }
     }
 
     static final class Managed implements Session {

@@ -447,7 +447,8 @@
       "compatibility": {
         "profiles": [
           "local-read-only",
-          "knowledge-read-only"
+          "knowledge-read-only",
+          "employee-assisted"
         ],
         "runtimeLanguages": [
           "java"
@@ -955,7 +956,8 @@
       "compatibility": {
         "profiles": [
           "local-read-only",
-          "knowledge-read-only"
+          "knowledge-read-only",
+          "employee-assisted"
         ],
         "runtimeLanguages": [
           "java"
