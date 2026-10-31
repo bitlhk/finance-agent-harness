@@ -78,6 +78,13 @@
   ],
   "profiles": [
     {
+      "id": "knowledge-read-only",
+      "version": "0.1.0",
+      "displayName": "知识证据查询（隔离候选）",
+      "source": "repo://profiles/knowledge-read-only.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
       "id": "shared-read-only",
       "version": "0.1.0",
       "displayName": "共同财富只读（候选）",
@@ -439,7 +446,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "local-read-only"
+          "local-read-only",
+          "knowledge-read-only"
         ],
         "runtimeLanguages": [
           "java"
@@ -946,7 +954,8 @@
       ],
       "compatibility": {
         "profiles": [
-          "local-read-only"
+          "local-read-only",
+          "knowledge-read-only"
         ],
         "runtimeLanguages": [
           "java"
@@ -1247,7 +1256,7 @@
       }
     }
   ],
-  "catalogRevision": "2026-10-31.knowledge-evidence-merge-prep",
+  "catalogRevision": "2026-10-31.knowledge-host-merge-prep",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
