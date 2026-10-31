@@ -13,6 +13,7 @@
     <description>Runtime-neutral contracts for connecting financial agents to bank capabilities.</description>
 
     <modules>
+        <module>providers/knowledge-service</module>
         <module>packages/java/quotation</module>
         <module>providers/quotation-reference</module>
         <module>packages/java/core</module>

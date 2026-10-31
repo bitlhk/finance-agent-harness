@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.16",
+  "catalogVersion": "0.2.17",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -45,9 +45,15 @@
       "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-customer-manager-java:0.1.0-SNAPSHOT",
       "governanceRef": "finance-harness-integration",
       "compatibility": {
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"],
-        "profiles": ["employee-assisted"]
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "employee-assisted"
+        ]
       }
     },
     {
@@ -58,9 +64,15 @@
       "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-fraud-verification-java:0.1.0-SNAPSHOT",
       "governanceRef": "finance-harness-integration",
       "compatibility": {
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"],
-        "profiles": ["fraud-investigation"]
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "fraud-investigation"
+        ]
       }
     }
   ],
@@ -137,11 +149,21 @@
       "profile": "employee-assisted",
       "source": "repo://domain-packs/wealth/service-preparation",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["wealth.previsit-context.query"],
-      "dependencies": [
-        {"kind": "capability-pack", "id": "wealth-manager-previsit", "version": "0.1.0"}
+      "requiresCapabilities": [
+        "wealth.previsit-context.query"
       ],
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-manager-previsit",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "wealth-shared-facts",
@@ -268,16 +290,26 @@
       "profile": "fraud-investigation",
       "source": "repo://domain-packs/risk/fraud-verification-assistance",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["fraud.risk-evidence.query"],
-      "dependencies": [{
-        "kind": "capability-pack",
-        "id": "fraud-risk-evidence-query",
-        "version": "0.1.0"
-      }],
+      "requiresCapabilities": [
+        "fraud.risk-evidence.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "fraud-risk-evidence-query",
+          "version": "0.1.0"
+        }
+      ],
       "compatibility": {
-        "profiles": ["fraud-investigation"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "fraud-investigation"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -287,9 +319,28 @@
       "profile": "post-loan-risk-review",
       "source": "repo://domain-packs/risk/post-loan-risk-verification",
       "governanceRef": "finance-harness-core",
-      "requiresCapabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
-      "dependencies": [{"kind":"capability-pack","id":"post-loan-risk-snapshot","version":"0.1.0"}],
-      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+      "requiresCapabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "post-loan-risk-snapshot",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     },
     {
       "id": "transfer-anti-fraud",
@@ -352,17 +403,49 @@
         "enterprise.application-contract.verify"
       ],
       "dependencies": [
-        {"kind": "capability-pack", "id": "enterprise-financial-statement-verification", "version": "0.1.0"},
-        {"kind": "capability-pack", "id": "enterprise-application-contract-verification", "version": "0.1.0"}
+        {
+          "kind": "capability-pack",
+          "id": "enterprise-financial-statement-verification",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "enterprise-application-contract-verification",
+          "version": "0.1.0"
+        }
       ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
   "capabilityPacks": [
+    {
+      "id": "knowledge-evidence-readonly",
+      "version": "0.1.0",
+      "displayName": "文档知识证据（隔离候选）",
+      "source": "repo://capability-packs/knowledge-evidence-readonly",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "knowledge.evidence.search"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
     {
       "id": "quotation-consultation-readonly",
       "version": "0.1.0",
@@ -394,9 +477,16 @@
         "eval.synthetic.wealth-assistant-product-info.query"
       ],
       "compatibility": {
-        "profiles": ["local-read-only"],
-        "runtimeFamilies": ["openjiuwen", "agentscope"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen",
+          "agentscope"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -543,8 +633,14 @@
       "displayName": "产品来源事实（待运行接线验收）",
       "source": "repo://capability-packs/wealth-product-facts",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["wealth.products.query"],
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "capabilities": [
+        "wealth.products.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "wealth-allocation-context",
@@ -552,8 +648,14 @@
       "displayName": "财富产品候选依据（待运行接线验收）",
       "source": "repo://capability-packs/wealth-allocation-context",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["wealth.allocation-context.query"],
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "capabilities": [
+        "wealth.allocation-context.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "wealth-customer-context",
@@ -669,11 +771,19 @@
       "displayName": "已知涉诈记录核验",
       "source": "repo://capability-packs/fraud-risk-evidence-query",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["fraud.risk-evidence.query"],
+      "capabilities": [
+        "fraud.risk-evidence.query"
+      ],
       "compatibility": {
-        "profiles": ["fraud-investigation"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "fraud-investigation"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -682,8 +792,21 @@
       "displayName": "贷后风险快照与确定性预警",
       "source": "repo://capability-packs/post-loan-risk-snapshot",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
-      "compatibility": {"profiles":["post-loan-risk-review"],"runtimeFamilies":["openjiuwen"],"runtimeLanguages":["java"]}
+      "capabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     },
     {
       "id": "cashflow-readonly",
@@ -726,8 +849,15 @@
       "displayName": "Account monthly summary",
       "source": "repo://capability-packs/account-statement-readonly",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["account.statement.query"],
-      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
+      "capabilities": [
+        "account.statement.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
     },
     {
       "id": "account-transactions-readonly",
@@ -735,8 +865,15 @@
       "displayName": "Account transaction page",
       "source": "repo://capability-packs/account-transactions-readonly",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["account.transaction.query"],
-      "compatibility": {"profiles": ["local-read-only", "local-simulator-task"]}
+      "capabilities": [
+        "account.transaction.query"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only",
+          "local-simulator-task"
+        ]
+      }
     },
     {
       "id": "channel-preferences",
@@ -759,11 +896,19 @@
       "displayName": "企业财报勾稽核验",
       "source": "repo://capability-packs/enterprise-financial-statement-verification",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["enterprise.financial-statement.verify"],
+      "capabilities": [
+        "enterprise.financial-statement.verify"
+      ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     },
     {
@@ -772,15 +917,42 @@
       "displayName": "申请与用途合同一致性核验",
       "source": "repo://capability-packs/enterprise-application-contract-verification",
       "governanceRef": "finance-harness-core",
-      "capabilities": ["enterprise.application-contract.verify"],
+      "capabilities": [
+        "enterprise.application-contract.verify"
+      ],
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
   "providers": [
+    {
+      "id": "knowledge-service",
+      "version": "0.1.0-probe.2",
+      "displayName": "受管知识服务（隔离候选）",
+      "source": "repo://providers/knowledge-service",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.2",
+      "governanceRef": "finance-harness-core",
+      "capabilities": [
+        "knowledge.evidence.search"
+      ],
+      "compatibility": {
+        "profiles": [
+          "local-read-only"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
+    },
     {
       "id": "quotation-synthetic-reference",
       "version": "0.1.0-SNAPSHOT",
@@ -901,18 +1073,31 @@
       "version": "0.1.0-SNAPSHOT",
       "displayName": "贷后风险合成参考 Provider",
       "source": "repo://providers/post-loan-risk-reference",
-      "capabilities": ["postloan.risk-snapshot.query", "postloan.risk-escalation.evaluate"],
+      "capabilities": [
+        "postloan.risk-snapshot.query",
+        "postloan.risk-escalation.evaluate"
+      ],
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles":["post-loan-risk-review"]}
+      "compatibility": {
+        "profiles": [
+          "post-loan-risk-review"
+        ]
+      }
     },
     {
       "id": "wealth-product-mcp",
       "version": "0.1.0-SNAPSHOT",
       "displayName": "产品来源 MCP 只读 Provider",
       "source": "repo://providers/wealth-product-mcp",
-      "capabilities": ["wealth.products.query"],
+      "capabilities": [
+        "wealth.products.query"
+      ],
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles": ["employee-assisted"]}
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
     },
     {
       "id": "customer-crm-readonly",
@@ -973,9 +1158,15 @@
       ],
       "governanceRef": "finance-harness-core",
       "compatibility": {
-        "profiles": ["internal-control"],
-        "runtimeFamilies": ["openjiuwen"],
-        "runtimeLanguages": ["java"]
+        "profiles": [
+          "internal-control"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
       }
     }
   ],
@@ -1049,10 +1240,14 @@
       "displayName": "企业信贷材料核验受控案例（非业务审批评测）",
       "source": "repo://conformance/fixtures/enterprise-credit-material-audit/v0.1",
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles": ["internal-control"]}
+      "compatibility": {
+        "profiles": [
+          "internal-control"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-10-28.crm-kyp-candidate-1",
+  "catalogRevision": "2026-10-31.knowledge-evidence-merge-prep",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
