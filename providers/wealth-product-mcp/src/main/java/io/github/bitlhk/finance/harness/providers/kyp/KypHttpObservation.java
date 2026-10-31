@@ -14,10 +14,10 @@ final class KypHttpObservation implements BoundedHttpClient.Observation, AutoClo
     private final Map<String,String> links;
     private ObservationRun run;
     private ObservationRun.Span parent;
-    KypHttpObservation(ManagedProviderFactoryV01.Connection connection, CapabilityRequestV1 request, String source) {
+    KypHttpObservation(ManagedProviderFactoryV01.Connection connection, CapabilityRequestV1 request) {
         this.connection = connection;
         links = Map.of("providerId", KypProductFactory.ID, "capabilityId", request.capabilityId(),
-                "harnessRequestId", request.context().requestId(), "harnessTraceId", request.context().traceId(), "sourceId", source);
+                "harnessRequestId", request.context().requestId(), "harnessTraceId", request.context().traceId());
         try {
             run = connection.observation().get();
             if (run != null) parent = run.start(null, "provider-mcp", "exchange", links);

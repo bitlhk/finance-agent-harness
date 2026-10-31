@@ -3,6 +3,7 @@ package io.github.bitlhk.finance.harness.providers.kyp;
 import com.sun.net.httpserver.HttpServer;
 import io.github.bitlhk.finance.harness.core.*;
 import io.github.bitlhk.finance.harness.core.spi.*;
+import io.github.bitlhk.finance.harness.core.observation.*;
 import io.github.bitlhk.finance.harness.mcp.PinnedMcpReader;
 import io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmFactoryV01;
 import org.junit.jupiter.api.*;
@@ -31,6 +32,8 @@ class KypManagedIntegrationTest {
     volatile String failAuditPhase = "";
     volatile Duration timeout = Duration.ofSeconds(2);
     final List<ManagedProviderFactoryV01.HttpAttempt> attempts = new CopyOnWriteArrayList<>();
+    final List<ObservationEventV01> events = new CopyOnWriteArrayList<>();
+    final ObservationRun observed = new ObservationRun("request", "boot", "instance", event -> events.add(event));
 
     @BeforeEach void start() throws Exception {
         now = Instant.now();
@@ -127,7 +130,7 @@ class KypManagedIntegrationTest {
                 () -> new ManagedProviderFactoryV01.SourceSession("isolated-crm-token", SUBJECT, ACTOR,
                         "fixture-session", now.plusSeconds(3600)), () -> null, ignored -> {});
         var productConnection = new ManagedProviderFactoryV01.Connection("wealth-product-mcp.v1", endpoint, timeout,
-                () -> { throw new AssertionError("Public product transport must never acquire a CRM credential"); }, () -> null, attempts::add);
+                () -> { throw new AssertionError("Public product transport must never acquire a CRM credential"); }, () -> observed, attempts::add);
         var registry = new ManagedProviderFactoriesV01(List.of(new CustomerCrmFactoryV01(), kyp));
         var ids = Set.of(CRM_ID, KypProductFactory.ID);
         return registry.createReferenced(Map.of(
@@ -158,6 +161,10 @@ class KypManagedIntegrationTest {
         assertFalse(productArguments.toString().contains("isolated-crm-token"));
         assertEquals(List.of("STARTED", "COMPLETED"), audit.stream().map(a -> a.get("phase")).toList());
         assertTrue(attempts.stream().anyMatch(a -> a.status() == 200 && a.route().equals("product-source")));
+        assertEquals(0, observed.droppedEvents(), "Product transport metadata must obey the existing observation contract");
+        assertTrue(events.stream().anyMatch(e -> e.component().equals("provider-http") && e.links().getOrDefault("httpStatus", "").equals("200")));
+        for (int i = 0; i < events.size(); i++) assertEquals(i + 1, events.get(i).sequence());
+        assertFalse(events.toString().contains("isolated-crm-token"));
     }
     @Test void revokedProductGrantDoesNotRevokeOrBorrowCrmGrant() {
         var providers = installed(); productGrant.set(grant(Set.of(), "WEALTH_PRODUCT_REVIEW"));
