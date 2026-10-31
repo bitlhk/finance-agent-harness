@@ -66,6 +66,9 @@ class PreparationKnowledgeTest {
                         assertTrue(refs.contains("/productReview/status"));
                         assertTrue(refs.contains("/productReview/policySource/ruleVersion"));
                         assertFalse(refs.contains("/productReview/invented"));
+                        assertTrue(refs.contains("/factAssessment/missing/0/state"));
+                        assertFalse(refs.contains("/factAssessment/goal"));
+                        assertTrue(refs.stream().allMatch(ref -> !facts.at(ref).isMissingNode()), refs.toString());
                     }
                     if (revokeDuringGeneration) knowledgeGranted = false;
                     var generated = HarnessJson.mapper().createObjectNode();
@@ -115,12 +118,13 @@ class PreparationKnowledgeTest {
         }
     }
     @Test void actualProductStatusCanBeCitedWithoutAllowingInventedFields() throws Exception {
-        for (String citation : List.of("/productReview/status", "/productReview/invented")) {
+        for (String citation : List.of("/productReview/status", "/factAssessment/missing/0/state",
+                "/productReview/invented")) {
             productCitation = citation;
             try (var service = open()) {
                 var report = service.prepareProduct("owner-a", service.select("owner-a", "合成客户甲", "筛选产品"),
                         Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch"), ServicePreparation.PreparationListener.NONE);
-                assertEquals(citation.endsWith("status") ? "READY" : "FAILED",
+                assertEquals(citation.endsWith("invented") ? "FAILED" : "READY",
                         report.path("explanationStatus").asText(), report.toString());
                 if (citation.endsWith("invented")) assertFalse(report.has("modelSuggestion"));
             }

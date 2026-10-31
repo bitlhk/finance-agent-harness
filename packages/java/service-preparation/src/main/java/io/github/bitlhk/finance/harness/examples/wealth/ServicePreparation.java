@@ -252,6 +252,7 @@ public final class ServicePreparation implements AutoCloseable {
                         }
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
                         generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
+                        collectFactRefs(generationContext.path("productMissingInputs"), "/productMissingInputs", ids, ids.size() + 80);
                         for (String field : List.of("status", "customerRiskLevel", "assessmentValidUntil",
                                 "eligibilityPolicy", "policySource"))
                             if (productReview.hasNonNull(field))
@@ -295,6 +296,10 @@ public final class ServicePreparation implements AutoCloseable {
                 ObjectNode factAssessment=assessFacts(s.goal(),context,report.path("productReview"));
                 report.set("factAssessment",factAssessment.deepCopy());
                 generationContext.set("factAssessment",factAssessment.deepCopy());
+                // Cite Host-derived completeness states without treating the user's goal as a fact.
+                collectFactRefs(factAssessment.path("status"), "/factAssessment/status", ids, ids.size() + 1);
+                collectFactRefs(factAssessment.path("missing"), "/factAssessment/missing", ids, ids.size() + 100);
+                if (generationContext.has("knowledgeStatus")) ids.add("/knowledgeStatus");
                 ObjectNode factState=factState(context,s.taskContext(),data.path("hostEvidence"),Instant.now());
                 report.set("factState",factState.deepCopy());generationContext.set("factState",factState.deepCopy());
                 collectFactRefs(factState,"/factState",ids,ids.size()+160);
