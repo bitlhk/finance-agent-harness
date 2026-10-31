@@ -38,8 +38,9 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         CustomerCrmProvider provider = new CustomerCrmProvider(owner, client, () -> mapping.get().authority(), Clock.systemUTC());
         String sessionId = UUID.randomUUID().toString();
         String productAuthority = System.getenv("FH_PRODUCT_READ_AUTHORITY");
+        var crmAccess = new DirectCrmPreparationAccess(owner, sessionId, provider, context.currentObservation());
         PreparationAccess access = KypPreparationBootstrap.open(context, sessionId,
-                new DirectCrmPreparationAccess(owner, sessionId, provider),
+                crmAccess,
                 productAuthority == null || productAuthority.isBlank() ? null : Path.of(productAuthority));
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
         var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
@@ -49,7 +50,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             knowledgeSelected |= "knowledge.evidence.search".equals(capability.asText());
         ManagerKnowledgeEvidence knowledge = null;
         try {
-        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context, provider, access, sessionId);
+        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context, crmAccess.invocationProvider(), access, sessionId);
         ServicePreparation task = new ServicePreparation(owner, knowledge == null ? access : knowledge.installedAccess(),
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),

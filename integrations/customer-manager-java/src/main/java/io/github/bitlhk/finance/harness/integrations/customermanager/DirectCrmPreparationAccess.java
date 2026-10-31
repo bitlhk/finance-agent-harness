@@ -11,12 +11,22 @@ public final class DirectCrmPreparationAccess implements PreparationAccess {
     private final String ownerRef;
     private final String sessionRef;
     private final CustomerCrmProvider provider;
+    private final io.github.bitlhk.finance.harness.core.spi.FinanceProvider invocationProvider;
     private final AtomicBoolean closed = new AtomicBoolean();
 
     public DirectCrmPreparationAccess(String ownerRef, String sessionRef, CustomerCrmProvider provider) {
+        this(ownerRef, sessionRef, provider, () -> null);
+    }
+
+    public DirectCrmPreparationAccess(String ownerRef, String sessionRef, CustomerCrmProvider provider,
+            java.util.function.Supplier<io.github.bitlhk.finance.harness.core.observation.ObservationRun> observation) {
         this.ownerRef = required(ownerRef); this.sessionRef = required(sessionRef);
         this.provider = Objects.requireNonNull(provider);
+        this.invocationProvider = new io.github.bitlhk.finance.harness.core.observation.ObservedFinanceProvider(
+                provider, CustomerCrmProvider.PROVIDER_ID, observation);
     }
+
+    io.github.bitlhk.finance.harness.core.spi.FinanceProvider invocationProvider() { return invocationProvider; }
 
     @Override public Snapshot authorize(String customerRef) {
         if (closed.get()) throw new SecurityException("CRM_SESSION_CLOSED");
@@ -40,7 +50,7 @@ public final class DirectCrmPreparationAccess implements PreparationAccess {
         CapabilityRequestV1 request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 capabilityId, CapabilityRequestV1.Operation.QUERY, context,
                 Map.copyOf(parameters), null, null, Map.of(), null);
-        CapabilityResultV1 result = provider.query(request);
+        CapabilityResultV1 result = invocationProvider.query(request);
         if (!before.equals(authorize(customerRef))) throw new SecurityException("CRM_AUTHORITY_CHANGED");
         return result;
     }
