@@ -11,6 +11,8 @@ import io.github.bitlhk.finance.harness.mcp.PinnedMcpReader;
 import io.github.bitlhk.finance.harness.providers.kyp.*;
 import io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmFactoryV01;
 import io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmProvider;
+import io.github.bitlhk.finance.harness.providers.knowledge.InstalledKnowledgeProvider;
+import io.github.bitlhk.finance.harness.providers.knowledge.KnowledgeProvider;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -32,6 +34,7 @@ final class KypPreparationBootstrap {
         boolean selected = false;
         for (var capability : lock.path("capabilities")) selected |= KypProductFactory.CAPABILITY.equals(capability.asText());
         if (!selected) return crm;
+        installation(root);
         Source installed = source(root, lock);
         var target = installed.target();
         var policy = installed.policy();
@@ -76,35 +79,119 @@ final class KypPreparationBootstrap {
     }
 
     static Map<String, FinanceProvider> installation(Path root) throws Exception {
-        var installed = source(root, read(root.resolve("service-lock.json"), 2_000_000));
+        var lock = read(root.resolve("service-lock.json"), 2_000_000);
+        var selected = selectedCapabilities(lock);
+        var plan = locked(root, lock, "component-plan.json");
         Supplier<BoundFinanceProvider.Grant> deny = () -> { throw new SecurityException("PLAN_ONLY_NO_GRANT"); };
-        var kyp = new KypProductFactory(installed.target(), installed.policy(), deny, ignored -> false, Clock.systemUTC());
         var crm = new CustomerCrmFactoryV01();
-        var kypConnection = new ManagedProviderFactoryV01.Connection(kyp.connectionKind(), installed.target().endpoint(),
-                installed.target().timeout(), () -> { throw new SecurityException("PLAN_ONLY_NO_SESSION"); }, () -> null, ignored -> {});
-        var crmConnection = new ManagedProviderFactoryV01.Connection(crm.connectionKind(), URI.create("http://127.0.0.1:1"),
-                Duration.ofSeconds(1), () -> { throw new SecurityException("PLAN_ONLY_NO_SESSION"); }, () -> null, ignored -> {});
-        var registry = new ManagedProviderFactoriesV01(List.of(crm, kyp));
-        var ids = Set.of(crm.providerId(), kyp.providerId());
-        return registry.createBound(Map.of(crm.providerId(), new ManagedProviderFactoriesV01.Binding(crmConnection, deny),
-                kyp.providerId(), new ManagedProviderFactoriesV01.Binding(kypConnection, deny)), ids,
-                registry.configurationDigests(ids), Map.of(crm.providerId(), ManagedProviderFactoriesV01.connectionDigest(crmConnection),
-                        kyp.providerId(), ManagedProviderFactoriesV01.connectionDigest(kypConnection)));
+        crmReference(plan);
+        var crmBinding = providerBinding(root, lock, plan, CustomerCrmProvider.PROVIDER_ID);
+        var crmConnection = new ManagedProviderFactoryV01.Connection(crm.connectionKind(), crmBinding == null
+                ? URI.create("http://127.0.0.1:1") : URI.create(crmBinding.path("endpoint").asText()),
+                crmBinding == null ? Duration.ofSeconds(1) : Duration.ofMillis(crmBinding.path("timeoutMillis").asLong()),
+                () -> { throw new SecurityException("PLAN_ONLY_NO_SESSION"); }, () -> null, ignored -> {});
+        var factories = new ArrayList<ManagedProviderFactoryV01>(); factories.add(crm);
+        var connections = new HashMap<String, ManagedProviderFactoriesV01.Binding>();
+        connections.put(crm.providerId(), new ManagedProviderFactoriesV01.Binding(crmConnection, deny));
+        var digests = new HashMap<String, String>();
+        digests.put(crm.providerId(), ManagedProviderFactoriesV01.connectionDigest(crmConnection));
+        if (selected.contains(KypProductFactory.CAPABILITY)) {
+            var installed = source(root, lock);
+            var kyp = new KypProductFactory(installed.target(), installed.policy(), deny, ignored -> false, Clock.systemUTC());
+            var connection = new ManagedProviderFactoryV01.Connection(kyp.connectionKind(), installed.target().endpoint(),
+                    installed.target().timeout(), () -> { throw new SecurityException("PLAN_ONLY_NO_SESSION"); }, () -> null, ignored -> {});
+            factories.add(kyp);
+            connections.put(kyp.providerId(), new ManagedProviderFactoriesV01.Binding(connection, deny));
+            digests.put(kyp.providerId(), ManagedProviderFactoriesV01.connectionDigest(connection));
+        }
+        var registry = new ManagedProviderFactoriesV01(factories);
+        var providers = new HashMap<>(registry.createBound(connections, connections.keySet(),
+                registry.configurationDigests(connections.keySet()), digests));
+        if (selected.contains(KnowledgeProvider.SEARCH))
+            providers.putAll(InstalledKnowledgeProvider.prepare(root, providers));
+        validateComposition(selected, plan, providers);
+        return Map.copyOf(providers);
     }
 
-    private record Source(String connectionRef, PinnedMcpReader.Target target, ProductCatalog.SourcePolicy policy) {}
-    private static Source source(Path root, JsonNode lock) throws Exception {
-        Set<String> capabilities = new HashSet<>(); lock.path("capabilities").forEach(v -> capabilities.add(v.asText()));
-        if (!capabilities.equals(Set.of(CustomerCrmProvider.CAPABILITY, CustomerCrmProvider.ALLOCATION_CAPABILITY, KypProductFactory.CAPABILITY)))
-            throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
-        JsonNode plan = locked(root, lock, "component-plan.json");
-        var providers = new HashSet<String>(); plan.path("providerConnections").fieldNames().forEachRemaining(providers::add);
-        if (!providers.equals(Set.of(CustomerCrmProvider.PROVIDER_ID, KypProductFactory.ID)))
-            throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
+    private static Set<String> selectedCapabilities(JsonNode lock) {
+        if (!lock.path("capabilities").isArray()) throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
+        var values = new HashSet<String>();
+        for (var value : lock.path("capabilities"))
+            if (!value.isTextual() || value.asText().isBlank() || !values.add(value.asText()))
+                throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
+        if (!values.contains(CustomerCrmProvider.CAPABILITY))
+            throw new SecurityException("CRM_CAPABILITY_REQUIRED");
+        return Set.copyOf(values);
+    }
+
+    private static void validateComposition(Set<String> capabilities, JsonNode plan, Map<String, FinanceProvider> providers) {
+        fields(plan.path("capabilityBindings"), capabilities);
+        fields(plan.path("providerConnections"), providers.keySet());
+        var used = new HashSet<String>();
+        for (String capability : capabilities) {
+            String id = plan.path("capabilityBindings").path(capability).asText();
+            if (!(providers.get(id) instanceof DescribedFinanceProvider provider)
+                    || !id.equals(provider.descriptor().providerId())
+                    || !provider.descriptor().supports(capability, io.github.bitlhk.finance.harness.core.CapabilityRequestV1.Operation.QUERY))
+                throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
+            used.add(id);
+        }
+        if (!used.equals(providers.keySet())) throw new SecurityException("KYP_COMPOSITION_NOT_SUPPORTED");
+    }
+
+    private static void crmReference(JsonNode plan) {
         var crmBinding = plan.path("providerConnections").path(CustomerCrmProvider.PROVIDER_ID);
         if (crmBinding.size() != 2 || !"crm-current".equals(crmBinding.path("connectionRef").asText())
                 || !"customer-crm-readonly.v1".equals(crmBinding.path("kind").asText()))
             throw new SecurityException("CRM_INSTALLED_SOURCE_INVALID");
+    }
+
+    static void requireCrmConnection(Path root, URI endpoint, Duration timeout) throws Exception {
+        var lock = read(root.resolve("service-lock.json"), 2_000_000);
+        // Older single-connection artifacts retain their existing Host configuration contract.
+        if (!lock.path("files").has("provider-bindings.json")) {
+            if (Files.exists(root.resolve("provider-bindings.json"))) throw new SecurityException("PROVIDER_BINDINGS_NOT_LOCKED");
+            return;
+        }
+        var plan = locked(root, lock, "component-plan.json");
+        crmReference(plan);
+        var binding = providerBinding(root, lock, plan, CustomerCrmProvider.PROVIDER_ID);
+        requireTransport(binding, endpoint, timeout);
+    }
+
+    private static JsonNode providerBinding(Path root, JsonNode lock, JsonNode plan, String id) throws Exception {
+        if (!lock.path("files").has("provider-bindings.json")) {
+            if (Files.exists(root.resolve("provider-bindings.json"))) throw new SecurityException("PROVIDER_BINDINGS_NOT_LOCKED");
+            return null;
+        }
+        var bindings = locked(root, lock, "provider-bindings.json");
+        fields(bindings, Set.of("schemaVersion", "providers"));
+        if (!"finance-host-provider-bindings.v0.1".equals(bindings.path("schemaVersion").asText()))
+            throw new SecurityException("PROVIDER_BINDING_INVALID");
+        var binding = bindings.path("providers").path(id);
+        fields(binding, Set.of("connectionRef", "kind", "endpoint", "timeoutMillis", "configuration"));
+        if (!binding.path("connectionRef").equals(plan.path("providerConnections").path(id).path("connectionRef"))
+                || !binding.path("kind").equals(plan.path("providerConnections").path(id).path("kind"))
+                || !binding.path("configuration").isObject() || !binding.path("configuration").isEmpty())
+            throw new SecurityException("PROVIDER_BINDING_INVALID");
+        URI endpoint = URI.create(text(binding, "endpoint"));
+        if (!Set.of("http", "https").contains(endpoint.getScheme()) || endpoint.getHost() == null
+                || endpoint.getUserInfo() != null || endpoint.getQuery() != null || endpoint.getFragment() != null)
+            throw new SecurityException("PROVIDER_BINDING_INVALID");
+        positive(binding, "timeoutMillis", 60_000);
+        return binding;
+    }
+
+    private static void requireTransport(JsonNode binding, URI endpoint, Duration timeout) {
+        if (binding != null && (!endpoint.equals(URI.create(binding.path("endpoint").asText()))
+                || timeout.toMillis() != binding.path("timeoutMillis").asLong()))
+            throw new SecurityException("PROVIDER_CONNECTION_LOCK_MISMATCH");
+    }
+
+    private record Source(String connectionRef, PinnedMcpReader.Target target, ProductCatalog.SourcePolicy policy) {}
+    private static Source source(Path root, JsonNode lock) throws Exception {
+        JsonNode plan = locked(root, lock, "component-plan.json");
+        crmReference(plan);
         JsonNode binding = plan.path("providerConnections").path(KypProductFactory.ID);
         if (!KypProductFactory.ID.equals(plan.path("capabilityBindings").path(KypProductFactory.CAPABILITY).asText())
                 || !binding.path("connectionRef").asText().matches("[a-z][a-z0-9-]{0,63}")
@@ -119,6 +206,7 @@ final class KypPreparationBootstrap {
             throw new SecurityException("KYP_INSTALLED_SOURCE_INVALID");
         var target = new PinnedMcpReader.Target(URI.create(text(source, "endpoint")), text(source, "tool"),
                 text(source, "inputSchemaSha256"), Duration.ofMillis(positive(source, "timeoutMillis", 30_000)));
+        requireTransport(providerBinding(root, lock, plan, KypProductFactory.ID), target.endpoint(), target.timeout());
         var policy = new ProductCatalog.SourcePolicy(text(source, "sourceId"), ProductCatalog.SalesTrust.DEMO,
                 Duration.ofSeconds(positive(source, "maximumAgeSeconds", 31_536_000)));
         return new Source(text(source, "connectionRef"), target, policy);

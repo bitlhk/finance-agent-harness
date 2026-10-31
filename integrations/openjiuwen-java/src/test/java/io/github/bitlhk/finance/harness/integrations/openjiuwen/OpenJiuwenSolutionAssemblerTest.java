@@ -730,6 +730,77 @@ class OpenJiuwenSolutionAssemblerTest {
         assertNull(cleanAgent.getAbilityManager().get("fraud_transfer_risk_assess"));
     }
 
+    @Test void jointManagerPacksRetainOneLockAndIndependentProviderContexts() throws Exception {
+        var yaml = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
+        var input = (com.fasterxml.jackson.databind.node.ObjectNode) yaml.readTree(root().resolve(
+                "examples/solutions/customer-manager-service-preparation/solution.yaml").toFile());
+        for (String pack : List.of("wealth-product-facts", "knowledge-evidence-readonly"))
+            ((com.fasterxml.jackson.databind.node.ArrayNode) input.path("capabilityPackRefs")).addObject()
+                    .put("id", pack).put("version", "0.1.0").put("source", "repo://capability-packs/" + pack);
+        var providerRefs = (com.fasterxml.jackson.databind.node.ArrayNode)input.path("providerRefs");
+        providerRefs.addObject().put("id", "wealth-product-mcp").put("version", "0.1.0-SNAPSHOT")
+                .put("source", "maven://io.github.bitlhk.finance:finance-provider-wealth-product-mcp:0.1.0-SNAPSHOT");
+        providerRefs.addObject().put("id", "knowledge-service").put("version", "0.1.0-probe.2")
+                .put("source", "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.2");
+        var targets = (com.fasterxml.jackson.databind.node.ObjectNode)input.path("capabilityBindings");
+        targets.put("wealth.products.query", "wealth-product-mcp").put("knowledge.evidence.search", "knowledge-service");
+        Path solutionFile = temporaryDirectory.resolve("manager-joint.json");
+        Files.writeString(solutionFile, input.toString());
+        var calls = new java.util.ArrayList<CapabilityRequestV1>();
+        var providers = new java.util.LinkedHashMap<String, FinanceProvider>();
+        for (JsonNode reference : providerRefs) {
+            String id = reference.path("id").asText(), version = reference.path("version").asText();
+            var supports = new java.util.ArrayList<ProviderDescriptorV1.CapabilitySupport>();
+            targets.fields().forEachRemaining(entry -> {
+                if (id.equals(entry.getValue().asText())) supports.add(new ProviderDescriptorV1.CapabilitySupport(
+                        entry.getKey(), CapabilityRequestV1.Operation.QUERY));
+            });
+            providers.put(id, new DescribedFinanceProvider() {
+                public ProviderDescriptorV1 descriptor() { return new ProviderDescriptorV1(ProviderDescriptorV1.SCHEMA_VERSION, id, version, supports); }
+                public CapabilityResultV1 query(CapabilityRequestV1 request) { calls.add(request); return completed(request, Map.of("fixture", true)); }
+                public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new AssertionError("No TASK in these four packs"); }
+            });
+        }
+        var assembler = new OpenJiuwenSolutionAssembler();
+        var prepared = assembler.prepare(root(), solutionFile, providers);
+        var contexts = new java.util.LinkedHashMap<String, OpenJiuwenCapabilityInstaller.ProviderInvocation>();
+        for (String id : providers.keySet()) contexts.put(id, new OpenJiuwenCapabilityInstaller.ProviderInvocation(
+                new OpenJiuwenFinanceBridge.InvocationDefaults(id + "-principal", id + "-subject",
+                        FinanceContextV1.PrincipalType.EMPLOYEE, "host", id + "-purpose",
+                        FinanceContextV1.AuthenticationLevel.STRONG,
+                        id.equals("knowledge-service") ? Set.of("knowledge:read") : id.equals("wealth-product-mcp")
+                                ? Set.of("wealth:products:read") : Set.of("wealth:previsit:read", "wealth:allocation:read"))
+                        .withStrictReadOnlyQueries(), id + "-session"));
+        var readOnly = prepared.openQueriesWithProviderContexts(contexts, true);
+        assertEquals(4, readOnly.capabilityIds().size());
+        assertThrows(IllegalArgumentException.class, () -> prepared.openQueriesWithProviderContexts(Map.of(), true));
+        var agent = cleanAgent("joint-manager-contexts");
+        assertThrows(IllegalArgumentException.class, () -> assembler.installWithProviderContexts(prepared, agent, Map.of(), true,
+                new TaskCheckpointStore.Memory()));
+        try (var installed = assembler.installWithProviderContexts(prepared, agent, contexts, true, new TaskCheckpointStore.Memory())) {
+            assertEquals(4, installed.lock().installations().size());
+            assertEquals(3, installed.lock().assets().stream().filter(a -> a.kind().equals("PROVIDER_RUNTIME")).count());
+            assertEquals(1, installed.lock().domainInstallations().size());
+            for (var pack : prepared.capabilityPacks()) for (var capability : pack.capabilities()) {
+                Map<String, Object> arguments = switch (capability.capabilityId()) {
+                    case "wealth.previsit-context.query" -> Map.of("customerRef", "crm-subject");
+                    case "wealth.allocation-context.query" -> Map.of("customerRef", "crm-subject", "amount", 100000,
+                            "horizonMonths", 12, "channel", "branch");
+                    case "knowledge.evidence.search" -> Map.of("question", "What public disclosure is required?");
+                    default -> Map.of();
+                };
+                assertEquals("COMPLETED", ((Map<?, ?>)((Tool)Runner.resourceMgr().getTool(capability.toolName())).invoke(arguments)).get("status"));
+                String id = targets.path(capability.capabilityId()).asText();
+                var actual = calls.getLast().context();
+                assertEquals(id + "-principal", actual.principalId());
+                assertEquals(id + "-subject", actual.subjectRef());
+                assertEquals(id + "-session", actual.sessionRef());
+            }
+        }
+        assertEquals(4, calls.size());
+        assertNull(agent.getAbilityManager().get("knowledge_evidence_search"));
+    }
+
     private Path catalogResolvedRiskReviewInput() throws Exception {
         ObjectMapper json = new ObjectMapper();
         var input = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(root().resolve(

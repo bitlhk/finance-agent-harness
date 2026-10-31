@@ -30,6 +30,68 @@ class OpenJiuwenCapabilityInstallerTest {
     private static final String ACCOUNT_TOOL = "account_balance_query";
     private static final String TRANSFER_TOOL = "transfer_internal_create";
 
+    @Test void providerContextsKeepQueriesAndTasksSeparateWithoutTrustingModelIdentity() throws Exception {
+        var pack = new FinanceCapabilityPackLoader().load(root().resolve("capability-packs/retail-banking-basics/pack.yaml"));
+        var agent = new ReActAgent(AgentCard.builder().id("provider-contexts").name("Context test").build());
+        var query = new AtomicReference<CapabilityRequestV1>();
+        var tasks = new ArrayList<CapabilityRequestV1>();
+        var readScopes = new AtomicReference<>(Set.of("account:read"));
+        var read = new OpenJiuwenFinanceBridge.InvocationDefaults("read-principal", "read-subject",
+                FinanceContextV1.PrincipalType.EMPLOYEE, "host", "READ_ONLY",
+                FinanceContextV1.AuthenticationLevel.STRONG, Set.of("account:read"), readScopes::get, true);
+        var write = defaults();
+        var bindings = Map.of(
+                "account.balance.query", new OpenJiuwenCapabilityInstaller.ProviderBinding("read-provider", "1", provider(query, new ArrayList<>())),
+                "transfer.internal.create", new OpenJiuwenCapabilityInstaller.ProviderBinding("task-provider", "1", provider(new AtomicReference<>(), tasks)));
+        var contexts = Map.of(
+                "read-provider", new OpenJiuwenCapabilityInstaller.ProviderInvocation(read, "read-session"),
+                "task-provider", new OpenJiuwenCapabilityInstaller.ProviderInvocation(write, "task-session"));
+        var installer = new OpenJiuwenCapabilityInstaller();
+        try (var installed = installer.installWithProviderContexts(agent, bindings, contexts, pack, true, new TaskCheckpointStore.Memory())) {
+            assertEquals("COMPLETED", ((Map<?, ?>) installed.tool(ACCOUNT_TOOL).invoke(Map.of())).get("status"));
+            assertEquals("read-principal", query.get().context().principalId());
+            assertEquals("read-subject", query.get().context().subjectRef());
+            assertEquals("read-session", query.get().context().sessionRef());
+            assertEquals(Set.of("account:read"), query.get().context().scopes());
+            assertNull(query.get().taskRef());
+            var first = (Map<?, ?>) installed.tool(TRANSFER_TOOL).invoke(Map.of(
+                    "fromAccountId", "acct-001", "beneficiaryId", "bene-002", "amount", 0.01));
+            assertEquals("NEED_USER", first.get("status"));
+            String handle = first.get(OpenJiuwenCapabilityInstaller.TASK_HANDLE_ARGUMENT).toString();
+            assertEquals("task-session", tasks.getFirst().context().sessionRef());
+            assertEquals(write.principalId(), tasks.getFirst().context().principalId());
+            assertNull(tasks.getFirst().confirmation());
+            assertEquals("NEED_USER", ((Map<?, ?>) installed.tool(TRANSFER_TOOL).invoke(Map.of(
+                    "financeTaskHandle", handle, "confirmationText", "confirmed"))).get("status"));
+            var now = Instant.now();
+            assertEquals("COMPLETED", installed.confirm(handle, new HostTaskConfirmation("trusted-host-event",
+                    installed.confirmationBinding(handle), now, now.plusSeconds(60))).get("status"));
+            assertTrue(tasks.getLast().confirmation().confirmed());
+            readScopes.set(Set.of());
+            query.set(null);
+            assertEquals("REJECTED", ((Map<?, ?>) installed.tool(ACCOUNT_TOOL).invoke(Map.of())).get("status"));
+            assertNull(query.get());
+        }
+        assertNull(agent.getAbilityManager().get(ACCOUNT_TOOL));
+        assertNull(agent.getAbilityManager().get(TRANSFER_TOOL));
+    }
+
+    @Test void missingOrUnknownProviderContextFailsBeforeSdkMutation() throws Exception {
+        var pack = new FinanceCapabilityPackLoader().load(root().resolve("capability-packs/account-balance-readonly/pack.yaml"));
+        var agent = new ReActAgent(AgentCard.builder().id("bad-provider-contexts").name("Context test").build());
+        var bindings = Map.of("account.balance.query", new OpenJiuwenCapabilityInstaller.ProviderBinding(
+                "selected", "1", provider(new AtomicReference<>(), new ArrayList<>())));
+        var installer = new OpenJiuwenCapabilityInstaller();
+        var context = new OpenJiuwenCapabilityInstaller.ProviderInvocation(defaults(), "session");
+        for (var contexts : List.of(Map.<String, OpenJiuwenCapabilityInstaller.ProviderInvocation>of(),
+                Map.of("selected", context, "unknown", context), Map.of("unknown", context))) {
+            assertThrows(IllegalArgumentException.class, () -> installer.installWithProviderContexts(
+                    agent, bindings, contexts, pack, true, new TaskCheckpointStore.Memory()));
+            assertNull(agent.getAbilityManager().get(ACCOUNT_TOOL));
+            assertFalse(agent.getSystemPromptBuilder().hasSection("finance-capability-pack:" + pack.packId()));
+        }
+    }
+
     @Test
     void independentTransferDeclarationMatchesExistingBankCapability() throws Exception {
         var loader = new FinanceCapabilityPackLoader();

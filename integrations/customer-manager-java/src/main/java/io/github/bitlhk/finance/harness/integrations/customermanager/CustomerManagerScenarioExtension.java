@@ -30,8 +30,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         Path reports = outsideArtifact(context.privateStateRoot().resolve("service-preparation-reports"), context.artifactRoot());
         String owner = required(context.ownerRef(), "OWNER_REQUIRED");
         var mapping = (java.util.function.Supplier<CustomerCrmEmployeeMapping>) () -> CustomerCrmEmployeeMapping.load(mappingFile, owner);
-        CustomerCrmClient client = new CustomerCrmClient(URI.create(requiredEnv("FH_CRM_URL")),
-                Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000"))),
+        URI crmEndpoint = URI.create(requiredEnv("FH_CRM_URL"));
+        Duration crmTimeout = Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000")));
+        KypPreparationBootstrap.requireCrmConnection(context.artifactRoot(), crmEndpoint, crmTimeout);
+        CustomerCrmClient client = new CustomerCrmClient(crmEndpoint, crmTimeout,
                 () -> requiredEnv("FH_CRM_SERVICE_TOKEN"));
         CustomerCrmProvider provider = new CustomerCrmProvider(owner, client, () -> mapping.get().authority(), Clock.systemUTC());
         String sessionId = UUID.randomUUID().toString();
