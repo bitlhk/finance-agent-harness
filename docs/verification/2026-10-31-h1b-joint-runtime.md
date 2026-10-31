@@ -1,7 +1,25 @@
 # H1b joint runtime checkpoint
 
-Status: **INCOMPLETE, Draft only**. No merge, deployment, permission change,
-production session reuse or Factory source change. This is not H1b acceptance.
+Latest: **isolated joint engineering path passed, Draft only** on Harness
+`13da7e96e804d8ddb8ecaa633e0eb6956d63801d` and Builder
+`1c4ad3c21d632dda917a24f28f77c0f742b16f3f`. SSO/human acceptance remain pending.
+Builder's `docs/H1B-FINAL-ISOLATED-ACCEPTANCE.md` records the complete same-instance
+proof, exact artifact qualification and remaining limits. Evidence root:
+`/home/ubuntu/outputs/knowledge-product-integration/h1b-final-runtime/joint-23/`.
+
+Agent `agent-fc9fdb76bdfc49be`, instance `cfde4350-4275-43c3-ae77-695650be388a`,
+Installation Lock `5473b16a48e45f33a76a58eb36bb9f705df7a298b85d14858cdea31989ec1b74`:
+normal Build, actual CRM/product/Factory calls, real DeepSeek answer, stop,
+independently authorized original history and source-revocation refusal passed.
+The result is honestly PARTIAL (synthetic product sales/channel not qualified),
+not a successful recommendation. All actual query observation events are retained.
+KYP first-fail dropped 17 events because the adapter emitted a metadata key absent
+from the existing contract; the fix removes only that uncontracted telemetry key,
+not source evidence or a security check. Final KYP HTTP/observation suite: 14 pass.
+
+No merge, production deployment, identity migration or Factory source modification.
+The remainder is the historical incomplete checkpoint; its counts and execution
+pair must not be represented as final-artifact acceptance.
 
 Execution pair:
 
