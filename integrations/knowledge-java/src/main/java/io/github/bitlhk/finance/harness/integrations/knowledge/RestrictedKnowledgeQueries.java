@@ -5,7 +5,7 @@ import io.github.bitlhk.finance.harness.core.spi.*;
 import java.util.*;
 
 /** Host-selected public questions only. Rejection happens before any Provider/session/network call. */
-public final class RestrictedKnowledgeQueries {
+public final class RestrictedKnowledgeQueries implements DescribedFinanceProvider, InvocationAccess {
     private final FinanceProvider provider;
     private final Set<String> questions;
 
@@ -17,6 +17,11 @@ public final class RestrictedKnowledgeQueries {
     }
 
     public CapabilityResultV1 query(CapabilityRequestV1 request) {
+        validate(request);
+        return provider.query(request);
+    }
+
+    private void validate(CapabilityRequestV1 request) {
         if (!"knowledge.evidence.search".equals(request.capabilityId())
                 || request.operation() != CapabilityRequestV1.Operation.QUERY
                 || request.idempotencyKey() != null || request.taskRef() != null
@@ -25,6 +30,13 @@ public final class RestrictedKnowledgeQueries {
                 || !(request.parameters().get("question") instanceof String question)
                 || !questions.contains(question))
             throw new SecurityException("KNOWLEDGE_EGRESS_REJECTED");
-        return provider.query(request);
     }
+    public void checkAccess(CapabilityRequestV1 request) {
+        validate(request);
+        if (!(provider instanceof InvocationAccess access)) throw new SecurityException("KNOWLEDGE_ACCESS_REQUIRED");
+        access.checkAccess(request);
+    }
+    public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new SecurityException("KNOWLEDGE_EGRESS_REJECTED"); }
+    public ProviderDescriptorV1 descriptor() { return ((DescribedFinanceProvider) provider).descriptor(); }
+    public List<Class<?>> artifactTypes() { return ((DescribedFinanceProvider) provider).artifactTypes(); }
 }

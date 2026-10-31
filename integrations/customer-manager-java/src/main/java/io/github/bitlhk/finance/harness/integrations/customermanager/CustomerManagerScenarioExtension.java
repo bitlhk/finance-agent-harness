@@ -47,10 +47,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         boolean knowledgeSelected = false;
         for (var capability : installedLock.path("capabilities"))
             knowledgeSelected |= "knowledge.evidence.search".equals(capability.asText());
-        PreparationKnowledge knowledge = null;
+        ManagerKnowledgeEvidence knowledge = null;
         try {
-        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context);
-        ServicePreparation task = new ServicePreparation(owner, access,
+        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context, provider, access, sessionId);
+        ServicePreparation task = new ServicePreparation(owner, knowledge == null ? access : knowledge.installedAccess(),
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
@@ -58,9 +58,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
-        return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
+        var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
+        return knowledge == null ? managed : knowledge.session(managed);
         } catch (Exception failure) {
             try { access.close(); } finally { if (knowledge != null) knowledge.close(); }
             throw failure;
