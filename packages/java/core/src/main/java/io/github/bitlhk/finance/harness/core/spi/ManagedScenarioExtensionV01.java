@@ -2,6 +2,8 @@ package io.github.bitlhk.finance.harness.core.spi;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.observation.ObservationRun;
+import io.github.bitlhk.finance.harness.core.observation.ObservationCapabilitiesV01;
+import java.util.List;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
@@ -25,9 +27,18 @@ public interface ManagedScenarioExtensionV01 {
 
     record Context(Path artifactRoot, Path privateStateRoot, String buildId,
                    String instanceId, String ownerRef, ModelConnection model,
-                   Supplier<ObservationRun> currentObservation) {
+                   Supplier<ObservationRun> currentObservation,
+                   List<ObservationCapabilitiesV01> trustedCollectors) {
         public Context {
             Objects.requireNonNull(currentObservation);
+            trustedCollectors = List.copyOf(trustedCollectors);
+        }
+
+        public Context(Path artifactRoot, Path privateStateRoot, String buildId,
+                       String instanceId, String ownerRef, ModelConnection model,
+                       Supplier<ObservationRun> currentObservation) {
+            this(artifactRoot, privateStateRoot, buildId, instanceId, ownerRef, model,
+                 currentObservation, List.of());
         }
 
         public Context(Path artifactRoot, Path privateStateRoot, String buildId,
