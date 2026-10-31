@@ -107,8 +107,8 @@ class KnowledgeProviderTest {
         service.fault.set("http-retrieval-error");
         var result = search();
         assertEquals(CapabilityResultV1.Status.FAILED, result.status());
-        assertEquals("RAGFLOW_UNAVAILABLE", result.failure().sourceCode());
-        assertFalse(result.failure().retryable());
+        assertEquals("RAGFLOW_UNAVAILABLE", result.error().sourceCode());
+        assertFalse(result.error().retryable());
         assertTrue(result.data().isEmpty());
         assertEquals(1, service.calls.get());
         record("http-retrieval-error", result);
