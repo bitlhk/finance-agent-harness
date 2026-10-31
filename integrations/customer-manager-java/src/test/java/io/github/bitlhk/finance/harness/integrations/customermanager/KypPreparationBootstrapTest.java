@@ -255,6 +255,19 @@ class KypPreparationBootstrapTest {
                 () -> new CustomerManagerScenarioExtension().installationProviders(root)).getMessage());
         assertEquals(0, productCalls.get()); assertEquals(0, crmCalls.get());
     }
+    @Test void lockedRootEndpointAcceptsOnlyTheEquivalentOptionalTrailingSlash() throws Exception {
+        joint();
+        URI current = URI.create("http://127.0.0.1:" + crmServer.getAddress().getPort());
+        var bindings = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(
+                root.resolve("provider-bindings.json").toFile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)bindings.path("providers").path(CustomerCrmProvider.PROVIDER_ID))
+                .put("endpoint", current + "/");
+        write(root.resolve("provider-bindings.json"), bindings); lockJoint();
+        KypPreparationBootstrap.requireCrmConnection(root, current, Duration.ofMillis(2000));
+        assertEquals("PROVIDER_CONNECTION_LOCK_MISMATCH", assertThrows(SecurityException.class,
+                () -> KypPreparationBootstrap.requireCrmConnection(root, URI.create(current + "/other"),
+                        Duration.ofMillis(2000))).getMessage());
+    }
     @Test void jointRegistryRejectsUnknownCapabilitiesAndTamperedKnowledgeConfiguration() throws Exception {
         joint();
         var plan = (com.fasterxml.jackson.databind.node.ObjectNode)HarnessJson.mapper().readTree(root.resolve("component-plan.json").toFile());

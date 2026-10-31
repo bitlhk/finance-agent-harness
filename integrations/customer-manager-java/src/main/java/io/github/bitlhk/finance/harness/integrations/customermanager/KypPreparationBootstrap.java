@@ -183,9 +183,16 @@ final class KypPreparationBootstrap {
     }
 
     private static void requireTransport(JsonNode binding, URI endpoint, Duration timeout) {
-        if (binding != null && (!endpoint.equals(URI.create(binding.path("endpoint").asText()))
+        if (binding != null && (!transportEndpoint(endpoint).equals(transportEndpoint(
+                URI.create(binding.path("endpoint").asText())))
                 || timeout.toMillis() != binding.path("timeoutMillis").asLong()))
             throw new SecurityException("PROVIDER_CONNECTION_LOCK_MISMATCH");
+    }
+
+    private static URI transportEndpoint(URI value) {
+        String path = value.getRawPath();
+        if (path == null || path.isEmpty()) return URI.create(value.toString() + "/").normalize();
+        return value.normalize();
     }
 
     private record Source(String connectionRef, PinnedMcpReader.Target target, ProductCatalog.SourcePolicy policy) {}
