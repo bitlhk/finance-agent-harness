@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "knowledge-service", "version": "0.1.0-probe.2"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-knowledge-service:0.1.0-probe.2",
+  "connectionKind": "knowledge-http.v0.1",
+  "configurationFiles": [{"id": "knowledge-binding", "pathEnvironment": "FH_KNOWLEDGE_BINDING", "digestEnvironment": "FH_KNOWLEDGE_BINDING_SHA256", "maxBytes": 8192}],
+  "supports": [{"pack": {"id": "knowledge-evidence-readonly", "version": "0.1.0"}, "capabilityIds": ["knowledge.evidence.search"], "operation": "QUERY"}]
+}
