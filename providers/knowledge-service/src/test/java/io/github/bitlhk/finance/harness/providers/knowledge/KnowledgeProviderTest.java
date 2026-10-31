@@ -124,7 +124,7 @@ class KnowledgeProviderTest {
     @Test void factoryDiscoveredButConfigAndConnectionMustMatch() {
         assertTrue(ServiceLoader.load(ManagedProviderFactoryV01.class).stream().anyMatch(p->p.type()==KnowledgeFactoryV01.class));
         assertThrows(IllegalArgumentException.class,()->factories.create(connection,grants::get,Set.of(KnowledgeProvider.ID),Map.of()));
-        assertThrows(IllegalArgumentException.class,()->new KnowledgeFactoryV01().configurationDigests());
+        assertThrows(IllegalArgumentException.class,()->new KnowledgeFactoryV01(Map.of()).configurationDigests());
         assertThrows(IllegalArgumentException.class,()->factories.createBound(
             Map.of(KnowledgeProvider.ID,new ManagedProviderFactoriesV01.Binding(connection,grants::get)),
             Set.of(KnowledgeProvider.ID),factories.configurationDigests(Set.of(KnowledgeProvider.ID)),Map.of()));

@@ -7,11 +7,13 @@ import java.util.*;
 public final class KnowledgeFactoryV01 implements ManagedProviderFactoryV01 {
     public static final String KIND = "knowledge-http.v0.1";
     private KnowledgeBinding binding;
-    public KnowledgeFactoryV01() { }
-    KnowledgeFactoryV01(KnowledgeBinding binding) { this.binding = binding; }
+    private final Map<String,String> environment;
+    public KnowledgeFactoryV01() { this(System.getenv()); }
+    KnowledgeFactoryV01(Map<String,String> environment) { this.environment = Map.copyOf(environment); }
+    KnowledgeFactoryV01(KnowledgeBinding binding) { this(Map.of()); this.binding = binding; }
     private synchronized KnowledgeBinding binding() {
-        if (binding == null) binding = KnowledgeBinding.load(System.getenv("FH_KNOWLEDGE_BINDING"),
-            System.getenv("FH_KNOWLEDGE_BINDING_SHA256"));
+        if (binding == null) binding = KnowledgeBinding.load(environment.get("FH_KNOWLEDGE_BINDING"),
+            environment.get("FH_KNOWLEDGE_BINDING_SHA256"));
         return binding;
     }
     public String providerId() { return KnowledgeProvider.ID; }
