@@ -43,17 +43,28 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 productAuthority == null || productAuthority.isBlank() ? null : Path.of(productAuthority));
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
         var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
+        JsonNode installedLock = HarnessJson.mapper().readTree(Files.readAllBytes(context.artifactRoot().resolve("service-lock.json")));
+        boolean knowledgeSelected = false;
+        for (var capability : installedLock.path("capabilities"))
+            knowledgeSelected |= "knowledge.evidence.search".equals(capability.asText());
+        PreparationKnowledge knowledge = null;
+        try {
+        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context);
         ServicePreparation task = new ServicePreparation(owner, access,
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method,
-                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
         return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
+        } catch (Exception failure) {
+            try { access.close(); } finally { if (knowledge != null) knowledge.close(); }
+            throw failure;
+        }
     }
 
     static final class Managed implements Session {

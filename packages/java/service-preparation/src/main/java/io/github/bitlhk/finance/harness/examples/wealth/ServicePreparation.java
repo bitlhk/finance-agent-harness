@@ -57,6 +57,7 @@ public final class ServicePreparation implements AutoCloseable {
     private final Path records;
     private final Map<String,String> versions;
     private final ScenarioEvidence evidence;
+    private final PreparationKnowledge knowledge;
     private final AtomicLong businessProviderCalls = new AtomicLong();
     private final AtomicLong modelGenerationCalls = new AtomicLong();
     private long generation;
@@ -78,11 +79,18 @@ public final class ServicePreparation implements AutoCloseable {
     public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
             ReportGenerator generator, Path records, Map<String,String> versions,
             InstalledPreparationMethod method, Supplier<Map<String,String>> trustedHost) throws Exception {
+        this(owner, access, mappings, generator, records, versions, method, trustedHost, null);
+    }
+    public ServicePreparation(String owner, PreparationAccess access, Supplier<Mapping> mappings,
+            ReportGenerator generator, Path records, Map<String,String> versions,
+            InstalledPreparationMethod method, Supplier<Map<String,String>> trustedHost,
+            PreparationKnowledge knowledge) throws Exception {
         this.owner = Objects.requireNonNull(owner); this.access = Objects.requireNonNull(access);
         this.mappings = Objects.requireNonNull(mappings); this.generator = Objects.requireNonNull(generator);
         this.method = Objects.requireNonNull(method);
         this.records = records.toAbsolutePath(); this.versions = Map.copyOf(versions);
         this.evidence = new ScenarioEvidence(this.records,trustedHost);
+        this.knowledge = knowledge;
         Files.createDirectories(this.records);
         if (Files.isSymbolicLink(this.records)) throw new SecurityException("UNSAFE_RECORD_DIRECTORY");
         Files.setPosixFilePermissions(this.records, java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
@@ -229,6 +237,7 @@ public final class ServicePreparation implements AutoCloseable {
                     productProof.check("ENTRY",authorize,null);productProof.invoked();
                     businessProviderCalls.incrementAndGet();
                     CapabilityResultV1 allocation=querySource(run+"-products",run,s.customer(),"wealth.allocation-context.query",productArguments,productProof);
+                    report.set("productExecution", HarnessJson.mapper().valueToTree(allocation));
                     if(allocation.status()==CapabilityResultV1.Status.COMPLETED)
                         sourceRelease.set(access.resultReleaseGuard(s.customer(),allocation));
                     productProof.returned();productProof.check("RETURN",authorize,allocation);
@@ -251,7 +260,32 @@ public final class ServicePreparation implements AutoCloseable {
                             JsonNode product=productReview.path("eligibleProducts").path(i);
                             product.fieldNames().forEachRemaining(k->ids.add("/productReview/eligibleProducts/"+productIndex+"/"+k.replace("~","~0").replace("/","~1")));
                         }
+                        collectFactRefs(productReview.path("sourceProducts"), "/productReview/sourceProducts", ids, ids.size() + 100);
+                        collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 100);
                         report.withArray("events").add("PRODUCT_POLICY_SCREENED");
+                    }
+                }
+                if (knowledge != null) {
+                    CapabilityResultV1 policy = knowledge.query(run + "-knowledge", run, productArguments != null);
+                    Runnable businessRelease = sourceRelease.get();
+                    sourceRelease.set(() -> { businessRelease.run(); knowledge.current(); });
+                    authorize.run();
+                    if (!(run + "-knowledge").equals(policy.requestId()) || !run.equals(policy.traceId()))
+                        throw new SecurityException("KNOWLEDGE_RESULT_BINDING_MISMATCH");
+                    report.set("knowledgeExecution", HarnessJson.mapper().valueToTree(policy));
+                    JsonNode policyData = HarnessJson.mapper().valueToTree(policy.data());
+                    if (policy.status() != CapabilityResultV1.Status.COMPLETED
+                            || !"EVIDENCE_FOUND".equals(policyData.path("decision").asText())
+                            || !policyData.path("evidence").isArray() || policyData.path("evidence").isEmpty()) {
+                        missing.add("本轮未取得可用制度原文，不得声称已通过制度核验");
+                        generationContext.put("knowledgeStatus", "UNAVAILABLE");
+                    } else {
+                        if (!policyData.path("knowledgeReceipt").isObject())
+                            throw new SecurityException("KNOWLEDGE_RECEIPT_REQUIRED");
+                        report.set("knowledgeEvidence", policyData.deepCopy());
+                        generationContext.set("knowledgeEvidence", policyData.deepCopy());
+                        generationContext.put("knowledgeStatus", "EVIDENCE_FOUND");
+                        collectFactRefs(policyData.path("evidence"), "/knowledgeEvidence/evidence", ids, ids.size() + 120);
                     }
                 }
                 ObjectNode factAssessment=assessFacts(s.goal(),context,report.path("productReview"));
@@ -386,7 +420,7 @@ public final class ServicePreparation implements AutoCloseable {
         if(selection.completion().cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
         ObjectNode discarded=report.deepCopy();
         discarded.remove(List.of("facts","execution","sourceReceipt","focusFactRefs","modelSuggestion",
-                "productReview","fallbackSuggestion","factState","derivedObservations","factPresentation"));
+                "productReview","productExecution","knowledgeExecution","knowledgeEvidence","fallbackSuggestion","factState","derivedObservations","factPresentation"));
         discarded.put("status","DISCARDED");discarded.withArray("events").add("LATE_RESULT_DISCARDED");
         persist(discarded);
     }
@@ -428,6 +462,10 @@ public final class ServicePreparation implements AutoCloseable {
                 || !r.path("customerRef").asText().equals(m.customers().get(r.path("customerAlias").asText()))
                 || !a.authorityRef().equals(r.path("authorityRef").asText()))
             throw new SecurityException("REPORT_AUTHORITY_CHANGED");
+        if (r.has("knowledgeExecution")) {
+            if (knowledge == null) throw new SecurityException("JOINT_HISTORY_AUTHORIZATION_REQUIRED");
+            knowledge.authorizeSaved(r);
+        }
     }
     private void releaseSaved(ObjectNode r) {
         authorizeReport(r);
@@ -1094,5 +1132,8 @@ public final class ServicePreparation implements AutoCloseable {
         }
         return reason;
     }
-    @Override public synchronized void close() { closed=true;generation++;selected=null;activeRun=null;access.close(); }
+    @Override public synchronized void close() {
+        closed=true;generation++;selected=null;activeRun=null;
+        try { access.close(); } finally { if (knowledge != null) knowledge.close(); }
+    }
 }
