@@ -252,6 +252,10 @@ public final class ServicePreparation implements AutoCloseable {
                         }
                         report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
                         generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
+                        for (String field : List.of("status", "customerRiskLevel", "assessmentValidUntil",
+                                "eligibilityPolicy", "policySource"))
+                            if (productReview.hasNonNull(field))
+                                collectFactRefs(productReview.path(field), "/productReview/" + field, ids, ids.size() + 40);
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);

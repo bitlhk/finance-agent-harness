@@ -16,6 +16,7 @@ class PreparationKnowledgeTest {
     boolean revokeDuringGeneration;
     int businessCalls, knowledgeCalls, modelCalls, closed;
     JsonNode modelFacts;
+    String productCitation;
     final PreparationAccess.Snapshot snapshot = new PreparationAccess.Snapshot("crm-authority", "employee",
             FinanceContextV1.AuthenticationLevel.STRONG);
     PreparationAccess business = new PreparationAccess() {
@@ -26,6 +27,11 @@ class PreparationKnowledgeTest {
         public String providerId() { return "customer-crm-readonly"; }
         public CapabilityResultV1 query(String request, String trace, String customer, String capability, Map<String,Object> args) {
             authorize(customer); businessCalls++;
+            if ("wealth.allocation-context.query".equals(capability))
+                return result(request, trace, Map.of("status", "partial", "customerRiskLevel", "C3",
+                        "assessmentValidUntil", "2027-08-27", "request", args,
+                        "policySource", Map.of("ruleVersion", "fixture-v1"),
+                        "eligibleProducts", List.of(), "excludedProducts", List.of()));
             return result(request, trace, Map.of("previsitContext", Map.of("customer", Map.of("customerId", customer),
                     "dataAsOf", "2026-10-31T00:00:00Z", "profiles", List.of(), "readiness", Map.of("status", "READY")),
                     "hostEvidence", Map.of("receiptId", "crm-receipt-a")));
@@ -56,12 +62,18 @@ class PreparationKnowledgeTest {
                 (method, goal, refs, facts) -> {
                     modelCalls++; modelFacts = facts.deepCopy();
                     if (found) assertTrue(refs.contains("/knowledgeEvidence/evidence/0/text"));
+                    if (productCitation != null) {
+                        assertTrue(refs.contains("/productReview/status"));
+                        assertTrue(refs.contains("/productReview/policySource/ruleVersion"));
+                        assertFalse(refs.contains("/productReview/invented"));
+                    }
                     if (revokeDuringGeneration) knowledgeGranted = false;
                     var generated = HarnessJson.mapper().createObjectNode();
                     generated.putArray("communicationFocus").addObject().put("text", "核实客户服务需求")
                             .putArray("factRefs").add("/customer/customerId");
                     generated.putArray("preparationAdvice").addObject().put("text", found ? "须核实产品销售资格" : "制度依据尚未取得")
-                            .putArray("factRefs").add(found ? "/knowledgeEvidence/evidence/0/text" : "/customer/customerId");
+                            .putArray("factRefs").add(productCitation != null ? productCitation
+                                    : found ? "/knowledgeEvidence/evidence/0/text" : "/customer/customerId");
                     generated.putArray("pendingItems").add("核实产品销售资格");
                     generated.putArray("reviewChecklist").add("核实事实与制度依据");
                     return generated;
@@ -100,6 +112,18 @@ class PreparationKnowledgeTest {
             assertEquals("UNAVAILABLE", modelFacts.path("knowledgeStatus").asText());
             assertFalse(modelFacts.has("knowledgeEvidence"));
             assertTrue(report.path("missingEvidence").toString().contains("未取得可用制度原文"));
+        }
+    }
+    @Test void actualProductStatusCanBeCitedWithoutAllowingInventedFields() throws Exception {
+        for (String citation : List.of("/productReview/status", "/productReview/invented")) {
+            productCitation = citation;
+            try (var service = open()) {
+                var report = service.prepareProduct("owner-a", service.select("owner-a", "合成客户甲", "筛选产品"),
+                        Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch"), ServicePreparation.PreparationListener.NONE);
+                assertEquals(citation.endsWith("status") ? "READY" : "FAILED",
+                        report.path("explanationStatus").asText(), report.toString());
+                if (citation.endsWith("invented")) assertFalse(report.has("modelSuggestion"));
+            }
         }
     }
     @Test void revocationDuringGenerationDiscardsJointContent() throws Exception {
