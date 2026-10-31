@@ -67,6 +67,9 @@ class PreparationKnowledgeTest {
                         assertTrue(refs.contains("/productReview/policySource/ruleVersion"));
                         assertFalse(refs.contains("/productReview/invented"));
                         assertTrue(refs.contains("/factAssessment/missing/0/state"));
+                        assertTrue(refs.contains("/productReview/eligibleProducts"));
+                        assertFalse(refs.contains("/productReview/eligibleProducts/0"));
+                        assertTrue(refs.contains("/knowledgeEvidence/evidence/0"));
                         assertFalse(refs.contains("/factAssessment/goal"));
                         assertTrue(refs.stream().allMatch(ref -> !facts.at(ref).isMissingNode()), refs.toString());
                     }
@@ -119,14 +122,16 @@ class PreparationKnowledgeTest {
     }
     @Test void actualProductStatusCanBeCitedWithoutAllowingInventedFields() throws Exception {
         for (String citation : List.of("/productReview/status", "/factAssessment/missing/0/state",
-                "/productReview/invented")) {
+                "/productReview/eligibleProducts", "/knowledgeEvidence/evidence/0", "/productReview/invented",
+                "/productReview/eligibleProducts/0")) {
             productCitation = citation;
             try (var service = open()) {
                 var report = service.prepareProduct("owner-a", service.select("owner-a", "合成客户甲", "筛选产品"),
                         Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch"), ServicePreparation.PreparationListener.NONE);
-                assertEquals(citation.endsWith("invented") ? "FAILED" : "READY",
+                boolean invalid = citation.endsWith("invented") || citation.equals("/productReview/eligibleProducts/0");
+                assertEquals(invalid ? "FAILED" : "READY",
                         report.path("explanationStatus").asText(), report.toString());
-                if (citation.endsWith("invented")) assertFalse(report.has("modelSuggestion"));
+                if (invalid) assertFalse(report.has("modelSuggestion"));
             }
         }
     }

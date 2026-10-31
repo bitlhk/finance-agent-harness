@@ -260,11 +260,7 @@ public final class ServicePreparation implements AutoCloseable {
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
-                        for(int i=0;i<productReview.path("eligibleProducts").size();i++) {
-                            final int productIndex=i;
-                            JsonNode product=productReview.path("eligibleProducts").path(i);
-                            product.fieldNames().forEachRemaining(k->ids.add("/productReview/eligibleProducts/"+productIndex+"/"+k.replace("~","~0").replace("/","~1")));
-                        }
+                        collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 100);
                         collectFactRefs(productReview.path("sourceProducts"), "/productReview/sourceProducts", ids, ids.size() + 100);
                         collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 100);
                         report.withArray("events").add("PRODUCT_POLICY_SCREENED");
@@ -1046,9 +1042,9 @@ public final class ServicePreparation implements AutoCloseable {
     }
     private static void collectFactRefs(JsonNode node, String path, List<String> refs, int limit) {
         if (refs.size() >= limit || node == null || node.isNull()) return;
-        if (node.isValueNode()) {
+        if (node.isValueNode() || node.isContainerNode()) {
             if (!path.isBlank()) refs.add(path);
-            return;
+            if (node.isValueNode() || refs.size() >= limit) return;
         }
         if (node.isArray()) {
             for (int i=0; i<node.size() && refs.size()<limit; i++) collectFactRefs(node.path(i), path+"/"+i, refs, limit);
