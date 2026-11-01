@@ -108,6 +108,8 @@ final class OpenJiuwenIntentProposer {
         if (selectedObject != null && !authorizedObjects.contains(selectedObject))
             throw new SecurityException("CONVERSATION_OBJECT_REJECTED");
         checkCancelled(cancelled);
+        if (isDirectKnowledgeQuestion(query, installedActions))
+            return new ConversationIntent(ConversationIntent.Kind.KNOWLEDGE_QUERY, null, null, null);
         String session = UUID.randomUUID().toString();
         try {
             var input = new LinkedHashMap<String,Object>();
@@ -138,6 +140,13 @@ final class OpenJiuwenIntentProposer {
                 throw new IllegalArgumentException("CONVERSATION_INTENT_INVALID");
             return intent;
         } finally { Runner.release(session); }
+    }
+
+    static boolean isDirectKnowledgeQuestion(String query, Set<ConversationIntent.Kind> installedActions) {
+        if (!installedActions.contains(ConversationIntent.Kind.KNOWLEDGE_QUERY)) return false;
+        String text = query.strip();
+        return text.matches(".*(?:应当|不得|是否(?:可以|允许)|需要满足(?:什么|哪些)?条件|具备(?:什么|哪些)条件|"
+                + "应履行(?:什么|哪些)?(?:义务|要求)|适用范围|依据(?:是什么|有哪些)?|(?:制度|规则|条款|规定)如何?要求).*");
     }
 
     private static void checkCancelled(BooleanSupplier cancelled) {
