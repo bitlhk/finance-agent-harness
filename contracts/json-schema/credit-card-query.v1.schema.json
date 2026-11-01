@@ -1,0 +1,282 @@
+{
+  "$defs": {
+    "ForecastReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "receipt_id": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Receipt Id",
+          "type": "string"
+        },
+        "dataset_version": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Dataset Version",
+          "type": "string"
+        },
+        "case_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "customer_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Customer Id",
+          "type": "string"
+        },
+        "group_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "snapshot_revision": {
+          "minimum": 0,
+          "title": "Snapshot Revision",
+          "type": "integer"
+        },
+        "input_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Digest",
+          "type": "string"
+        },
+        "model_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Model Digest",
+          "type": "string"
+        },
+        "protocol_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Protocol Digest",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "model",
+            "baseline"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/HorizonForecast"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limitation": {
+          "default": "Synthetic reference; successful spending is policy-constrained; probabilities are not credit approvals.",
+          "title": "Limitation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "receipt_id",
+        "dataset_version",
+        "case_id",
+        "customer_id",
+        "group_id",
+        "snapshot_revision",
+        "input_digest",
+        "model_digest",
+        "protocol_digest",
+        "observed_at",
+        "expires_at",
+        "method",
+        "results",
+        "evidence_refs"
+      ],
+      "title": "ForecastReceipt",
+      "type": "object"
+    },
+    "HorizonForecast": {
+      "additionalProperties": false,
+      "properties": {
+        "horizon_days": {
+          "enum": [
+            1,
+            3,
+            7
+          ],
+          "title": "Horizon Days",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "insufficient-data",
+            "untrained",
+            "failed",
+            "stale",
+            "unsupported"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "currency": {
+          "const": "CNY",
+          "default": "CNY",
+          "title": "Currency",
+          "type": "string"
+        },
+        "p10_minor": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P10 Minor"
+        },
+        "p50_minor": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P50 Minor"
+        },
+        "p90_minor": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P90 Minor"
+        },
+        "shortage_probability": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shortage Probability"
+        },
+        "postprocess_corrections": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Postprocess Corrections",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "horizon_days",
+        "status",
+        "reason"
+      ],
+      "title": "HorizonForecast",
+      "type": "object"
+    },
+    "SourceBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "tenant_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Tenant Id",
+          "type": "string"
+        },
+        "principal_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Principal Id",
+          "type": "string"
+        },
+        "customer_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Customer Id",
+          "type": "string"
+        },
+        "case_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "visible_source_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Visible Source Ids",
+          "type": "array"
+        },
+        "snapshot_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Snapshot Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "principal_id",
+        "customer_id",
+        "case_id",
+        "observed_at",
+        "visible_source_ids",
+        "snapshot_digest"
+      ],
+      "title": "SourceBinding",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/SourceBinding"
+    },
+    {
+      "$ref": "#/$defs/ForecastReceipt"
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Domain input or result, carried inside the existing Harness capability envelope."
+}

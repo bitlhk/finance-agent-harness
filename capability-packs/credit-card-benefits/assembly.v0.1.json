@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "credit-card-benefits",
+    "version": "0.1.0"
+  },
+  "requiredFeatures": [
+    "query.v1"
+  ],
+  "defaultDomainPacks": []
+}

@@ -74,6 +74,26 @@
           "fraud-investigation"
         ]
       }
+    },
+    {
+      "id": "credit-card-python",
+      "version": "0.1.0",
+      "displayName": "credit-card-python",
+      "source": "repo://packages/python/finance-credit-card-runtime",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "artifactRef": "python://finance-credit-card-runtime:0.1.0"
     }
   ],
   "profiles": [
@@ -432,6 +452,29 @@
           "java"
         ]
       }
+    },
+    {
+      "id": "credit-card",
+      "version": "0.1.0",
+      "displayName": "credit-card",
+      "source": "repo://domain-packs/credit-card",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.limit-risk.query",
+        "credit.card.benefits.query"
+      ]
     }
   ],
   "capabilityPacks": [
@@ -939,6 +982,50 @@
           "java"
         ]
       }
+    },
+    {
+      "id": "credit-card-limit-risk",
+      "version": "0.1.0",
+      "displayName": "credit-card-limit-risk",
+      "source": "repo://capability-packs/credit-card-limit-risk",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.limit-risk.query"
+      ]
+    },
+    {
+      "id": "credit-card-benefits",
+      "version": "0.1.0",
+      "displayName": "credit-card-benefits",
+      "source": "repo://capability-packs/credit-card-benefits",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.benefits.query"
+      ]
     }
   ],
   "providers": [
@@ -1177,6 +1264,29 @@
           "java"
         ]
       }
+    },
+    {
+      "id": "credit-card-reference",
+      "version": "0.1.0",
+      "displayName": "credit-card-reference",
+      "source": "repo://providers/credit-card-reference",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.limit-risk.query",
+        "credit.card.benefits.query"
+      ]
     }
   ],
   "evalPacks": [
@@ -1254,6 +1364,29 @@
           "internal-control"
         ]
       }
+    },
+    {
+      "id": "credit-card-reference-contracts",
+      "version": "0.1.0",
+      "displayName": "credit-card-reference-contracts",
+      "source": "repo://packages/python/finance-credit-card-runtime/tests",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.limit-risk.query",
+        "credit.card.benefits.query"
+      ]
     }
   ],
   "catalogRevision": "2026-10-31.knowledge-host-merge-prep",

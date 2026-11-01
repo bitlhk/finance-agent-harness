@@ -1,0 +1,26 @@
+schemaVersion: finance-capability-pack.v1
+packId: credit-card-limit-risk
+version: 0.1.0
+systemPrompt: 面向客户经理解释核验后的查询结果，不修改来源事实，不办理金融操作。
+capabilities:
+- capabilityId: credit.card.limit-risk.query
+  toolName: credit_card_limit_risk
+  name: 额度不足预测与服务准备
+  description: 读取受管宿主绑定的当前客户材料；缺来源/模型时诚实报告，预测或推荐不构成审批或客户授权。
+  operation: QUERY
+  inputSchema:
+    type: object
+    additionalProperties: false
+    properties:
+      caseRef:
+        type: string
+        minLength: 1
+      goal:
+        type: string
+        minLength: 1
+        maxLength: 1000
+    required:
+    - caseRef
+    - goal
+  requiredScopes:
+  - credit-card:read
