@@ -75,6 +75,11 @@ final class ConversationIntentTest {
         assertEquals(ConversationIntent.Kind.KNOWLEDGE_QUERY, value.kind());
         assertFalse(value.requiresExecutionConfirmation());
     }
+    @Test void knowledgeClassifierInstructionCoversNaturalPolicyQuestions() {
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("需要满足什么条件"));
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("应履行什么要求"));
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("availableActions包含KNOWLEDGE_QUERY"));
+    }
     @Test void duplicateTrailingUnknownAndMalformedOutputFailClosedWithoutEcho() {
         String valid = proposal("GREETING", "null", "null", "null");
         rejected(valid + "{}");
