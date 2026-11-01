@@ -278,6 +278,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             List<String> customers=task.customers(owner);
             if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            if (confirmedDecision == null
+                    && OpenJiuwenIntentProposer.isDirectKnowledgeQuestion(query, capabilities.actions())) {
+                capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+                if (knowledge == null) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");
+                var protectedAliases = new HashSet<>(customers);
+                protectedAliases.addAll(dialogue.disclosedObjects());
+                if (dialogue.object() != null) protectedAliases.add(dialogue.object());
+                return knowledge.answerPolicyQuestion(query, operation.id, protectedAliases);
+            }
             String conversationalCustomer=requested!=null?(requested.isBlank()?null:requested):selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
             var decision=confirmedDecision == null ? CustomerManagerDialogue.resolve(query,customers,conversationalCustomer) : confirmedDecision;
             if(decision.action()==CustomerManagerDialogue.Action.GREETING)
