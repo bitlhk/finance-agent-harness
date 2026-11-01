@@ -59,7 +59,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
-        var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
+        var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(), knowledge,
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
         return knowledge == null ? managed : knowledge.session(managed);
@@ -75,6 +75,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final InstalledPreparationMethod method;
         private final ConversationCapabilities capabilities;
         private final String instanceId;
+        private final ManagerKnowledgeEvidence knowledge;
         private final OpenJiuwenIntentProposer intentProposer;
         private final java.util.function.Supplier<String> scopeDigest;
         private final ScenarioEvidence conversationEvidence;
@@ -102,11 +103,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             Operation(String id) { this.id = id; }
         }
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
-                ConversationCapabilities capabilities, String instanceId, OpenJiuwenIntentProposer intentProposer,
+                ConversationCapabilities capabilities, String instanceId, ManagerKnowledgeEvidence knowledge,
+                OpenJiuwenIntentProposer intentProposer,
                 java.util.function.Supplier<String> scopeDigest, ScenarioEvidence conversationEvidence) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             this.capabilities=capabilities;
-            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.intentProposer=intentProposer;
+            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.knowledge=knowledge; this.intentProposer=intentProposer;
             this.scopeDigest=Objects.requireNonNull(scopeDigest);
             this.conversationEvidence=Objects.requireNonNull(conversationEvidence);
             var latest=task.latest(owner);
@@ -224,8 +226,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                         previousDialogue=dialogue.read(dialogueBinding,Instant.now());
                     }
                 }
-                var result = body.has("conversationContract") ? converse(body, requested, sink)
-                        : chat(text(body,"query"),requested,sink);
+                String query = text(body,"query");
+                Map<String,Object> result;
+                if (knowledge != null && isKnowledgeHelp(query))
+                    result = Map.of("status","ANSWERED","response",capabilities.description(),"responseScope","NON_BUSINESS");
+                else if (knowledge != null && ManagerKnowledgeEvidence.publicQuestion(query) != null)
+                    result = knowledge.answerPolicyQuestion(query,current.id);
+                else result = body.has("conversationContract") ? converse(body, requested, sink)
+                        : chat(query,requested,sink);
                 synchronized (operationLock) {
                     if (current.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
                     if (!dialogueBinding.scope().equals(scopeDigest.get())) dialogue.clear();
@@ -245,6 +253,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!current.finished) { dialogue.clear();clarification=null;confirmation.invalidate();clearPendingProduct(); }
                 current.finished = true;
             } }
+        }
+        static boolean isKnowledgeHelp(String query) {
+            return query != null && (query.contains("有哪些知识") || query.contains("有什么知识")
+                    || query.contains("知识范围") || query.contains("知识能力"));
         }
         private long selectOperation(String customer, String query, JsonNode context) {
             synchronized (operationLock) {

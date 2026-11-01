@@ -78,6 +78,16 @@ public final class ManagedKnowledgeQueries implements AutoCloseable {
         if (currentContexts == null) throw new SecurityException("JOINT_INSTALLATION_REQUIRED");
         return withInstalledProviders(currentContexts, () -> queryInstalled(requestId, traceId, publicQuestion));
     }
+
+    /**
+     * Deterministic scenario dispatch for a Host-selected public question. The
+     * locked Provider is still used and observed, but no CRM/product invocation
+     * context is manufactured for a knowledge-only turn.
+     */
+    public CapabilityResultV1 queryKnowledgeOnly(String requestId, String traceId, String publicQuestion) {
+        if (!questions.contains(publicQuestion)) throw new SecurityException("KNOWLEDGE_EGRESS_REJECTED");
+        return queryInstalled(requestId, traceId, publicQuestion);
+    }
     private CapabilityResultV1 queryInstalled(String requestId, String traceId, String publicQuestion) {
         current();
         var grant = authority.grant();

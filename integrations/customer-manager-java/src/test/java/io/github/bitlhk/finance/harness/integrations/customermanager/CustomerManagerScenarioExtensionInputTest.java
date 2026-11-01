@@ -75,4 +75,23 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals(false,CustomerManagerScenarioExtension.shouldUseProductFlow(
                 CustomerManagerDialogue.Action.CANCEL_PRODUCT,true,"取消产品筛选"));
     }
+
+    @Test void routesOnlyBoundedPolicyQuestionsToKnowledge() {
+        assertEquals(ManagerKnowledgeEvidence.SUITABILITY,
+                ManagerKnowledgeEvidence.publicQuestion("向六十五周岁以上客户销售高风险产品时应履行什么义务？"));
+        assertEquals(ManagerKnowledgeEvidence.PERSONAL_LOANS,
+                ManagerKnowledgeEvidence.publicQuestion("贷款调查需要了解借款人的哪些情况？"));
+        assertEquals(null, ManagerKnowledgeEvidence.publicQuestion("周明远的客户编号是什么？"));
+        assertTrue(CustomerManagerScenarioExtension.Managed.isKnowledgeHelp("你有哪些知识？"));
+    }
+
+    @Test void knowledgeDescriptionDependsOnInstalledLockCapability() throws Exception {
+        var without = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
+                "{\"schemaVersion\":\"local-agent-service-lock.v0.1\",\"capabilities\":[\"wealth.previsit-context.query\"]}"));
+        var with = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
+                "{\"schemaVersion\":\"local-agent-service-lock.v0.1\",\"capabilities\":[\"wealth.previsit-context.query\",\"knowledge.evidence.search\"]}"));
+        assertEquals(false, without.description().contains("制度文档"));
+        assertTrue(with.description().contains("制度文档"));
+        assertTrue(with.description().contains("不读取或发送客户资料"));
+    }
 }

@@ -19,6 +19,8 @@ import java.util.*;
 final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     static final String PREVISIT = "客户经理开展服务准备时，制度对事实核实、适当性和人工复核有哪些要求？请提供原文条款。";
     static final String PRODUCTS = "产品服务准备中，制度对风险匹配、销售资格、信息核实和人工复核有哪些要求？请提供原文条款。";
+    static final String SUITABILITY = "金融机构向客户销售不适当产品，以及向六十五周岁以上客户销售高风险产品时，制度规定哪些限制和义务？请提供原文条款。";
+    static final String PERSONAL_LOANS = "个人贷款制度对申请条件、贷款调查和风险管理有哪些要求？请提供原文条款。";
     private final ManagedKnowledgeQueries knowledge;
     private final ManagedScenarioExtensionV01.Context context;
     private final PreparationAccess business;
@@ -30,7 +32,7 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         var peers = new HashMap<String, FinanceProvider>();
         peers.put(CustomerCrmProvider.PROVIDER_ID, crm);
         if (business instanceof KypPreparationAccess kyp) peers.put(KypProductFactory.ID, kyp.productProvider());
-        knowledge = new ManagedKnowledgeQueries(context, peers, Set.of(PREVISIT, PRODUCTS));
+        knowledge = new ManagedKnowledgeQueries(context, peers, Set.of(PREVISIT, PRODUCTS, SUITABILITY, PERSONAL_LOANS));
     }
 
     PreparationAccess installedAccess() {
@@ -121,6 +123,61 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
 
     public CapabilityResultV1 query(String requestId, String traceId, boolean productReview) {
         return knowledge.query(requestId, traceId, productReview ? PRODUCTS : PREVISIT);
+    }
+
+    Map<String,Object> answerPolicyQuestion(String userQuestion, String runId) {
+        String publicQuestion = publicQuestion(userQuestion);
+        if (publicQuestion == null) throw new SecurityException("KNOWLEDGE_QUESTION_NOT_SUPPORTED");
+        String requestId = "fh-request-" + UUID.randomUUID();
+        String traceId = "fh-trace-" + UUID.randomUUID();
+        CapabilityResultV1 result = knowledge.queryKnowledgeOnly(requestId, traceId, publicQuestion);
+        JsonNode data = HarnessJson.mapper().valueToTree(result.data());
+        boolean found = result.status() == CapabilityResultV1.Status.COMPLETED
+                && "EVIDENCE_FOUND".equals(data.path("decision").asText())
+                && data.path("evidence").isArray() && !data.path("evidence").isEmpty();
+        var reply = new LinkedHashMap<String,Object>();
+        reply.put("status", found ? "COMPLETED" : result.status() == CapabilityResultV1.Status.COMPLETED ? "NO_EVIDENCE" : "PARTIAL");
+        reply.put("response", policyAnswer(data, found));
+        reply.put("responseScope", "KNOWLEDGE_EVIDENCE");
+        reply.put("toolResults", List.of(Map.of("data", Map.of(
+                "capabilityId", KnowledgeProvider.SEARCH,
+                "resultStatus", result.status().name(),
+                "requestId", result.requestId(), "traceId", result.traceId(),
+                "result", result.data()))));
+        reply.put("manifest", knowledge.manifest()); reply.put("productId", knowledge.productId());
+        reply.put("buildId", context.buildId()); reply.put("instanceId", context.instanceId());
+        reply.put("runId", runId);
+        return Map.copyOf(reply);
+    }
+
+    static String publicQuestion(String query) {
+        if (query == null || query.isBlank()) return null;
+        if (containsAny(query, "适当性", "高风险产品", "风险产品", "销售资格", "风险匹配")) return SUITABILITY;
+        if (containsAny(query, "个人贷款", "借款人", "贷款调查", "贷款申请", "授信调查")) return PERSONAL_LOANS;
+        if (containsAny(query, "制度依据", "制度要求", "原文条款", "合规义务")) return PRODUCTS;
+        return null;
+    }
+
+    private static boolean containsAny(String value, String... terms) {
+        for (String term : terms) if (value.contains(term)) return true;
+        return false;
+    }
+
+    static String policyAnswer(JsonNode data, boolean found) {
+        if (!found) return "当前固定版本的知识产品没有返回可用原文依据，因此不能确认这项制度结论。";
+        var out = new StringBuilder("已从当前装配的制度知识中找到以下原文依据：\n\n");
+        int displayed = 0;
+        for (JsonNode item : data.path("evidence")) {
+            String clause = item.path("clause").asText();
+            String quote = item.path("quote").asText();
+            if (quote.isBlank()) continue;
+            if (++displayed > 5) break;
+            out.append("- ");
+            if (!clause.isBlank()) out.append("**").append(clause).append("**：");
+            out.append(quote).append("\n");
+        }
+        if (displayed == 0) return "当前固定版本的知识产品没有返回可展示的原文依据，因此不能确认这项制度结论。";
+        return out.append("\n以上为已发布文档的原文检索结果；具体客户或业务处理仍需结合当前授权和业务事实判断。").toString();
     }
     public void current() { knowledge.current(); }
     public void authorizeSaved(JsonNode report) {
