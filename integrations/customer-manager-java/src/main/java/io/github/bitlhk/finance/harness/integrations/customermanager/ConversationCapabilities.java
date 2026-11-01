@@ -34,9 +34,12 @@ record ConversationCapabilities(Set<ConversationIntent.Kind> actions, List<Strin
             if (ids.contains(CustomerCrmProvider.ALLOCATION_CAPABILITY))
                 actions.add(ConversationIntent.Kind.PRODUCT_REVIEW);
         }
+        if (ids.contains("knowledge.evidence.search")) actions.add(ConversationIntent.Kind.KNOWLEDGE_QUERY);
         // These two registered CRM actions are QUERY-only, single-customer draft production.
         // Do not infer exemption for future actions from their names or model/Skill claims.
-        return new ConversationCapabilities(actions, new ArrayList<>(ids), actions);
+        var directReads = EnumSet.copyOf(actions);
+        directReads.remove(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+        return new ConversationCapabilities(actions, new ArrayList<>(ids), directReads);
     }
     void require(ConversationIntent.Kind kind) {
         if (!actions.contains(kind)) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");

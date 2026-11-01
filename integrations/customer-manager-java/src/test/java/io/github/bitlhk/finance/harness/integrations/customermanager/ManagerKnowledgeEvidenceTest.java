@@ -39,11 +39,4 @@ class ManagerKnowledgeEvidenceTest {
         assertFalse(answer.contains("技术字段"));
     }
 
-    @Test void customerTextNeverEntersTheKnowledgeEgressQuestion() {
-        String outbound = ManagerKnowledgeEvidence.publicQuestion(
-                "请结合周明远的CRM资料说明向六十五周岁以上客户销售高风险产品的义务");
-        assertEquals(ManagerKnowledgeEvidence.SUITABILITY, outbound);
-        assertFalse(outbound.contains("周明远"));
-        assertFalse(outbound.contains("CRM"));
-    }
 }

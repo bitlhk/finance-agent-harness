@@ -77,11 +77,6 @@ final class CustomerManagerScenarioExtensionInputTest {
     }
 
     @Test void routesOnlyBoundedPolicyQuestionsToKnowledge() {
-        assertEquals(ManagerKnowledgeEvidence.SUITABILITY,
-                ManagerKnowledgeEvidence.publicQuestion("向六十五周岁以上客户销售高风险产品时应履行什么义务？"));
-        assertEquals(ManagerKnowledgeEvidence.PERSONAL_LOANS,
-                ManagerKnowledgeEvidence.publicQuestion("贷款调查需要了解借款人的哪些情况？"));
-        assertEquals(null, ManagerKnowledgeEvidence.publicQuestion("周明远的客户编号是什么？"));
         assertTrue(CustomerManagerScenarioExtension.Managed.isKnowledgeHelp("你有哪些知识？"));
     }
 
@@ -93,5 +88,6 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals(false, without.description().contains("制度文档"));
         assertTrue(with.description().contains("制度文档"));
         assertTrue(with.description().contains("不读取或发送客户资料"));
+        assertTrue(with.actions().contains(ConversationIntent.Kind.KNOWLEDGE_QUERY));
     }
 }

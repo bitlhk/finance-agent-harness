@@ -15,24 +15,29 @@ import io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmProvide
 import io.github.bitlhk.finance.harness.providers.kyp.KypProductFactory;
 import io.github.bitlhk.finance.harness.providers.knowledge.KnowledgeProvider;
 import java.util.*;
+import java.nio.file.*;
+import java.security.MessageDigest;
 
 final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     static final String PREVISIT = "客户经理开展服务准备时，制度对事实核实、适当性和人工复核有哪些要求？请提供原文条款。";
     static final String PRODUCTS = "产品服务准备中，制度对风险匹配、销售资格、信息核实和人工复核有哪些要求？请提供原文条款。";
-    static final String SUITABILITY = "金融机构向客户销售不适当产品，以及向六十五周岁以上客户销售高风险产品时，制度规定哪些限制和义务？请提供原文条款。";
-    static final String PERSONAL_LOANS = "个人贷款制度对申请条件、贷款调查和风险管理有哪些要求？请提供原文条款。";
     private final ManagedKnowledgeQueries knowledge;
     private final ManagedScenarioExtensionV01.Context context;
     private final PreparationAccess business;
     private final String session;
+    private final String productName;
+    private final int productVersion;
 
     ManagerKnowledgeEvidence(ManagedScenarioExtensionV01.Context context, FinanceProvider crm,
             PreparationAccess business, String session) throws Exception {
         this.context = context; this.business = business; this.session = session;
+        JsonNode descriptor = installedDescriptor(context.artifactRoot());
+        productName = descriptor.path("name").asText();
+        productVersion = descriptor.path("version").asInt();
         var peers = new HashMap<String, FinanceProvider>();
         peers.put(CustomerCrmProvider.PROVIDER_ID, crm);
         if (business instanceof KypPreparationAccess kyp) peers.put(KypProductFactory.ID, kyp.productProvider());
-        knowledge = new ManagedKnowledgeQueries(context, peers, Set.of(PREVISIT, PRODUCTS, SUITABILITY, PERSONAL_LOANS));
+        knowledge = new ManagedKnowledgeQueries(context, peers, Set.of(PREVISIT, PRODUCTS));
     }
 
     PreparationAccess installedAccess() {
@@ -125,9 +130,33 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         return knowledge.query(requestId, traceId, productReview ? PRODUCTS : PREVISIT);
     }
 
-    Map<String,Object> answerPolicyQuestion(String userQuestion, String runId) {
-        String publicQuestion = publicQuestion(userQuestion);
-        if (publicQuestion == null) throw new SecurityException("KNOWLEDGE_QUESTION_NOT_SUPPORTED");
+    String description(String installedCapabilities) {
+        return "当前已装配知识：**" + productName + " · 第 " + productVersion + " 版**。"
+                + "你可以直接询问该文档中的制度、规则、条款、义务或依据；回答会返回可核对的原文位置。\n\n"
+                + installedCapabilities;
+    }
+
+    private static JsonNode installedDescriptor(Path root) throws Exception {
+        JsonNode lock = HarnessJson.mapper().readTree(root.resolve("service-lock.json").toFile());
+        String expected = lock.path("files").path("knowledge-product.json").asText();
+        Path file = root.resolve("knowledge-product.json");
+        if (!expected.matches("[a-f0-9]{64}") || Files.isSymbolicLink(file) || !Files.isRegularFile(file)
+                || Files.size(file) > 262144) throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+        byte[] raw = Files.readAllBytes(file);
+        String actual = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));
+        JsonNode product = HarnessJson.mapper().readTree(raw);
+        JsonNode descriptor = product.path("descriptor");
+        JsonNode capabilities = descriptor.path("capabilities");
+        if (!expected.equals(actual) || !"knowledge-product-release.v0.1".equals(descriptor.path("schemaVersion").asText())
+                || descriptor.path("name").asText().isBlank() || descriptor.path("version").asInt() < 1
+                || !capabilities.isArray() || capabilities.size() != 1
+                || !"knowledge.evidence.search".equals(capabilities.get(0).asText()))
+            throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+        return descriptor;
+    }
+
+    Map<String,Object> answerPolicyQuestion(String userQuestion, String runId, Set<String> customerAliases) {
+        String publicQuestion = knowledge.publicQuestion(userQuestion, customerAliases);
         String requestId = "fh-request-" + UUID.randomUUID();
         String traceId = "fh-trace-" + UUID.randomUUID();
         CapabilityResultV1 result = knowledge.queryKnowledgeOnly(requestId, traceId, publicQuestion);
@@ -150,18 +179,6 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         return Map.copyOf(reply);
     }
 
-    static String publicQuestion(String query) {
-        if (query == null || query.isBlank()) return null;
-        if (containsAny(query, "适当性", "高风险产品", "风险产品", "销售资格", "风险匹配")) return SUITABILITY;
-        if (containsAny(query, "个人贷款", "借款人", "贷款调查", "贷款申请", "授信调查")) return PERSONAL_LOANS;
-        if (containsAny(query, "制度依据", "制度要求", "原文条款", "合规义务")) return PRODUCTS;
-        return null;
-    }
-
-    private static boolean containsAny(String value, String... terms) {
-        for (String term : terms) if (value.contains(term)) return true;
-        return false;
-    }
 
     static String policyAnswer(JsonNode data, boolean found) {
         if (!found) return "当前固定版本的知识产品没有返回可用原文依据，因此不能确认这项制度结论。";

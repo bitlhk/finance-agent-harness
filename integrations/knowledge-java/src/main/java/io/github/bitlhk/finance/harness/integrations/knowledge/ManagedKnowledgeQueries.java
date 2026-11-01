@@ -85,8 +85,10 @@ public final class ManagedKnowledgeQueries implements AutoCloseable {
      * context is manufactured for a knowledge-only turn.
      */
     public CapabilityResultV1 queryKnowledgeOnly(String requestId, String traceId, String publicQuestion) {
-        if (!questions.contains(publicQuestion)) throw new SecurityException("KNOWLEDGE_EGRESS_REJECTED");
         return queryInstalled(requestId, traceId, publicQuestion);
+    }
+    public String publicQuestion(String question, Collection<String> protectedAliases) {
+        return queries.publicQuestion(question, protectedAliases);
     }
     private CapabilityResultV1 queryInstalled(String requestId, String traceId, String publicQuestion) {
         current();

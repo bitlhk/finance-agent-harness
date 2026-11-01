@@ -229,9 +229,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 String query = text(body,"query");
                 Map<String,Object> result;
                 if (knowledge != null && isKnowledgeHelp(query))
-                    result = Map.of("status","ANSWERED","response",capabilities.description(),"responseScope","NON_BUSINESS");
-                else if (knowledge != null && ManagerKnowledgeEvidence.publicQuestion(query) != null)
-                    result = knowledge.answerPolicyQuestion(query,current.id);
+                    result = Map.of("status","ANSWERED","response",knowledge.description(capabilities.description()),
+                            "responseScope","NON_BUSINESS");
                 else result = body.has("conversationContract") ? converse(body, requested, sink)
                         : chat(query,requested,sink);
                 synchronized (operationLock) {
@@ -452,7 +451,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             // Model classification cannot grant access. Only non-data replies bypass CRM I/O;
             // every data/list/history/confirmation path still obtains current business authority.
             if(intent.objectRef()!=null || !Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
-                    ConversationIntent.Kind.CLARIFY,ConversationIntent.Kind.CANCEL_TASK,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
+                    ConversationIntent.Kind.KNOWLEDGE_QUERY, ConversationIntent.Kind.CLARIFY,
+                    ConversationIntent.Kind.CANCEL_TASK,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
                 customers=liveCustomers();
                 if((requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                         ||(intent.objectRef()!=null&&!customers.contains(intent.objectRef()))
@@ -467,6 +467,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                         "本轮仅问候，尚未查询客户事实或生成报告。",proposedBinding,sink);
                 case CAPABILITIES -> naturalReply(query,ConversationResponder.Purpose.CAPABILITIES,List.of(),
                         "仅介绍当前装配能力，不表示已获得业务授权；尚未执行。",proposedBinding,sink);
+                case KNOWLEDGE_QUERY -> {
+                    capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+                    if (knowledge == null) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");
+                    var protectedAliases = new HashSet<>(customers);
+                    protectedAliases.addAll(dialogue.disclosedObjects());
+                    if (dialogue.object() != null) protectedAliases.add(dialogue.object());
+                    yield knowledge.answerPolicyQuestion(query,operation.id,protectedAliases);
+                }
                 case LIST_OBJECTS -> {
                     dialogue.listed(customers);
                     yield Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);

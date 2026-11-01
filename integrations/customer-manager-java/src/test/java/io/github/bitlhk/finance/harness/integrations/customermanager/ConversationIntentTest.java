@@ -67,6 +67,14 @@ final class ConversationIntentTest {
         for (String field : new String[]{"owner", "confirmed", "scope", "query", "tool", "parameters"})
             rejected(valid.substring(0, valid.length()-1) + ",\"" + field + "\":true}");
     }
+    @Test void knowledgeIntentRequiresTheBuildInstalledCapability() {
+        String proposal = proposal("KNOWLEDGE_QUERY", "null", "null", "null");
+        rejected(proposal);
+        var value = ConversationIntent.parse(proposal, OBJECTS,
+                Set.of(ConversationIntent.Kind.PREPARE, ConversationIntent.Kind.KNOWLEDGE_QUERY));
+        assertEquals(ConversationIntent.Kind.KNOWLEDGE_QUERY, value.kind());
+        assertFalse(value.requiresExecutionConfirmation());
+    }
     @Test void duplicateTrailingUnknownAndMalformedOutputFailClosedWithoutEcho() {
         String valid = proposal("GREETING", "null", "null", "null");
         rejected(valid + "{}");
