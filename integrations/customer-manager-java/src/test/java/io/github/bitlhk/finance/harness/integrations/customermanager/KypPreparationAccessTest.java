@@ -50,12 +50,14 @@ class KypPreparationAccessTest {
     }
     class Products implements FinanceProvider, InvocationAccess {
         int calls;
+        String lastKeyword;
         boolean revoke, mismatch, brokenChannels;
         public void checkAccess(CapabilityRequestV1 request) { BoundFinanceProvider.checkContext(grant.get(), request.context()); }
         public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new SecurityException("READ_ONLY"); }
         public CapabilityResultV1 query(CapabilityRequestV1 request) {
             calls++;
-            assertTrue(request.parameters().isEmpty(), "CRM facts must not be sent as product query parameters");
+            assertEquals(Set.of("keyword"), request.parameters().keySet(), "CRM facts must not be sent as product query parameters");
+            lastKeyword = (String) request.parameters().get("keyword");
             var row = new LinkedHashMap<String,Object>();
             row.put("productId", "P001"); row.put("name", "Demo fixture"); row.put("sourceId", "demo-fixture");
             row.put("salesTrust", "DEMO"); row.put("factsType", "demo"); row.put("riskLevel", 2);
@@ -75,6 +77,13 @@ class KypPreparationAccessTest {
         assertEquals(List.of(), result.data().get("eligibleProducts"));
         assertEquals(1, ((List<?>)result.data().get("excludedProducts")).size());
         assertNotNull(result.data().get("sourceEvidence"));
+    }
+    @Test void explicitProductRefIsTheOnlyValueSentToProductSource() {
+        access().query("request-fixture", "trace-fixture", "customer-fixture",
+                CustomerCrmProvider.ALLOCATION_CAPABILITY,
+                Map.of("amount",100000,"horizonMonths",12,"channel","branch","productRef","132112"));
+        assertEquals(1, products.calls);
+        assertEquals("132112", products.lastKeyword);
     }
     @Test void crmOnlyReportDoesNotRequireAnUnusedProductGrant() {
         var access = access();

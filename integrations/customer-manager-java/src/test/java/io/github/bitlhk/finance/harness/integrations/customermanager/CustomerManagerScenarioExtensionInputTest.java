@@ -62,6 +62,8 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals(100000.0,values.get("amount"));
         assertEquals(12,values.get("horizonMonths"));
         assertEquals("手机银行",values.get("channel"));
+        assertEquals("132112", CustomerManagerScenarioExtension.productArguments(
+                "为周明远核对产品132112，10万元、12个月、网点").get("productRef"));
         assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
 

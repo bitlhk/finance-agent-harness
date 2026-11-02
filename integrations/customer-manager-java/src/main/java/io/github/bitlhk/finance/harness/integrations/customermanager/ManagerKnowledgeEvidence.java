@@ -27,6 +27,7 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     private final String session;
     private final String productName;
     private final int productVersion;
+    private final ProductKnowledgeMatcher matcher;
 
     ManagerKnowledgeEvidence(ManagedScenarioExtensionV01.Context context, FinanceProvider crm,
             PreparationAccess business, String session) throws Exception {
@@ -34,6 +35,8 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         JsonNode descriptor = installedDescriptor(context.artifactRoot());
         productName = descriptor.path("name").asText();
         productVersion = descriptor.path("version").asInt();
+        matcher = "knowledge-product-release.v0.2".equals(descriptor.path("schemaVersion").asText())
+                ? new ProductKnowledgeMatcher(descriptor) : null;
         var peers = new HashMap<String, FinanceProvider>();
         peers.put(CustomerCrmProvider.PROVIDER_ID, crm);
         if (business instanceof KypPreparationAccess kyp) peers.put(KypProductFactory.ID, kyp.productProvider());
@@ -127,7 +130,24 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     }
 
     public CapabilityResultV1 query(String requestId, String traceId, boolean productReview) {
+        if (productReview && matcher != null && business instanceof KypPreparationAccess kyp) {
+            var decision = matcher.select(kyp.productsFor(traceId));
+            if (decision == ProductKnowledgeMatcher.Decision.NO_KNOWLEDGE)
+                return unavailable(requestId, traceId, "NO_BOUND_PRODUCT_KNOWLEDGE", false);
+            if (decision == ProductKnowledgeMatcher.Decision.AMBIGUOUS)
+                return unavailable(requestId, traceId, "KNOWLEDGE_PRODUCT_SELECTION_AMBIGUOUS", true);
+        }
         return knowledge.query(requestId, traceId, productReview ? PRODUCTS : PREVISIT);
+    }
+
+    private static CapabilityResultV1 unavailable(String requestId, String traceId, String reason, boolean rejected) {
+        return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, requestId, traceId,
+                CapabilityResultV1.Status.COMPLETED, rejected
+                        ? "本轮未能唯一确定产品，已拒绝引用产品知识。"
+                        : "当前产品没有装配对应的固定版本知识。",
+                Map.of("decision", rejected ? "KNOWLEDGE_REJECTED" : "KNOWLEDGE_NOT_AVAILABLE",
+                        "evidence", List.of(), "reason", reason),
+                List.of(reason), List.of(), "knowledge-host", null, null, null);
     }
 
     String description(String installedCapabilities) {
@@ -147,11 +167,34 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         JsonNode product = HarnessJson.mapper().readTree(raw);
         JsonNode descriptor = product.path("descriptor");
         JsonNode capabilities = descriptor.path("capabilities");
-        if (!expected.equals(actual) || !"knowledge-product-release.v0.1".equals(descriptor.path("schemaVersion").asText())
+        String version = descriptor.path("schemaVersion").asText();
+        if (!expected.equals(actual) || !Set.of("knowledge-product-release.v0.1", "knowledge-product-release.v0.2").contains(version)
                 || descriptor.path("name").asText().isBlank() || descriptor.path("version").asInt() < 1
                 || !capabilities.isArray() || capabilities.size() != 1
                 || !"knowledge.evidence.search".equals(capabilities.get(0).asText()))
             throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+        if ("knowledge-product-release.v0.2".equals(version)) {
+            String setExpected = lock.path("files").path("knowledge-product-set.json").asText();
+            Path setFile = root.resolve("knowledge-product-set.json");
+            String bindingExpected = lock.path("files").path(
+                    "provider-configuration/knowledge-service/knowledge-binding.json").asText();
+            Path bindingFile = root.resolve("provider-configuration/knowledge-service/knowledge-binding.json");
+            if (!setExpected.matches("[a-f0-9]{64}") || !bindingExpected.matches("[a-f0-9]{64}")
+                    || Files.isSymbolicLink(setFile) || Files.isSymbolicLink(bindingFile)
+                    || !Files.isRegularFile(setFile) || !Files.isRegularFile(bindingFile))
+                throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+            byte[] setRaw = Files.readAllBytes(setFile), bindingRaw = Files.readAllBytes(bindingFile);
+            if (!setExpected.equals(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(setRaw)))
+                    || !bindingExpected.equals(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bindingRaw))))
+                throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+            JsonNode set = HarnessJson.mapper().readTree(setRaw), binding = HarnessJson.mapper().readTree(bindingRaw);
+            if (!"knowledge-product-set.v0.1".equals(set.path("schemaVersion").asText())
+                    || !set.path("products").isArray() || set.path("products").size() != 1
+                    || !set.path("products").get(0).equals(product)
+                    || !"knowledge-binding.v0.2".equals(binding.path("schemaVersion").asText())
+                    || !descriptor.path("businessBindingDigest").equals(binding.path("businessBindingDigest")))
+                throw new SecurityException("KNOWLEDGE_PRODUCT_NOT_LOCKED");
+        }
         return descriptor;
     }
 

@@ -116,7 +116,8 @@ class CustomerCrmProviderTest {
         assertEquals("ready",result.data().get("status"));
         List<?> eligible=(List<?>)result.data().get("eligibleProducts");
         assertEquals(2,eligible.size());
-        assertTrue(result.data().toString().contains("wealth-suitability-v1"));
+        assertTrue(result.data().toString().contains("product-facts-screening-v2"));
+        assertTrue(result.data().toString().contains("REQUIRES_AUTHORIZED_RULE"));
         assertTrue(result.data().toString().contains("PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON"));
         assertFalse(result.data().toString().contains("fixture-token"));
     }

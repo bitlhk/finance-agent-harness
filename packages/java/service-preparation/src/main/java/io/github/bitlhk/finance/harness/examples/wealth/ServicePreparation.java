@@ -702,7 +702,7 @@ public final class ServicePreparation implements AutoCloseable {
                     &&productReview.path("eligibleProducts").isArray()&&productReview.path("excludedProducts").isArray()
                     &&!policyRefs.isEmpty();
             if(screened) {
-                addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录与适当性规则筛选结果",policyRefs);
+                addAvailable(available,"PRODUCT_POLICY_RESULT","产品目录事实条件筛选结果（适当性待核验）",policyRefs);
                 for(String code:List.of("WEALTH_POSITION_NOT_PROVIDED","RISK_ASSESSMENT_NOT_PROVIDED","RECENT_EVENTS_NOT_PROVIDED"))removeMissing(missing,code);
             } else {
                 addMissing(missing,"PRODUCT_POLICY_NOT_VERIFIED","产品来源信息或销售资格尚未完整核实","来源返回不代表产品适合推荐或已获准销售");
@@ -1024,7 +1024,7 @@ public final class ServicePreparation implements AutoCloseable {
         if(!status.isBlank())firstRefs.add("/customer/customerStatus");
         JsonNode products=facts.path("productReview").path("eligibleProducts");
         if(products.isArray()&&!products.isEmpty()) {
-            var product=focus.addObject();product.put("text","当前规则筛选得到"+products.size()+"个待经理复核的产品候选，候选资格以产品卡片和规则版本为准。");
+            var product=focus.addObject();product.put("text","当前产品事实条件筛选得到"+products.size()+"个待经理复核的候选；客户适当性仍须由受权规则另行核验。");
             var refs=product.putArray("factRefs");for(int i=0;i<products.size();i++)refs.add("/productReview/eligibleProducts/"+i+"/name");
             var prepare=advice.addObject();prepare.put("text","与客户沟通前，请复核候选产品的期限、风险等级、最低金额和办理渠道，不将待复核候选表述为购买建议。");
             prepare.putArray("factRefs").add("/productReview/policySource/ruleVersion");
