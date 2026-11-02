@@ -170,7 +170,8 @@ public final class ServicePreparation implements AutoCloseable {
     }
     public ObjectNode prepareProduct(String caller, long expectedGeneration, Map<String,Object> arguments,
             PreparationListener listener) throws Exception {
-        if(arguments==null||!arguments.keySet().equals(Set.of("amount","horizonMonths","channel")))
+        if(arguments==null||!Set.of(Set.of("amount","horizonMonths","channel"),
+                Set.of("amount","horizonMonths","channel","productRef")).contains(arguments.keySet()))
             throw new IllegalArgumentException("PRODUCT_REVIEW_ARGUMENTS_REQUIRED");
         return prepareInternal(caller, expectedGeneration, Map.copyOf(arguments), listener);
     }

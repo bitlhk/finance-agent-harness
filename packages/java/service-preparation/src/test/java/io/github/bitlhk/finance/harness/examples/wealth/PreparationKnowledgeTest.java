@@ -135,6 +135,14 @@ class PreparationKnowledgeTest {
             }
         }
     }
+    @Test void productPreparationPreservesAnOptionalHostSelectedProductReference() throws Exception {
+        try (var service = open()) {
+            var report = service.prepareProduct("owner-a", service.select("owner-a", "合成客户甲", "筛选产品"),
+                    Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch", "productRef", "132112"),
+                    ServicePreparation.PreparationListener.NONE);
+            assertEquals("132112", report.at("/productReview/request/productRef").asText());
+        }
+    }
     @Test void revocationDuringGenerationDiscardsJointContent() throws Exception {
         revokeDuringGeneration = true;
         try (var service = open()) {
