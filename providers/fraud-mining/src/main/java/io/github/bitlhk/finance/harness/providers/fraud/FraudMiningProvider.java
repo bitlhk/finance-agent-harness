@@ -210,6 +210,7 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
         data.put("decisionSource", "fraud-mining-incident-registry");
 
         Instant asOf = newestEvidence.equals(Instant.EPOCH) ? Instant.now() : newestEvidence;
+        checkCurrentSession(request);
         return new CapabilityResultV1(
                 CapabilityResultV1.SCHEMA_VERSION,
                 request.context().requestId(),
@@ -347,6 +348,7 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             default -> "风险来源查询未完整，不能得出未命中结论；请人工核验。";
         };
         Instant asOf = newestEvidence.equals(Instant.EPOCH) ? Instant.now() : newestEvidence;
+        checkCurrentSession(request);
         return new CapabilityResultV1(
                 CapabilityResultV1.SCHEMA_VERSION, request.context().requestId(), request.context().traceId(),
                 CapabilityResultV1.Status.COMPLETED, content, data, List.of(),
@@ -371,6 +373,17 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
             throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder(config.baseUri().resolve(path))
                 .timeout(timeout).header("Accept", "application/json").GET();
+        SourceSession session = checkCurrentSession(request);
+        if (session != null) builder.header("X-Session-Id", session.credential());
+        HttpResponse<String> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 401 || response.statusCode() == 403) {
+            throw new SourceAuthorizationFailure();
+        }
+        checkCurrentSession(request);
+        return response;
+    }
+
+    private SourceSession checkCurrentSession(CapabilityRequestV1 request) {
         if (currentSession != null) {
             SourceSession session;
             try {
@@ -385,16 +398,12 @@ public final class FraudMiningProvider implements DescribedFinanceProvider {
                 if (session.credential().chars().anyMatch(c -> c < 0x20 || c == 0x7f)) {
                     throw new SourceAuthorizationFailure();
                 }
-                builder.header("X-Session-Id", session.credential());
+                return session;
             } catch (RuntimeException unavailable) {
                 throw new SourceAuthorizationFailure();
             }
         }
-        HttpResponse<String> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 401 || response.statusCode() == 403) {
-            throw new SourceAuthorizationFailure();
-        }
-        return response;
+        return null;
     }
 
     private static final class SourceAuthorizationFailure extends RuntimeException {

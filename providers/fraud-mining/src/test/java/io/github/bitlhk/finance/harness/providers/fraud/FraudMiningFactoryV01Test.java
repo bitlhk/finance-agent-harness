@@ -95,6 +95,55 @@ class FraudMiningFactoryV01Test {
         assertEquals(2, credentials.size());
     }
 
+    @Test void responseTimeRevocationExpiryAndIdentityDriftDenyBothCapabilities() {
+        for (boolean evidence : List.of(false, true)) {
+            for (String change : List.of("revoke", "expire", "principal", "subject", "host")) {
+                session.set(authority("synthetic-first", "principal", "customer", "host-session", Instant.now().plusSeconds(60)));
+                credentials.clear();
+                afterRequest = () -> session.set(switch(change) {
+                    case "revoke" -> null;
+                    case "expire" -> authority("synthetic-expired", "principal", "customer", "host-session", Instant.EPOCH);
+                    case "principal" -> authority("synthetic-wrong", "other", "customer", "host-session", Instant.now().plusSeconds(60));
+                    case "subject" -> authority("synthetic-wrong", "principal", "other", "host-session", Instant.now().plusSeconds(60));
+                    default -> authority("synthetic-wrong", "principal", "customer", "other", Instant.now().plusSeconds(60));
+                });
+                assertDenied(managed(session::get).query(request(evidence)));
+                assertEquals(1, credentials.size());
+            }
+        }
+    }
+
+    @Test void finalDisclosureRechecksAuthorityAfterParsingForBothCapabilities() {
+        for(boolean evidence:List.of(false,true)) {
+            var checks=new AtomicInteger();credentials.clear();
+            var provider=managed(()->checks.incrementAndGet()>=3?null:session.get());
+            assertDenied(provider.query(request(evidence)));
+            assertEquals(3,checks.get());
+            assertEquals(1,credentials.size());
+        }
+    }
+
+    @Test void finalEvidencePageRevocationNeverReturnsPartialEvidence() {
+        paginated = true;
+        afterRequest = () -> { if (credentials.size() == 2) session.set(null); };
+        var provider = new FraudMiningProvider(new FraudMiningProvider.Config(endpoint(), Duration.ofSeconds(2), 1, 3, 10), session::get);
+        assertDenied(provider.query(request(true)));
+        assertEquals(2, credentials.size());
+    }
+
+    @Test void validInFlightRenewalRetainsBothCapabilitiesAndFaultsStayFailures() {
+        for (boolean evidence : List.of(false, true)) {
+            status.set(200);
+            session.set(authority("synthetic-first", "principal", "customer", "host-session", Instant.now().plusSeconds(60)));
+            afterRequest = () -> session.set(authority("synthetic-renewed", "principal", "customer", "host-session", Instant.now().plusSeconds(60)));
+            assertEquals(CapabilityResultV1.Status.COMPLETED, managed(session::get).query(request(evidence)).status());
+            afterRequest = () -> {};status.set(500);
+            var failed=managed(session::get).query(request(evidence));
+            assertEquals(CapabilityResultV1.Status.FAILED,failed.status());
+            assertTrue(failed.data().isEmpty());
+        }
+    }
+
     @Test void managedEndpointRejectsUnprotectedRemoteOrEmbeddedCredentials() {
         for (String uri : List.of("http://example.invalid", "https://user:pass@example.invalid", "https://example.invalid?token=x")) {
             assertThrows(IllegalArgumentException.class, () -> new FraudMiningProvider(

@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from observation_assembly import (
     AssemblyError, LIMIT, local_path, read_json, source_digest,
@@ -43,6 +44,21 @@ class ObservationAssemblyTest(unittest.TestCase):
         self.manifest["hostBindings"].remove("authorization")
         with self.assertRaisesRegex(AssemblyError, "^MISSING_HOST_BINDING$"):
             validate_assembly(ROOT, self.manifest)
+
+    def test_each_reference_drift_is_rejected(self):
+        references = [ref for field in ("components", "contracts", "requirements",
+                      "conformance", "developmentSupport") for ref in self.manifest[field]]
+        references.append(self.manifest["policyContract"])
+        for reference in references:
+            with self.subTest(source=reference["source"]):
+                self.assertEqual(reference["digest"], source_digest(ROOT, reference))
+                def changed_digest(root, ref):
+                    if ref["source"] == reference["source"]:
+                        return "sha256:" + "0" * 64
+                    return source_digest(root, ref)
+                with patch("observation_assembly.source_digest", side_effect=changed_digest):
+                    with self.assertRaisesRegex(AssemblyError, "^DIGEST_MISMATCH$"):
+                        validate_assembly(ROOT, self.manifest)
 
     def test_limits_and_unknown_purpose(self):
         for change in ("limit", "purpose", "kind"):

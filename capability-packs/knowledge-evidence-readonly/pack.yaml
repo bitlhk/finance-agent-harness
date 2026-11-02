@@ -1,0 +1,18 @@
+schemaVersion: finance-capability-pack.v1
+packId: knowledge-evidence-readonly
+version: 0.1.0
+systemPrompt: "隔离文档知识查询。只引用实际返回的原文证据，不生成审批或合规结论。模型不得指定服务地址、身份、权限、知识版本或业务日期。无证据时明确无法确认。"
+capabilities:
+  - capabilityId: knowledge.evidence.search
+    toolName: knowledge_evidence_search
+    name: 文档知识证据查询
+    description: 查询受管固定版本知识产品的条款证据和原文位置，不执行规则或办理业务。
+    operation: QUERY
+    requiredScopes: ["knowledge:read"]
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question: {type: string, minLength: 1, maxLength: 1000}
+

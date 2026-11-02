@@ -13,6 +13,7 @@
     <description>Runtime-neutral contracts for connecting financial agents to bank capabilities.</description>
 
     <modules>
+        <module>providers/knowledge-service</module>
         <module>packages/java/quotation</module>
         <module>providers/quotation-reference</module>
         <module>packages/java/core</module>
@@ -26,6 +27,7 @@
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
         <module>integrations/customer-manager-java</module>
+        <module>integrations/knowledge-java</module>
         <module>integrations/fraud-verification-java</module>
         <module>integrations/post-loan-risk-java</module>
         <module>providers/non-ai-banking</module>
