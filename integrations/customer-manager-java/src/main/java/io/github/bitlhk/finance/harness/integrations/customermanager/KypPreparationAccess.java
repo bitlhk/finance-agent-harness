@@ -24,7 +24,7 @@ public final class KypPreparationAccess implements PreparationAccess {
     private final java.util.function.Supplier<BoundFinanceProvider.Grant> productGrants;
     private final AtomicBoolean closed = new AtomicBoolean();
     private volatile ProductSelection productSelection;
-    private record ProductSelection(String traceId, JsonNode products) {}
+    private record ProductSelection(String traceId, JsonNode products, String channel) {}
 
     public KypPreparationAccess(PreparationAccess crm, FinanceProvider products, String sessionRef, Clock clock,
             java.util.function.Supplier<BoundFinanceProvider.Grant> productGrants) {
@@ -104,7 +104,7 @@ public final class KypPreparationAccess implements PreparationAccess {
                 || source.path("sourceId").asText().isBlank()
                 || !source.path("normalizedContentDigest").asText().matches("[a-f0-9]{64}"))
             throw new IllegalStateException("ALLOCATION_PRODUCT_CONTRACT_INVALID");
-        productSelection = new ProductSelection(traceId, source.path("products").deepCopy());
+        productSelection = new ProductSelection(traceId, source.path("products").deepCopy(), channelCode(channel));
         var eligible = new ArrayList<Map<String,Object>>(); var excluded = new ArrayList<Map<String,Object>>();
         var missing = new TreeSet<String>(result.missingInputs());
         for (var product : source.path("products")) {
@@ -169,6 +169,19 @@ public final class KypPreparationAccess implements PreparationAccess {
         if (current == null || !current.traceId().equals(traceId))
             throw new SecurityException("PRODUCT_IDENTITY_NOT_BOUND_TO_RUN");
         return current.products().deepCopy();
+    }
+    String productChannelFor(String traceId) {
+        ProductSelection current = productSelection;
+        if (current == null || !current.traceId().equals(traceId))
+            throw new SecurityException("PRODUCT_IDENTITY_NOT_BOUND_TO_RUN");
+        return current.channel();
+    }
+    private static String channelCode(String channel) {
+        return switch (channel) {
+            case "网点", "柜面", "branch" -> "BRANCH";
+            case "手机银行", "手机端", "mobile" -> "MOBILE_BANKING";
+            default -> throw new IllegalArgumentException("ALLOCATION_CHANNEL_UNSUPPORTED");
+        };
     }
     @Override public Runnable resultReleaseGuard(String customer, CapabilityResultV1 result) {
         Runnable customerGuard = crm.resultReleaseGuard(customer, result);

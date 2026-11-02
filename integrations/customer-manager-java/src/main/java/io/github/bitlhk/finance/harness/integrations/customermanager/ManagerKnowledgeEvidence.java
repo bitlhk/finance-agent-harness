@@ -134,7 +134,7 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     public CapabilityResultV1 query(String requestId, String traceId, boolean productReview) {
         if (productReview && matcher != null && business instanceof KypPreparationAccess kyp) {
             JsonNode products = kyp.productsFor(traceId);
-            var decision = matcher.select(products);
+            var decision = matcher.select(products, kyp.productChannelFor(traceId));
             if (decision == ProductKnowledgeMatcher.Decision.NO_KNOWLEDGE)
                 return unavailable(requestId, traceId, "NO_BOUND_PRODUCT_KNOWLEDGE", false);
             if (decision == ProductKnowledgeMatcher.Decision.AMBIGUOUS)

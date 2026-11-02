@@ -17,8 +17,10 @@ final class ProductKnowledgeMatcher {
             throw new SecurityException("KNOWLEDGE_BUSINESS_BINDING_INVALID");
     }
 
-    Decision select(JsonNode products) {
+    Decision select(JsonNode products, String channel) {
         if (!products.isArray()) throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
+        if (channel == null || !channel.matches("[A-Z_]{2,32}"))
+            throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
         if (products.size() > 1) return Decision.AMBIGUOUS;
         int matches = 0;
         boolean conflict = false;
@@ -33,7 +35,8 @@ final class ProductKnowledgeMatcher {
             for (JsonNode allowed : binding.path("distribution")) {
                 distribution |= text(actual,"distributorId").equals(text(allowed,"distributorId"))
                         && contains(allowed.path("salesCodes"), text(actual,"salesCode"))
-                        && contains(allowed.path("shareClasses"), text(actual,"shareClass"));
+                        && contains(allowed.path("shareClasses"), text(actual,"shareClass"))
+                        && contains(allowed.path("channels"), channel);
             }
             if (sameCode && sameRegistration && manager && distribution) matches++;
             else conflict = true;

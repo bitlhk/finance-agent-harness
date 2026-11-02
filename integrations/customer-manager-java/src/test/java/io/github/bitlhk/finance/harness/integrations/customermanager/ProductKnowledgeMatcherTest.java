@@ -29,19 +29,21 @@ final class ProductKnowledgeMatcherTest {
 
     @Test void exact_provider_identity_matches_locked_knowledge() throws Exception {
         assertEquals(ProductKnowledgeMatcher.Decision.MATCHED, matcher().select(products(
-                "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112N","N")));
+                "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112N","N"), "BRANCH"));
     }
 
     @Test void unrelated_mock_product_has_no_knowledge() throws Exception {
         assertEquals(ProductKnowledgeMatcher.Decision.NO_KNOWLEDGE,
-                matcher().select(HarnessJson.mapper().readTree("[{\"productId\":\"SYN-FI-002\"}]")));
+                matcher().select(HarnessJson.mapper().readTree("[{\"productId\":\"SYN-FI-002\"}]"), "BRANCH"));
     }
 
     @Test void same_code_wrong_manager_or_share_is_rejected() throws Exception {
         assertThrows(SecurityException.class, () -> matcher().select(products(
-                "other-manager","132112","Z7001626000062","bank-of-nanjing","132112N","N")));
+                "other-manager","132112","Z7001626000062","bank-of-nanjing","132112N","N"), "BRANCH"));
         assertThrows(SecurityException.class, () -> matcher().select(products(
-                "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112D","D")));
+                "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112D","D"), "BRANCH"));
+        assertThrows(SecurityException.class, () -> matcher().select(products(
+                "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112N","N"), "MOBILE_BANKING"));
     }
 
     @Test void multiple_products_are_ambiguous_even_when_one_matches() throws Exception {
@@ -49,6 +51,6 @@ final class ProductKnowledgeMatcherTest {
                 "bank-of-nanjing","132112N","N").get(0);
         var rows = HarnessJson.mapper().createArrayNode();
         rows.add(exact); rows.addObject().put("productId","SYN-FI-002");
-        assertEquals(ProductKnowledgeMatcher.Decision.AMBIGUOUS, matcher().select(rows));
+        assertEquals(ProductKnowledgeMatcher.Decision.AMBIGUOUS, matcher().select(rows, "BRANCH"));
     }
 }
