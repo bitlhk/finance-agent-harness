@@ -1,0 +1,23 @@
+schemaVersion: finance-domain-pack.v1
+packId: transfer-anti-fraud
+version: 0.1.1-rc.1
+profile: customer-self-service
+capabilities:
+  - fraud.transfer-risk.assess
+capabilityPackRefs:
+  - id: fraud-risk-readonly
+    version: 0.1.0-rc.1
+skills:
+  - directory: transfer-risk-explanation
+    entry: skills/transfer-risk-explanation/SKILL.md
+scope:
+  - 使用客户明确提供且有权查询的账户引用获取已知涉诈风险
+  - 解释风险状态、必要原因、来源、时间与信息缺口
+  - 风险系统不可用时明确说明无法判断
+outOfScope:
+  - 执行、放行、阻断或撤销转账
+  - 替代银行预检、风险阈值或交易规则
+  - 以模型输出或聊天文本确认交易
+sourceReferences:
+  - finance-agent-harness@884947047fca4bf6563c0068f7cf11656ae964d3/domain-packs/anti-fraud/pack.yaml
+  - finance-agent-harness@884947047fca4bf6563c0068f7cf11656ae964d3/domain-packs/risk/internal-control/skills/transfer-risk-review/SKILL.md

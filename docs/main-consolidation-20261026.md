@@ -96,3 +96,15 @@ New work starts from current main on a short-lived feature branch. A normal
 reviewed PR returns it to main; release manifests pin exact commits. Do not use
 historical feature branch names as a permanent integration target. Remote branch
 deletion and dirty-worktree cleanup are separate from source consolidation.
+
+
+## PR44 follow-up (2026-10-29)
+
+The PR44 repair is based on main e911c71. It retains both fraud operations and the
+managed factory connection kind, and maps the existing current-session supplier
+onto every assess/evidence HTTP request. The rc standalone pack remains QUERY-only;
+its fraud:read scope agrees with the current factory. Existing evidence pack and
+fraud-risk:read requirements remain. Candidate admission, host-session rotation and
+revocation require the regression evidence attached to PR44; this is not a release
+or production-installation claim. The historical retained-work table above records
+the state at consolidation, before this repair.
