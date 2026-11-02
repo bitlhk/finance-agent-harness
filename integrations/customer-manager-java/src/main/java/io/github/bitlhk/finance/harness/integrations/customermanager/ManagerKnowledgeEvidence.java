@@ -131,13 +131,29 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
 
     public CapabilityResultV1 query(String requestId, String traceId, boolean productReview) {
         if (productReview && matcher != null && business instanceof KypPreparationAccess kyp) {
-            var decision = matcher.select(kyp.productsFor(traceId));
+            JsonNode products = kyp.productsFor(traceId);
+            var decision = matcher.select(products);
             if (decision == ProductKnowledgeMatcher.Decision.NO_KNOWLEDGE)
                 return unavailable(requestId, traceId, "NO_BOUND_PRODUCT_KNOWLEDGE", false);
             if (decision == ProductKnowledgeMatcher.Decision.AMBIGUOUS)
                 return unavailable(requestId, traceId, "KNOWLEDGE_PRODUCT_SELECTION_AMBIGUOUS", true);
+            return knowledge.query(requestId, traceId, productQuestion(products.get(0)));
         }
         return knowledge.query(requestId, traceId, productReview ? PRODUCTS : PREVISIT);
+    }
+
+    static String productQuestion(JsonNode product) {
+        JsonNode identity = product.path("businessIdentity");
+        String name = product.path("name").asText("").strip();
+        String code = identity.path("managerProductCode").asText("").strip();
+        String share = identity.path("shareClass").asText("").strip();
+        if (name.isBlank() || name.length() > 200 || !code.matches("[A-Za-z0-9-]{1,64}")
+                || !share.matches("[A-Za-z0-9-]{1,32}"))
+            throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
+        return "请提供产品“" + name + "”（管理人产品代码 " + code + "，" + share
+                + " 份额）的原文依据：产品类型与风险等级、适用投资者、申购起点、费用、申购赎回安排、"
+                + "暂停或大额赎回、管理人提前终止，以及条款调整和费率公告的适用期间。"
+                + "只返回该产品及该份额适用的原文；实时在售、额度、交易日历和客户适当性不由文档判断。";
     }
 
     private static CapabilityResultV1 unavailable(String requestId, String traceId, String reason, boolean rejected) {

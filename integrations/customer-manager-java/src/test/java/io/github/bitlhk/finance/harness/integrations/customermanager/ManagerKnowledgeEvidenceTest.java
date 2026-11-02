@@ -39,4 +39,18 @@ class ManagerKnowledgeEvidenceTest {
         assertFalse(answer.contains("技术字段"));
     }
 
+    @Test void productQuestionUsesOnlyTrustedProductIdentityAndKeepsRealtimeFactsOut() throws Exception {
+        var product = HarnessJson.mapper().readTree("""
+            {"name":"招银理财招睿添利日开21号固定收益类理财计划N份额",
+             "businessIdentity":{"managerProductCode":"132112","shareClass":"N"}}
+            """);
+        String question = ManagerKnowledgeEvidence.productQuestion(product);
+        assertTrue(question.contains("132112"));
+        assertTrue(question.contains("N 份额"));
+        assertTrue(question.contains("实时在售"));
+        assertFalse(question.contains("客户甲"));
+        assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productQuestion(
+                HarnessJson.mapper().readTree("{\"name\":\"产品\",\"businessIdentity\":{}}")));
+    }
+
 }
