@@ -120,6 +120,10 @@ class OpenJiuwenReportGeneratorTest {
                         okhttp3.internal.http2.ErrorCode.REFUSED_STREAM)).retryable());
         assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(
                 new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL)).retryable());
+        var wrappedCancel=new java.io.InterruptedIOException("timeout");
+        wrappedCancel.initCause(new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL));
+        assertEquals("HTTP2_CANCEL_STATE_UNKNOWN",OpenJiuwenReportGenerator.modelTransportFailure(
+                wrappedCancel).category());
         assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.InterruptedIOException("timeout")).retryable());
         assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.IOException("reset")).retryable());
         assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new RuntimeException("model call failed")).retryable());

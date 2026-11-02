@@ -162,6 +162,10 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
     record RetryDecision(boolean retryable, String category, boolean duplicateChargePossible) { }
 
     static RetryDecision modelTransportFailure(Throwable failure) {
+        String resetCode=http2ErrorCode(failure);
+        if(resetCode!=null)return "REFUSED_STREAM".equals(resetCode)
+                ?new RetryDecision(true,"HTTP2_REFUSED_STREAM",false)
+                :new RetryDecision(false,"HTTP2_"+resetCode+"_STATE_UNKNOWN",true);
         var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
         for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
             if(current instanceof java.util.concurrent.CancellationException
@@ -173,20 +177,20 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 return new RetryDecision(false,"SDK_OR_BUSINESS_RESPONSE_PARSE_FAILED",false);
             if(current instanceof ConnectException)
                 return new RetryDecision(true,"CONNECT_FAILED_BEFORE_RESPONSE",false);
-            String http2=http2ErrorCode(current);
-            if(http2!=null)return "REFUSED_STREAM".equals(http2)
-                    ?new RetryDecision(true,"HTTP2_REFUSED_STREAM",false)
-                    :new RetryDecision(false,"HTTP2_"+http2+"_STATE_UNKNOWN",true);
         }
         return new RetryDecision(false,"NON_RETRYABLE_MODEL_FAILURE",false);
     }
 
     private static String http2ErrorCode(Throwable failure) {
-        if(!"okhttp3.internal.http2.StreamResetException".equals(failure.getClass().getName()))return null;
-        try {
-            Object value=failure.getClass().getField("errorCode").get(failure);
-            return value instanceof Enum<?> code?code.name():null;
-        } catch (ReflectiveOperationException ignored) { return null; }
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
+            if(!"okhttp3.internal.http2.StreamResetException".equals(current.getClass().getName()))continue;
+            try {
+                Object value=current.getClass().getField("errorCode").get(current);
+                return value instanceof Enum<?> code?code.name():null;
+            } catch (ReflectiveOperationException ignored) { return null; }
+        }
+        return null;
     }
 
     static JsonNode referenceCatalog(List<String> ids, JsonNode context) {
