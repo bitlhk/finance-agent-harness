@@ -26,6 +26,7 @@
         <module>packages/java/cashflow</module>
         <module>conformance/java-provider-kit</module>
         <module>integrations/openjiuwen-java</module>
+        <module>integrations/credit-card-openjiuwen-java</module>
         <module>integrations/customer-manager-java</module>
         <module>integrations/knowledge-java</module>
         <module>integrations/fraud-verification-java</module>
@@ -39,6 +40,7 @@
         <module>providers/customer-crm</module>
         <module>providers/wealth-product-mcp</module>
         <module>providers/credit-card-reference</module>
+        <module>providers/credit-card-java</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
@@ -100,4 +102,3 @@
         </pluginManagement>
     </build>
 </project>
-
