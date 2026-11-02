@@ -61,8 +61,26 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         value.put("upstreamRequestIdObserved", false);
         value.put("httpSendCountObserved", false);
         value.put("downstreamDisconnectObserved", false);
-        if (failure != null) value.put("causeChain", redactedCauseChain(failure));
+        if (failure != null) {
+            value.put("causeChain", redactedCauseChain(failure));
+            value.put("failureFrame", redactedFailureFrame(failure));
+        }
         return Map.copyOf(value);
+    }
+    private static Map<String,Object> redactedFailureFrame(Throwable failure) {
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
+            for(StackTraceElement frame:current.getStackTrace()){
+                String owner=frame.getClassName();
+                if(owner.startsWith("com.openjiuwen.core.foundation.llm.model_clients."))return Map.of(
+                        "component","OPENJIUWEN_MODEL_CLIENT","type",safeType(current),
+                        "method",safeMethod(frame.getMethodName()),"line",Math.max(frame.getLineNumber(),0));
+            }
+        }
+        return Map.of("component","UNCLASSIFIED","type",safeType(failure));
+    }
+    private static String safeMethod(String value) {
+        return value!=null&&value.matches("[A-Za-z0-9_$]{1,96}")?value:"unknown";
     }
     private static String cancellationSource(Throwable failure) {
         if (causedBy(failure, CancellationException.class)) return "EXCEPTION_CHAIN";

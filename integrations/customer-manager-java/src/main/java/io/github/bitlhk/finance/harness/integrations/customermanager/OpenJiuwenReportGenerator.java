@@ -35,7 +35,8 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             + "例如直接写‘只有历史快照，当前资金去向待核实’，不要解释某字段为某状态；"
             + "没有比例就只写已取得的金额，不解释缺少哪个计算字段。不要复述这些写作指令。";
     static final String FACT_REFERENCE_INSTRUCTION =
-            "factReferenceCatalog逐项给出ref及其value，引用某项值时，factRefs只能逐字复制该项的ref；"
+            "factReferenceCatalog逐项给出facts中可引用叶子值的ref；引用某项值时，factRefs只能逐字复制该项的ref；"
+            + "实际值只读取facts中该ref指向的位置，目录不重复传输事实值；"
             + "日期引用必须取实际日期值对应的ref，不能移到其他对象之下。"
             + "不得引用父对象、容器路径，不得缩短、改写或自行构造路径。";
     static final String CONTRACT_BOUNDARY_INSTRUCTION =
@@ -100,6 +101,28 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
     @Override public ObjectNode generateStreaming(io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod method,
             String goal, List<String> ids, JsonNode context,
             java.util.function.Consumer<ServicePreparation.ReportDelta> sink) throws Exception {
+        Exception firstFailure = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            var emitted = new java.util.concurrent.atomic.AtomicInteger();
+            try {
+                return generateAttempt(method, goal, ids, context, delta -> {
+                    emitted.incrementAndGet();
+                    sink.accept(delta);
+                });
+            } catch (Exception failure) {
+                if (attempt == 2 || emitted.get() != 0 || !modelTransportFailure(failure)) {
+                    if (firstFailure != null && firstFailure != failure) failure.addSuppressed(firstFailure);
+                    throw failure;
+                }
+                firstFailure = failure;
+            }
+        }
+        throw new IllegalStateException("MODEL_RETRY_STATE_INVALID");
+    }
+
+    private ObjectNode generateAttempt(io.github.bitlhk.finance.harness.examples.wealth.InstalledPreparationMethod method,
+            String goal, List<String> ids, JsonNode context,
+            java.util.function.Consumer<ServicePreparation.ReportDelta> sink) throws Exception {
         String sid = UUID.randomUUID().toString();
         try {
             String input=HarnessJson.mapper().writeValueAsString(Map.of(
@@ -123,6 +146,18 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
         } finally { Runner.release(sid); }
     }
 
+    static boolean modelTransportFailure(Throwable failure) {
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
+            if(current instanceof java.io.IOException)return true;
+            for(StackTraceElement frame:current.getStackTrace())if(frame.getClassName().startsWith(
+                    "com.openjiuwen.core.foundation.llm.model_clients."))return true;
+            String message=String.valueOf(current.getMessage());
+            if(message.contains("model call failed")||message.contains("Failed to read streaming response"))return true;
+        }
+        return false;
+    }
+
     static JsonNode referenceCatalog(List<String> ids, JsonNode context) {
         var catalog=HarnessJson.mapper().createArrayNode();
         for(String id:ids){
@@ -131,7 +166,6 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             if(value.isMissingNode()||value.isContainerNode())continue;
             var entry=catalog.addObject();
             entry.put("ref",id);
-            entry.set("value",value.deepCopy());
         }
         return catalog;
     }
