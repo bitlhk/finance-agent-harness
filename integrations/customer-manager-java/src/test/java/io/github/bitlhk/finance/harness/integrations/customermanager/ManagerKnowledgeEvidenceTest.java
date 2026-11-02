@@ -5,6 +5,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ManagerKnowledgeEvidenceTest {
+    @Test void noKnowledgeAndAmbiguousDecisionsRemainValidCapabilityResults() {
+        var missing = ManagerKnowledgeEvidence.unavailable("request", "trace", "NO_BOUND_PRODUCT_KNOWLEDGE", false);
+        assertEquals(io.github.bitlhk.finance.harness.core.CapabilityResultV1.Status.COMPLETED, missing.status());
+        assertEquals("KNOWLEDGE_NOT_AVAILABLE", missing.data().get("decision"));
+        assertNotNull(missing.asOf());
+
+        var rejected = ManagerKnowledgeEvidence.unavailable("request", "trace", "KNOWLEDGE_PRODUCT_SELECTION_AMBIGUOUS", true);
+        assertEquals("KNOWLEDGE_REJECTED", rejected.data().get("decision"));
+        assertNotNull(rejected.asOf());
+    }
     @Test void originalValidatedTextIsProjectedWithoutRegeneration() throws Exception {
         var report = HarnessJson.mapper().readTree("""
             {"customerAlias":"Synthetic customer", "explanationStatus":"READY",

@@ -17,6 +17,7 @@ import io.github.bitlhk.finance.harness.providers.knowledge.KnowledgeProvider;
 import java.util.*;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.time.Instant;
 
 final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     static final String PREVISIT = "客户经理开展服务准备时，制度对事实核实、适当性和人工复核有哪些要求？请提供原文条款。";
@@ -162,14 +163,14 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
                 + "只返回该产品及该份额适用的原文；实时在售、额度、交易日历和客户适当性不由文档判断。";
     }
 
-    private static CapabilityResultV1 unavailable(String requestId, String traceId, String reason, boolean rejected) {
+    static CapabilityResultV1 unavailable(String requestId, String traceId, String reason, boolean rejected) {
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION, requestId, traceId,
                 CapabilityResultV1.Status.COMPLETED, rejected
                         ? "本轮未能唯一确定产品，已拒绝引用产品知识。"
                         : "当前产品没有装配对应的固定版本知识。",
                 Map.of("decision", rejected ? "KNOWLEDGE_REJECTED" : "KNOWLEDGE_NOT_AVAILABLE",
                         "evidence", List.of(), "reason", reason),
-                List.of(reason), List.of(), "knowledge-host", null, null, null);
+                List.of(reason), List.of(), "knowledge-host", Instant.now(), null, null);
     }
 
     String description(String installedCapabilities) {
