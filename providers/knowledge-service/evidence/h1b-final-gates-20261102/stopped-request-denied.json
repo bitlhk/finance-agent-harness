@@ -1,0 +1,14 @@
+{
+  "httpStatus": 409,
+  "body": "{\"schemaVersion\": \"finance-workbench-api.v0.2\", \"error\": {\"code\": \"SESSION_UNAVAILABLE\", \"retryable\": false, \"message\": \"操作未完成。\", \"nextStep\": \"请稍后重试；若仍失败，请携带请求 ID 联系维护者。\", \"failedState\": \"OPERATION_FAILED\", \"requestId\": \"fhreq-dce8aeee4d884a8abbcf652b57a8aab3\"}, \"clearConversation\": true}",
+  "before": {
+    "models": 2,
+    "business": 8,
+    "knowledgeReceipts": 5
+  },
+  "after": {
+    "models": 2,
+    "business": 8,
+    "knowledgeReceipts": 5
+  }
+}

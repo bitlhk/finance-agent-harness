@@ -1,0 +1,250 @@
+[
+  {
+    "id": "actual-model-observation-present",
+    "passed": true
+  },
+  {
+    "id": "actual-observation-no-loss",
+    "passed": true
+  },
+  {
+    "id": "actual-observation-contiguous",
+    "passed": true
+  },
+  {
+    "id": "frozen-factory-history-schema",
+    "passed": true
+  },
+  {
+    "id": "bounded-original-knowledge-receipts",
+    "passed": true
+  },
+  {
+    "id": "server-proves-current-viewer-is-stopped-instance-owner",
+    "passed": true
+  },
+  {
+    "id": "original-archive-integrity-before-page-disclosure",
+    "passed": true
+  },
+  {
+    "id": "owner-history-http",
+    "passed": true
+  },
+  {
+    "id": "owner-history-exact-original-answer",
+    "passed": true
+  },
+  {
+    "id": "owner-history-saved-missing-facts-not-verified",
+    "passed": true
+  },
+  {
+    "id": "owner-history-instance-lock-manifest-receipt",
+    "passed": true
+  },
+  {
+    "id": "owner-history-original-evidence",
+    "passed": true
+  },
+  {
+    "id": "owner-history-anchors-visible",
+    "passed": true
+  },
+  {
+    "id": "owner-history-independent-authorization",
+    "passed": true
+  },
+  {
+    "id": "owner-history-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "original-business-evidence-restored",
+    "passed": true
+  },
+  {
+    "id": "crm-only-report-cannot-release-knowledge",
+    "passed": true
+  },
+  {
+    "id": "factory-retained-public-question-only",
+    "passed": true
+  },
+  {
+    "id": "factory-receipt-no-customer-context",
+    "passed": true
+  },
+  {
+    "id": "business-source-revoked-history-http",
+    "passed": true
+  },
+  {
+    "id": "business-source-revoked-history-no-answer-or-evidence",
+    "passed": true
+  },
+  {
+    "id": "business-source-revoked-history-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "product-permission-revoked-history-http",
+    "passed": true
+  },
+  {
+    "id": "product-permission-revoked-history-no-answer-or-evidence",
+    "passed": true
+  },
+  {
+    "id": "product-permission-revoked-history-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-http",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-exact-original-answer",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-saved-missing-facts-not-verified",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-instance-lock-manifest-receipt",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-original-evidence",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-anchors-visible",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-independent-authorization",
+    "passed": true
+  },
+  {
+    "id": "business-permission-restored-history-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "owner-history-390-no-overflow",
+    "passed": true
+  },
+  {
+    "id": "owner-history-320-no-overflow",
+    "passed": true
+  },
+  {
+    "id": "other-real-workbench-session-denied",
+    "passed": true
+  },
+  {
+    "id": "owner-no-history-permission-http",
+    "passed": true
+  },
+  {
+    "id": "owner-no-history-permission-no-answer-or-evidence",
+    "passed": true
+  },
+  {
+    "id": "owner-no-history-permission-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "wrong-receipt-permission-http",
+    "passed": true
+  },
+  {
+    "id": "wrong-receipt-permission-no-answer-or-evidence",
+    "passed": true
+  },
+  {
+    "id": "wrong-receipt-permission-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-http",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-exact-original-answer",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-saved-missing-facts-not-verified",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-instance-lock-manifest-receipt",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-original-evidence",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-anchors-visible",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-independent-authorization",
+    "passed": true
+  },
+  {
+    "id": "owner-history-repeat-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "new-history-grant-not-runtime-lease",
+    "passed": true
+  },
+  {
+    "id": "history-no-core-mutation-before-revocation",
+    "passed": true
+  },
+  {
+    "id": "source-revoked-history-http",
+    "passed": true
+  },
+  {
+    "id": "source-revoked-history-no-answer-or-evidence",
+    "passed": true
+  },
+  {
+    "id": "source-revoked-history-lease-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "source-revoked-factory-denial",
+    "passed": true
+  },
+  {
+    "id": "denied-read-no-core-mutation",
+    "passed": true
+  },
+  {
+    "id": "history-no-new-query-receipts",
+    "passed": true
+  },
+  {
+    "id": "history-no-model-calls",
+    "passed": true
+  },
+  {
+    "id": "history-business-authorization-only",
+    "passed": true
+  },
+  {
+    "id": "runtime-leases-still-reclaimed",
+    "passed": true
+  },
+  {
+    "id": "history-worker-stopped-without-retrieval",
+    "passed": true
+  }
+]

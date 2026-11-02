@@ -1,0 +1,58 @@
+[
+  {
+    "ref": "/factAssessment/missing/0/impact",
+    "label": "已保存的缺项或待核实信息",
+    "value": "回访触发原因仍需经理确认",
+    "resolved": true,
+    "valueState": "MISSING",
+    "display": "回访触发原因仍需经理确认（缺项或待核实信息，不是已核实事实）"
+  },
+  {
+    "ref": "/factState/items/1/completeness/status",
+    "label": "已保存的缺项或待核实信息",
+    "value": "UNKNOWN",
+    "resolved": true,
+    "valueState": "MISSING",
+    "display": "完整性未知，事实未确认"
+  },
+  {
+    "ref": "/productMissingInputs/0",
+    "label": "已保存的缺项或待核实信息",
+    "value": "BANK_SALES_NOT_VERIFIED",
+    "resolved": true,
+    "valueState": "MISSING",
+    "display": "银行销售资格尚未核实"
+  },
+  {
+    "ref": "/productMissingInputs/1",
+    "label": "已保存的缺项或待核实信息",
+    "value": "DEMO_PRODUCT_FACTS",
+    "resolved": true,
+    "valueState": "MISSING",
+    "display": "仅有演示产品事实，不代表真实银行产品"
+  },
+  {
+    "ref": "/productReview/eligibleProducts",
+    "label": "已保存的空集合",
+    "value": [],
+    "resolved": true,
+    "valueState": "EMPTY",
+    "display": "本次保存的集合为空；仅限当时查询范围，不代表所有来源都没有数据"
+  },
+  {
+    "ref": "/knowledgeEvidence/evidence/0/quote",
+    "label": "已保存来源事实",
+    "value": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+    "resolved": true,
+    "valueState": "PRESENT",
+    "display": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。"
+  },
+  {
+    "ref": "/knowledgeEvidence/evidence/1/quote",
+    "label": "已保存来源事实",
+    "value": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+    "resolved": true,
+    "valueState": "PRESENT",
+    "display": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "httpStatus": 409,
+  "body": "{\"schemaVersion\": \"finance-workbench-api.v0.2\", \"error\": {\"code\": \"REFERENCE_OPERATION_ALREADY_SUBMITTED\", \"retryable\": false, \"message\": \"操作未完成。\", \"nextStep\": \"请稍后重试；若仍失败，请携带请求 ID 联系维护者。\", \"failedState\": \"OPERATION_FAILED\", \"requestId\": \"fhreq-d30d54e627454491ba4d688dfd528348\"}, \"clearConversation\": false}",
+  "before": {
+    "models": 2,
+    "business": 8,
+    "knowledgeReceipts": 2
+  },
+  "after": {
+    "models": 2,
+    "business": 8,
+    "knowledgeReceipts": 2
+  }
+}

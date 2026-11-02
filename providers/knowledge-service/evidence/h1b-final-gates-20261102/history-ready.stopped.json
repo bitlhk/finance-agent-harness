@@ -1,0 +1,19 @@
+{
+  "state": "STOPPED_WORKERS_JOINED",
+  "mode": "history",
+  "host": "127.0.0.1",
+  "port": 35043,
+  "binding": {
+    "schemaVersion": "knowledge-runtime-binding.v0.1",
+    "productId": "synthetic-product-policy-e1bdc9d3687e",
+    "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+    "productionBaseline": "1b5f11d9a1e94f734d1aced2c98747a31361e27f"
+  },
+  "bindingFileDigest": "a8513dc8c3e4d6d87b159b0477da8b7e907de5de35a0c667832d0cf6747d7014",
+  "schemaSha256": "114397ec532e40b84975e5884457ed1de63b45c71a05652c7e8ed5c3f1f3c3c6",
+  "codeIdentity": {
+    "commit": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+    "dirty": false
+  },
+  "outboundAttempts": 0
+}
