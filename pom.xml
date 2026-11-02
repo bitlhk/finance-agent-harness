@@ -38,6 +38,7 @@
         <module>providers/employee-agent</module>
         <module>providers/customer-crm</module>
         <module>providers/wealth-product-mcp</module>
+        <module>providers/credit-card-reference</module>
         <module>integrations/employee-agent-java</module>
         <module>examples/solutions/openjiuwen-retail-banking</module>
         <module>examples/solutions/openjiuwen-wealth-manager-previsit</module>
@@ -99,3 +100,4 @@
         </pluginManagement>
     </build>
 </project>
+

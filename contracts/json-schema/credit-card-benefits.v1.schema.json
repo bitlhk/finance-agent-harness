@@ -1,0 +1,312 @@
+{
+  "$defs": {
+    "Benefit": {
+      "additionalProperties": false,
+      "properties": {
+        "benefit_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Benefit Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "known_at": {
+          "format": "date-time",
+          "title": "Known At",
+          "type": "string"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        },
+        "minimum_tier": {
+          "maximum": 8,
+          "minimum": 2,
+          "title": "Minimum Tier",
+          "type": "integer"
+        },
+        "remaining": {
+          "minimum": 0,
+          "title": "Remaining",
+          "type": "integer"
+        },
+        "synthetic": {
+          "const": true,
+          "default": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "benefit_id",
+        "title",
+        "known_at",
+        "valid_from",
+        "valid_until",
+        "minimum_tier",
+        "remaining"
+      ],
+      "title": "Benefit",
+      "type": "object"
+    },
+    "EngineResult": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "enum": [
+            "onerec",
+            "llm"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "failed",
+            "cancelled",
+            "no-candidates"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "default": "",
+          "title": "Code",
+          "type": "string"
+        },
+        "items": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RecommendationItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "rejected": {
+          "default": [],
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Rejected",
+          "type": "array"
+        },
+        "raw_count": {
+          "default": 0,
+          "title": "Raw Count",
+          "type": "integer"
+        },
+        "elapsed_ms": {
+          "minimum": 0,
+          "title": "Elapsed Ms",
+          "type": "number"
+        },
+        "provenance": {
+          "additionalProperties": true,
+          "title": "Provenance",
+          "type": "object"
+        },
+        "calls": {
+          "default": [],
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Calls",
+          "type": "array"
+        }
+      },
+      "required": [
+        "engine",
+        "status",
+        "elapsed_ms",
+        "provenance"
+      ],
+      "title": "EngineResult",
+      "type": "object"
+    },
+    "RecommendationItem": {
+      "additionalProperties": false,
+      "properties": {
+        "benefit": {
+          "$ref": "#/$defs/Benefit"
+        },
+        "reference": {
+          "$ref": "#/$defs/Reference"
+        },
+        "matching_explanation": {
+          "title": "Matching Explanation",
+          "type": "string"
+        },
+        "explanation_kind": {
+          "const": "model-matching-not-business-fact",
+          "default": "model-matching-not-business-fact",
+          "title": "Explanation Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "benefit",
+        "reference",
+        "matching_explanation"
+      ],
+      "title": "RecommendationItem",
+      "type": "object"
+    },
+    "RecommendationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_key": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Operation Key",
+          "type": "string"
+        },
+        "engines": {
+          "default": [
+            "llm"
+          ],
+          "items": {
+            "enum": [
+              "onerec",
+              "llm"
+            ],
+            "type": "string"
+          },
+          "title": "Engines",
+          "type": "array"
+        },
+        "top_k": {
+          "default": 3,
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "goal": {
+          "default": "推荐适合当前客户的权益",
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "marketing_copy": {
+          "default": false,
+          "title": "Marketing Copy",
+          "type": "boolean"
+        },
+        "conversation": {
+          "default": false,
+          "title": "Conversation",
+          "type": "boolean"
+        },
+        "parent_run_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Run Id"
+        }
+      },
+      "required": [
+        "operation_key"
+      ],
+      "title": "RecommendationRequest",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "customer_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Customer Id",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "record_id": {
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "snapshot_digest": {
+          "title": "Snapshot Digest",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_id",
+        "customer_id",
+        "source_id",
+        "record_id",
+        "version",
+        "snapshot_digest",
+        "observed_at"
+      ],
+      "title": "Reference",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/RecommendationRequest"
+    },
+    {
+      "$ref": "#/$defs/EngineResult"
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Strict domain object union; root property names are bounded, each unchanged anyOf branch enforces its complete required/type/additionalProperties contract. Payloads unchanged.",
+  "$id": "urn:finance-harness:credit-card-benefits:v1",
+  "type": "object",
+  "properties": {
+    "calls": {},
+    "code": {},
+    "conversation": {},
+    "elapsed_ms": {},
+    "engine": {},
+    "engines": {},
+    "goal": {},
+    "items": {},
+    "marketing_copy": {},
+    "operation_key": {},
+    "parent_run_id": {},
+    "provenance": {},
+    "raw_count": {},
+    "rejected": {},
+    "status": {},
+    "top_k": {}
+  },
+  "additionalProperties": false,
+  "required": []
+}

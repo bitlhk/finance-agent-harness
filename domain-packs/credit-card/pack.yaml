@@ -1,0 +1,24 @@
+schemaVersion: finance-domain-pack.v1
+packId: credit-card
+version: 0.1.0
+profile: employee-assisted
+capabilities:
+- credit.card.limit-risk.query
+- credit.card.benefits.query
+capabilityPackRefs:
+- id: credit-card-limit-risk
+  version: 0.1.0
+- id: credit-card-benefits
+  version: 0.1.0
+skills:
+- directory: credit-limit-risk
+  entry: skills/credit-limit-risk/SKILL.md
+- directory: benefits-recommendation
+  entry: skills/benefits-recommendation/SKILL.md
+scope:
+- 信用卡领域首批额度不足预测、权益推荐
+outOfScope:
+- 完整信用卡业务覆盖
+- 自动授信审批与客户触达
+- 生产SSO或真实业务准入
+- 业务起步任务公共化

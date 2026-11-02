@@ -82,3 +82,33 @@ jobs:
             integrations/openjiuwen-java/target/java-instant-cases.json
             examples/solutions/wealth-facts-kit/target/runs/**
             ${{ runner.temp }}/harness-reproducibility/*
+  credit-card-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build reference Runtime wheel
+        run: |
+          python -m pip install build
+          python -m build --wheel packages/python/finance-credit-card-runtime --outdir "$RUNNER_TEMP/credit-wheels"
+      - name: Install wheel in isolated Runtime environment
+        run: |
+          python -m venv "$RUNNER_TEMP/credit-venv"
+          "$RUNNER_TEMP/credit-venv/bin/python" -m pip install "$RUNNER_TEMP"/credit-wheels/*.whl
+          "$RUNNER_TEMP/credit-venv/bin/python" -m pip install 'finance-credit-card-runtime[forecast,service]' pytest
+      - name: Native Runtime reference regression without live credentials
+        run: |
+          "$RUNNER_TEMP/credit-venv/bin/python" -m pytest packages/python/finance-credit-card-runtime/tests -q --junitxml="$RUNNER_TEMP/credit-runtime.xml"
+      - name: Retain Runtime results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: credit-runtime-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/credit-runtime.xml

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "credit-card-reference", "version": "0.1.0"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-credit-card-reference:0.1.0-SNAPSHOT",
+  "connectionKind": "credit-card-reference.v1",
+  "supports": [
+    {"pack": {"id": "credit-card-limit-risk", "version": "0.1.0"}, "capabilityIds": ["credit.card.limit-risk.query"], "operation": "QUERY"},
+    {"pack": {"id": "credit-card-benefits", "version": "0.1.0"}, "capabilityIds": ["credit.card.benefits.query"], "operation": "QUERY"}
+  ]
+}
