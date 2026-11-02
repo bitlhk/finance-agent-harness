@@ -114,9 +114,16 @@ class OpenJiuwenReportGeneratorTest {
     }
 
     @Test void retriesOnlyModelTransportFailures() {
-        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.IOException("reset")));
-        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(new RuntimeException("model call failed")));
-        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new IllegalArgumentException("INVALID_REPORT_ITEM")));
+        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(new java.net.ConnectException("refused")).retryable());
+        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(
+                new okhttp3.internal.http2.StreamResetException(
+                        okhttp3.internal.http2.ErrorCode.REFUSED_STREAM)).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(
+                new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL)).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.InterruptedIOException("timeout")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.IOException("reset")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new RuntimeException("model call failed")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new IllegalArgumentException("INVALID_REPORT_ITEM")).retryable());
     }
 
     @Test void streamsAndAcceptsCanonicalReportReturnedByProvider() throws Exception {

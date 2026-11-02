@@ -61,6 +61,8 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         value.put("upstreamRequestIdObserved", false);
         value.put("httpSendCountObserved", false);
         value.put("downstreamDisconnectObserved", false);
+        String http2Error=http2ErrorCode(failure);
+        if(http2Error!=null)value.put("http2ResetErrorCode",http2Error);
         if (failure != null) {
             value.put("causeChain", redactedCauseChain(failure));
             value.put("failureFrame", redactedFailureFrame(failure));
@@ -88,6 +90,8 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         return "NOT_OBSERVED";
     }
     private static String terminationReason(Throwable failure) {
+        String http2Error=http2ErrorCode(failure);
+        if(http2Error!=null)return "HTTP2_STREAM_RESET_"+http2Error;
         if (causedBy(failure, SocketTimeoutException.class)) return "READ_TIMEOUT";
         if (causedBy(failure, TimeoutException.class)) return "TIMEOUT_SOURCE_UNSPECIFIED";
         if (causedBy(failure, CancellationException.class)) return "EXPLICIT_CANCELLATION";
@@ -116,6 +120,8 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         return name.matches("[A-Za-z0-9_$]{1,96}") ? name : "Throwable";
     }
     private static String terminationReasonForSingleCause(Throwable failure) {
+        String http2Error=http2ErrorCode(failure);
+        if(http2Error!=null)return "HTTP2_STREAM_RESET_"+http2Error;
         if (failure instanceof SocketTimeoutException) return "READ_TIMEOUT";
         if (failure instanceof TimeoutException) return "TIMEOUT_SOURCE_UNSPECIFIED";
         if (failure instanceof CancellationException) return "EXPLICIT_CANCELLATION";
@@ -125,6 +131,17 @@ public final class ModelSnapshotClient extends OpenAiCompatibleModelClient {
         if (failure instanceof SocketException) return "SOCKET_FAILURE";
         if (failure instanceof IOException) return "IO_FAILURE";
         return "RUNTIME_FAILURE";
+    }
+    private static String http2ErrorCode(Throwable failure) {
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
+            if(!"okhttp3.internal.http2.StreamResetException".equals(current.getClass().getName()))continue;
+            try {
+                Object value=current.getClass().getField("errorCode").get(current);
+                return value instanceof Enum<?> code?code.name():null;
+            } catch (ReflectiveOperationException ignored) { return null; }
+        }
+        return null;
     }
     private static <T extends Throwable> boolean causedBy(Throwable failure, Class<T> type) {
         return firstCause(failure,type)!=null;

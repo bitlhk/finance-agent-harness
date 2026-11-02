@@ -11,10 +11,14 @@ import com.openjiuwen.core.session.stream.OutputSchema;
 import com.openjiuwen.core.session.stream.StreamMode;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation;
+import java.net.ConnectException;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Model-backed wording over Host-authorized facts and the installed method. */
 final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenerator {
+    private static final Logger LOG = LoggerFactory.getLogger(OpenJiuwenReportGenerator.class);
     static final int REPORT_MAX_TOKENS = 3200;
     static final String DELIVERY_INSTRUCTION =
             "四个section只是证据分类，不是限制业务内容的四句模板。按installedMethod中的交付要求组织正文，"
@@ -103,14 +107,23 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
             java.util.function.Consumer<ServicePreparation.ReportDelta> sink) throws Exception {
         Exception firstFailure = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
+            String attemptId = UUID.randomUUID().toString();
             var emitted = new java.util.concurrent.atomic.AtomicInteger();
             try {
-                return generateAttempt(method, goal, ids, context, delta -> {
+                ObjectNode report = generateAttempt(method, goal, ids, context, delta -> {
                     emitted.incrementAndGet();
                     sink.accept(delta);
                 });
+                LOG.info("model report attempt completed attemptId={} attempt={} emittedDeltas={} outcome=READY",
+                        attemptId, attempt, emitted.get());
+                return report;
             } catch (Exception failure) {
-                if (attempt == 2 || emitted.get() != 0 || !modelTransportFailure(failure)) {
+                RetryDecision decision = modelTransportFailure(failure);
+                boolean retry = attempt == 1 && emitted.get() == 0 && decision.retryable();
+                LOG.warn("model report attempt failed attemptId={} attempt={} emittedDeltas={} category={} retry={} duplicateChargePossible={}",
+                        attemptId, attempt, emitted.get(), decision.category(), retry,
+                        decision.duplicateChargePossible());
+                if (!retry) {
                     if (firstFailure != null && firstFailure != failure) failure.addSuppressed(firstFailure);
                     throw failure;
                 }
@@ -146,16 +159,34 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
         } finally { Runner.release(sid); }
     }
 
-    static boolean modelTransportFailure(Throwable failure) {
+    record RetryDecision(boolean retryable, String category, boolean duplicateChargePossible) { }
+
+    static RetryDecision modelTransportFailure(Throwable failure) {
         var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
         for(Throwable current=failure;current!=null&&seen.add(current);current=current.getCause()){
-            if(current instanceof java.io.IOException)return true;
-            for(StackTraceElement frame:current.getStackTrace())if(frame.getClassName().startsWith(
-                    "com.openjiuwen.core.foundation.llm.model_clients."))return true;
-            String message=String.valueOf(current.getMessage());
-            if(message.contains("model call failed")||message.contains("Failed to read streaming response"))return true;
+            if(current instanceof java.util.concurrent.CancellationException
+                    || current instanceof InterruptedException
+                    || current instanceof java.io.InterruptedIOException
+                    || current instanceof java.net.SocketTimeoutException)
+                return new RetryDecision(false,"CANCELLED_OR_TIMEOUT_STATE_UNKNOWN",true);
+            if(current instanceof com.fasterxml.jackson.core.JsonProcessingException)
+                return new RetryDecision(false,"SDK_OR_BUSINESS_RESPONSE_PARSE_FAILED",false);
+            if(current instanceof ConnectException)
+                return new RetryDecision(true,"CONNECT_FAILED_BEFORE_RESPONSE",false);
+            String http2=http2ErrorCode(current);
+            if(http2!=null)return "REFUSED_STREAM".equals(http2)
+                    ?new RetryDecision(true,"HTTP2_REFUSED_STREAM",false)
+                    :new RetryDecision(false,"HTTP2_"+http2+"_STATE_UNKNOWN",true);
         }
-        return false;
+        return new RetryDecision(false,"NON_RETRYABLE_MODEL_FAILURE",false);
+    }
+
+    private static String http2ErrorCode(Throwable failure) {
+        if(!"okhttp3.internal.http2.StreamResetException".equals(failure.getClass().getName()))return null;
+        try {
+            Object value=failure.getClass().getField("errorCode").get(failure);
+            return value instanceof Enum<?> code?code.name():null;
+        } catch (ReflectiveOperationException ignored) { return null; }
     }
 
     static JsonNode referenceCatalog(List<String> ids, JsonNode context) {
