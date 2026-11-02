@@ -94,6 +94,25 @@
         ]
       },
       "artifactRef": "python://finance-credit-card-runtime:0.1.0"
+    },
+    {
+      "id": "credit-card-openjiuwen-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "OpenJiuwen Java Integration",
+      "source": "repo://integrations/credit-card-openjiuwen-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-credit-card-openjiuwen-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -1292,6 +1311,29 @@
         ],
         "runtimeLanguages": [
           "python",
+          "java"
+        ]
+      },
+      "capabilities": [
+        "credit.card.limit-risk.query",
+        "credit.card.benefits.query"
+      ]
+    },
+    {
+      "id": "credit-card-java",
+      "version": "0.1.0",
+      "displayName": "Credit Card Java Provider",
+      "source": "repo://providers/credit-card-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-credit-card-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ],
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
           "java"
         ]
       },
