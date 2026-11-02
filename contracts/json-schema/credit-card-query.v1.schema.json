@@ -278,5 +278,31 @@
     }
   ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Domain input or result, carried inside the existing Harness capability envelope."
+  "$comment": "Strict domain object union; root property names are bounded, each unchanged anyOf branch enforces its complete required/type/additionalProperties contract. Payloads unchanged.",
+  "$id": "urn:finance-harness:credit-card-query:v1",
+  "type": "object",
+  "properties": {
+    "case_id": {},
+    "customer_id": {},
+    "dataset_version": {},
+    "evidence_refs": {},
+    "expires_at": {},
+    "group_id": {},
+    "input_digest": {},
+    "limitation": {},
+    "method": {},
+    "model_digest": {},
+    "observed_at": {},
+    "principal_id": {},
+    "protocol_digest": {},
+    "receipt_id": {},
+    "results": {},
+    "schema_version": {},
+    "snapshot_digest": {},
+    "snapshot_revision": {},
+    "tenant_id": {},
+    "visible_source_ids": {}
+  },
+  "additionalProperties": false,
+  "required": []
 }

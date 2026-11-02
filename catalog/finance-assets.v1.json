@@ -474,6 +474,18 @@
       "capabilities": [
         "credit.card.limit-risk.query",
         "credit.card.benefits.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "credit-card-limit-risk",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "credit-card-benefits",
+          "version": "0.1.0"
+        }
       ]
     }
   ],
