@@ -46,11 +46,19 @@ final class ProductKnowledgeMatcherTest {
                 "cmb-wealth-management","132112","Z7001626000062","bank-of-nanjing","132112N","N"), "MOBILE_BANKING"));
     }
 
-    @Test void multiple_products_are_ambiguous_even_when_one_matches() throws Exception {
+    @Test void catalog_can_contain_unrelated_products_when_one_product_matches() throws Exception {
         JsonNode exact = products("cmb-wealth-management","132112","Z7001626000062",
                 "bank-of-nanjing","132112N","N").get(0);
         var rows = HarnessJson.mapper().createArrayNode();
         rows.add(exact); rows.addObject().put("productId","SYN-FI-002");
+        assertEquals(ProductKnowledgeMatcher.Decision.MATCHED, matcher().select(rows, "BRANCH"));
+    }
+
+    @Test void duplicate_exact_product_bindings_are_ambiguous() throws Exception {
+        JsonNode exact = products("cmb-wealth-management","132112","Z7001626000062",
+                "bank-of-nanjing","132112N","N").get(0);
+        var rows = HarnessJson.mapper().createArrayNode();
+        rows.add(exact); rows.add(exact.deepCopy());
         assertEquals(ProductKnowledgeMatcher.Decision.AMBIGUOUS, matcher().select(rows, "BRANCH"));
     }
 }

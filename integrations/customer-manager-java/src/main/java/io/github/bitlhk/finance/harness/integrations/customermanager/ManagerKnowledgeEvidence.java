@@ -257,6 +257,8 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
     Map<String,Object> answerProductQuestion(String userQuestion, String runId, JsonNode product) {
         if (matcher == null)
             return Map.of("status", "NO_EVIDENCE", "response", "当前产品没有装配可核对的产品手册知识。");
+        if (!product.path("businessIdentity").isObject())
+            return Map.of("status", "NO_EVIDENCE", "response", "当前产品只有产品来源事实，未装配与其身份一致的固定版本产品手册。");
         String channel = productChannel(product.path("channels"));
         var products = HarnessJson.mapper().createArrayNode().add(product.deepCopy());
         var decision = matcher.select(products, channel);
