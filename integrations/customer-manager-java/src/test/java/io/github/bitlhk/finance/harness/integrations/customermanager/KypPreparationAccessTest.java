@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class KypPreparationAccessTest {
     final Instant now = Instant.now();
     final AtomicReference<BoundFinanceProvider.Grant> grant = new AtomicReference<>(new BoundFinanceProvider.Grant(
-            "employee-fixture", FinanceContextV1.PrincipalType.EMPLOYEE, Set.of("customer-fixture"),
+            "employee-fixture", FinanceContextV1.PrincipalType.EMPLOYEE, Set.of("product-source-fixture"),
             Set.of("WEALTH_PRODUCT_REVIEW"), Set.of(KypProductFactory.SCOPE), "session-fixture", "kyp-grant-1", now.plusSeconds(600)));
     final Crm crm = new Crm();
     final Products products = new Products();
@@ -51,6 +51,7 @@ class KypPreparationAccessTest {
     class Products implements FinanceProvider, InvocationAccess {
         int calls;
         String lastKeyword;
+        String lastSubject;
         boolean revoke, mismatch, brokenChannels;
         public void checkAccess(CapabilityRequestV1 request) { BoundFinanceProvider.checkContext(grant.get(), request.context()); }
         public CapabilityResultV1 executeTask(CapabilityRequestV1 request) { throw new SecurityException("READ_ONLY"); }
@@ -58,6 +59,7 @@ class KypPreparationAccessTest {
             calls++;
             assertEquals(Set.of("keyword"), request.parameters().keySet(), "CRM facts must not be sent as product query parameters");
             lastKeyword = (String) request.parameters().get("keyword");
+            lastSubject = request.context().subjectRef();
             var row = new LinkedHashMap<String,Object>();
             row.put("productId", "P001"); row.put("name", "Demo fixture"); row.put("sourceId", "demo-fixture");
             row.put("salesTrust", "DEMO"); row.put("factsType", "demo"); row.put("riskLevel", 2);
@@ -84,6 +86,8 @@ class KypPreparationAccessTest {
                 Map.of("amount",100000,"horizonMonths",12,"channel","branch","productRef","132112"));
         assertEquals(1, products.calls);
         assertEquals("132112", products.lastKeyword);
+        assertEquals("product-source-fixture", products.lastSubject);
+        assertNotEquals("customer-fixture", products.lastSubject);
     }
     @Test void crmOnlyReportDoesNotRequireAnUnusedProductGrant() {
         var access = access();
