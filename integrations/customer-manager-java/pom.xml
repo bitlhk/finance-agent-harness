@@ -14,6 +14,8 @@
     <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-service-preparation</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-customer-crm</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-wealth-product-mcp</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>${project.groupId}</groupId><artifactId>finance-provider-knowledge-service</artifactId><version>0.1.0-probe.2</version></dependency>
+    <dependency><groupId>${project.groupId}</groupId><artifactId>finance-integration-knowledge-java</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>${project.groupId}</groupId><artifactId>finance-harness-openjiuwen-java</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>com.openjiuwen</groupId><artifactId>agent-core-java</artifactId><version>${openjiuwen.core.version}</version></dependency>
     <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>

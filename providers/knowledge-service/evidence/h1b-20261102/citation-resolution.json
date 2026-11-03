@@ -1,0 +1,129 @@
+[
+  {
+    "ref": "/taskContext/facts/0/value",
+    "label": "口述可讨论金额",
+    "value": 1000000,
+    "resolved": true,
+    "verification": "UNVERIFIED",
+    "source": {
+      "kind": "USER_STATEMENT",
+      "ref": "CURRENT_CONVERSATION",
+      "recordedAt": "2026-11-02T01:57:46.357995794Z"
+    }
+  },
+  {
+    "ref": "/taskContext/facts/1/value",
+    "label": "本轮事实",
+    "value": 12,
+    "resolved": true,
+    "verification": "UNVERIFIED",
+    "source": {
+      "kind": "USER_STATEMENT",
+      "ref": "CURRENT_CONVERSATION",
+      "recordedAt": "2026-11-02T01:57:46.358175799Z"
+    }
+  },
+  {
+    "ref": "/productReview/request/channel",
+    "label": "已保存来源事实",
+    "value": "手机银行",
+    "resolved": true
+  },
+  {
+    "ref": "/profiles/0/detail/riskAssessment/riskLevel",
+    "label": "风险等级",
+    "value": "C3",
+    "resolved": true
+  },
+  {
+    "ref": "/profiles/0/detail/riskAssessment/validUntil",
+    "label": "已保存来源事实",
+    "value": "2026-11-02T03:55:18.736247+00:00",
+    "resolved": true
+  },
+  {
+    "ref": "/profiles/0/detail/totalAssets",
+    "label": "来源资产合计",
+    "value": 320000,
+    "resolved": true
+  },
+  {
+    "ref": "/productReview/status",
+    "label": "已保存来源事实",
+    "value": "partial",
+    "resolved": true
+  },
+  {
+    "ref": "/taskContext/facts/0/source/kind",
+    "label": "本轮事实",
+    "value": "USER_STATEMENT",
+    "resolved": true
+  },
+  {
+    "ref": "/taskContext/facts/0/verification/status",
+    "label": "本轮事实",
+    "value": "UNVERIFIED",
+    "resolved": true
+  },
+  {
+    "ref": "/factAssessment/missing/0/impact",
+    "label": "当前报告无法唯一定位此引用",
+    "resolved": false
+  },
+  {
+    "ref": "/factState/items/1/completeness/status",
+    "label": "当前报告无法唯一定位此引用",
+    "resolved": false
+  },
+  {
+    "ref": "/productReview/sourceProducts/0/name",
+    "label": "已保存来源事实",
+    "value": "合成稳健产品",
+    "resolved": true
+  },
+  {
+    "ref": "/productReview/sourceProducts/0/issues/0",
+    "label": "已保存来源事实",
+    "value": "DEMO_PRODUCT_FACTS",
+    "resolved": true
+  },
+  {
+    "ref": "/productReview/sourceProducts/0/issues/1",
+    "label": "已保存来源事实",
+    "value": "BANK_SALES_NOT_VERIFIED",
+    "resolved": true
+  },
+  {
+    "ref": "/productReview/sourceProducts/0/channels/0",
+    "label": "已保存来源事实",
+    "value": "branch",
+    "resolved": true
+  },
+  {
+    "ref": "/knowledgeEvidence/evidence/0/quote",
+    "label": "已保存来源事实",
+    "value": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+    "resolved": true
+  },
+  {
+    "ref": "/knowledgeEvidence/evidence/1/quote",
+    "label": "已保存来源事实",
+    "value": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+    "resolved": true
+  },
+  {
+    "ref": "/productMissingInputs/0",
+    "label": "当前报告无法唯一定位此引用",
+    "resolved": false
+  },
+  {
+    "ref": "/productMissingInputs/1",
+    "label": "当前报告无法唯一定位此引用",
+    "resolved": false
+  },
+  {
+    "ref": "/productReview/eligibleProducts",
+    "label": "当前报告无法唯一定位此引用",
+    "resolved": false
+  }
+]

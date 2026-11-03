@@ -78,7 +78,7 @@ public final class KypProductFactory implements ManagedProviderFactoryV01 {
             record(request, "STARTED", Map.of());
             try {
                 byte[] bytes;
-                try (var observation = new KypHttpObservation(connection, request, policy.sourceId())) {
+                try (var observation = new KypHttpObservation(connection, request)) {
                     bytes = new PinnedMcpReader().read(target, args, guard, observation);
                     observation.returned();
                 }
@@ -96,6 +96,13 @@ public final class KypProductFactory implements ManagedProviderFactoryV01 {
                     row.put("riskLevel", product.riskLevel());
                     if (product.minimumAmount() != null) row.put("minimumAmount", product.minimumAmount());
                     if (product.termMonths() != null) row.put("termMonths", product.termMonths());
+                    if (product.businessIdentity() != null) row.put("businessIdentity", Map.of(
+                            "managerId", product.businessIdentity().managerId(),
+                            "managerProductCode", product.businessIdentity().managerProductCode(),
+                            "registrationCode", product.businessIdentity().registrationCode(),
+                            "distributorId", product.businessIdentity().distributorId(),
+                            "salesCode", product.businessIdentity().salesCode(),
+                            "shareClass", product.businessIdentity().shareClass()));
                     row.put("channels", product.channels().stream().sorted().toList()); row.put("issues", product.issues());
                     row.put("readyForScreening", product.eligibleForScreening());
                     allIssues.addAll(product.issues()); productRows.add(Map.copyOf(row));

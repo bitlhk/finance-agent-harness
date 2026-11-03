@@ -1,0 +1,67 @@
+{
+  "status": "BLOCKED_MODEL_REPORT",
+  "model": "REAL_VOLCENGINE_DEEPSEEK",
+  "authentication": "LOCAL_CREATOR_NOT_SSO",
+  "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+  "builder": "ce035f4bf00ff80fbb76bde2d74d6f2aad4f223e",
+  "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+  "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+  "queryAcceptance": "FACTORY_TOOL_RETURNED_MODEL_REPORT_FAILED",
+  "h1b": "NOT_PASSED_MODEL_REPORT",
+  "modelObservation": "EXISTING_REDACTED_CAPTURE_OWN_CREATOR_ONLY_NO_VIEW_GRANT",
+  "buildEntry": "BROWSER_FORM",
+  "buildId": "agent-b8d6e91313b04f25",
+  "buildStatus": "SUCCEEDED",
+  "descriptorDigest": "311c1d7e549c7d6cfd87a2ec42ae5e9b192346848b32114ce0e55b7d502541a5",
+  "instanceId": "c342564a-2ece-4668-95af-711ac16bea43",
+  "answerEvidence": "ORIGINAL_SAVED_ANSWER_CORRELATED_WITH_LIVE_REFERENCE_VIEW",
+  "queryStatus": "PARTIAL",
+  "modelReportReady": false,
+  "modelBlocker": {
+    "status": "FAILED",
+    "stage": "MODEL_TRANSPORT",
+    "startedAt": "2026-11-02T03:21:12.194785340Z",
+    "provisionalDeltaCount": 0,
+    "failureReasonCode": "MODEL_PROVIDER_OR_RUNTIME_FAILED",
+    "completedAt": "2026-11-02T03:21:15.646057275Z",
+    "transportObservation": {
+      "schemaVersion": "model-transport-observation.v0.1",
+      "terminationReason": "UNKNOWN_RUNTIME_FAILURE",
+      "threadInterruptedObserved": false,
+      "cancellationSource": "NOT_OBSERVED",
+      "httpStatusObserved": false,
+      "upstreamRequestIdObserved": false,
+      "httpSendCountObserved": false,
+      "downstreamDisconnectObserved": false,
+      "downstreamDeliveryFailureObserved": false,
+      "causeChain": [
+        {
+          "type": "IllegalArgumentException",
+          "category": "RUNTIME"
+        }
+      ]
+    },
+    "discardedProvisionalDeltaCount": 0
+  },
+  "stopStatus": "STOPPED",
+  "runtimeLeasesRemaining": 0,
+  "installedFaults": [
+    {
+      "name": "manifest",
+      "passed": true
+    },
+    {
+      "name": "unavailable",
+      "passed": true
+    },
+    {
+      "name": "revoke-before-return",
+      "passed": true
+    },
+    {
+      "name": "stop-late-return",
+      "passed": true
+    }
+  ],
+  "historyAcceptance": "STOPPED_OWNER_PAGE_AND_SOURCE_REVOCATION_PASSED"
+}

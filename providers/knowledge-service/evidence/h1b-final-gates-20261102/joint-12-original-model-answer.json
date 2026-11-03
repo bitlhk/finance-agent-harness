@@ -1,0 +1,88 @@
+{
+  "requestId": "ad6d4b9b-1a56-452e-a6c6-78b86771ee36",
+  "buildId": "agent-d270dc872b3e4b7c",
+  "instanceId": "2a679628-389d-4734-8f3d-fc6a7c53483e",
+  "runtimeLockDigest": "015204298adb8f486305a7eb9ef72f320ef4f3cfde55e4936fcbb8d7028df217",
+  "productId": "synthetic-product-policy-e1bdc9d3687e",
+  "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+  "status": "PARTIAL",
+  "response": "## 合成客户甲 · 服务准备\n\n### 沟通重点\n\n- 本次拜访目标是为合成客户甲筛选产品，客户口述拟讨论金额100万元、可接受期限12个月、渠道为手机银行。系统已核验客户身份为有效状态，风险测评等级C3且当前有效，但资产概况仅为合成数据，持仓完整性未知。产品筛选结果为部分完成，来源返回的产品因销售资格和事实未核实被排除，当前无法确认合格候选。\n- 触发事件是客户明确提出产品讨论需求，金额、期限和渠道三项参数齐全，已执行产品筛选。但产品来源返回的合成稳健产品为演示数据，销售资格未核实且渠道仅限网点，不符合手机银行条件，已被排除。近期联系、事项或到期事件未取得，回访触发原因仍需经理确认。\n\n### 服务建议\n\n- 客户口述讨论金额100万元和期限12个月均未独立核验，应作为待确认假设，不能等同于资产总额或已核实需求。系统显示总资产32万元，但资产概况为合成数据且持仓完整性未知，需向客户核实当前资金去向和可投资金额，避免将讨论金额直接等同于可用资金。\n- 风险测评等级C3且有效期至2026-11-02，当前有效，可作为适当性评估基础。但产品筛选结果中eligibleProducts为空，来源返回的合成稳健产品因演示数据、销售资格未核实、渠道不符等原因被排除，不能作为候选推荐。需向客户说明当前尚不能确认可推荐产品，而非全市场无合适产品。\n- 制度依据已取得：产品风险等级和当前可售状态必须从产品服务取得，本制度不提供客户实时资料或持仓事实；只有客户风险承受等级不低于产品风险等级、风险评估有效且产品当前可售时才能形成合成匹配建议，缺少任一依据应标记待核实。当前产品来源为演示数据且销售资格未核实，不满足形成匹配建议的条件。\n- 客户口述期限12个月，来源返回的合成稳健产品期限6个月，期限本身不超过客户可接受期限，但该产品因演示数据、销售资格未核实和渠道不符被排除，不能据此推荐。需向客户确认手机银行渠道是否有其他可核实产品，或询问是否接受网点渠道后再行筛选。\n- 客户口述金额100万元与系统总资产32万元存在差异，需向客户确认讨论金额的资金来源和当前持仓情况。系统资产概况为合成数据，持仓完整性未知，不能据此判断客户实际资产分布。建议询问客户当前资金存放形式、是否有其他账户资产，以及100万元是否全部为新增可投资资金。\n\n### 待核实事项\n\n- 待经理确认：客户口述的100万元讨论金额和12个月期限均未独立核验，需在拜访中向客户核实资金来源、用途和流动性需求，确认是否与系统记录一致。\n- 待经理确认：产品筛选结果为部分完成，来源返回的合成稳健产品因演示数据、销售资格未核实和渠道不符被排除，当前无合格候选产品，需确认是否有其他可核实产品来源或调整渠道后再筛选。\n- 待经理确认：近期联系、事项或到期事件未取得，回访触发原因不明，需确认本次拜访是否由客户主动发起或有其他业务背景。\n\n### 复核事项\n\n- 复核客户身份、风险测评等级C3及有效期，确认系统记录与本次拜访目标一致。\n- 复核客户口述金额100万元和期限12个月的核验状态，确认拜访中需向客户追问的具体问题。\n- 复核产品筛选结果，确认无合格候选产品的原因是否完整记录，避免将排除产品误作推荐。\n- 复核制度依据引用是否准确，确认产品风险等级和可售状态需从产品服务取得，当前未满足匹配建议条件。\n\n待人工复核，未办理购买或写入客户系统。",
+  "toolResults": [
+    {
+      "data": {
+        "traceId": "e7ed6512-160b-4a3f-b4e1-6536155ea430",
+        "capabilityId": "knowledge.evidence.search",
+        "resultStatus": "COMPLETED",
+        "result": {
+          "decision": "EVIDENCE_FOUND",
+          "evidence": [
+            {
+              "clause": "第二条",
+              "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+              "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+              "chunkId": "73da3410bfd2e01a",
+              "anchors": [
+                {
+                  "locator": {
+                    "end": 55,
+                    "start": 0,
+                    "xpath": "/html/body/p[3]/text()[1]"
+                  },
+                  "locatorKind": "HTML_DOM_TEXT",
+                  "mediaType": "text/html",
+                  "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+                  "quoteDigest": "f9ecf828b4b9176bd8cb05f23e5adef84cb4b89ed8c6f2cacd7e16c2d038f10d",
+                  "schemaVersion": "evidence-anchor.v0.1",
+                  "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+                }
+              ],
+              "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367"
+            },
+            {
+              "clause": "第三条",
+              "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+              "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+              "chunkId": "f76811a52425c0d7",
+              "anchors": [
+                {
+                  "locator": {
+                    "end": 96,
+                    "start": 0,
+                    "xpath": "/html/body/p[4]/text()[1]"
+                  },
+                  "locatorKind": "HTML_DOM_TEXT",
+                  "mediaType": "text/html",
+                  "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+                  "quoteDigest": "b066befdb35d31c0e036ce0d111d5659f85878e2bedcf365277b5cb3e9f46934",
+                  "schemaVersion": "evidence-anchor.v0.1",
+                  "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+                }
+              ],
+              "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367"
+            }
+          ],
+          "knowledgeReceipt": {
+            "schemaVersion": "knowledge-receipt.v0.1",
+            "receiptId": "kr-5b125f5f30f0c271158ae1d7f0d72ca6e79621275bfccde08b5164a4def1fad0",
+            "coreReceiptDigest": "5b125f5f30f0c271158ae1d7f0d72ca6e79621275bfccde08b5164a4def1fad0",
+            "productId": "synthetic-product-policy-e1bdc9d3687e",
+            "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+            "businessDate": "2026-10-31",
+            "requestId": "e7ed6512-160b-4a3f-b4e1-6536155ea430-knowledge",
+            "traceId": "e7ed6512-160b-4a3f-b4e1-6536155ea430",
+            "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367",
+            "sourceId": "synthetic-product-policy-e1bdc9d3687e-source",
+            "sourceRevision": 1,
+            "indexDigest": "99adf775d106a687f17b8485725d0b8ea830aefbfb303b9910b5e5ccf02f3368",
+            "bindingDigest": "d14b8be838bf5dd0b1cd08b0455c23c27e5ce5a960f83d4516dd96a9b2a81c3a",
+            "policyDigest": "dadc600222325237d5c65eee0d9f03597a7da0e9f29a6608c9bed2e667a5359a",
+            "mode": "M2_ISOLATED_DOCUMENT"
+          },
+          "bindingSha256": "354ceaa50c820d6f67e5768d92f34e11e1d2f3f53d38ad0ed588273d604cf622",
+          "testOnly": true
+        },
+        "requestId": "e7ed6512-160b-4a3f-b4e1-6536155ea430-knowledge"
+      }
+    }
+  ]
+}

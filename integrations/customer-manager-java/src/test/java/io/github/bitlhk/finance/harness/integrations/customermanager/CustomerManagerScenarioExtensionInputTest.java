@@ -9,6 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class CustomerManagerScenarioExtensionInputTest {
+    @Test void builderActionDeclarationMatchesActualExtension() throws Exception {
+        String builder = System.getenv("FH_H1B_BUILDER_ROOT");
+        org.junit.jupiter.api.Assumptions.assumeTrue(builder != null, "Cross-repository Builder checkout required");
+        var file = java.nio.file.Path.of(builder).resolve("community/finance/builder/finance-solution-builder/templates/local-readonly-service/employee-host-support.v0.1.json");
+        var declaration = HarnessJson.mapper().readTree(file.toFile()).path("scenarioExtension");
+        var actual = new CustomerManagerScenarioExtension();
+        var actions = new java.util.HashSet<String>();
+        declaration.path("actions").forEach(action -> assertTrue(actions.add(action.asText())));
+        assertEquals(actual.id(), declaration.path("id").asText());
+        assertEquals(actual.actions(), actions);
+    }
     @Test void confirmationScopeIncludesTrustedAliasToResourceMappingWithoutDependingOnMapOrder() {
         var authority=new io.github.bitlhk.finance.harness.providers.customercrm.CustomerCrmAuthority("owner-a","employee-a","r1",
                 java.util.Set.of("ref-a","ref-b"),java.time.Instant.parse("2030-01-01T00:00:00Z"),
@@ -51,6 +62,8 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertEquals(100000.0,values.get("amount"));
         assertEquals(12,values.get("horizonMonths"));
         assertEquals("手机银行",values.get("channel"));
+        assertEquals("132112", CustomerManagerScenarioExtension.productArguments(
+                "为周明远核对产品132112，10万元、12个月、网点").get("productRef"));
         assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
 
@@ -63,5 +76,20 @@ final class CustomerManagerScenarioExtensionInputTest {
                 CustomerManagerDialogue.Action.PREPARE,true,"先不推荐产品，帮我准备周明远的回访"));
         assertEquals(false,CustomerManagerScenarioExtension.shouldUseProductFlow(
                 CustomerManagerDialogue.Action.CANCEL_PRODUCT,true,"取消产品筛选"));
+    }
+
+    @Test void routesOnlyBoundedPolicyQuestionsToKnowledge() {
+        assertTrue(CustomerManagerScenarioExtension.Managed.isKnowledgeHelp("你有哪些知识？"));
+    }
+
+    @Test void knowledgeDescriptionDependsOnInstalledLockCapability() throws Exception {
+        var without = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
+                "{\"schemaVersion\":\"local-agent-service-lock.v0.1\",\"capabilities\":[\"wealth.previsit-context.query\"]}"));
+        var with = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
+                "{\"schemaVersion\":\"local-agent-service-lock.v0.1\",\"capabilities\":[\"wealth.previsit-context.query\",\"knowledge.evidence.search\"]}"));
+        assertEquals(false, without.description().contains("制度文档"));
+        assertTrue(with.description().contains("制度文档"));
+        assertTrue(with.description().contains("不读取或发送客户资料"));
+        assertTrue(with.actions().contains(ConversationIntent.Kind.KNOWLEDGE_QUERY));
     }
 }

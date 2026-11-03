@@ -1,0 +1,101 @@
+[
+  {
+    "run": "joint-11",
+    "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+    "builder": "58dbe33ac928c06f0594545763701552bf7d54d1",
+    "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+    "agentId": "agent-993924cd52564b17",
+    "instanceId": "b0c0fa70-056b-45b4-afa3-fce683cff48f",
+    "buildStatus": "SUCCEEDED",
+    "finalStatus": "FAILED",
+    "modelStatus": "FAILED",
+    "modelDiagnostics": {
+      "status": "FAILED",
+      "stage": "MODEL_TRANSPORT",
+      "startedAt": "2026-11-02T03:12:40.848188711Z",
+      "provisionalDeltaCount": 0,
+      "failureReasonCode": "MODEL_PROVIDER_OR_RUNTIME_FAILED",
+      "completedAt": "2026-11-02T03:12:44.458268714Z",
+      "transportObservation": {
+        "schemaVersion": "model-transport-observation.v0.1",
+        "terminationReason": "UNKNOWN_RUNTIME_FAILURE",
+        "threadInterruptedObserved": false,
+        "cancellationSource": "NOT_OBSERVED",
+        "httpStatusObserved": false,
+        "upstreamRequestIdObserved": false,
+        "httpSendCountObserved": false,
+        "downstreamDisconnectObserved": false,
+        "downstreamDeliveryFailureObserved": false,
+        "causeChain": [
+          {
+            "type": "IllegalArgumentException",
+            "category": "RUNTIME"
+          }
+        ]
+      },
+      "discardedProvisionalDeltaCount": 0
+    },
+    "reportError": "JOINT_MODEL_REPORT_NOT_READY",
+    "originalAnswerSha256": "a8729a1a66f44b8ab8c6a8f549d971d3a7eb3d0c1c32148bb9006571e527bd27"
+  },
+  {
+    "run": "joint-12",
+    "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+    "builder": "b19e0c4b60b076d067ad4beb819ea2c2f14c8044",
+    "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+    "agentId": "agent-d270dc872b3e4b7c",
+    "instanceId": "2a679628-389d-4734-8f3d-fc6a7c53483e",
+    "buildStatus": "SUCCEEDED",
+    "finalStatus": "FAILED",
+    "modelStatus": "READY",
+    "modelDiagnostics": {
+      "status": "READY",
+      "stage": "COMPLETED",
+      "startedAt": "2026-11-02T03:16:40.496126396Z",
+      "provisionalDeltaCount": 14,
+      "completedAt": "2026-11-02T03:16:56.077331246Z",
+      "firstDeltaAt": "2026-11-02T03:16:43.656470645Z"
+    },
+    "reportError": "INSTALLED_FAULT_NOT_REJECTED:manifest",
+    "originalAnswerSha256": "a697434e8d5f7d752b387785acdf96e629389de85357fc5a63b27dd12d9c9324"
+  },
+  {
+    "run": "joint-13",
+    "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+    "builder": "ce035f4bf00ff80fbb76bde2d74d6f2aad4f223e",
+    "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+    "agentId": "agent-b8d6e91313b04f25",
+    "instanceId": "c342564a-2ece-4668-95af-711ac16bea43",
+    "buildStatus": "SUCCEEDED",
+    "finalStatus": "BLOCKED_MODEL_REPORT",
+    "modelStatus": "FAILED",
+    "modelDiagnostics": {
+      "status": "FAILED",
+      "stage": "MODEL_TRANSPORT",
+      "startedAt": "2026-11-02T03:21:12.194785340Z",
+      "provisionalDeltaCount": 0,
+      "failureReasonCode": "MODEL_PROVIDER_OR_RUNTIME_FAILED",
+      "completedAt": "2026-11-02T03:21:15.646057275Z",
+      "transportObservation": {
+        "schemaVersion": "model-transport-observation.v0.1",
+        "terminationReason": "UNKNOWN_RUNTIME_FAILURE",
+        "threadInterruptedObserved": false,
+        "cancellationSource": "NOT_OBSERVED",
+        "httpStatusObserved": false,
+        "upstreamRequestIdObserved": false,
+        "httpSendCountObserved": false,
+        "downstreamDisconnectObserved": false,
+        "downstreamDeliveryFailureObserved": false,
+        "causeChain": [
+          {
+            "type": "IllegalArgumentException",
+            "category": "RUNTIME"
+          }
+        ]
+      },
+      "discardedProvisionalDeltaCount": 0
+    },
+    "reportError": null,
+    "originalAnswerSha256": "833b7d19978386bce5fe0a4cdfc4224735e44239e6938e2f56f6f9bd26701d15"
+  }
+]

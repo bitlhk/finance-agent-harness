@@ -8,7 +8,7 @@
     "catalogRevision": "2026-10-31.knowledge-host-merge-prep",
     "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:0665f67fd486c9131689147d407784d41204381ef40d8b7def9929a83716d6db"
+    "digest": "sha256:fcd2a71a33198cfd6105fa3af8cfe25d80a931753bed3b3eba9056c630c40941"
   },
   "target": {
     "kind": "domain-pack",

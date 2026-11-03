@@ -103,6 +103,16 @@ class KnowledgeProviderTest {
         service.fault.set(fault);var r=search();assertEquals(CapabilityResultV1.Status.FAILED,r.status());
         assertTrue(r.data().isEmpty());record(fault,r);
     }
+    @Test void preservesSafeHttpRejectionWithoutDisclosingEvidenceOrRetrying() {
+        service.fault.set("http-retrieval-error");
+        var result = search();
+        assertEquals(CapabilityResultV1.Status.FAILED, result.status());
+        assertEquals("RAGFLOW_UNAVAILABLE", result.error().sourceCode());
+        assertFalse(result.error().retryable());
+        assertTrue(result.data().isEmpty());
+        assertEquals(1, service.calls.get());
+        record("http-retrieval-error", result);
+    }
     @ParameterizedTest @ValueSource(strings={"serviceUrl","manifest","productId","principalId","scopes","businessDate"})
     void modelCannotOverrideBinding(String key) {
         var r=provider.query(request(KnowledgeProvider.SEARCH,Map.of("question","test",key,"injected")));
@@ -124,7 +134,7 @@ class KnowledgeProviderTest {
     @Test void factoryDiscoveredButConfigAndConnectionMustMatch() {
         assertTrue(ServiceLoader.load(ManagedProviderFactoryV01.class).stream().anyMatch(p->p.type()==KnowledgeFactoryV01.class));
         assertThrows(IllegalArgumentException.class,()->factories.create(connection,grants::get,Set.of(KnowledgeProvider.ID),Map.of()));
-        assertThrows(IllegalArgumentException.class,()->new KnowledgeFactoryV01().configurationDigests());
+        assertThrows(IllegalArgumentException.class,()->new KnowledgeFactoryV01(Map.of()).configurationDigests());
         assertThrows(IllegalArgumentException.class,()->factories.createBound(
             Map.of(KnowledgeProvider.ID,new ManagedProviderFactoriesV01.Binding(connection,grants::get)),
             Set.of(KnowledgeProvider.ID),factories.configurationDigests(Set.of(KnowledgeProvider.ID)),Map.of()));

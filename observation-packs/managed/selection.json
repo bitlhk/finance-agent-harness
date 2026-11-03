@@ -7,6 +7,11 @@
   ],
   "units": [
     {
+      "id": "knowledge-evidence",
+      "capabilityIds": ["knowledge.evidence.search"],
+      "source": "repo://capability-packs/knowledge-evidence-readonly/observation.v0.1.json"
+    },
+    {
       "id": "balance",
       "capabilityIds": [
         "account.balance.query"

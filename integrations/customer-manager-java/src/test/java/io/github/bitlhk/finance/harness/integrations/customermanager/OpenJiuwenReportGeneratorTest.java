@@ -44,7 +44,8 @@ class OpenJiuwenReportGeneratorTest {
             assertEquals(method.content(),payload.at("/installedMethod/content").asText());
             assertEquals(digest,payload.at("/installedMethod/digest").asText());
             assertEquals("/customer/displayName",payload.at("/factReferenceCatalog/0/ref").asText());
-            assertEquals("合成客户",payload.at("/factReferenceCatalog/0/value").asText());
+            assertTrue(payload.at("/factReferenceCatalog/0/value").isMissingNode());
+            assertEquals("合成客户",payload.at("/facts/customer/displayName").asText());
             String installed=payload.at("/installedMethod/content").asText();
             assertTrue(installed.contains(external==null?"DELIVERY-REFERENCE-MARKER":"SOURCE-MARKER-ONE"));
             if(external!=null)assertTrue(installed.contains("Source digest: "));
@@ -93,9 +94,9 @@ class OpenJiuwenReportGeneratorTest {
                 "/missing"),facts);
         assertEquals(2,catalog.size());
         assertEquals("/factState/items/0/value/availableCash",catalog.at("/0/ref").asText());
-        assertEquals(360000,catalog.at("/0/value").asInt());
+        assertTrue(catalog.at("/0/value").isMissingNode());
         assertEquals("/factState/items/0/value/customerId",catalog.at("/1/ref").asText());
-        assertEquals("CUST-1",catalog.at("/1/value").asText());
+        assertTrue(catalog.at("/1/value").isMissingNode());
         assertFalse(catalog.toString().contains("\"/factState/items/0/value\""));
         assertTrue(OpenJiuwenReportGenerator.FACT_REFERENCE_INSTRUCTION.contains("不得引用父对象"));
     }
@@ -108,8 +109,25 @@ class OpenJiuwenReportGeneratorTest {
                 "/dataAsOf", "/profiles/0/portfolioSummary/dataAsOf"),facts);
         assertEquals(1,catalog.size());
         assertEquals("/dataAsOf",catalog.at("/0/ref").asText());
-        assertEquals(facts.path("dataAsOf"),catalog.at("/0/value"));
+        assertTrue(catalog.at("/0/value").isMissingNode());
         assertFalse(catalog.toString().contains("portfolioSummary"));
+    }
+
+    @Test void retriesOnlyModelTransportFailures() {
+        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(new java.net.ConnectException("refused")).retryable());
+        assertTrue(OpenJiuwenReportGenerator.modelTransportFailure(
+                new okhttp3.internal.http2.StreamResetException(
+                        okhttp3.internal.http2.ErrorCode.REFUSED_STREAM)).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(
+                new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL)).retryable());
+        var wrappedCancel=new java.io.InterruptedIOException("timeout");
+        wrappedCancel.initCause(new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL));
+        assertEquals("HTTP2_CANCEL_STATE_UNKNOWN",OpenJiuwenReportGenerator.modelTransportFailure(
+                wrappedCancel).category());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.InterruptedIOException("timeout")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new java.io.IOException("reset")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new RuntimeException("model call failed")).retryable());
+        assertFalse(OpenJiuwenReportGenerator.modelTransportFailure(new IllegalArgumentException("INVALID_REPORT_ITEM")).retryable());
     }
 
     @Test void streamsAndAcceptsCanonicalReportReturnedByProvider() throws Exception {

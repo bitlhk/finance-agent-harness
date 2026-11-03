@@ -67,6 +67,26 @@ final class ConversationIntentTest {
         for (String field : new String[]{"owner", "confirmed", "scope", "query", "tool", "parameters"})
             rejected(valid.substring(0, valid.length()-1) + ",\"" + field + "\":true}");
     }
+    @Test void knowledgeIntentRequiresTheBuildInstalledCapability() {
+        String proposal = proposal("KNOWLEDGE_QUERY", "null", "null", "null");
+        rejected(proposal);
+        var value = ConversationIntent.parse(proposal, OBJECTS,
+                Set.of(ConversationIntent.Kind.PREPARE, ConversationIntent.Kind.KNOWLEDGE_QUERY));
+        assertEquals(ConversationIntent.Kind.KNOWLEDGE_QUERY, value.kind());
+        assertFalse(value.requiresExecutionConfirmation());
+    }
+    @Test void knowledgeClassifierInstructionCoversNaturalPolicyQuestions() {
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("需要满足什么条件"));
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("应履行什么要求"));
+        assertTrue(OpenJiuwenIntentProposer.INSTRUCTION.contains("availableActions包含KNOWLEDGE_QUERY"));
+    }
+    @Test void directPolicyQuestionRequiresInstalledKnowledgeCapability() {
+        var installed = Set.of(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+        assertTrue(OpenJiuwenIntentProposer.isDirectKnowledgeQuestion("申请个人贷款应当具备哪些条件？", installed));
+        assertTrue(OpenJiuwenIntentProposer.isDirectKnowledgeQuestion("向老年客户销售高风险产品时应履行什么义务？", installed));
+        assertFalse(OpenJiuwenIntentProposer.isDirectKnowledgeQuestion("帮我准备周明远的回访", installed));
+        assertFalse(OpenJiuwenIntentProposer.isDirectKnowledgeQuestion("申请个人贷款应当具备哪些条件？", Set.of()));
+    }
     @Test void duplicateTrailingUnknownAndMalformedOutputFailClosedWithoutEcho() {
         String valid = proposal("GREETING", "null", "null", "null");
         rejected(valid + "{}");

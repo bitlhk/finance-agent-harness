@@ -1,0 +1,65 @@
+{
+  "allEightUnchanged": true,
+  "processes": [
+    {
+      "pid": 3001655,
+      "startTicks": 442290904,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/builder-knowledge-product-integration/community/finance/builder/finance-solution-builder"
+    },
+    {
+      "pid": 3001663,
+      "startTicks": 442290941,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/.local/share/harness-knowledge-dev/run-20261101T082452-46c9d8/bank"
+    },
+    {
+      "pid": 3002059,
+      "startTicks": 442291584,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/knowledge-factory-product-delivery"
+    },
+    {
+      "pid": 3002062,
+      "startTicks": 442291604,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/knowledge-factory-product-delivery"
+    },
+    {
+      "pid": 3002067,
+      "startTicks": 442291625,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/knowledge-factory-product-delivery"
+    },
+    {
+      "pid": 3002070,
+      "startTicks": 442291645,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/knowledge-factory-product-delivery"
+    },
+    {
+      "pid": 3002075,
+      "startTicks": 442291693,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/worktrees/builder-knowledge-product-integration/community/finance/builder/finance-solution-builder"
+    },
+    {
+      "pid": 3036834,
+      "startTicks": 442365902,
+      "sameProcess": true,
+      "cwd": "/home/ubuntu/.local/share/harness-knowledge-dev/studio/workbench/agent-d22376ea1e954ea5/candidate"
+    }
+  ],
+  "protectedWorkspaces": [
+    {
+      "path": "/home/ubuntu/worktrees/harness-knowledge-product-integration",
+      "head": "1773f63d99e568f4e5fc806a10d5a31dabfd533e",
+      "status": ""
+    },
+    {
+      "path": "/home/ubuntu/worktrees/builder-knowledge-product-integration",
+      "head": "9a822259682b4915ade5c33dd92022e68f567c62",
+      "status": ""
+    }
+  ]
+}

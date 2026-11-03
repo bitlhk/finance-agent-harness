@@ -121,7 +121,7 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         for(JsonNode product:catalog.path("products")) {
             String reason=null;int productRisk=riskOrdinal(product.path("riskLevel").asText());
             if(!"在售".equals(product.path("status").asText()))reason="PRODUCT_NOT_SELLABLE";
-            else if(productRisk<1||productRisk>customerRisk)reason="RISK_MISMATCH";
+            else if(productRisk<1)reason="PRODUCT_RISK_UNKNOWN";
             else if(!contains(product.path("channels"),channel))reason="CHANNEL_NOT_ALLOWED";
             else if(amount<product.path("minAmount").asDouble())reason="AMOUNT_BELOW_MINIMUM";
             else if(horizon<product.path("termMonths").asInt())reason="HORIZON_TOO_SHORT";
@@ -129,7 +129,8 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
             for(String key:List.of("productId","name","category","riskLevel","status","minAmount","termMonths","channels"))
                 item.put(key,JSON.convertValue(product.path(key),Object.class));
             item.put("dataAsOf",catalog.path("dataAsOf").asText());
-            if(reason==null){item.put("policyCode","WEALTH_SUITABILITY_MATCH:ELIGIBLE");eligible.add(Map.copyOf(item));}
+            item.put("suitabilityStatus","REQUIRES_AUTHORIZED_RULE");
+            if(reason==null){item.put("policyCode","PRODUCT_FACTS_MATCH:SUITABILITY_PENDING");eligible.add(Map.copyOf(item));}
             else {item.put("reasonCode",reason);excluded.add(Map.copyOf(item));}
         }
         CustomerCrmAuthority after=authorize(customerRef);if(!before.equals(after))throw new SecurityException("CRM_AUTHORITY_CHANGED");
@@ -140,11 +141,12 @@ public final class CustomerCrmProvider implements DescribedFinanceProvider {
         data.put("eligibleProducts",List.copyOf(eligible));data.put("excludedProducts",List.copyOf(excluded));
         data.put("eligibilityPolicy",Map.of(
                 "horizonRule","PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON",
-                "description","产品期限不超过客户可接受期限即满足期限条件"));
-        data.put("policySource",Map.of("ruleVersion","wealth-suitability-v1","catalogVersion",catalog.path("catalogVersion").asText(),
+                "suitabilityRule","NOT_CONFIGURED",
+                "description","仅核对产品事实条件；客户适当性必须由受权规则另行确认"));
+        data.put("policySource",Map.of("ruleVersion","product-facts-screening-v2","catalogVersion",catalog.path("catalogVersion").asText(),
                 "catalogDigest",digest(catalog),"dataAsOf",catalog.path("dataAsOf").asText()));
         return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,context.requestId(),context.traceId(),
-                CapabilityResultV1.Status.COMPLETED,"已完成合成产品目录的确定性适当性筛选。",Map.copyOf(data),
+                CapabilityResultV1.Status.COMPLETED,"已完成合成产品目录的事实条件筛选；客户适当性尚未核验。",Map.copyOf(data),
                 List.of(),List.of(),"customer-crm",Instant.parse(catalog.path("dataAsOf").asText()),null,null);
     }
 

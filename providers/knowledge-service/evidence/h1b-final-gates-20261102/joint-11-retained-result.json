@@ -1,0 +1,22 @@
+{
+  "status": "FAILED",
+  "model": "LIVE_DEEPSEEK_REQUESTED",
+  "authentication": "LOCAL_CREATOR_NOT_SSO",
+  "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+  "builder": "58dbe33ac928c06f0594545763701552bf7d54d1",
+  "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+  "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+  "queryAcceptance": "ATTEMPTED_NO_COMPLETE_DISPLAY",
+  "h1b": "NOT_RUN",
+  "modelObservation": "EXISTING_REDACTED_CAPTURE_OWN_CREATOR_ONLY_NO_VIEW_GRANT",
+  "buildEntry": "BROWSER_FORM",
+  "buildId": "agent-993924cd52564b17",
+  "buildStatus": "SUCCEEDED",
+  "descriptorDigest": "311c1d7e549c7d6cfd87a2ec42ae5e9b192346848b32114ce0e55b7d502541a5",
+  "instanceId": "b0c0fa70-056b-45b4-afa3-fce683cff48f",
+  "answerEvidence": "ORIGINAL_SAVED_ANSWER_CORRELATED_WITH_LIVE_REFERENCE_VIEW",
+  "queryStatus": "PARTIAL",
+  "stopStatus": "STOPPED",
+  "runtimeLeasesRemaining": 0,
+  "error": "JOINT_MODEL_REPORT_NOT_READY"
+}

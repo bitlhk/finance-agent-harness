@@ -1,0 +1,23 @@
+{
+  "status": "FAILED",
+  "model": "LIVE_DEEPSEEK_REQUESTED",
+  "authentication": "LOCAL_CREATOR_NOT_SSO",
+  "harness": "56c55aa8690803a05f8498f0348787687e806f13",
+  "builder": "b19e0c4b60b076d067ad4beb819ea2c2f14c8044",
+  "factory": "53cca76e5d8ee9c8ee558200dafa1c03253b4323",
+  "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+  "queryAcceptance": "REAL_MODEL_FACTORY_TOOL_RETURNED",
+  "h1b": "NOT_RUN",
+  "modelObservation": "EXISTING_REDACTED_CAPTURE_OWN_CREATOR_ONLY_NO_VIEW_GRANT",
+  "buildEntry": "BROWSER_FORM",
+  "buildId": "agent-d270dc872b3e4b7c",
+  "buildStatus": "SUCCEEDED",
+  "descriptorDigest": "311c1d7e549c7d6cfd87a2ec42ae5e9b192346848b32114ce0e55b7d502541a5",
+  "instanceId": "2a679628-389d-4734-8f3d-fc6a7c53483e",
+  "answerEvidence": "ORIGINAL_SAVED_ANSWER_CORRELATED_WITH_LIVE_REFERENCE_VIEW",
+  "queryStatus": "PARTIAL",
+  "modelReportReady": true,
+  "stopStatus": "STOPPED",
+  "runtimeLeasesRemaining": 0,
+  "error": "INSTALLED_FAULT_NOT_REJECTED:manifest"
+}

@@ -31,8 +31,9 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
         final OpenJiuwenSolutionAssembler assembler = new OpenJiuwenSolutionAssembler();
         final OpenJiuwenSolutionAssembler.PreparedSolution prepared;
         final OpenJiuwenFinanceBridge.InvocationDefaults defaults;
-        final List<Object> toolResults = new ArrayList<>();
-        final List<Object> attempts = new ArrayList<>();
+        final List<Object> toolResults = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final List<Object> attempts = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final KnowledgeObservationScope requestObservation = new KnowledgeObservationScope();
         final Set<String> runs = new HashSet<>();
         final Path evidence;
         final OpenJiuwenObservationAdapter observer = new OpenJiuwenObservationAdapter();
@@ -46,8 +47,10 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
             authority=new KnowledgeAuthority(context.artifactRoot(),context.ownerRef(),context.instanceId(),session);
             try {
                 if (context.trustedCollectors().isEmpty()) throw new SecurityException("TRUSTED_COLLECTORS_REQUIRED");
-                var providers=InstalledKnowledgeProvider.create(context.artifactRoot(),authority::source,authority::grant,
-                    context.currentObservation(), attempts::add);
+                var providers=InstalledKnowledgeProvider.create(context.artifactRoot(),
+                    () -> { requestObservation.current(); current(); return authority.source(); },
+                    () -> { requestObservation.current(); current(); return authority.grant(); },
+                    requestObservation::current, attempts::add);
                 var ref=HarnessJson.mapper().readValue(context.artifactRoot().resolve("observation-reference.json").toFile(),
                     ObservationRequirementsV01.Reference.class);
                 prepared=assembler.prepare(context.artifactRoot().resolve("assets"),context.artifactRoot().resolve("solution.json"),
@@ -69,12 +72,25 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                     try { current(); } catch(RuntimeException failure){denied=true;c.requestForceFinish(Map.of("error","AUTHORIZATION_REJECTED"));}
                     observer.observe(c);
                 },0);
-                agent.registerCallback(AgentCallbackEvent.AFTER_TOOL_CALL,c->{
-                    if(c.getInputs() instanceof ToolCallInputs call) toolResults.add(call.getToolResult());
+                agent.registerCallback(AgentCallbackEvent.BEFORE_TOOL_CALL,c->{
+                    try { current(); requestObservation.enterTool(); }
+                    catch(RuntimeException failure) {
+                        denied=true; c.requestForceFinish(Map.of("error","AUTHORIZATION_REJECTED"));
+                    }
                     observer.observe(c);
                 },0);
-                for(var event:List.of(AgentCallbackEvent.AFTER_MODEL_CALL,AgentCallbackEvent.ON_MODEL_EXCEPTION,
-                    AgentCallbackEvent.BEFORE_TOOL_CALL,AgentCallbackEvent.ON_TOOL_EXCEPTION)) agent.registerCallback(event,observer::observe,0);
+                agent.registerCallback(AgentCallbackEvent.AFTER_TOOL_CALL,c->{
+                    try {
+                        requestObservation.current(); current();
+                        if(c.getInputs() instanceof ToolCallInputs call) toolResults.add(call.getToolResult());
+                        observer.observe(c);
+                    } finally { requestObservation.leaveTool(); }
+                },0);
+                agent.registerCallback(AgentCallbackEvent.ON_TOOL_EXCEPTION,c->{
+                    try { observer.observe(c); } finally { requestObservation.leaveTool(); }
+                },0);
+                for(var event:List.of(AgentCallbackEvent.AFTER_MODEL_CALL,AgentCallbackEvent.ON_MODEL_EXCEPTION))
+                    agent.registerCallback(event,observer::observe,0);
                 evidence=context.privateStateRoot().resolve("knowledge").resolve(context.instanceId()).resolve(session);
                 Files.createDirectories(evidence);
                 synchronized(SDK_LOCK) {
@@ -109,6 +125,7 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
             var observation=context.currentObservation().get();
             if(observation==null)throw new SecurityException("OBSERVATION_REQUIRED");
             var span=observation.start(null,"host","knowledge-agent",Map.of());observer.attach(observation,span.id());
+            requestObservation.begin(observation);
             try(var installed=mount()) {
                 requireSameInstallation(lock, installed.lock());
                 var response=Runner.runAgent(agent,Map.of("query",body.path("query").asText(),"conversation_id",session),session,null);
@@ -127,7 +144,11 @@ public final class KnowledgeScenario implements ManagedScenarioExtensionV01 {
                 result.put("status",outcome);
                 span.finish(io.github.bitlhk.finance.harness.core.observation.ObservationEventV01.Outcome.RETURNED,Map.of());
                 return result;
-            } finally { observer.detach();span.close();active=null; }
+            } catch(Exception failure) {
+                // An exceptional SDK run must not lend a later turn's scope to unfinished work.
+                cancelled=true;
+                throw failure;
+            } finally { requestObservation.end();observer.detach();span.close();active=null; }
             }
         }
         public synchronized void close() {

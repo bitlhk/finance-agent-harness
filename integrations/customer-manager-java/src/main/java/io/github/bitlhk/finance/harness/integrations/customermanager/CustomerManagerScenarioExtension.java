@@ -30,28 +30,43 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         Path reports = outsideArtifact(context.privateStateRoot().resolve("service-preparation-reports"), context.artifactRoot());
         String owner = required(context.ownerRef(), "OWNER_REQUIRED");
         var mapping = (java.util.function.Supplier<CustomerCrmEmployeeMapping>) () -> CustomerCrmEmployeeMapping.load(mappingFile, owner);
-        CustomerCrmClient client = new CustomerCrmClient(URI.create(requiredEnv("FH_CRM_URL")),
-                Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000"))),
+        URI crmEndpoint = URI.create(requiredEnv("FH_CRM_URL"));
+        Duration crmTimeout = Duration.ofMillis(Long.parseLong(System.getenv().getOrDefault("FH_CRM_TIMEOUT_MILLIS", "8000")));
+        KypPreparationBootstrap.requireCrmConnection(context.artifactRoot(), crmEndpoint, crmTimeout);
+        CustomerCrmClient client = new CustomerCrmClient(crmEndpoint, crmTimeout,
                 () -> requiredEnv("FH_CRM_SERVICE_TOKEN"));
         CustomerCrmProvider provider = new CustomerCrmProvider(owner, client, () -> mapping.get().authority(), Clock.systemUTC());
         String sessionId = UUID.randomUUID().toString();
         String productAuthority = System.getenv("FH_PRODUCT_READ_AUTHORITY");
+        var crmAccess = new DirectCrmPreparationAccess(owner, sessionId, provider, context.currentObservation());
         PreparationAccess access = KypPreparationBootstrap.open(context, sessionId,
-                new DirectCrmPreparationAccess(owner, sessionId, provider),
+                crmAccess,
                 productAuthority == null || productAuthority.isBlank() ? null : Path.of(productAuthority));
         InstalledPreparationMethod method = installedMethod(context.artifactRoot());
         var model = Objects.requireNonNull(context.model(), "MODEL_CONNECTION_REQUIRED");
-        ServicePreparation task = new ServicePreparation(owner, access,
+        JsonNode installedLock = HarnessJson.mapper().readTree(Files.readAllBytes(context.artifactRoot().resolve("service-lock.json")));
+        boolean knowledgeSelected = false;
+        for (var capability : installedLock.path("capabilities"))
+            knowledgeSelected |= "knowledge.evidence.search".equals(capability.asText());
+        ManagerKnowledgeEvidence knowledge = null;
+        try {
+        if (knowledgeSelected) knowledge = new ManagerKnowledgeEvidence(context, crmAccess.invocationProvider(), access, sessionId);
+        ServicePreparation task = new ServicePreparation(owner, knowledge == null ? access : knowledge.installedAccess(),
                 () -> { var value=mapping.get(); return new ServicePreparation.Mapping(value.authority().revision(), value.customers()); },
                 new OpenJiuwenReportGenerator(model.clientProvider(), model.apiKey(), model.apiBase(), model.modelName()),
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method,
-                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context));
+                io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
-        return new Managed(owner, sessionId, task, method, capabilities, context.instanceId(),
+        var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(), knowledge,
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
+        return knowledge == null ? managed : knowledge.session(managed);
+        } catch (Exception failure) {
+            try { access.close(); } finally { if (knowledge != null) knowledge.close(); }
+            throw failure;
+        }
     }
 
     static final class Managed implements Session {
@@ -60,6 +75,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final InstalledPreparationMethod method;
         private final ConversationCapabilities capabilities;
         private final String instanceId;
+        private final ManagerKnowledgeEvidence knowledge;
         private final OpenJiuwenIntentProposer intentProposer;
         private final java.util.function.Supplier<String> scopeDigest;
         private final ScenarioEvidence conversationEvidence;
@@ -87,11 +103,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             Operation(String id) { this.id = id; }
         }
         Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
-                ConversationCapabilities capabilities, String instanceId, OpenJiuwenIntentProposer intentProposer,
+                ConversationCapabilities capabilities, String instanceId, ManagerKnowledgeEvidence knowledge,
+                OpenJiuwenIntentProposer intentProposer,
                 java.util.function.Supplier<String> scopeDigest, ScenarioEvidence conversationEvidence) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             this.capabilities=capabilities;
-            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.intentProposer=intentProposer;
+            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.knowledge=knowledge; this.intentProposer=intentProposer;
             this.scopeDigest=Objects.requireNonNull(scopeDigest);
             this.conversationEvidence=Objects.requireNonNull(conversationEvidence);
             var latest=task.latest(owner);
@@ -209,8 +226,13 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                         previousDialogue=dialogue.read(dialogueBinding,Instant.now());
                     }
                 }
-                var result = body.has("conversationContract") ? converse(body, requested, sink)
-                        : chat(text(body,"query"),requested,sink);
+                String query = text(body,"query");
+                Map<String,Object> result;
+                if (knowledge != null && isKnowledgeHelp(query))
+                    result = Map.of("status","ANSWERED","response",knowledge.description(capabilities.description()),
+                            "responseScope","NON_BUSINESS");
+                else result = body.has("conversationContract") ? converse(body, requested, sink)
+                        : chat(query,requested,sink);
                 synchronized (operationLock) {
                     if (current.cancelled) throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
                     if (!dialogueBinding.scope().equals(scopeDigest.get())) dialogue.clear();
@@ -230,6 +252,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 if(!current.finished) { dialogue.clear();clarification=null;confirmation.invalidate();clearPendingProduct(); }
                 current.finished = true;
             } }
+        }
+        static boolean isKnowledgeHelp(String query) {
+            return query != null && (query.contains("有哪些知识") || query.contains("有什么知识")
+                    || query.contains("知识范围") || query.contains("知识能力"));
         }
         private long selectOperation(String customer, String query, JsonNode context) {
             synchronized (operationLock) {
@@ -252,6 +278,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             List<String> customers=task.customers(owner);
             if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            if (confirmedDecision == null
+                    && OpenJiuwenIntentProposer.isDirectKnowledgeQuestion(query, capabilities.actions())) {
+                capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+                if (knowledge == null) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");
+                var protectedAliases = new HashSet<>(customers);
+                protectedAliases.addAll(dialogue.disclosedObjects());
+                if (dialogue.object() != null) protectedAliases.add(dialogue.object());
+                return knowledge.answerPolicyQuestion(query, operation.id, protectedAliases);
+            }
             String conversationalCustomer=requested!=null?(requested.isBlank()?null:requested):selectedCustomer!=null?selectedCustomer:pendingProductCustomer;
             var decision=confirmedDecision == null ? CustomerManagerDialogue.resolve(query,customers,conversationalCustomer) : confirmedDecision;
             if(decision.action()==CustomerManagerDialogue.Action.GREETING)
@@ -425,7 +460,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             // Model classification cannot grant access. Only non-data replies bypass CRM I/O;
             // every data/list/history/confirmation path still obtains current business authority.
             if(intent.objectRef()!=null || !Set.of(ConversationIntent.Kind.GREETING,ConversationIntent.Kind.CAPABILITIES,
-                    ConversationIntent.Kind.CLARIFY,ConversationIntent.Kind.CANCEL_TASK,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
+                    ConversationIntent.Kind.KNOWLEDGE_QUERY, ConversationIntent.Kind.CLARIFY,
+                    ConversationIntent.Kind.CANCEL_TASK,ConversationIntent.Kind.UNSUPPORTED).contains(intent.kind())) {
                 customers=liveCustomers();
                 if((requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                         ||(intent.objectRef()!=null&&!customers.contains(intent.objectRef()))
@@ -440,6 +476,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                         "本轮仅问候，尚未查询客户事实或生成报告。",proposedBinding,sink);
                 case CAPABILITIES -> naturalReply(query,ConversationResponder.Purpose.CAPABILITIES,List.of(),
                         "仅介绍当前装配能力，不表示已获得业务授权；尚未执行。",proposedBinding,sink);
+                case KNOWLEDGE_QUERY -> {
+                    capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+                    if (knowledge == null) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");
+                    var protectedAliases = new HashSet<>(customers);
+                    protectedAliases.addAll(dialogue.disclosedObjects());
+                    if (dialogue.object() != null) protectedAliases.add(dialogue.object());
+                    yield knowledge.answerPolicyQuestion(query,operation.id,protectedAliases);
+                }
                 case LIST_OBJECTS -> {
                     dialogue.listed(customers);
                     yield Map.of("status","ANSWERED","response","你当前可服务的客户有："+displayNames(customers)+"。请告诉我本次客户和目标。","customers",customers);
@@ -628,6 +672,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         if(months.find())result.put("horizonMonths",Integer.parseInt(months.group(1))*("年".equals(months.group(2))?12:1));
         if(query.contains("手机银行")||query.contains("手机端"))result.put("channel","手机银行");
         else if(query.contains("网点")||query.contains("柜面"))result.put("channel","网点");
+        var product=java.util.regex.Pattern.compile("(?<![A-Za-z0-9-])([0-9]{6,}|[A-Za-z][A-Za-z0-9-]{1,63})(?![A-Za-z0-9-])")
+                .matcher(query);
+        while(product.find()) {
+            String value=product.group(1);
+            if(value.chars().anyMatch(Character::isDigit)) { result.put("productRef",value); break; }
+        }
         return Map.copyOf(result);
     }
 

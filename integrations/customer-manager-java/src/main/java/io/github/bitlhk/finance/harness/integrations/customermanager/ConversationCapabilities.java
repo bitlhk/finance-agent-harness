@@ -34,9 +34,12 @@ record ConversationCapabilities(Set<ConversationIntent.Kind> actions, List<Strin
             if (ids.contains(CustomerCrmProvider.ALLOCATION_CAPABILITY))
                 actions.add(ConversationIntent.Kind.PRODUCT_REVIEW);
         }
+        if (ids.contains("knowledge.evidence.search")) actions.add(ConversationIntent.Kind.KNOWLEDGE_QUERY);
         // These two registered CRM actions are QUERY-only, single-customer draft production.
         // Do not infer exemption for future actions from their names or model/Skill claims.
-        return new ConversationCapabilities(actions, new ArrayList<>(ids), actions);
+        var directReads = EnumSet.copyOf(actions);
+        directReads.remove(ConversationIntent.Kind.KNOWLEDGE_QUERY);
+        return new ConversationCapabilities(actions, new ArrayList<>(ids), directReads);
     }
     void require(ConversationIntent.Kind kind) {
         if (!actions.contains(kind)) throw new SecurityException("CONVERSATION_CAPABILITY_NOT_INSTALLED");
@@ -53,6 +56,8 @@ record ConversationCapabilities(Set<ConversationIntent.Kind> actions, List<Strin
             result += capabilityIds.contains("wealth.products.query")
                     ? "；在金额、期限和渠道明确后，结合授权客户事实读取独立产品来源并核对条件。当前为Demo/Shadow来源，未核实银行在售资格的产品只展示为待核实事实，不是可推荐或可购买候选"
                     : "；在金额、期限和渠道明确后，从合成产品目录筛选待复核候选";
+        if (capabilityIds.contains("knowledge.evidence.search"))
+            result += "；查询当前构建已固定版本的制度文档，返回相关原文条款和来源位置。知识查询不读取或发送客户资料，也不替代具体业务审批";
         return result + "。以上为本制品已装配能力，实际执行仍需核验当前授权。我不会执行购买、CRM写入、消息发送或交易办理。";
     }
 }
