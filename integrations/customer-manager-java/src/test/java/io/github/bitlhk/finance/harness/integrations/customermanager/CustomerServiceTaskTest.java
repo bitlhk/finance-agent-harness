@@ -20,7 +20,10 @@ class CustomerServiceTaskTest {
             calls++;
             return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,request,trace,
                     CapabilityResultV1.Status.COMPLETED,"fixture",Map.of("previsitContext",Map.of(
-                    "profiles",List.of(Map.of("profileType","wealth","detail",Map.of(
+                    "profiles",List.of(Map.of("profileType","wealth",
+                            "demographics",Map.of("ageBand","45_59","occupationCategory","enterprise_manager","city","上海"),
+                            "preferences",Map.of("investmentHorizon","3年以上","liquidityNeeds","20%高流动性资产","communicationPreference","面谈"),
+                            "detail",Map.of("customerTier","private_banking",
                             "riskAssessment",Map.of("riskLevel","C3","validUntil","2027-01-01"),
                             "portfolioSummary",Map.of("currency","CNY","totalAssets",320000,"availableCash",80000),
                             "holdings",List.of(Map.of("productName","稳健组合","balance",120000,"currency","CNY",
@@ -38,6 +41,9 @@ class CustomerServiceTaskTest {
         String response=(String)result.get("response");
         assertTrue(response.contains("稳健组合"));
         assertTrue(response.contains("MATURITY_DUE"));
+        assertTrue(response.contains("private_banking"));
+        assertTrue(response.contains("45_59"));
+        assertTrue(response.contains("3年以上"));
         assertTrue(response.contains("来源快照"));
         assertEquals(1,access.calls);
     }

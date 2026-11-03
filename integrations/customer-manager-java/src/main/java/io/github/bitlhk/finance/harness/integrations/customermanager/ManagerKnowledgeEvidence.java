@@ -232,7 +232,7 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
                 && data.path("evidence").isArray() && !data.path("evidence").isEmpty();
         var reply = new LinkedHashMap<String,Object>();
         reply.put("status", found ? "COMPLETED" : result.status() == CapabilityResultV1.Status.COMPLETED ? "NO_EVIDENCE" : "PARTIAL");
-        reply.put("response", policyAnswer(data, found));
+        reply.put("response", policyAnswer(userQuestion, data, found));
         reply.put("responseScope", "KNOWLEDGE_EVIDENCE");
         reply.put("toolResults", List.of(Map.of("data", Map.of(
                 "capabilityId", KnowledgeProvider.SEARCH,
@@ -269,7 +269,13 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
 
 
     static String policyAnswer(JsonNode data, boolean found) {
+        return policyAnswer("", data, found);
+    }
+
+    static String policyAnswer(String question, JsonNode data, boolean found) {
         if (!found) return "当前固定版本的知识产品没有返回可用原文依据，因此不能确认这项制度结论。";
+        String direct = directProductConclusion(question, data.path("evidence"));
+        if (direct != null) return direct;
         var out = new StringBuilder("已从当前装配的制度知识中找到以下原文依据：\n\n");
         int displayed = 0;
         for (JsonNode item : data.path("evidence")) {
@@ -283,6 +289,24 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         }
         if (displayed == 0) return "当前固定版本的知识产品没有返回可展示的原文依据，因此不能确认这项制度结论。";
         return out.append("\n以上为已发布文档的原文检索结果；具体客户或业务处理仍需结合当前授权和业务事实判断。").toString();
+    }
+
+    private static String directProductConclusion(String question, JsonNode evidence) {
+        if (question == null || !(question.contains("风险等级") || question.contains("风险评级"))) return null;
+        var pattern = java.util.regex.Pattern.compile("风险评级为([一二三四五])级(?:，即)?(PR[1-5])?(?:（([^）]{1,20})）)?");
+        for (JsonNode item : evidence) {
+            String quote = item.path("quote").asText("");
+            var matcher = pattern.matcher(quote);
+            if (!matcher.find()) continue;
+            String rating = matcher.group(2) == null ? matcher.group(1) + "级" : matcher.group(2);
+            String label = matcher.group(3) == null ? "" : "（" + matcher.group(3) + "）";
+            String sourceRule = quote.contains("销售服务机构与管理人对本产品风险评级结果不一致")
+                    ? "销售服务机构与管理人评级不一致时，应以销售服务机构最终披露的较高评级为准。" : "";
+            return "**结论：该产品文件载明的管理人风险评级为 " + rating + label + "。**\n\n"
+                    + sourceRule + "客户当前是否适配及产品实时销售状态，仍需由授权业务系统核验。\n\n"
+                    + "原文条款与来源位置已保留在“查看依据”中。";
+        }
+        return null;
     }
     public void current() { knowledge.current(); }
     public void authorizeSaved(JsonNode report) {

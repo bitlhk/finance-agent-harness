@@ -52,8 +52,18 @@ final class CustomerServiceTask {
         JsonNode detail = wealthDetail(context.path("profiles"));
         var out = new StringBuilder("## ").append(alias).append(" · 客户概览\n\n");
         JsonNode risk = detail.path("riskAssessment");
+        String tier = text(detail,"customerTier");
+        if (!"待核实".equals(tier)) out.append("- 客户层级：").append(tier).append("\n");
         if (risk.isObject()) out.append("- 风险测评：").append(text(risk,"riskLevel"))
                 .append("，有效期至 ").append(text(risk,"validUntil")).append("\n");
+        JsonNode demographics = wealthProfile(context.path("profiles")).path("demographics");
+        if (demographics.isObject()) out.append("- 基本画像：年龄段 ").append(text(demographics,"ageBand"))
+                .append("，职业 ").append(text(demographics,"occupationCategory"))
+                .append("，城市 ").append(text(demographics,"city")).append("\n");
+        JsonNode preferences = wealthProfile(context.path("profiles")).path("preferences");
+        if (preferences.isObject()) out.append("- 服务偏好：投资期限 ").append(text(preferences,"investmentHorizon"))
+                .append("，流动性要求 ").append(text(preferences,"liquidityNeeds"))
+                .append("，沟通方式 ").append(text(preferences,"communicationPreference")).append("\n");
         JsonNode portfolio = detail.path("portfolioSummary");
         if (portfolio.isObject()) out.append("- 资产概况：总资产 ").append(amount(portfolio,"totalAssets"))
                 .append("，可用资金 ").append(amount(portfolio,"availableCash"))
@@ -65,6 +75,8 @@ final class CustomerServiceTask {
                     .append(amount(item,"balance")).append(" | ").append(text(item,"dataAsOf")).append(" |\n"));
         } else if (query.contains("持仓")) out.append("\n当前来源未返回持仓明细。\n");
         JsonNode events = detail.path("recentEvents");
+        if ((!events.isArray() || events.isEmpty()) && detail.path("maturities").isArray())
+            events = detail.path("maturities");
         if (events.isArray() && !events.isEmpty()) {
             out.append("\n### 近期事项\n\n");
             events.forEach(item -> out.append("- ").append(event(item)).append("\n"));
@@ -74,13 +86,20 @@ final class CustomerServiceTask {
     }
 
     private static JsonNode wealthDetail(JsonNode profiles) {
+        return wealthProfile(profiles).path("detail");
+    }
+    private static JsonNode wealthProfile(JsonNode profiles) {
         if (profiles.isArray()) for (JsonNode profile : profiles)
-            if ("wealth".equals(profile.path("profileType").asText())) return profile.path("detail");
+            if ("wealth".equals(profile.path("profileType").asText())) return profile;
         return HarnessJson.mapper().createObjectNode();
     }
     private static String event(JsonNode item) {
         String type = text(item,"type"), date = text(item,"date");
-        return date.equals("待核实") ? type : type + "（" + date + "）";
+        if ("待核实".equals(type)) type = text(item,"productName");
+        if ("待核实".equals(date)) date = text(item,"maturityDate");
+        String amount = amount(item,"amount");
+        return type + ("待核实".equals(date) ? "" : "（" + date + "）")
+                + ("待核实".equals(amount) ? "" : "，金额 " + amount);
     }
     private static String amount(JsonNode node, String field) {
         JsonNode value=node.path(field); if(!value.isNumber()) return "待核实";

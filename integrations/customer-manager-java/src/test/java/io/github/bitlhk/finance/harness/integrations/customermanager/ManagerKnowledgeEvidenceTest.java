@@ -64,4 +64,15 @@ class ManagerKnowledgeEvidenceTest {
                 HarnessJson.mapper().readTree("{\"name\":\"产品\",\"businessBinding\":{}}")));
     }
 
+    @Test void riskQuestionLeadsWithGroundedConclusionAndLeavesOriginalEvidenceInToolResult() throws Exception {
+        var data = HarnessJson.mapper().readTree("""
+            {"decision":"EVIDENCE_FOUND","evidence":[{"clause":"产品风险",
+              "quote":"管理人对本产品的风险评级为二级，即PR2（中低风险）。销售服务机构与管理人对本产品风险评级结果不一致时，以销售服务机构最终披露结果为准。"}]}
+            """);
+        String answer = ManagerKnowledgeEvidence.policyAnswer("这款产品是什么风险等级？", data, true);
+        assertTrue(answer.contains("PR2（中低风险）"));
+        assertTrue(answer.contains("授权业务系统核验"));
+        assertFalse(answer.contains("管理人对本产品的风险评级为二级，即PR2"));
+    }
+
 }
