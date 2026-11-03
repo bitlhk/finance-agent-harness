@@ -8,7 +8,7 @@ final class CustomerManagerDialogue {
     private static final Pattern NEGATED_PRODUCT_INTENT = Pattern.compile(
             "(?:不要|无需|不用|暂不|先不|不再|不做|不需要|取消|不)(?:[^，。；！？,.!?]{0,8})(?:推荐|筛选|候选|购买|买产品|理财产品)");
     private static final Pattern PREPARATION_INTENT = Pattern.compile(
-            "(?:回访|访前|服务准备|沟通要点|访问要点|准备要点|客户服务)");
+            "(?:回访|访前|服务准备|沟通要点|访问要点|准备要点|沟通话术|客户服务)");
 
     enum Action { GREETING, CLARIFY_INTENT, DESCRIBE_CAPABILITIES, LIST_CUSTOMERS, PREPARE, CANCEL_PRODUCT, CLARIFY_CUSTOMER, CLARIFY_MULTIPLE, PRODUCT_REVIEW }
     record Decision(Action action, String customer, List<String> mentioned) {}

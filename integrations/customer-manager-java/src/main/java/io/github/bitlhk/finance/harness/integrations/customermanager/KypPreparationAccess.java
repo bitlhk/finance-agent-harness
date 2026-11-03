@@ -46,6 +46,34 @@ public final class KypPreparationAccess implements PreparationAccess {
     FinanceProvider productProvider() { return products; }
     String productSession() { return sessionRef; }
     BoundFinanceProvider.Grant productGrant() { return productGrants.get(); }
+
+    CapabilityResultV1 queryProducts(String requestId, String traceId, String keyword) {
+        if (closed.get()) throw new SecurityException("CRM_SESSION_CLOSED");
+        if (keyword == null || keyword.length() > 120 || keyword.chars().anyMatch(Character::isISOControl))
+            throw new IllegalArgumentException("KYP_KEYWORD_INVALID");
+        var grant = productGrants.get();
+        String subject = grant.subjects().stream().sorted().findFirst()
+                .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
+        var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId, traceId,
+                grant.principalId(), grant.principalType(), "finance-harness", "WEALTH_PRODUCT_REVIEW",
+                subject, sessionRef, FinanceContextV1.AuthenticationLevel.UNKNOWN, grant.scopes());
+        var request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
+                KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, context,
+                Map.of("keyword", keyword), null, null, Map.of(), null);
+        productCurrent(request, grant);
+        var result = products.query(request);
+        productCurrent(request, grant);
+        if (!requestId.equals(result.requestId()) || !traceId.equals(result.traceId()))
+            throw new SecurityException("KYP_RESULT_BINDING_MISMATCH");
+        JsonNode source = HarnessJson.mapper().valueToTree(result.data());
+        if (result.status() != CapabilityResultV1.Status.COMPLETED
+                || !"kyp-product-context.v1".equals(source.path("schema").asText())
+                || !source.path("products").isArray()
+                || source.path("sourceId").asText().isBlank()
+                || !source.path("normalizedContentDigest").asText().matches("[a-f0-9]{64}"))
+            throw new IllegalStateException("KYP_PRODUCT_CONTRACT_INVALID");
+        return result;
+    }
     @Override public void close() { closed.set(true); crm.close(); }
 
     @Override public CapabilityResultV1 query(String requestId, String traceId, String customer,

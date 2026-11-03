@@ -51,10 +51,10 @@ record ConversationCapabilities(Set<ConversationIntent.Kind> actions, List<Strin
     String description() {
         String result = "可以查看你当前获授权的客户名单";
         if (actions.contains(ConversationIntent.Kind.PREPARE))
-            result += "；在用户明确提出回访准备目标和客户后汇集客户资料与持仓事实，生成待复核的回访准备建议。没有独立的只查资料或持仓动作，不能将它列成可直接执行的选项；用户只想查看时应说明此边界，询问是否改为回访准备，不能自动替用户执行";
+            result += "；查看指定客户的资产概况、持仓、风险测评和近期事项，并生成回访/访前简报、沟通要点或话术";
         if (actions.contains(ConversationIntent.Kind.PRODUCT_REVIEW))
             result += capabilityIds.contains("wealth.products.query")
-                    ? "；在金额、期限和渠道明确后，结合授权客户事实读取独立产品来源并核对条件。当前为Demo/Shadow来源，未核实银行在售资格的产品只展示为待核实事实，不是可推荐或可购买候选"
+                    ? "；查看产品列表、详情和对比；在金额、期限和渠道明确后，结合授权客户事实核对候选条件。销售状态、额度和适当性仍以当前业务系统核验为准"
                     : "；在金额、期限和渠道明确后，从合成产品目录筛选待复核候选";
         if (capabilityIds.contains("knowledge.evidence.search"))
             result += "；查询当前构建已固定版本的制度文档，返回相关原文条款和来源位置。知识查询不读取或发送客户资料，也不替代具体业务审批";

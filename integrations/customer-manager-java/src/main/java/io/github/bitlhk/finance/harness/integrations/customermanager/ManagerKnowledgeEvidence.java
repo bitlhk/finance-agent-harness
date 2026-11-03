@@ -245,6 +245,28 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
         return Map.copyOf(reply);
     }
 
+    Map<String,Object> answerProductQuestion(String userQuestion, String runId, JsonNode product) {
+        if (matcher == null)
+            return Map.of("status", "NO_EVIDENCE", "response", "当前产品没有装配可核对的产品手册知识。");
+        String channel = productChannel(product.path("channels"));
+        var products = HarnessJson.mapper().createArrayNode().add(product.deepCopy());
+        var decision = matcher.select(products, channel);
+        if (decision == ProductKnowledgeMatcher.Decision.NO_KNOWLEDGE)
+            return Map.of("status", "NO_EVIDENCE", "response", "当前产品只有产品来源事实，未装配与其身份一致的固定版本产品手册。");
+        if (decision != ProductKnowledgeMatcher.Decision.MATCHED)
+            throw new SecurityException("KNOWLEDGE_PRODUCT_SELECTION_AMBIGUOUS");
+        return answerPolicyQuestion(userQuestion, runId, Set.of());
+    }
+
+    private static String productChannel(JsonNode channels) {
+        var values = new HashSet<String>();
+        channels.forEach(value -> values.add(value.asText().toLowerCase(Locale.ROOT)));
+        if (values.contains("branch") || values.contains("网点") || values.contains("柜面")) return "BRANCH";
+        if (values.contains("mobile_banking") || values.contains("mobile") || values.contains("手机银行"))
+            return "MOBILE_BANKING";
+        throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
+    }
+
 
     static String policyAnswer(JsonNode data, boolean found) {
         if (!found) return "当前固定版本的知识产品没有返回可用原文依据，因此不能确认这项制度结论。";
