@@ -25,6 +25,10 @@ class OriginalToolCiTest(unittest.TestCase):
         for prop in ['fh.originalToolRelease', 'fh.originalToolReleaseDigest']:
             self.assertIn('-D' + prop + '=', steps[verify]['run'])
         self.assertNotIn('continue-on-error', steps[prepare])
+        assets = next(step for step in steps if step.get('name') == 'Original market-risk asset tests')
+        self.assertIn('python -m pytest engineering/test_market_risk_capital_assets.py', assets['run'])
+        tooling = next(step for step in steps if step.get('name') == 'Install original-tool test tooling')
+        self.assertIn('pytest==9.2.0', tooling['run'])
 
     def test_fixed_checkout_keeps_requested_revision_not_latest_head(self):
         with tempfile.TemporaryDirectory() as directory:

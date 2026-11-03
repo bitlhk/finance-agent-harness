@@ -64,8 +64,10 @@ jobs:
         run: mvn -B -ntp -f integrations/openjiuwen-java-otel/pom.xml test
       - name: Optional financial observation semantic tests
         run: mvn -B -ntp -f packages/java/observation-analysis/pom.xml test
-      - name: Install original-tool environment manager
-        run: python -m pip install uv==0.12.10
+      - name: Install original-tool test tooling
+        run: python -m pip install uv==0.12.10 pytest==9.2.0
+      - name: Original market-risk asset tests
+        run: python -m pytest engineering/test_market_risk_capital_assets.py -q -p no:cacheprovider
       - name: Prepare pinned original market-risk tool
         run: >-
           python engineering/prepare_original_market_risk_tool.py
