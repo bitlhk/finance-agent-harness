@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import java.util.*;
+import java.text.DecimalFormat;
 import java.util.regex.Pattern;
 
 /** Product exploration is independent from customer suitability and product-knowledge matching. */
@@ -180,7 +181,7 @@ final class ProductServiceTask {
         for (JsonNode product : products) out.append("| ").append(product.path("name").asText())
                 .append(" (`").append(product.path("productId").asText()).append("`) | R")
                 .append(product.path("riskLevel").asInt()).append(" | ")
-                .append(product.path("minimumAmount").isNumber() ? product.path("minimumAmount").asText()+" 元" : "待核实")
+                .append(amount(product.path("minimumAmount")))
                 .append(" | ").append(product.path("termMonths").isIntegralNumber() ? product.path("termMonths").asText()+" 个月" : "待核实")
                 .append(" | ").append(join(product.path("channels"))).append(" |\n");
         return out.toString();
@@ -189,7 +190,7 @@ final class ProductServiceTask {
     private static String detail(JsonNode product) {
         return "**" + product.path("name").asText() + "**（`" + product.path("productId").asText() + "`）\n\n"
                 + "- 产品事实风险等级：R" + product.path("riskLevel").asInt() + "\n"
-                + "- 起购金额：" + (product.path("minimumAmount").isNumber() ? product.path("minimumAmount").asText()+" 元" : "待核实") + "\n"
+                + "- 起购金额：" + amount(product.path("minimumAmount")) + "\n"
                 + "- 参考期限：" + (product.path("termMonths").isIntegralNumber() ? product.path("termMonths").asText()+" 个月" : "待核实") + "\n"
                 + "- 可见渠道：" + join(product.path("channels")) + "\n"
                 + "- 销售状态：" + product.path("salesStatus").asText("待核实") + "（来源可信级别："
@@ -202,7 +203,7 @@ final class ProductServiceTask {
                 .append("| 产品 | 风险 | 起购金额 | 参考期限 | 渠道 |\n|---|---:|---:|---:|---|\n");
         for (JsonNode product : products) out.append("| ").append(product.path("name").asText()).append(" (`")
                 .append(product.path("productId").asText()).append("`) | R").append(product.path("riskLevel").asInt())
-                .append(" | ").append(product.path("minimumAmount").asText("待核实")).append(" | ")
+                .append(" | ").append(amount(product.path("minimumAmount"))).append(" | ")
                 .append(product.path("termMonths").asText("待核实")).append(" 个月 | ")
                 .append(join(product.path("channels"))).append(" |\n");
         return out.toString();
@@ -221,5 +222,12 @@ final class ProductServiceTask {
     private static String join(JsonNode values) {
         var result = new ArrayList<String>(); values.forEach(value -> result.add(value.asText()));
         return result.isEmpty() ? "待核实" : String.join("、", result);
+    }
+
+    private static String amount(JsonNode value) {
+        if (!value.isNumber()) return "待核实";
+        var format = new DecimalFormat("#,##0.##");
+        format.setParseBigDecimal(true);
+        return format.format(value.decimalValue()) + " 元";
     }
 }

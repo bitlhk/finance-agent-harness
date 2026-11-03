@@ -128,6 +128,53 @@ final class ConversationHostTest {
         }
     }
 
+    @Test @Timeout(30) void bothAssistantUiContractsReachTheSameDirectProductTask() throws Exception {
+        useInstalledReadPolicy=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        var product = Map.<String,Object>of("productId","132112","name","招银理财招睿添利日开21号固定收益类理财计划",
+                "riskLevel",2,"minimumAmount",10000,"termMonths",1,"salesStatus","unknown",
+                "salesTrust","DEMO","channels",List.of("branch"));
+        var catalog = new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"product-request","product-trace",
+                CapabilityResultV1.Status.COMPLETED,"ok",Map.of("products",List.of(product)),List.of(),List.of(),
+                "product-provider",java.time.Instant.now(),null,null);
+        var products = new ProductServiceTask((request,trace,keyword) -> catalog, null);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES);
+                var session=session(model.proposer(),null,products,null)) {
+            var managed=session.call("chat",body("查询产品列表",null));
+            var compatibility=(com.fasterxml.jackson.databind.node.ObjectNode)body("查询产品列表",null);
+            compatibility.remove("conversationContract");
+            compatibility.put("runId",UUID.randomUUID().toString());
+            var legacy=session.call("chat",compatibility);
+            assertEquals("ANSWERED",managed.get("status"));
+            assertEquals(managed.get("response"),legacy.get("response"));
+            assertTrue(model.requests.isEmpty(),"Direct catalog reads must not depend on model intent classification");
+        }
+    }
+
+    @Test @Timeout(30) void directCatalogTaskAbandonsPendingProductExecution() throws Exception {
+        useInstalledReadPolicy=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        var product = Map.<String,Object>of("productId","132112","name","招银理财招睿添利日开21号固定收益类理财计划",
+                "riskLevel",2,"minimumAmount",10000,"termMonths",1,"salesStatus","unknown",
+                "salesTrust","DEMO","channels",List.of("branch"));
+        var catalog = new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"product-request","product-trace",
+                CapabilityResultV1.Status.COMPLETED,"ok",Map.of("products",List.of(product)),List.of(),List.of(),
+                "product-provider",java.time.Instant.now(),null,null);
+        var products = new ProductServiceTask((request,trace,keyword) -> catalog, null);
+        String productIntent=PROPOSAL.replace("PREPARE","PRODUCT_REVIEW");
+        String clarify=CAPABILITIES.replace("CAPABILITIES","CLARIFY");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(productIntent,clarify,"请说明希望继续的业务任务");
+                var session=session(model.proposer(),null,products,null)) {
+            var pending=session.call("chat",body("为synthetic-a筛选10万元、6个月的产品",null));
+            assertEquals(List.of("channel"),pending.get("missingInputs"));
+            assertEquals("ANSWERED",session.call("chat",body("有哪些产品",null)).get("status"));
+            var unrelated=session.call("chat",body("手机银行",null));
+            assertEquals("NEED_CLARIFICATION",unrelated.get("status"));
+            assertFalse(unrelated.containsKey("report"));
+            assertEquals(0,business.get(),"The old product proposal must not resume after switching tasks");
+        }
+    }
+
     @Test @Timeout(30) void oneConversationCarriesProductSelectionIntoComparisonButNotAnotherConversation() throws Exception {
         useInstalledReadPolicy=true;
         installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);

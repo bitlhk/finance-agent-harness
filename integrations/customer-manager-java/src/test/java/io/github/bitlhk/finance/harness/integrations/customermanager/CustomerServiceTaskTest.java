@@ -41,6 +41,7 @@ class CustomerServiceTaskTest {
         assertEquals("ANSWERED",result.get("status"));
         String response=(String)result.get("response");
         assertTrue(response.contains("稳健组合"));
+        assertTrue(response.contains("120,000 CNY"));
         assertTrue(response.contains("MATURITY_DUE"));
         assertFalse(response.contains("private_banking"));
         assertFalse(response.contains("45_59"));
@@ -50,6 +51,7 @@ class CustomerServiceTaskTest {
         assertTrue(profile.contains("private_banking"));
         assertTrue(profile.contains("45_59"));
         assertTrue(profile.contains("3年以上"));
+        assertTrue(profile.contains("320,000 CNY"));
     }
 
     @Test void explicitPreparationIntentIsNotCapturedByFactsRoute() {

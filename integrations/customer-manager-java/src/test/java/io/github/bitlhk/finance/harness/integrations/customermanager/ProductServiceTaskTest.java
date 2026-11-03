@@ -31,6 +31,8 @@ final class ProductServiceTaskTest {
         var result = task.run("有哪些产品", "run-a");
         assertEquals("ANSWERED", result.get("status"));
         assertTrue(result.get("response").toString().contains("132112"));
+        assertTrue(result.get("response").toString().contains("10,000 元"));
+        assertFalse(result.get("response").toString().contains("1E+4"));
         assertEquals(0, calls.get());
     }
 

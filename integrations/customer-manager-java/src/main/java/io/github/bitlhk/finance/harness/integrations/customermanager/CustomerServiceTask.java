@@ -6,6 +6,7 @@ import io.github.bitlhk.finance.harness.core.HarnessJson;
 import io.github.bitlhk.finance.harness.examples.wealth.PreparationAccess;
 import io.github.bitlhk.finance.harness.examples.wealth.ServicePreparation;
 import java.util.*;
+import java.text.DecimalFormat;
 
 /** Bounded CRM read for customer overview, holdings and upcoming items. */
 final class CustomerServiceTask {
@@ -111,7 +112,8 @@ final class CustomerServiceTask {
     private static String amount(JsonNode node, String field) {
         JsonNode value=node.path(field); if(!value.isNumber()) return "待核实";
         String currency=node.path("currency").asText("");
-        return value.asText() + (currency.isBlank()?"":" "+currency);
+        var format=new DecimalFormat("#,##0.##");format.setParseBigDecimal(true);
+        return format.format(value.decimalValue()) + (currency.isBlank()?"":" "+currency);
     }
     private static String text(JsonNode node, String field) {
         String value=node.path(field).asText(""); return value.isBlank()?"待核实":value;

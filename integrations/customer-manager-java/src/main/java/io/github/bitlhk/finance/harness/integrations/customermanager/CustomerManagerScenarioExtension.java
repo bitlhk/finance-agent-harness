@@ -305,7 +305,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
             if (confirmedDecision == null) {
                 Map<String,Object> direct = directService(query, requested, customers);
-                if (direct != null) return direct;
+                if (direct != null) {
+                    abandonPendingExecution();
+                    return direct;
+                }
             }
             if (confirmedDecision == null
                     && OpenJiuwenIntentProposer.isDirectKnowledgeQuestion(query, capabilities.actions())) {
@@ -452,7 +455,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             clearPendingProduct();
             String query=text(body,"query");
             Map<String,Object> direct = directService(query, requested, customers);
-            if (direct != null) return direct;
+            if (direct != null) {
+                abandonPendingExecution();
+                return direct;
+            }
             var proposedBinding=conversationBinding();
             String reportId=body.has("reportId")?text(body,"reportId"):null;
             Integer reportRevision=body.has("revision")?integer(body,"revision"):null;
@@ -638,6 +644,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
 
         private Map<String,Object> withJourney(Map<String,Object> result) {
             var value=new LinkedHashMap<String,Object>(result);value.put("journey",journey.projection());return Map.copyOf(value);
+        }
+
+        /** A direct read is a new task, not a supplement to an executable proposal from an earlier turn. */
+        private void abandonPendingExecution() {
+            synchronized (operationLock) {
+                confirmation.invalidate();
+                clarification = null;
+                clearPendingProduct();
+            }
         }
 
         private Map<String,Object> continuity() {
