@@ -169,6 +169,24 @@ final class ConversationHostTest {
             assertTrue(why.containsKey("savedExplanation"));
         }
     }
+
+    @Test @Timeout(30) void assistantUiCompatibilityConversationRetainsItsSavedReport() throws Exception {
+        useInstalledReadPolicy=true;providePrevisitFacts=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(SAVED_ANSWER);var session=session(model.proposer())) {
+            var prepare=(com.fasterxml.jackson.databind.node.ObjectNode)body(
+                    "为synthetic-a筛选10万元、6个月、网点办理的产品候选",null);
+            prepare.remove("conversationContract");
+            assertTrue(session.call("chat",prepare).containsKey("report"));
+            int calls=business.get();
+            var followup=(com.fasterxml.jackson.databind.node.ObjectNode)body("为什么推荐这些产品？",null);
+            followup.remove("conversationContract");
+            var why=session.call("chat",followup);
+            assertEquals("ANSWERED",why.get("status"));
+            assertEquals(calls,business.get());
+            assertTrue(why.containsKey("savedExplanation"));
+        }
+    }
     @Test @Timeout(30) void installedReadExecutesOnceWithoutConfirmationAndRejectsReplay() throws Exception {
         useInstalledReadPolicy=true;
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {

@@ -226,7 +226,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     selectedCustomer=null;selectedGoal=null;
                     hasRequestedObject=false;
                 }
-                if(!body.has("conversationContract")) { invalidateConfirmation();clarification=null;dialogue.clear();journey.reset(); }
+                if(!body.has("conversationContract")) {
+                    // The standard Assistant UI uses the compatibility conversation contract. The managed
+                    // Scenario Session is still the isolation boundary, so retain only its lightweight journey.
+                    invalidateConfirmation();clarification=null;dialogue.clear();
+                }
                 if(clarification!=null && clarification.object()!=null && hasRequestedObject
                         && !Objects.equals(requested,priorRequestedObject) && !Objects.equals(requested,clarification.object())) {
                     invalidateConfirmation();clarification=null;clearPendingProduct();
