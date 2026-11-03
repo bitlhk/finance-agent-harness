@@ -102,6 +102,7 @@ final class ProductServiceTaskTest {
     @Test void boundedRouterDoesNotCaptureCustomerProductScreening() {
         assertTrue(ProductServiceTask.handles("有哪些产品"));
         assertTrue(ProductServiceTask.handles("132112 是哪个风险等级的产品"));
+        assertTrue(ProductServiceTask.handles("招银理财招睿添利日开21号是什么风险等级"));
         assertFalse(ProductServiceTask.handles("为周明远筛选适合的产品"));
     }
 }

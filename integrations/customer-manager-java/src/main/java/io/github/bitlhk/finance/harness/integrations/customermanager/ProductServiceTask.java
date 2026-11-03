@@ -25,7 +25,7 @@ final class ProductServiceTask {
         boolean explore = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         boolean compare = query.contains("对比") || query.contains("比较") || query.contains("区别");
-        boolean detail = (query.contains("产品") || query.contains("理财计划")
+        boolean detail = (query.contains("产品") || query.contains("理财")
                 || query.contains("份额") || PRODUCT_CODE.matcher(query).find())
                 && (query.contains("详情") || query.contains("风险等级") || query.contains("费用")
                 || query.contains("赎回") || query.contains("申购") || query.contains("起购")
