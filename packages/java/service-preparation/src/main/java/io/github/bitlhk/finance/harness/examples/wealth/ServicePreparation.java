@@ -995,6 +995,8 @@ public final class ServicePreparation implements AutoCloseable {
     static List<String> normalizeFactRefs(List<String> refs,List<String> ids) {
         var normalized=new LinkedHashSet<String>();
         for(String ref:refs) {
+            if(ref.matches("/productReview/productMissingInputs/[0-9]+"))
+                ref="/productMissingInputs/"+ref.substring(ref.lastIndexOf('/')+1);
             if(ids.contains(ref)){normalized.add(ref);continue;}
             if(!safeAggregateRef(ref)){normalized.add(ref);continue;}
             String prefix=ref+"/";
