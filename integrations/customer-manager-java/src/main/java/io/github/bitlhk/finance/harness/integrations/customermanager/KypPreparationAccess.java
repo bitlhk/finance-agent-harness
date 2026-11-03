@@ -117,8 +117,8 @@ public final class KypPreparationAccess implements PreparationAccess {
         String productSubject = productGrant.subjects().stream().sorted().findFirst()
                 .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
         var sourceContext = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId + "-kyp", traceId,
-                before.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
-                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, before.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
+                productGrant.principalId(), productGrant.principalType(), "finance-harness",
+                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, before.authenticationLevel(), productGrant.scopes());
         var productRequest = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, sourceContext,
                 Map.of("keyword", productRef), null, null, Map.of(), null);
@@ -228,8 +228,8 @@ public final class KypPreparationAccess implements PreparationAccess {
         String productSubject = initial.subjects().stream().sorted().findFirst()
                 .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
         var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, result.requestId(), result.traceId(),
-                snapshot.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
-                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, snapshot.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
+                initial.principalId(), initial.principalType(), "finance-harness",
+                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, snapshot.authenticationLevel(), initial.scopes());
         var request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, KypProductFactory.CAPABILITY,
                 CapabilityRequestV1.Operation.QUERY, context, Map.of(), null, null, Map.of(), null);
         Runnable guard = () -> { customerGuard.run(); productCurrent(request, initial); };
