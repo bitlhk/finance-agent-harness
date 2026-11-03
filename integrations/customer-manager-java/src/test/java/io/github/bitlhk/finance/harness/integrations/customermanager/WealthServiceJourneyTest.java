@@ -22,6 +22,7 @@ final class WealthServiceJourneyTest {
     @Test void customerSwitchClearsCustomerSpecificTaskButNotAnotherSession() {
         var first=new WealthServiceJourney();
         first.selectCustomer("周明远");first.parameters(Map.of("amount",100000));
+        first.evidence(List.of("crm-request-a", "knowledge-receipt-a"));
         first.report("report-a",1,List.of("132112"));
         var second=new WealthServiceJourney();
         assertNull(second.customerRef());
@@ -29,6 +30,8 @@ final class WealthServiceJourneyTest {
         first.selectCustomer("沈嘉禾");
         assertEquals("沈嘉禾",first.customerRef());
         assertTrue(first.parameters().isEmpty());
+        assertTrue(first.productRefs().isEmpty());
+        assertEquals(List.of(), first.projection().get("evidenceRefs"));
         assertFalse(first.hasReport());
     }
 

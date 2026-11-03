@@ -115,6 +115,15 @@ class KypPreparationAccessTest {
         assertThrows(SecurityException.class, this::query);
         assertEquals(0, products.calls);
     }
+    @Test void multipleProductSubjectsAreRejectedInsteadOfSelectingOne() {
+        var current = grant.get();
+        grant.set(new BoundFinanceProvider.Grant(current.principalId(), current.principalType(),
+                Set.of("product-source-a", "product-source-b"), current.purposes(), current.scopes(),
+                current.sessionRef(), current.authorityRef(), current.expiresAt()));
+        assertEquals("KYP_READ_AUTHORITY_REJECTED",
+                assertThrows(SecurityException.class, this::query).getMessage());
+        assertEquals(0, products.calls);
+    }
     @Test void revokedProductGrantCannotReleaseReturnedFacts() {
         products.revoke=true;
         assertThrows(SecurityException.class, this::query);

@@ -22,7 +22,8 @@ final class WealthServiceJourney {
         if (value == null || value.isBlank()) return;
         if (!value.equals(customerRef)) {
             customerRef = value;
-            parameters.clear(); pendingItems.clear(); reportRef = null; reportRevision = null;
+            productRefs.clear(); parameters.clear(); evidenceRefs.clear(); pendingItems.clear();
+            reportRef = null; reportRevision = null;
             stage = "CUSTOMER_SELECTED";
         }
     }
