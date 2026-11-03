@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "market-risk-capital-conformance-cases.v1",
+  "scope": "Original read-only standard formula; controlled fixtures, not production qualification",
+  "upstreamRevision": "0e158eee225c698774aa75671c944624cd36550b",
+  "originalFunction": "mktrisk_engine.standard.compute_standard_capital",
+  "paramVersion": "2026.09-demo-v1",
+  "cases": [
+    {"id": "original-ten-positions", "expectedStatus": "COMPLETED", "expectedValues": {"interest_rate": 839000, "fx": 7200000, "equity": 12000000, "commodity": 20400000, "total": 40439000}},
+    {"id": "empty-authorized-snapshot", "expectedStatus": "COMPLETED", "expectedTotal": 0, "sourceAsOf": null},
+    {"id": "positions-missing", "expectedStatus": "FAILED", "expectedSourceCode": "ORIGINAL_TOOL_HTTP_422"},
+    {"id": "wrong-current-owner", "expectedStatus": "FAILED", "expectedSourceCode": "ACCESS_DENIED"}
+  ]
+}

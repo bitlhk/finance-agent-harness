@@ -4,10 +4,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
+import { loadPublicPages } from './public-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = fs.readFileSync(path.join(root, 'docs/public/developer-guide.md'), 'utf8');
 const headings = marked.lexer(source).filter(token => token.type === 'heading' && token.depth === 2);
+
+test('every public page renders with the publication link policy', () => {
+  const edition = JSON.parse(fs.readFileSync(path.join(root, 'docs/public/edition.json'), 'utf8'));
+  const pages = loadPublicPages(root, edition);
+  assert.equal(pages.length, 3);
+  assert.ok(pages.every(page => typeof page.html === 'string' && page.html.length > 0));
+});
 
 test('public guide has concrete paths from upload to a newly installed Agent', () => {
   assert.equal(headings.length, 17);

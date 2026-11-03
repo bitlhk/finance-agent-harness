@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "finance-domain-pack.v1",
+  "packId": "market-risk-capital",
+  "version": "0.1.0",
+  "profile": "market-risk-capital-readonly",
+  "capabilities": ["market.risk.capital.query"],
+  "capabilityPackRefs": [{"id": "market-risk-capital-readonly", "version": "0.1.0"}],
+  "skills": [{"directory": "market-risk-capital", "entry": "skill/SKILL.md"}],
+  "scope": ["原标准法资本只读计算", "分项与原返回核对", "数据日期缺失说明"],
+  "outOfScope": ["VaR及压力测试", "监管报送资格", "交易执行", "任意Python脚本"],
+  "sourceReferences": [
+    "docs/market-risk-capital-readonly-v1.md",
+    "https://gitcode.com/openJiuwen/agent-store/blob/0e158eee225c698774aa75671c944624cd36550b/community/finance/scenario/bank-mktrisk-kit/agent/run_pipeline.py",
+    "https://gitcode.com/openJiuwen/agent-store/blob/0e158eee225c698774aa75671c944624cd36550b/community/finance/scenario/risk-llm-coach/agent/coach/executor.py"
+  ]
+}

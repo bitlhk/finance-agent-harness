@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "market-risk-capital-readonly",
+  "version": "0.1.0",
+  "systemPrompt": "仅调用已安装、已获当前授权的原标准法资本工具。不得通过模型计算替代原算法，不得补造输入或数据日期。",
+  "capabilities": [{
+    "capabilityId": "market.risk.capital.query",
+    "toolName": "market_risk_capital_query",
+    "name": "查询原标准法市场风险资本",
+    "description": "对 Host 当前绑定的组合与任务调用原标准法资本工具，返回四类资本、合计、参数版本、数据日期及原始明细。",
+    "operation": "QUERY",
+    "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+    "requiredScopes": ["market-risk:read"]
+  }]
+}

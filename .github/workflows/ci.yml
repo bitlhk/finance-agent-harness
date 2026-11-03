@@ -64,8 +64,21 @@ jobs:
         run: mvn -B -ntp -f integrations/openjiuwen-java-otel/pom.xml test
       - name: Optional financial observation semantic tests
         run: mvn -B -ntp -f packages/java/observation-analysis/pom.xml test
+      - name: Install original-tool test tooling
+        run: python -m pip install uv==0.12.10 pytest==9.2.0
+      - name: Original market-risk asset tests
+        run: python -m pytest engineering/test_market_risk_capital_assets.py -q -p no:cacheprovider
+      - name: Prepare pinned original market-risk tool
+        run: >-
+          python engineering/prepare_original_market_risk_tool.py
+          --workspace "$RUNNER_TEMP/original-market-risk"
+          --github-env "$GITHUB_ENV"
       - name: Unit tests and local HTTP fault injection
-        run: mvn -B -ntp verify
+        run: >-
+          mvn -B -ntp
+          "-Dfh.originalToolRelease=$FH_ORIGINAL_TOOL_RELEASE"
+          "-Dfh.originalToolReleaseDigest=$FH_ORIGINAL_TOOL_RELEASE_DIGEST"
+          verify
       - name: Java timestamp compatibility on supported Python versions
         run: python -m unittest discover -s engineering -p 'test_*.py' -v
       - name: Controlled developer entrypoint (no external model or bank)
@@ -82,3 +95,4 @@ jobs:
             integrations/openjiuwen-java/target/java-instant-cases.json
             examples/solutions/wealth-facts-kit/target/runs/**
             ${{ runner.temp }}/harness-reproducibility/*
+            ${{ runner.temp }}/original-market-risk/preparation.json

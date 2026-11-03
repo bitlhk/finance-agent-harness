@@ -813,3 +813,17 @@ mvn -B -ntp -pl providers/non-ai-banking -am -Dtest=CashflowProviderTest,NonAiBa
 相同协议的新特性原则上只新增资产、适配和案例，不修改 Builder 核心或通用页面；新审批协议、Runtime、知识或护栏接线需要单独评审真实扩展点，不能机械包装为业务工具。先记录当前参考实现限制，再决定是否扩公共机制。
 
 完成标准不是“上传成功”，而是下一位开发者能从固定版本复跑、完成一次自己的修改，取得新的验证和安装证据。当前自动测试与候选浏览器检查只是技术预验收，尚不代表真人已独立完成。
+
+### 16.7 原算法作为独立工具依赖的首个候选
+
+`market-risk-capital-readonly` 复用 Agent Store 固定原 `mktrisk_engine` 的标准法资本函数。
+不要把 Python 代码放入 Skill 执行：先发布独立工具制品及锁定依赖，再由受管 Provider 接到 Java Agent。
+能力包/领域包使用已有 `pack.yaml`，Catalog 记录版本和依赖；方法注明从原流程派生。
+
+部署方提供原工具服务、本次主体/任务的私有授权、固定快照和配置摘要；模型只触发空参数 QUERY。
+凭据和头寸文件放在制品外，结果引用本次实际返回。缺日期保留缺失，工具失败不沿用旧成功。
+按候选源码中的 `integrations/market-risk-capital-java/README.md` 接线说明运行真实 Runtime 组件测试，
+再按 Agent Store 的独立制品指南验证构建、安装、运行和页面；前一个测试不能替代后一个。
+
+当前是 0.1.0 / 0.1.0-SNAPSHOT 的本地候选。交付时固定实际源码内容和 JAR 摘要，保留原来源提交；
+不能把未提交的新代码说成原提交已具备，也不能将本地测试说成上游已发布。

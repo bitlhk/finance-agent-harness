@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance-market-risk-capital-query.v1",
+  "title": "Host-bound market risk QUERY arguments; identity is never model input",
+  "type": "object",
+  "required": [],
+  "additionalProperties": false,
+  "properties": {}
+}

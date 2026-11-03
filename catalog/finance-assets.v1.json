@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.17",
+  "catalogVersion": "0.2.18",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -74,6 +74,25 @@
           "fraud-investigation"
         ]
       }
+    },
+    {
+      "id": "market-risk-capital-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原标准法资本 Java 接线（候选）",
+      "source": "repo://integrations/market-risk-capital-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-market-risk-capital-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "market-risk-capital-readonly"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -145,6 +164,13 @@
       "version": "0.1.0",
       "displayName": "本地模拟银行受控办理",
       "source": "repo://profiles/local-simulator-task.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "market-risk-capital-readonly",
+      "version": "0.1.0",
+      "displayName": "原标准法资本只读（候选）",
+      "source": "repo://profiles/market-risk-capital-readonly.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -430,6 +456,35 @@
         ],
         "runtimeLanguages": [
           "java"
+        ]
+      }
+    },
+    {
+      "id": "market-risk-capital",
+      "version": "0.1.0",
+      "displayName": "原标准法资本核对方法（派生候选）",
+      "profile": "market-risk-capital-readonly",
+      "source": "repo://domain-packs/market-risk-capital",
+      "requiresCapabilities": [
+        "market.risk.capital.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "market-risk-capital-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "market-risk-capital-readonly"
         ]
       }
     }
@@ -940,6 +995,27 @@
           "java"
         ]
       }
+    },
+    {
+      "id": "market-risk-capital-readonly",
+      "version": "0.1.0",
+      "displayName": "原标准法资本只读能力（候选）",
+      "source": "repo://capability-packs/market-risk-capital-readonly",
+      "capabilities": [
+        "market.risk.capital.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "market-risk-capital-readonly"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1179,9 +1255,38 @@
           "java"
         ]
       }
+    },
+    {
+      "id": "market-risk-capital-original",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原标准法资本本地工具适配（候选）",
+      "source": "repo://providers/market-risk-capital",
+      "capabilities": [
+        "market.risk.capital.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "market-risk-capital-readonly"
+        ]
+      }
     }
   ],
   "evalPacks": [
+    {
+      "id": "market-risk-capital-controlled",
+      "version": "0.1.0",
+      "displayName": "原标准法资本受控合同案例（非模型质量评测）",
+      "source": "repo://conformance/market-risk-capital-readonly",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {"profiles": ["market-risk-capital-readonly"]}
+    },
     {
       "id": "wealth-facts-controlled",
       "version": "0.1.0",
@@ -1258,7 +1363,7 @@
       }
     }
   ],
-  "catalogRevision": "2026-10-31.knowledge-host-merge-prep",
+  "catalogRevision": "2026-11-03.scenario-industrialization-feat001-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
