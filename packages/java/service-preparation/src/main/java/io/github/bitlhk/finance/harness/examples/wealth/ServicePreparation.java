@@ -251,7 +251,10 @@ public final class ServicePreparation implements AutoCloseable {
                             missing.add("产品来源信息或销售资格尚未完整核实");
                             report.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         }
-                        report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        report.set("productReview",productReview.deepCopy());
+                        JsonNode generationProductReview=productReview.deepCopy();
+                        if(generationProductReview instanceof ObjectNode object)object.remove("sourceProducts");
+                        generationContext.set("productReview",generationProductReview);
                         generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         collectFactRefs(generationContext.path("productMissingInputs"), "/productMissingInputs", ids, ids.size() + 80);
                         for (String field : List.of("status", "customerRiskLevel", "assessmentValidUntil",
@@ -262,7 +265,6 @@ public final class ServicePreparation implements AutoCloseable {
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
                         collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 100);
-                        collectFactRefs(productReview.path("sourceProducts"), "/productReview/sourceProducts", ids, ids.size() + 100);
                         collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 100);
                         report.withArray("events").add("PRODUCT_POLICY_SCREENED");
                     }

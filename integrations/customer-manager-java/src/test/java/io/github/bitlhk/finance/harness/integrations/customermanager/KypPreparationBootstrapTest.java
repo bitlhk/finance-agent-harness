@@ -156,15 +156,17 @@ class KypPreparationBootstrapTest {
                 () -> new ServicePreparation.Mapping("mapping-a", Map.of("Synthetic customer", "customer-a")),
                 (method, goal, refs, facts) -> {
                     assertEquals("customer-a", facts.at("/customer/customerId").asText());
-                    assertEquals("P001", facts.at("/productReview/sourceProducts/0/productId").asText());
+                    assertTrue(facts.at("/productReview/sourceProducts").isMissingNode());
+                    assertEquals("P001", facts.at("/productReview/excludedProducts/0/productId").asText());
                     assertEquals("clause-a", facts.at("/knowledgeEvidence/evidence/0/anchor").asText());
-                    assertTrue(refs.contains("/productReview/sourceProducts/0/name"));
+                    assertFalse(refs.stream().anyMatch(ref -> ref.startsWith("/productReview/sourceProducts/")));
+                    assertTrue(refs.contains("/productReview/excludedProducts/0/name"));
                     assertTrue(refs.contains("/knowledgeEvidence/evidence/0/text"));
                     var report = HarnessJson.mapper().createObjectNode();
                     report.putArray("communicationFocus").addObject().put("text", "核实客户服务需求")
                             .putArray("factRefs").add("/customer/customerId");
                     report.putArray("preparationAdvice").addObject().put("text", "产品仅为合成资料，需核实销售资格")
-                            .putArray("factRefs").add("/productReview/sourceProducts/0/name").add("/knowledgeEvidence/evidence/0/text");
+                            .putArray("factRefs").add("/productReview/excludedProducts/0/name").add("/knowledgeEvidence/evidence/0/text");
                     report.putArray("pendingItems").add("核实产品销售资格"); report.putArray("reviewChecklist").add("经理复核");
                     return report;
                 }, state.resolve("joint-reports"), Map.of(),

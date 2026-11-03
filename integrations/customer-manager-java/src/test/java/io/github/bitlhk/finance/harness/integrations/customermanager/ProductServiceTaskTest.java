@@ -61,14 +61,15 @@ final class ProductServiceTaskTest {
         var task=new ProductServiceTask((request,trace,keyword)->catalog(),(question,run,product)->{
             calls.incrementAndGet();
             return "132112".equals(product.path("productId").asText())
-                    ? Map.of("response","产品手册载明PR2及申赎安排。","toolResults",List.of())
-                    : Map.of("response","当前产品只有产品来源事实，未装配与其身份一致的固定版本产品手册。");
+                    ? Map.of("status","COMPLETED","response","产品手册载明PR2及申赎安排。","toolResults",List.of())
+                    : Map.of("status","NO_EVIDENCE","response","当前产品只有产品来源事实，未装配与其身份一致的固定版本产品手册。");
         });
         var result=task.run("和 SYN-FI-002 比较一下，重点看风险、流动性和费用","run-a",List.of("132112"));
         assertEquals("ANSWERED",result.get("status"));
         assertEquals(List.of("SYN-FI-002","132112"),result.get("selectedProductRefs"));
         assertTrue(result.get("response").toString().contains("产品资料覆盖"));
-        assertTrue(result.get("response").toString().contains("产品手册载明PR2"));
+        assertTrue(result.get("response").toString().contains("查看依据"));
+        assertFalse(result.get("response").toString().contains("产品手册载明PR2"));
         assertTrue(result.get("response").toString().contains("只有产品来源事实"));
         assertEquals(2,calls.get());
     }

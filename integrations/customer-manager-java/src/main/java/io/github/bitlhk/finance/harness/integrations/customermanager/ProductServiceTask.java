@@ -83,7 +83,7 @@ final class ProductServiceTask {
                 var coverage = new StringBuilder("\n### 产品资料覆盖\n\n");
                 for (JsonNode product : selected) {
                     Map<String,Object> evidence = knowledge.answer(query, runId, product);
-                    String text = Objects.toString(evidence.get("response"), "").strip();
+                    String text = knowledgeCoverage(evidence);
                     coverage.append("- **").append(product.path("name").asText()).append("**：")
                             .append(text.isBlank() ? "当前没有可展示的产品手册依据。" : text).append("\n");
                     if (evidence.get("toolResults") instanceof List<?> values) tools.addAll(values);
@@ -113,6 +113,14 @@ final class ProductServiceTask {
                 if (evidence.containsKey(key)) reply.put(key, evidence.get(key));
         }
         return Map.copyOf(reply);
+    }
+
+    private static String knowledgeCoverage(Map<String,Object> evidence) {
+        String status = Objects.toString(evidence.get("status"), "");
+        if ("COMPLETED".equals(status))
+            return "已取得与该产品身份一致的固定版本手册依据；完整原文和来源位置可在“查看依据”中展开。";
+        String response = Objects.toString(evidence.get("response"), "").strip();
+        return response.isBlank() ? "当前没有可展示的产品手册依据。" : response;
     }
 
     private static boolean continuation(String query) {
