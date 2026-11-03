@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "knowledge-history.v0.1",
+  "code": 0,
+  "replay": true,
+  "requestId": "4653881d-c4e5-46ff-83a8-2df622eb6292",
+  "traceId": "ea30751f-a39e-4dfc-9626-37341fc59624",
+  "coreReceiptDigest": "48e69efe199982a4a40595636097da73a92b3c96203dd288e00c340330c6fe93",
+  "savedReceipt": {
+    "bindingDigest": "d14b8be838bf5dd0b1cd08b0455c23c27e5ce5a960f83d4516dd96a9b2a81c3a",
+    "businessContextSource": "isolated-host-fixed-business-date",
+    "createdAt": "2026-11-02T01:57:48.519046+00:00",
+    "host": {
+      "business_date": "2026-10-31",
+      "institution": "synthetic-bank",
+      "product": "customer-service",
+      "purpose": "evidence-query",
+      "region": "CN-BJ",
+      "timezone": "Asia/Shanghai"
+    },
+    "hostAuthority": "isolated-h1a-host-operator",
+    "indexDigest": "99adf775d106a687f17b8485725d0b8ea830aefbfb303b9910b5e5ccf02f3368",
+    "manifestDigest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+    "mode": "M2_ISOLATED_DOCUMENT",
+    "policyDigest": "dadc600222325237d5c65eee0d9f03597a7da0e9f29a6608c9bed2e667a5359a",
+    "principal": "knowledge-agent",
+    "productId": "synthetic-product-policy-e1bdc9d3687e",
+    "question": "产品服务准备中，制度对风险匹配、销售资格、信息核实和人工复核有哪些要求？请提供原文条款。",
+    "requestId": "8a43ec32-2ccb-458f-b78e-46fe9e1bbe67-knowledge",
+    "result": {
+      "decision": "EVIDENCE_FOUND",
+      "evidence": [
+        {
+          "anchors": [
+            {
+              "locator": {
+                "end": 55,
+                "start": 0,
+                "xpath": "/html/body/p[3]/text()[1]"
+              },
+              "locatorKind": "HTML_DOM_TEXT",
+              "mediaType": "text/html",
+              "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+              "quoteDigest": "f9ecf828b4b9176bd8cb05f23e5adef84cb4b89ed8c6f2cacd7e16c2d038f10d",
+              "schemaVersion": "evidence-anchor.v0.1",
+              "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+            }
+          ],
+          "chunkId": "73da3410bfd2e01a",
+          "clause": "第二条",
+          "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+          "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。"
+        },
+        {
+          "anchors": [
+            {
+              "locator": {
+                "end": 96,
+                "start": 0,
+                "xpath": "/html/body/p[4]/text()[1]"
+              },
+              "locatorKind": "HTML_DOM_TEXT",
+              "mediaType": "text/html",
+              "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+              "quoteDigest": "b066befdb35d31c0e036ce0d111d5659f85878e2bedcf365277b5cb3e9f46934",
+              "schemaVersion": "evidence-anchor.v0.1",
+              "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+            }
+          ],
+          "chunkId": "f76811a52425c0d7",
+          "clause": "第三条",
+          "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+          "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。"
+        }
+      ]
+    },
+    "schemaVersion": "document-receipt.v0.1",
+    "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367",
+    "traceId": "8a43ec32-2ccb-458f-b78e-46fe9e1bbe67"
+  },
+  "queryResponse": {
+    "code": 0,
+    "decision": "EVIDENCE_FOUND",
+    "evidence": [
+      {
+        "anchors": [
+          {
+            "locator": {
+              "end": 55,
+              "start": 0,
+              "xpath": "/html/body/p[3]/text()[1]"
+            },
+            "locatorKind": "HTML_DOM_TEXT",
+            "mediaType": "text/html",
+            "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+            "quoteDigest": "f9ecf828b4b9176bd8cb05f23e5adef84cb4b89ed8c6f2cacd7e16c2d038f10d",
+            "schemaVersion": "evidence-anchor.v0.1",
+            "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+          }
+        ],
+        "chunkId": "73da3410bfd2e01a",
+        "clause": "第二条",
+        "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+        "quote": "第二条 产品风险等级和当前可售状态必须从产品服务取得。本制度不提供任何客户的实时资料、具体产品数据或持仓事实。",
+        "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367"
+      },
+      {
+        "anchors": [
+          {
+            "locator": {
+              "end": 96,
+              "start": 0,
+              "xpath": "/html/body/p[4]/text()[1]"
+            },
+            "locatorKind": "HTML_DOM_TEXT",
+            "mediaType": "text/html",
+            "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+            "quoteDigest": "b066befdb35d31c0e036ce0d111d5659f85878e2bedcf365277b5cb3e9f46934",
+            "schemaVersion": "evidence-anchor.v0.1",
+            "sourceBytesDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e"
+          }
+        ],
+        "chunkId": "f76811a52425c0d7",
+        "clause": "第三条",
+        "originalDigest": "4442085e7acab3ac44fbf3e9e0fcf832a9937e7f9434fb984c2a24331dcfcf7e",
+        "quote": "第三条 只有客户风险承受等级不低于产品风险等级、客户风险评估有效且产品当前可售时，才能形成合成匹配建议。缺少任一依据时应标记待核实，不得编造缺失事实。本知识服务不执行交易、自动审批或规则核验。",
+        "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367"
+      }
+    ],
+    "receipt": {
+      "schemaVersion": "knowledge-receipt.v0.1",
+      "receiptId": "kr-48e69efe199982a4a40595636097da73a92b3c96203dd288e00c340330c6fe93",
+      "coreReceiptDigest": "48e69efe199982a4a40595636097da73a92b3c96203dd288e00c340330c6fe93",
+      "productId": "synthetic-product-policy-e1bdc9d3687e",
+      "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+      "businessDate": "2026-10-31",
+      "requestId": "8a43ec32-2ccb-458f-b78e-46fe9e1bbe67-knowledge",
+      "traceId": "8a43ec32-2ccb-458f-b78e-46fe9e1bbe67",
+      "sourceDigest": "11c298e2fd93997d7bd3704ec6182dd0bf4faec610ce3fbf450e22b5927e6367",
+      "sourceId": "synthetic-product-policy-e1bdc9d3687e-source",
+      "sourceRevision": 1,
+      "indexDigest": "99adf775d106a687f17b8485725d0b8ea830aefbfb303b9910b5e5ccf02f3368",
+      "bindingDigest": "d14b8be838bf5dd0b1cd08b0455c23c27e5ce5a960f83d4516dd96a9b2a81c3a",
+      "policyDigest": "dadc600222325237d5c65eee0d9f03597a7da0e9f29a6608c9bed2e667a5359a",
+      "mode": "M2_ISOLATED_DOCUMENT"
+    }
+  }
+}

@@ -23,6 +23,8 @@ public final class KypPreparationAccess implements PreparationAccess {
     private final Clock clock;
     private final java.util.function.Supplier<BoundFinanceProvider.Grant> productGrants;
     private final AtomicBoolean closed = new AtomicBoolean();
+    private volatile ProductSelection productSelection;
+    private record ProductSelection(String traceId, JsonNode products, String channel) {}
 
     public KypPreparationAccess(PreparationAccess crm, FinanceProvider products, String sessionRef, Clock clock,
             java.util.function.Supplier<BoundFinanceProvider.Grant> productGrants) {
@@ -41,6 +43,37 @@ public final class KypPreparationAccess implements PreparationAccess {
         return snapshot;
     }
     @Override public String providerId() { return crm.providerId(); }
+    FinanceProvider productProvider() { return products; }
+    String productSession() { return sessionRef; }
+    BoundFinanceProvider.Grant productGrant() { return productGrants.get(); }
+
+    CapabilityResultV1 queryProducts(String requestId, String traceId, String keyword) {
+        if (closed.get()) throw new SecurityException("CRM_SESSION_CLOSED");
+        if (keyword == null || keyword.length() > 120 || keyword.chars().anyMatch(Character::isISOControl))
+            throw new IllegalArgumentException("KYP_KEYWORD_INVALID");
+        var grant = productGrants.get();
+        String subject = grant.subjects().stream().sorted().findFirst()
+                .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
+        var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId, traceId,
+                grant.principalId(), grant.principalType(), "finance-harness", "WEALTH_PRODUCT_REVIEW",
+                subject, sessionRef, FinanceContextV1.AuthenticationLevel.UNKNOWN, grant.scopes());
+        var request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
+                KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, context,
+                Map.of("keyword", keyword), null, null, Map.of(), null);
+        productCurrent(request, grant);
+        var result = products.query(request);
+        productCurrent(request, grant);
+        if (!requestId.equals(result.requestId()) || !traceId.equals(result.traceId()))
+            throw new SecurityException("KYP_RESULT_BINDING_MISMATCH");
+        JsonNode source = HarnessJson.mapper().valueToTree(result.data());
+        if (result.status() != CapabilityResultV1.Status.COMPLETED
+                || !"kyp-product-context.v1".equals(source.path("schema").asText())
+                || !source.path("products").isArray()
+                || source.path("sourceId").asText().isBlank()
+                || !source.path("normalizedContentDigest").asText().matches("[a-f0-9]{64}"))
+            throw new IllegalStateException("KYP_PRODUCT_CONTRACT_INVALID");
+        return result;
+    }
     @Override public void close() { closed.set(true); crm.close(); }
 
     @Override public CapabilityResultV1 query(String requestId, String traceId, String customer,
@@ -49,12 +82,20 @@ public final class KypPreparationAccess implements PreparationAccess {
             authorize(customer);
             return crm.query(requestId, traceId, customer, capability, arguments);
         }
-        if (!arguments.keySet().equals(Set.of("amount", "horizonMonths", "channel")))
+        if (!Set.of(Set.of("amount", "horizonMonths", "channel"),
+                Set.of("amount", "horizonMonths", "channel", "productRef")).contains(arguments.keySet()))
             throw new IllegalArgumentException("ALLOCATION_ARGUMENTS_INVALID");
         BigDecimal amount = positive(arguments.get("amount"), new BigDecimal("10000000000"));
         BigDecimal horizon = positive(arguments.get("horizonMonths"), new BigDecimal("1200"));
         if (!(arguments.get("channel") instanceof String channel) || channel.isBlank() || channel.length() > 64)
             throw new IllegalArgumentException("ALLOCATION_CHANNEL_REQUIRED");
+        String productRef = "";
+        if (arguments.containsKey("productRef")) {
+            if (!(arguments.get("productRef") instanceof String value)
+                    || !value.matches("[A-Za-z0-9][A-Za-z0-9-]{1,63}"))
+                throw new IllegalArgumentException("ALLOCATION_PRODUCT_REF_INVALID");
+            productRef = value;
+        }
         var productGrant = productGrants.get();
         var before = authorize(customer);
         var facts = crm.query(requestId + "-crm", traceId, customer, CustomerCrmProvider.CAPABILITY, Map.of());
@@ -71,14 +112,13 @@ public final class KypPreparationAccess implements PreparationAccess {
         String level = assessment.path("riskLevel").asText(), until = assessment.path("validUntil").asText();
         if (!level.matches("C[1-5]") || !current(until))
             throw new IllegalStateException("CUSTOMER_SUITABILITY_CONTEXT_INVALID");
-        int customerRisk = level.charAt(1) - '0';
         unchanged(customer, before);
         var sourceContext = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId + "-kyp", traceId,
                 before.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
                 "WEALTH_PRODUCT_REVIEW", customer, sessionRef, before.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
         var productRequest = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, sourceContext,
-                Map.of(), null, null, Map.of(), null);
+                Map.of("keyword", productRef), null, null, Map.of(), null);
         productCurrent(productRequest, productGrant);
         var result = products.query(productRequest);
         productCurrent(productRequest, productGrant);
@@ -92,6 +132,7 @@ public final class KypPreparationAccess implements PreparationAccess {
                 || source.path("sourceId").asText().isBlank()
                 || !source.path("normalizedContentDigest").asText().matches("[a-f0-9]{64}"))
             throw new IllegalStateException("ALLOCATION_PRODUCT_CONTRACT_INVALID");
+        productSelection = new ProductSelection(traceId, source.path("products").deepCopy(), channelCode(channel));
         var eligible = new ArrayList<Map<String,Object>>(); var excluded = new ArrayList<Map<String,Object>>();
         var missing = new TreeSet<String>(result.missingInputs());
         for (var product : source.path("products")) {
@@ -107,7 +148,7 @@ public final class KypPreparationAccess implements PreparationAccess {
             if (!"on_sale".equals(product.path("salesStatus").asText())) reasons.add("PRODUCT_NOT_SELLABLE");
             int risk = product.path("riskLevel").isIntegralNumber() && product.path("riskLevel").canConvertToInt()
                     ? product.path("riskLevel").intValue() : 0;
-            if (risk < 1 || risk > 5 || risk > customerRisk) reasons.add("RISK_MISMATCH");
+            if (risk < 1 || risk > 5) reasons.add("PRODUCT_RISK_UNKNOWN");
             if (!product.path("minimumAmount").isNumber() || product.path("minimumAmount").decimalValue().signum() < 0
                     || amount.compareTo(product.path("minimumAmount").decimalValue()) < 0) reasons.add("AMOUNT_BELOW_MINIMUM_OR_UNKNOWN");
             if (!product.path("termMonths").isIntegralNumber() || product.path("termMonths").asInt(-1) < 0
@@ -116,24 +157,30 @@ public final class KypPreparationAccess implements PreparationAccess {
             for (var value : product.path("channels")) allowedChannel |= channel.equals(value.asText());
             if (!allowedChannel) reasons.add("CHANNEL_NOT_ALLOWED");
             var item = new LinkedHashMap<String,Object>();
-            for (String key : List.of("productId", "name", "sourceId", "factsAsOf", "salesAsOf", "salesTrust", "factsType"))
+            for (String key : List.of("productId", "name", "sourceId", "factsAsOf", "salesAsOf", "salesTrust", "factsType", "businessIdentity"))
                 if (product.hasNonNull(key)) item.put(key, HarnessJson.mapper().convertValue(product.get(key), Object.class));
             item.put("riskLevel", "R" + risk);
             item.put("termMonths", product.path("termMonths").asInt(-1));
             if (product.path("minimumAmount").isNumber()) item.put("minAmount", product.path("minimumAmount").decimalValue());
             item.put("channels", HarnessJson.mapper().convertValue(product.path("channels"), Object.class));
-            if (reasons.isEmpty()) { item.put("policyCode", "WEALTH_SUITABILITY_MATCH:ELIGIBLE"); eligible.add(Map.copyOf(item)); }
+            item.put("suitabilityStatus", "REQUIRES_AUTHORIZED_RULE");
+            if (reasons.isEmpty()) { item.put("policyCode", "PRODUCT_FACTS_MATCH:SUITABILITY_PENDING"); eligible.add(Map.copyOf(item)); }
             else { item.put("reasonCodes", List.copyOf(new LinkedHashSet<>(reasons))); excluded.add(Map.copyOf(item)); }
         }
         var data = new LinkedHashMap<String,Object>();
         data.put("schema", "harness.wealth-allocation-context.v1");
         data.put("status", !missing.isEmpty() ? "partial" : eligible.isEmpty() ? "no_eligible_products" : "ready");
         data.put("customerRef", customer); data.put("customerRiskLevel", level); data.put("assessmentValidUntil", until);
-        data.put("request", Map.of("amount", amount, "horizonMonths", horizon, "channel", channel));
+        var normalizedRequest = new LinkedHashMap<String,Object>();
+        normalizedRequest.put("amount", amount); normalizedRequest.put("horizonMonths", horizon);
+        normalizedRequest.put("channel", channel);
+        if (!productRef.isBlank()) normalizedRequest.put("productRef", productRef);
+        data.put("request", Map.copyOf(normalizedRequest));
         data.put("eligibleProducts", List.copyOf(eligible)); data.put("excludedProducts", List.copyOf(excluded));
         data.put("sourceProducts", result.data().get("products"));
-        data.put("eligibilityPolicy", Map.of("horizonRule", "PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON"));
-        data.put("policySource", Map.of("ruleVersion", "wealth-suitability-v1", "sourceId", source.path("sourceId").asText(),
+        data.put("eligibilityPolicy", Map.of("horizonRule", "PRODUCT_TERM_NOT_LONGER_THAN_CUSTOMER_HORIZON",
+                "suitabilityRule", "NOT_CONFIGURED"));
+        data.put("policySource", Map.of("ruleVersion", "product-facts-screening-v2", "sourceId", source.path("sourceId").asText(),
                 "catalogDigest", source.path("normalizedContentDigest").asText(), "coverage", source.path("coverage").asText()));
         if (!(facts.data().get("hostEvidence") instanceof Map<?,?> receipt) || receipt.isEmpty())
             throw new IllegalStateException("CRM_SOURCE_RECEIPT_MISSING");
@@ -145,8 +192,30 @@ public final class KypPreparationAccess implements PreparationAccess {
                 "Product facts screened against authorized customer context; no purchase or CRM write.", Map.copyOf(data),
                 List.copyOf(missing), List.of(), source.path("sourceId").asText(), result.asOf(), null, null);
     }
+    JsonNode productsFor(String traceId) {
+        ProductSelection current = productSelection;
+        if (current == null || !current.traceId().equals(traceId))
+            throw new SecurityException("PRODUCT_IDENTITY_NOT_BOUND_TO_RUN");
+        return current.products().deepCopy();
+    }
+    String productChannelFor(String traceId) {
+        ProductSelection current = productSelection;
+        if (current == null || !current.traceId().equals(traceId))
+            throw new SecurityException("PRODUCT_IDENTITY_NOT_BOUND_TO_RUN");
+        return current.channel();
+    }
+    private static String channelCode(String channel) {
+        return switch (channel) {
+            case "网点", "柜面", "branch" -> "BRANCH";
+            case "手机银行", "手机端", "mobile" -> "MOBILE_BANKING";
+            default -> throw new IllegalArgumentException("ALLOCATION_CHANNEL_UNSUPPORTED");
+        };
+    }
     @Override public Runnable resultReleaseGuard(String customer, CapabilityResultV1 result) {
         Runnable customerGuard = crm.resultReleaseGuard(customer, result);
+        if (result.data().containsKey("previsitContext") && !result.data().containsKey("productAuthorityBinding")
+                && !result.data().containsKey("sourceEvidence") && !result.data().containsKey("eligibleProducts"))
+            return customerGuard;
         if (!result.data().containsKey("productAuthorityBinding"))
             throw new SecurityException("KYP_RESULT_AUTHORITY_BINDING_MISSING");
         var initial = productGrants.get();

@@ -88,7 +88,7 @@ final class ConversationHostTest {
         return new CustomerManagerScenarioExtension.Managed("owner-a", "session-a", task, method,
                 useInstalledReadPolicy?ConversationCapabilities.fromLock(capabilityLock)
                         :new ConversationCapabilities(installedActions, List.of("wealth.previsit-context.query")),
-                "instance-a", proposer,scope::get,
+                "instance-a", null, proposer,scope::get,
                 new io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence(files,Map::of));
     }
     private static JsonNode body(String query, String confirmation) {

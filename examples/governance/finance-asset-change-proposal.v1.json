@@ -8,7 +8,7 @@
     "catalogRevision": "2026-11-03.scenario-industrialization-feat001-candidate",
     "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:ea1c61f473ea4c2e28b551c494b48ce25698c9e5166df3a0cf26bd4c11c53cdd"
+    "digest": "sha256:dc4f5ee0455bd0f50dd530609b10fea38c5508dddf8ff89a980b97e77da0ef46"
   },
   "target": {
     "kind": "domain-pack",

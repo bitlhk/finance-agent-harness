@@ -2,6 +2,7 @@ package io.github.bitlhk.finance.harness.providers.knowledge;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.observation.ObservationRun;
+import io.github.bitlhk.finance.harness.core.CapabilityRequestV1;
 import io.github.bitlhk.finance.harness.core.spi.*;
 import java.net.URI;
 import java.nio.file.*;
@@ -15,30 +16,37 @@ public final class InstalledKnowledgeProvider {
     private InstalledKnowledgeProvider() { }
 
     public static Map<String, FinanceProvider> prepare(Path root) {
+        return prepare(root, Map.of());
+    }
+
+    /** Peers must be actual Host-prepared adapters, never IDs supplied by a request. */
+    public static Map<String, FinanceProvider> prepare(Path root, Map<String, FinanceProvider> peers) {
         return create(root, () -> { throw new SecurityException("PLAN_ONLY_NO_SESSION"); },
             () -> { throw new SecurityException("PLAN_ONLY_NO_GRANT"); }, () -> null,
-            ignored -> { throw new IllegalStateException("PLAN_ONLY_NO_HTTP"); });
+            ignored -> { throw new IllegalStateException("PLAN_ONLY_NO_HTTP"); }, peers);
     }
 
     public static Map<String, FinanceProvider> create(Path root,
             Supplier<ManagedProviderFactoryV01.SourceSession> sessions,
             Supplier<BoundFinanceProvider.Grant> grants, Supplier<ObservationRun> observation,
             Consumer<ManagedProviderFactoryV01.HttpAttempt> attempts) {
+        return create(root, sessions, grants, observation, attempts, Map.of());
+    }
+
+    /** Returns only the knowledge adapter; global installation still checks the combined registry. */
+    public static Map<String, FinanceProvider> create(Path root,
+            Supplier<ManagedProviderFactoryV01.SourceSession> sessions,
+            Supplier<BoundFinanceProvider.Grant> grants, Supplier<ObservationRun> observation,
+            Consumer<ManagedProviderFactoryV01.HttpAttempt> attempts, Map<String, FinanceProvider> peers) {
         try {
             root = root.toAbsolutePath().normalize();
             JsonNode lock = read(root.resolve("service-lock.json"), 2_000_000);
             JsonNode plan = locked(root, lock, "component-plan.json", 2_000_000);
-            var capabilities = new HashSet<String>();
-            lock.path("capabilities").forEach(c -> capabilities.add(c.asText()));
-            if (!capabilities.equals(Set.of(KnowledgeProvider.SEARCH))
-                    || plan.path("capabilityBindings").size() != 1
-                    || !KnowledgeProvider.ID.equals(plan.path("capabilityBindings").path(KnowledgeProvider.SEARCH).asText()))
-                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
             JsonNode bindings = locked(root, lock, "provider-bindings.json", 65536);
             fields(bindings, Set.of("schemaVersion", "providers"));
             if (!"finance-host-provider-bindings.v0.1".equals(bindings.path("schemaVersion").asText()))
                 throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
-            fields(bindings.path("providers"), Set.of(KnowledgeProvider.ID));
+            composition(lock, plan, bindings, Map.copyOf(peers));
             JsonNode selected = bindings.path("providers").path(KnowledgeProvider.ID);
             fields(selected, Set.of("connectionRef", "kind", "endpoint", "timeoutMillis", "configuration"));
             JsonNode reference = plan.path("providerConnections").path(KnowledgeProvider.ID);
@@ -73,6 +81,60 @@ public final class InstalledKnowledgeProvider {
         catch (Exception invalid) { throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_UNAVAILABLE"); }
     }
 
+    private static void composition(JsonNode lock, JsonNode plan, JsonNode bindings,
+                                    Map<String, FinanceProvider> peers) {
+        if (peers.containsKey(KnowledgeProvider.ID) || !lock.path("capabilities").isArray())
+            throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+        var capabilities = new HashSet<String>();
+        for (var value : lock.path("capabilities")) {
+            if (!value.isTextual() || value.asText().isBlank() || !capabilities.add(value.asText()))
+                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+        }
+        fields(plan.path("capabilityBindings"), capabilities);
+        if (!KnowledgeProvider.ID.equals(plan.path("capabilityBindings").path(KnowledgeProvider.SEARCH).asText()))
+            throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+        var providers = new HashSet<>(peers.keySet());
+        providers.add(KnowledgeProvider.ID);
+        fields(plan.path("providerConnections"), providers);
+        fields(bindings.path("providers"), providers);
+        var used = new HashSet<String>();
+        for (String capability : capabilities) {
+            if (capability.startsWith("knowledge.") && !KnowledgeProvider.SEARCH.equals(capability))
+                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+            JsonNode target = plan.path("capabilityBindings").path(capability);
+            if (!target.isTextual()) throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+            String provider = target.asText();
+            used.add(provider);
+            if (KnowledgeProvider.ID.equals(provider)) {
+                if (!KnowledgeProvider.SEARCH.equals(capability))
+                    throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+            } else if (!(peers.get(provider) instanceof DescribedFinanceProvider described)
+                    || !provider.equals(described.descriptor().providerId())
+                    || !described.descriptor().supports(capability, CapabilityRequestV1.Operation.QUERY)) {
+                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+            }
+        }
+        if (!used.equals(providers)) throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+        var connections = new HashMap<String, JsonNode>();
+        for (String provider : providers) {
+            var reference = plan.path("providerConnections").path(provider);
+            var selected = bindings.path("providers").path(provider);
+            fields(reference, Set.of("connectionRef", "kind"));
+            fields(selected, Set.of("connectionRef", "kind", "endpoint", "timeoutMillis", "configuration"));
+            if (!reference.path("connectionRef").isTextual()
+                    || !reference.path("connectionRef").asText().matches("[a-z][a-z0-9-]{0,63}")
+                    || !reference.path("kind").isTextual() || reference.path("kind").asText().isBlank()
+                    || !selected.path("connectionRef").equals(reference.path("connectionRef"))
+                    || !selected.path("kind").equals(reference.path("kind")))
+                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+            var previous = connections.putIfAbsent(reference.path("connectionRef").asText(), selected);
+            if (previous != null && (!previous.path("kind").equals(selected.path("kind"))
+                    || !previous.path("endpoint").equals(selected.path("endpoint"))
+                    || !previous.path("timeoutMillis").equals(selected.path("timeoutMillis"))))
+                throw new IllegalArgumentException("KNOWLEDGE_INSTALLATION_MISMATCH");
+        }
+    }
+
     private static JsonNode locked(Path root, JsonNode lock, String name, int limit) throws Exception {
         Path file = root.resolve(name);
         if (!file.toRealPath().startsWith(root.toRealPath()) || Files.isSymbolicLink(file))
@@ -101,4 +163,3 @@ public final class InstalledKnowledgeProvider {
             throw new IllegalArgumentException("KNOWLEDGE_CONFIGURATION_INVALID");
     }
 }
-

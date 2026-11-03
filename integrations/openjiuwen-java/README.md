@@ -100,6 +100,25 @@ var installation = solution.installationForCapability("transfer.internal.create"
 
 装配时校验已声明的 `sha256:` 摘要。Domain Pack 使用目录树摘要，Capability Pack 使用 `pack.yaml` 摘要；本地 Profile、Evaluation 和 Provider 源码引用也会记录摘要，目录树排除 `target/build/logs/.git`。Provider 实际加载的类目录或 JAR 单独记录为 `PROVIDER_RUNTIME`。外部引用的摘要如果无法解析会拒绝装配；没有摘要的外部评测引用仍属于待验证输入，不能声称已经锁定。完整依赖、模型配置和业务输出合同将在下一阶段固化。
 
+### Provider 独立调用上下文
+
+联合安装仍使用一次 `prepare` 和一份完整 Solution Lock，不拆成多个 Agent 或局部 Lock。
+Host 可使用 `installWithProviderContexts(prepared, agent, contexts, simulated, checkpoints)`，
+为每个实际选中的 Provider 提供 `ProviderInvocation(defaults, hostSessionRef)`。
+`contexts` 必须与已解析的 Provider 集合精确一致；缺少或多余项在 SDK 注册前拒绝。
+该映射只能来自可信 Host，不能反序列化浏览器或模型提供的身份、权限或会话。
+
+纯查询调用可使用 `prepared.openQueriesWithProviderContexts(contexts, simulated)`；
+该入口仍拒绝任何 TASK。原生工具安装继续按 Capability Pack 的 QUERY/TASK 类型分流，
+TASK 保留原来的可信人工确认、检查点和幂等处理，不因联合知识查询而改成 QUERY。
+旧 `install` / `openQueries` 接口与旧 TASK 检查点身份保持兼容。
+新增按 Provider 的 TASK 检查点作用域包含各自的身份、对象、用途、权限及 Host 会话，
+不复用另一种上下文的待确认任务。
+
+这里仅隔离调用上下文，不授予权限，也不处理跨 Provider 数据外发许可。
+联合业务 Host 仍须独立检查每个来源的当前授权、检索入参的数据边界和历史查看权限。
+安装测试不是实际采集器资格或普通工作台 Build/模型联合验收。
+
 ### Checkpoint 数值与补参兼容
 
 文件 Store 单独启用十进制精确读取，浮点 JSON 数字读为 `BigDecimal`；不改变全局

@@ -20,13 +20,16 @@ final class OpenJiuwenIntentProposer {
     static final String INSTRUCTION = "你是意图分类器，不回答业务问题、不调用工具、不产生授权。只输出一个JSON对象，"
             + "严格包含schema、kind、objectRef、reportRef、revision五个字段，不得增加字段或代码围栏。"
             + "schema必须为finance-conversation-intent.v1。kind只可为GREETING、CAPABILITIES、LIST_OBJECTS、"
-            + "CLARIFY、SELECT_OBJECT、CANCEL_TASK、RESOLVE_OBJECT、CONTINUE_TASK、EXPLAIN_REPORT、PREPARE、PRODUCT_REVIEW、UNSUPPORTED。"
+            + "CLARIFY、SELECT_OBJECT、CANCEL_TASK、RESOLVE_OBJECT、CONTINUE_TASK、EXPLAIN_REPORT、PREPARE、PRODUCT_REVIEW、KNOWLEDGE_QUERY、UNSUPPORTED。"
             + "问候是GREETING；询问能做什么是CAPABILITIES；询问负责哪些客户是LIST_OBJECTS；"
             + "只有selectedReport存在且用户解释这份报告、数字或来源时才是EXPLAIN_REPORT。"
             + "没有selectedReport时，明确为某客户准备回访是PREPARE；只说看某客户的回访而不能确定新准备还是已有记录时为CLARIFY，不能要求用户提供内部版本号。"
             + "切换客户不是解释上一位客户的报告，不能跨对象沿用报告引用；也不能因含回访或产品词语就自动执行。"
             + "只分类顶层userText这一条当前消息；previousDialogue里的userText都是过去消息，不能代替当前消息。"
             + "明确要求回访准备可建议PREPARE，明确筛选产品候选才可建议PRODUCT_REVIEW。"
+            + "仅当availableActions包含KNOWLEDGE_QUERY，且当前消息是在询问已发布文档中的制度、规则、条款、条件、要求、适用范围、义务或依据时，返回KNOWLEDGE_QUERY；"
+            + "询问某类业务应当、不得、是否允许、需要满足什么条件或应履行什么要求，也属于KNOWLEDGE_QUERY，即使用户没有直接说制度或条款；"
+            + "它不读取客户事实，不得把客户姓名、编号、账户、持仓、金额或CRM内容当作知识查询。普通业务办理、客户问题和闲聊不能分类为KNOWLEDGE_QUERY。"
             + "目标识别与执行条件齐备是两回事：已明确筛选产品但缺客户、金额、期限或渠道，仍返回PRODUCT_REVIEW，缺客户时objectRef为null；不能仅因条件缺失返回CLARIFY。"
             + "当前只支持逐位客户服务；请求给负责的客户筛选产品时先保留PRODUCT_REVIEW目标并补一位客户，不承诺整个名单批量执行。"
             + "结合本轮和previousDialogue理解口语或错别字，但不能猜测对象、金额或把含糊请求自动执行；仍不能确定目标时返回CLARIFY。"
@@ -105,6 +108,8 @@ final class OpenJiuwenIntentProposer {
         if (selectedObject != null && !authorizedObjects.contains(selectedObject))
             throw new SecurityException("CONVERSATION_OBJECT_REJECTED");
         checkCancelled(cancelled);
+        if (isDirectKnowledgeQuestion(query, installedActions))
+            return new ConversationIntent(ConversationIntent.Kind.KNOWLEDGE_QUERY, null, null, null);
         String session = UUID.randomUUID().toString();
         try {
             var input = new LinkedHashMap<String,Object>();
@@ -135,6 +140,13 @@ final class OpenJiuwenIntentProposer {
                 throw new IllegalArgumentException("CONVERSATION_INTENT_INVALID");
             return intent;
         } finally { Runner.release(session); }
+    }
+
+    static boolean isDirectKnowledgeQuestion(String query, Set<ConversationIntent.Kind> installedActions) {
+        if (!installedActions.contains(ConversationIntent.Kind.KNOWLEDGE_QUERY)) return false;
+        String text = query.strip();
+        return text.matches(".*(?:应当|不得|是否(?:可以|允许)|需要满足(?:什么|哪些)?条件|具备(?:什么|哪些)条件|"
+                + "应履行(?:什么|哪些)?(?:义务|要求)|适用范围|依据(?:是什么|有哪些)?|(?:制度|规则|条款|规定)如何?要求).*");
     }
 
     private static void checkCancelled(BooleanSupplier cancelled) {

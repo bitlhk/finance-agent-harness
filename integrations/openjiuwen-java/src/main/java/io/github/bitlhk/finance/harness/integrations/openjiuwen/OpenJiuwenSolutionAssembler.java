@@ -206,6 +206,21 @@ public final class OpenJiuwenSolutionAssembler {
     public AssembledSolution install(PreparedSolution prepared, BaseAgent agent,
             OpenJiuwenFinanceBridge.InvocationDefaults defaults, boolean simulated,
             TaskCheckpointStore checkpoints, String hostSessionRef) {
+        return install(prepared, agent, defaults, simulated, checkpoints, hostSessionRef, null);
+    }
+
+    /** All selected Providers require explicit trusted Host contexts; none inherits another's session. */
+    public AssembledSolution installWithProviderContexts(PreparedSolution prepared, BaseAgent agent,
+            Map<String, OpenJiuwenCapabilityInstaller.ProviderInvocation> contexts, boolean simulated,
+            TaskCheckpointStore checkpoints) {
+        var frozen = OpenJiuwenCapabilityInstaller.exactContexts(prepared.bindings, contexts);
+        return install(prepared, agent, null, simulated, checkpoints, null, frozen);
+    }
+
+    private AssembledSolution install(PreparedSolution prepared, BaseAgent agent,
+            OpenJiuwenFinanceBridge.InvocationDefaults defaults, boolean simulated,
+            TaskCheckpointStore checkpoints, String hostSessionRef,
+            Map<String, OpenJiuwenCapabilityInstaller.ProviderInvocation> contexts) {
         Objects.requireNonNull(prepared, "prepared");
         Objects.requireNonNull(agent, "agent");
         var spec = prepared.spec;
@@ -231,8 +246,10 @@ public final class OpenJiuwenSolutionAssembler {
             }
             boolean installTerminology = true;
             for (FinanceCapabilityPackV1 pack : loadedCapabilityPacks) {
-                installations.add(installer.install(
+                installations.add(contexts == null ? installer.install(
                         agent, providerBindings, defaults, pack, simulated, checkpoints, hostSessionRef,
+                        capabilityDescriptions, installTerminology) : installer.installWithProviderContexts(
+                        agent, providerBindings, contexts, pack, simulated, checkpoints,
                         capabilityDescriptions, installTerminology));
                 installTerminology = false;
             }
@@ -371,7 +388,15 @@ public final class OpenJiuwenSolutionAssembler {
 
         public ReadOnlyInstallation openQueries(OpenJiuwenFinanceBridge.InvocationDefaults defaults,
                                                boolean simulated, String hostSessionRef) {
-            return new ReadOnlyInstallation(this, defaults, simulated, hostSessionRef);
+            var context = new OpenJiuwenCapabilityInstaller.ProviderInvocation(defaults, hostSessionRef);
+            var contexts = new LinkedHashMap<String, OpenJiuwenCapabilityInstaller.ProviderInvocation>();
+            bindings.values().forEach(binding -> contexts.put(binding.providerId(), context));
+            return openQueriesWithProviderContexts(contexts, simulated);
+        }
+
+        public ReadOnlyInstallation openQueriesWithProviderContexts(
+                Map<String, OpenJiuwenCapabilityInstaller.ProviderInvocation> contexts, boolean simulated) {
+            return new ReadOnlyInstallation(this, OpenJiuwenCapabilityInstaller.exactContexts(bindings, contexts), simulated);
         }
     }
 
@@ -382,18 +407,18 @@ public final class OpenJiuwenSolutionAssembler {
         private final Map<String, FinanceCapabilityPackV1.Capability> capabilities = new LinkedHashMap<>();
         private final Map<String, QueryInputValidator> validators = new LinkedHashMap<>();
 
-        private ReadOnlyInstallation(PreparedSolution prepared, OpenJiuwenFinanceBridge.InvocationDefaults defaults,
-                                     boolean simulated, String session) {
+        private ReadOnlyInstallation(PreparedSolution prepared,
+                Map<String, OpenJiuwenCapabilityInstaller.ProviderInvocation> contexts, boolean simulated) {
             this.prepared = prepared;
-            if (session == null || session.isBlank()) throw new IllegalArgumentException("Host session required");
             for (var pack : prepared.capabilityPacks) for (var capability : pack.capabilities()) {
                 if (capability.operation() != FinanceCapabilityPackV1.Operation.QUERY)
                     throw new IllegalArgumentException("READONLY_INSTALLATION_REJECTS_TASK");
                 var binding = prepared.bindings.get(capability.capabilityId());
+                var context = contexts.get(binding.providerId());
                 capabilities.put(capability.capabilityId(), capability);
                 validators.put(capability.capabilityId(), new QueryInputValidator(capability.inputSchema()));
                 bridges.put(capability.capabilityId(), new OpenJiuwenFinanceBridge(binding.provider(), binding.providerId(),
-                        defaults, Set.of(capability.capabilityId()), simulated).hostSession(session));
+                        context.defaults(), Set.of(capability.capabilityId()), simulated).hostSession(context.hostSessionRef()));
             }
         }
 

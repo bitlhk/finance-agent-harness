@@ -1,0 +1,21 @@
+{
+  "agentId": "agent-04e765facfe04ece",
+  "instanceId": "6ddba573-b621-43bf-b765-d62db1e0ee05",
+  "installationLock": "482a841535a8dd6361a7a8b0eba01ce5c6b98bdd39aaaa0d087b5875e0c1a822",
+  "manifest": "1d51ac2b45f67ad61099c5a741017c23bb5096c7300fe12a3395f5a45de1449f",
+  "coreReceiptDigests": [
+    "48e69efe199982a4a40595636097da73a92b3c96203dd288e00c340330c6fe93"
+  ],
+  "hostRequestId": "c08ca4df-d268-4c02-97be-1e99ec766ee4",
+  "historyReads": [
+    "8abee05a-fe7b-4fad-9707-58b61fbe6da5",
+    "2217904a-40b0-471d-837d-f904bc24cdfc"
+  ],
+  "authentication": "REAL_CREATOR_LOCAL_WORKBENCH_SESSION_NOT_SSO",
+  "model": "REAL_VOLCENGINE_DEEPSEEK",
+  "source": "REAL_FACTORY_QUERY_AND_HISTORY_HTTP",
+  "queryServiceStoppedBeforeHistory": true,
+  "modelCallsDuringHistory": 0,
+  "newQueryReceiptsDuringHistory": 0,
+  "historyOutboundAttempts": 0
+}

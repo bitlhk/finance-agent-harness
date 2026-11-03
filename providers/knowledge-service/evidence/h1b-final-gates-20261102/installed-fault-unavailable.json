@@ -1,0 +1,28 @@
+{
+  "name": "unavailable",
+  "level": "INSTALLED_HOST_REAL_FACTORY_TRANSPORT_FAULT",
+  "httpStatus": 200,
+  "response": "data: {\"runId\": \"fault-1ff29927fac345929a7bdd83efbd22e9\", \"threadId\": \"ade3a83a-7aa4-4b8b-9b33-d839b3c86edc\", \"type\": \"RUN_STARTED\"}\n\ndata: {\"type\": \"STEP_STARTED\", \"stepName\": \"governed_execution\"}\n\ndata: {\"type\": \"STEP_FINISHED\", \"stepName\": \"governed_execution\"}\n\ndata: {\"type\": \"RUN_ERROR\", \"code\": \"REFERENCE_CONVERSATION_INVALID\"}\n\n",
+  "rejected": true,
+  "noBusinessDisclosure": true,
+  "originalArchiveUnchanged": true,
+  "transport": [
+    {
+      "path": "/session",
+      "mode": "normal",
+      "status": 200
+    },
+    {
+      "path": "/query",
+      "mode": "unavailable",
+      "status": 503
+    },
+    {
+      "path": "/session",
+      "mode": "normal",
+      "status": 200
+    }
+  ],
+  "faultTransportExercised": true,
+  "passed": true
+}

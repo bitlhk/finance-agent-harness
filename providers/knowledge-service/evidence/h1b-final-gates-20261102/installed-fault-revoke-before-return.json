@@ -1,0 +1,23 @@
+{
+  "name": "revoke-before-return",
+  "level": "INSTALLED_HOST_REAL_FACTORY_TRANSPORT_FAULT",
+  "httpStatus": 200,
+  "response": "data: {\"runId\": \"fault-a3abfa1b152d4ae69282ad0a4e0675d2\", \"threadId\": \"ade3a83a-7aa4-4b8b-9b33-d839b3c86edc\", \"type\": \"RUN_STARTED\"}\n\ndata: {\"type\": \"STEP_STARTED\", \"stepName\": \"governed_execution\"}\n\ndata: {\"code\": \"AUTHORIZATION_REJECTED\", \"message\": \"SCENARIO_STREAM_FAILED\", \"type\": \"RUN_ERROR\"}\n\n",
+  "rejected": true,
+  "noBusinessDisclosure": true,
+  "originalArchiveUnchanged": true,
+  "transport": [
+    {
+      "path": "/session",
+      "mode": "normal",
+      "status": 200
+    },
+    {
+      "path": "/query",
+      "mode": "barrier",
+      "status": 200
+    }
+  ],
+  "faultTransportExercised": true,
+  "passed": true
+}

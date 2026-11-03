@@ -25,9 +25,15 @@ class ModelSnapshotClientTest {
         assertEquals(false,timeout.get("httpSendCountObserved"));
         String rendered=timeout.toString();
         assertFalse(rendered.contains("CUSTOMER_TEXT"));assertFalse(rendered.contains("secret-token"));
+        assertEquals("UNCLASSIFIED",((Map<?,?>)timeout.get("failureFrame")).get("component"));
 
         var reset=ModelSnapshotClient.streamTermination(new RuntimeException(new SocketException("Connection reset by peer")),"ITERATOR_NEXT",2);
         assertEquals("SOCKET_RESET_OR_CLOSED",reset.get("terminationReason"));
+        var http2Cancel=ModelSnapshotClient.streamTermination(new RuntimeException(
+                new okhttp3.internal.http2.StreamResetException(okhttp3.internal.http2.ErrorCode.CANCEL)),
+                "STREAM_OPEN",0);
+        assertEquals("HTTP2_STREAM_RESET_CANCEL",http2Cancel.get("terminationReason"));
+        assertEquals("CANCEL",http2Cancel.get("http2ResetErrorCode"));
         var eof=ModelSnapshotClient.streamTermination(new RuntimeException(new java.io.EOFException("partial")),"ITERATOR_HAS_NEXT",1);
         assertEquals("UNEXPECTED_EOF",eof.get("terminationReason"));
         var cancelled=ModelSnapshotClient.streamTermination(new CancellationException("caller cancelled"),"STREAM_OPEN",0);
@@ -39,6 +45,14 @@ class ModelSnapshotClientTest {
                 new com.fasterxml.jackson.core.JsonParseException(null,"PRIVATE_STREAM_BODY")),"ITERATOR_NEXT",1);
         assertEquals("MALFORMED_STREAM_PAYLOAD",malformed.get("terminationReason"));
         assertFalse(malformed.toString().contains("PRIVATE_STREAM_BODY"));
+        var sdkFailure=new IllegalArgumentException("PRIVATE",new RuntimeException());
+        sdkFailure.setStackTrace(new StackTraceElement[]{new StackTraceElement(
+                "com.openjiuwen.core.foundation.llm.model_clients.OpenAiCompatibleModelClient$StreamingChunkIterator",
+                "readNextChunk","OpenAiCompatibleModelClient.java",417)});
+        var sdkFrame=(Map<?,?>)ModelSnapshotClient.streamTermination(sdkFailure,"ITERATOR_HAS_NEXT",0).get("failureFrame");
+        assertEquals("OPENJIUWEN_MODEL_CLIENT",sdkFrame.get("component"));
+        assertEquals("readNextChunk",sdkFrame.get("method"));
+        assertFalse(sdkFrame.toString().contains("PRIVATE"));
         assertEquals("ITERATOR_EXHAUSTED",ModelSnapshotClient.streamTermination(null,"ITERATOR_HAS_NEXT",3).get("terminationReason"));
     }
     @Test void concurrentScopesAreIsolatedAndResponseExcludesReasoning() throws Exception {

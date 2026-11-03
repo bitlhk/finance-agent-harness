@@ -9,12 +9,14 @@ import java.time.LocalDate;
 import java.util.*;
 
 /** Host-owned, digest-pinned instance binding. Never supplied by a tool call. */
-public record KnowledgeBinding(String productId, String manifest, LocalDate businessDate, String sha256) {
+public record KnowledgeBinding(String productId, String manifest, LocalDate businessDate,
+        String businessBindingDigest, String sha256) {
     static final ObjectMapper JSON = new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
         .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     public KnowledgeBinding {
         if (productId == null || !productId.matches("[a-z0-9-]{1,80}")
                 || manifest == null || !manifest.matches("[a-f0-9]{64}") || businessDate == null
+                || (businessBindingDigest != null && !businessBindingDigest.matches("[a-f0-9]{64}"))
                 || sha256 == null || !sha256.matches("[a-f0-9]{64}"))
             throw new IllegalArgumentException("KNOWLEDGE_BINDING_INVALID");
     }
@@ -27,11 +29,15 @@ public record KnowledgeBinding(String productId, String manifest, LocalDate busi
             String actual = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
             if (!actual.equals(expected)) throw new IllegalArgumentException();
             var node = JSON.readTree(bytes);
-            if (node.size() != 4 || !"knowledge-binding.v0.1".equals(node.path("schemaVersion").asText()))
+            String version = node.path("schemaVersion").asText();
+            if (!(node.size() == 4 && "knowledge-binding.v0.1".equals(version))
+                    && !(node.size() == 5 && "knowledge-binding.v0.2".equals(version)
+                        && node.path("businessBindingDigest").asText().matches("[a-f0-9]{64}")))
                 throw new IllegalArgumentException();
             return new KnowledgeBinding(node.get("productId").textValue(), node.get("manifest").textValue(),
-                LocalDate.parse(node.get("businessDate").textValue()), actual);
+                LocalDate.parse(node.get("businessDate").textValue()),
+                "knowledge-binding.v0.2".equals(version) ? node.get("businessBindingDigest").textValue() : null,
+                actual);
         } catch (Exception error) { throw new IllegalArgumentException("KNOWLEDGE_BINDING_INVALID"); }
     }
 }
-

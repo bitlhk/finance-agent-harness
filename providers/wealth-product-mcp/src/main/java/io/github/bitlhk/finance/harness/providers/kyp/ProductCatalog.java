@@ -25,9 +25,30 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
     public record Product(String id, String name, String sourceId, String factsType,
             Instant factsAsOf, Instant salesAsOf, SalesTrust salesTrust, String salesStatus,
             int riskLevel, BigDecimal minimumAmount, Integer termMonths, Set<String> channels,
-            List<String> issues) {
+            BusinessIdentity businessIdentity, List<String> issues) {
         public Product { channels = Set.copyOf(channels); issues = List.copyOf(issues); }
         public boolean eligibleForScreening() { return issues.isEmpty(); }
+    }
+
+    public record BusinessIdentity(String managerId, String managerProductCode,
+            String registrationCode, String distributorId, String salesCode, String shareClass) {
+        static BusinessIdentity parse(JsonNode value, List<String> issues) {
+            if (value == null || value.isMissingNode() || value.isNull()) return null;
+            if (!value.isObject()) { issues.add("PRODUCT_BUSINESS_IDENTITY_INVALID"); return null; }
+            var names = new TreeSet<String>(); value.fieldNames().forEachRemaining(names::add);
+            if (!names.equals(Set.of("managerId", "managerProductCode", "registrationCode",
+                    "distributorId", "salesCode", "shareClass"))) {
+                issues.add("PRODUCT_BUSINESS_IDENTITY_INVALID"); return null;
+            }
+            var fields = new ArrayList<String>();
+            for (String key : names) fields.add(text(value, key));
+            if (fields.stream().anyMatch(item -> item.isBlank() || item.length() > 128)) {
+                issues.add("PRODUCT_BUSINESS_IDENTITY_INVALID"); return null;
+            }
+            return new BusinessIdentity(text(value,"managerId"), text(value,"managerProductCode"),
+                    text(value,"registrationCode"), text(value,"distributorId"),
+                    text(value,"salesCode"), text(value,"shareClass"));
+        }
     }
 
     /** Nested details and reviewed search summaries retain distinct completeness levels. */
@@ -97,8 +118,9 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
                     else channels.add(channel.asText());
                 }
                 if (channels.isEmpty()) issues.add("SALES_CHANNEL_MISSING");
+                BusinessIdentity identity = BusinessIdentity.parse(facts.path("businessIdentity"), issues);
                 products.add(new Product(id, name, policy.sourceId(), type, factsTime, salesTime,
-                        policy.salesTrust(), status, risk, minimum, months, channels, issues));
+                        policy.salesTrust(), status, risk, minimum, months, channels, identity, issues));
             }
             String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
             return new ProductCatalog(products, now, digest);
