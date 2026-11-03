@@ -231,7 +231,7 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
                 && "EVIDENCE_FOUND".equals(data.path("decision").asText())
                 && data.path("evidence").isArray() && !data.path("evidence").isEmpty();
         var reply = new LinkedHashMap<String,Object>();
-        reply.put("status", found ? "COMPLETED" : result.status() == CapabilityResultV1.Status.COMPLETED ? "NO_EVIDENCE" : "PARTIAL");
+        reply.put("status", "ANSWERED");
         reply.put("response", policyAnswer(userQuestion, data, found));
         reply.put("responseScope", "KNOWLEDGE_EVIDENCE");
         reply.put("toolResults", List.of(Map.of("data", Map.of(

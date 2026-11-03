@@ -122,7 +122,7 @@ final class ConversationHostTest {
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES);
                 var session=session(model.proposer(),null,products,null)) {
             var response=session.call("chat",body("有哪些产品你能看到？",null));
-            assertEquals("COMPLETED",response.get("status"));
+            assertEquals("ANSWERED",response.get("status"));
             assertTrue(response.get("response").toString().contains("132112"));
             assertTrue(model.requests.isEmpty());
         }

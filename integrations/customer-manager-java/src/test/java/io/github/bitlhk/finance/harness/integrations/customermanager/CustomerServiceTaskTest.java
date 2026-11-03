@@ -38,6 +38,7 @@ class CustomerServiceTaskTest {
         var access=new Access();
         var task=new CustomerServiceTask(access,alias -> "周明远".equals(alias)?"CUST-1":null);
         var result=task.run("看看周明远的持仓和到期事项","周明远","run-1");
+        assertEquals("ANSWERED",result.get("status"));
         String response=(String)result.get("response");
         assertTrue(response.contains("稳健组合"));
         assertTrue(response.contains("MATURITY_DUE"));

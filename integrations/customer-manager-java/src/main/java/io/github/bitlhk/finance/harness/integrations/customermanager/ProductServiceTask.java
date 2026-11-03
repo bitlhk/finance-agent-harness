@@ -47,7 +47,7 @@ final class ProductServiceTask {
         boolean list = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         var reply = new LinkedHashMap<String,Object>();
-        reply.put("status", "COMPLETED");
+        reply.put("status", "ANSWERED");
         reply.put("responseScope", "PRODUCT_FACTS");
         reply.put("toolResults", List.of(tool(result)));
         reply.put("runId", runId);

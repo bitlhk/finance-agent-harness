@@ -41,7 +41,7 @@ final class CustomerServiceTask {
         Runnable releaseGuard = access.resultReleaseGuard(customerRef, result);
         String response = render(alias, context, query);
         releaseGuard.run();
-        return Map.of("status", "COMPLETED", "responseScope", "CUSTOMER_FACTS", "response", response,
+        return Map.of("status", "ANSWERED", "responseScope", "CUSTOMER_FACTS", "response", response,
                 "runId", runId, "toolResults", List.of(Map.of("data", Map.of(
                         "capabilityId", ServicePreparation.CAPABILITY,
                         "resultStatus", result.status().name(), "requestId", result.requestId(),

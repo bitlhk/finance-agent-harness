@@ -29,7 +29,7 @@ final class ProductServiceTaskTest {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(),
                 (question, run, product) -> { calls.incrementAndGet(); return Map.of(); });
         var result = task.run("有哪些产品", "run-a");
-        assertEquals("COMPLETED", result.get("status"));
+        assertEquals("ANSWERED", result.get("status"));
         assertTrue(result.get("response").toString().contains("132112"));
         assertEquals(0, calls.get());
     }
@@ -52,14 +52,14 @@ final class ProductServiceTaskTest {
     @Test void comparisonUsesFactsAndStatesTheSuitabilityBoundary() {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(), null);
         var result = task.run("比较 132112 和 SYN-FI-002", "run-a");
-        assertEquals("COMPLETED", result.get("status"));
+        assertEquals("ANSWERED", result.get("status"));
         assertTrue(result.get("response").toString().contains("不判断客户适当性"));
     }
 
     @Test void uniqueProductCanBeResolvedByNaturalShortName() {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(), null);
         var result = task.run("招银理财招睿添利日开21号是什么风险等级", "run-a");
-        assertEquals("COMPLETED", result.get("status"));
+        assertEquals("ANSWERED", result.get("status"));
         assertEquals("132112", ((Map<?,?>)result.get("product")).get("productId"));
     }
 
@@ -87,7 +87,7 @@ final class ProductServiceTaskTest {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(),
                 (question, run, product) -> { calls.incrementAndGet(); return Map.of("response", "PR2原文依据"); });
         var result = task.run("招银理财招睿添利日开21号固定收益类理财计划是什么风险等级", "run-a");
-        assertEquals("COMPLETED", result.get("status"));
+        assertEquals("ANSWERED", result.get("status"));
         assertTrue(result.get("response").toString().contains("PR2原文依据"));
         assertEquals(1, calls.get());
     }
@@ -95,7 +95,7 @@ final class ProductServiceTaskTest {
     @Test void explicitCorrectShareStillAllowsComparisonWithUnclassifiedProduct() {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(), null);
         var result = task.run("比较稳健固收增强A和招银理财招睿添利日开21号N份额", "run-a");
-        assertEquals("COMPLETED", result.get("status"));
+        assertEquals("ANSWERED", result.get("status"));
         assertEquals(2, ((List<?>) result.get("products")).size());
     }
 
