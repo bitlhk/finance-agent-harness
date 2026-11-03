@@ -66,6 +66,16 @@ class SavedReportExplainerSdkTest {
         assertThrows(IllegalArgumentException.class,()->SavedReportExplainer.validate(value.toString(),report()));
     }
 
+    @Test void omittedFactsPrefixIsCanonicalizedOnlyWhenItResolvesToARealLeaf() {
+        var value=HarnessJson.mapper().createObjectNode().put("schema","finance-saved-report-answer.v1")
+                .put("answer","依据为未核验的客户口述。");
+        value.putArray("refs").add("/basis");
+        var actual=SavedReportExplainer.validate(value.toString(),report());
+        assertEquals("/facts/basis",actual.at("/refs/0").asText());
+        value.putArray("refs").add("/invented");
+        assertThrows(IllegalArgumentException.class,()->SavedReportExplainer.validate(value.toString(),report()));
+    }
+
     @Test @Timeout(30) void sdkReceivesTheSameBoundsAsTheOutputValidator() throws Exception {
         var requests=new CopyOnWriteArrayList<JsonNode>();
         var fixture=answer();fixture.putArray("refs").add("/binding/revision").add("/facts/basis");

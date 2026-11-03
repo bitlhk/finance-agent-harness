@@ -82,12 +82,23 @@ public final class SavedReportExplainer {
                     ||value.path("answer").asText().length()>MAX_ANSWER_CHARACTERS
                     ||!value.path("refs").isArray()||value.path("refs").isEmpty()||value.path("refs").size()>MAX_REFERENCES)throw invalid();
             Set<String> seen=new HashSet<>();
+            var canonicalRefs=HarnessJson.mapper().createArrayNode();
             for(JsonNode reference:value.path("refs")) {
-                if(!reference.isTextual()||!reference.asText().startsWith("/")||reference.asText().length()>500||!seen.add(reference.asText()))throw invalid();
-                JsonNode target=projected.at(reference.asText());
+                if(!reference.isTextual()||!reference.asText().startsWith("/")||reference.asText().length()>500)throw invalid();
+                String pointer=reference.asText();
+                JsonNode target=projected.at(pointer);
+                if(target.isMissingNode()) {
+                    String factsPointer="/facts"+pointer;
+                    JsonNode factsTarget=projected.at(factsPointer);
+                    if(!factsTarget.isMissingNode()&&!factsTarget.isContainerNode()&&!factsTarget.isNull()) {
+                        pointer=factsPointer;target=factsTarget;
+                    }
+                }
+                if(!seen.add(pointer))throw invalid();
                 if(target.isMissingNode()||target.isContainerNode()||target.isNull())throw invalid();
+                canonicalRefs.add(pointer);
             }
-            return ((ObjectNode)value).deepCopy();
+            ObjectNode result=((ObjectNode)value).deepCopy();result.set("refs",canonicalRefs);return result;
         }catch(Exception error){throw invalid();}
     }
     private static void check(BooleanSupplier cancelled) {
