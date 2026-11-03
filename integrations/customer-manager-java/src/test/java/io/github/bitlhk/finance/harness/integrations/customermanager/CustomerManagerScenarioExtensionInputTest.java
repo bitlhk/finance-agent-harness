@@ -67,6 +67,12 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
 
+    @Test void commonHalfYearExpressionDoesNotRequireAnotherClarification() {
+        assertEquals(java.util.Map.of("amount",100000.0,"horizonMonths",6,"channel","网点"),
+                CustomerManagerScenarioExtension.productArguments(
+                        "周明远准备配置10万元，期限半年，通过网点办理，希望兼顾流动性"));
+    }
+
     @Test void pendingProductFlowContinuesForParametersButYieldsToExplicitPreparation() {
         assertTrue(CustomerManagerScenarioExtension.shouldUseProductFlow(
                 CustomerManagerDialogue.Action.PREPARE,true,"手机银行"));

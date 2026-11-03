@@ -60,6 +60,10 @@ class CustomerManagerDialogueTest {
                 CustomerManagerDialogue.resolve("给周明远推荐理财产品",CUSTOMERS,null).action());
         assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
                 CustomerManagerDialogue.resolve("为周明远筛选10万元的产品候选",CUSTOMERS,null).action());
+        assertEquals(CustomerManagerDialogue.Action.PRODUCT_REVIEW,
+                CustomerManagerDialogue.resolve(
+                        "周明远准备配置10万元，期限半年，通过网点办理，希望兼顾流动性。请分析可考虑的产品并给出排除理由。",
+                        CUSTOMERS,null).action());
     }
 
     @Test void negatedProductLanguageDoesNotOverrideExplicitPreparation() {

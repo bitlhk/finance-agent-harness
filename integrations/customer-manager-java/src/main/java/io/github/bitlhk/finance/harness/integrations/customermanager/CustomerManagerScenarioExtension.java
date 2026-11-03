@@ -764,6 +764,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         if(amount.find())result.put("amount",Double.parseDouble(amount.group(1))*("万".equals(amount.group(2))?10000:1));
         var months=java.util.regex.Pattern.compile("(\\d+)\\s*(年|个月|月)").matcher(query);
         if(months.find())result.put("horizonMonths",Integer.parseInt(months.group(1))*("年".equals(months.group(2))?12:1));
+        else if(query.contains("半年"))result.put("horizonMonths",6);
         if(query.contains("手机银行")||query.contains("手机端"))result.put("channel","手机银行");
         else if(query.contains("网点")||query.contains("柜面"))result.put("channel","网点");
         var product=java.util.regex.Pattern.compile("(?<![A-Za-z0-9-])([0-9]{6,}|[A-Za-z][A-Za-z0-9-]{1,63})(?![A-Za-z0-9-])")
