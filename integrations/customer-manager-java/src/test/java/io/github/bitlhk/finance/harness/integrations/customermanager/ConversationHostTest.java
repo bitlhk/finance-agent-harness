@@ -37,6 +37,10 @@ final class ConversationHostTest {
         return session(proposer,null);
     }
     private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer,PreparationAccess override) throws Exception {
+        return session(proposer, override, null, null);
+    }
+    private CustomerManagerScenarioExtension.Managed session(OpenJiuwenIntentProposer proposer,PreparationAccess override,
+            ProductServiceTask productService, CustomerServiceTask customerService) throws Exception {
         PreparationAccess access = override!=null?override:new PreparationAccess() {
             public Snapshot authorize(String ref) {
                 authorityReads.incrementAndGet();
@@ -88,7 +92,7 @@ final class ConversationHostTest {
         return new CustomerManagerScenarioExtension.Managed("owner-a", "session-a", task, method,
                 useInstalledReadPolicy?ConversationCapabilities.fromLock(capabilityLock)
                         :new ConversationCapabilities(installedActions, List.of("wealth.previsit-context.query")),
-                "instance-a", null, proposer,scope::get,
+                "instance-a", null, productService, customerService, proposer,scope::get,
                 new io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence(files,Map::of));
     }
     private static JsonNode body(String query, String confirmation) {
@@ -105,6 +109,24 @@ final class ConversationHostTest {
     private static final String RESOLVE_OBJECT=PROPOSAL.replace("\"PREPARE\"","\"RESOLVE_OBJECT\"");
     private static final String SAVED_ANSWER="{\"schema\":\"finance-saved-report-answer.v1\",\"answer\":\"此版本执行失败，不能据此视为已取得完整客户事实。\",\"refs\":[\"/status\"]}";
     private static final String CAPABILITIES = "{\"schema\":\"finance-conversation-intent.v1\",\"kind\":\"CAPABILITIES\",\"objectRef\":null,\"reportRef\":null,\"revision\":null}";
+    @Test @Timeout(30) void standardConversationRoutesProductListToInstalledProviderWithoutModelIntent() throws Exception {
+        useInstalledReadPolicy=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        var product = Map.<String,Object>of("productId","132112","name","招银理财招睿添利日开21号固定收益类理财计划",
+                "riskLevel",2,"minimumAmount",10000,"termMonths",1,"salesStatus","on_sale",
+                "salesTrust","DEMO","channels",List.of("branch"));
+        var result = new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"product-request","product-trace",
+                CapabilityResultV1.Status.COMPLETED,"ok",Map.of("products",List.of(product)),List.of(),List.of(),
+                "product-provider",java.time.Instant.now(),null,null);
+        var products = new ProductServiceTask((request,trace,keyword) -> result, null);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES);
+                var session=session(model.proposer(),null,products,null)) {
+            var response=session.call("chat",body("有哪些产品你能看到？",null));
+            assertEquals("COMPLETED",response.get("status"));
+            assertTrue(response.get("response").toString().contains("132112"));
+            assertTrue(model.requests.isEmpty());
+        }
+    }
     @Test @Timeout(30) void installedReadExecutesOnceWithoutConfirmationAndRejectsReplay() throws Exception {
         useInstalledReadPolicy=true;
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {

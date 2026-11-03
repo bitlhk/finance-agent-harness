@@ -296,16 +296,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             List<String> customers=task.customers(owner);
             if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
-            if (confirmedDecision == null && customerService != null && CustomerServiceTask.handles(query)) {
-                String customer = requested != null && !requested.isBlank() ? requested : selectedCustomer;
-                if (customer == null) {
-                    List<String> mentioned = customers.stream().filter(value -> query.contains(value)).toList();
-                    if (mentioned.size() == 1) customer = mentioned.getFirst();
-                }
-                return customerService.run(query, customer, operation.id);
+            if (confirmedDecision == null) {
+                Map<String,Object> direct = directService(query, requested, customers);
+                if (direct != null) return direct;
             }
-            if (confirmedDecision == null && productService != null && ProductServiceTask.handles(query))
-                return productService.run(query, operation.id);
             if (confirmedDecision == null
                     && OpenJiuwenIntentProposer.isDirectKnowledgeQuestion(query, capabilities.actions())) {
                 capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
@@ -441,6 +435,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             clearPendingProduct();
             String query=text(body,"query");
+            Map<String,Object> direct = directService(query, requested, customers);
+            if (direct != null) return direct;
             var proposedBinding=conversationBinding();
             String reportId=body.has("reportId")?text(body,"reportId"):null;
             Integer reportRevision=body.has("revision")?integer(body,"revision"):null;
@@ -584,6 +580,22 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                                     "query",plan.originalQuery(),"expiresAt",plan.expiresAt().toString()));
                 }
             };
+        }
+        private Map<String,Object> directService(String query, String requested, Collection<String> customers) {
+            if (customerService != null && CustomerServiceTask.handles(query)) {
+                capabilities.require(ConversationIntent.Kind.PREPARE);
+                String customer = requested != null && !requested.isBlank() ? requested : selectedCustomer;
+                if (customer == null) {
+                    List<String> mentioned = customers.stream().filter(value -> query.contains(value)).toList();
+                    if (mentioned.size() == 1) customer = mentioned.getFirst();
+                }
+                return customerService.run(query, customer, operation.id);
+            }
+            if (productService != null && ProductServiceTask.handles(query)) {
+                capabilities.require(ConversationIntent.Kind.PRODUCT_REVIEW);
+                return productService.run(query, operation.id);
+            }
+            return null;
         }
         private Set<String> liveCustomers() {
             try { return Set.copyOf(task.customers(owner)); }
