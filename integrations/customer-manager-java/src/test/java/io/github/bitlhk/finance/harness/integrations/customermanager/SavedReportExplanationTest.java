@@ -32,4 +32,18 @@ final class SavedReportExplanationTest {
         var error=assertThrows(IllegalArgumentException.class,()->OpenJiuwenSavedReportExplainer.validate(bad,report));
         assertEquals("CONVERSATION_ANSWER_INVALID",error.getMessage());
     }
+    @Test void invalidModelAnswerMayFallBackOnlyToArchivedValidatedSuggestion() {
+        var report=HarnessJson.mapper().createObjectNode().put("status","PARTIAL").put("explanationStatus","READY");
+        var suggestion=report.putObject("modelSuggestion");
+        suggestion.putArray("preparationAdvice").addObject().put("text","当前没有通过事实条件筛选的候选产品。");
+        suggestion.putArray("pendingItems").add("核实产品销售资格。")
+                .add("核实到期资金去向。");
+        var projection=OpenJiuwenSavedReportExplainer.project(report);
+        var result=OpenJiuwenSavedReportExplainer.archivedFallback(projection);
+        assertTrue(result.path("answer").asText().startsWith("当前没有通过事实条件筛选"));
+        assertTrue(result.path("answer").asText().contains("核实产品销售资格"));
+        assertEquals("/modelSuggestion/preparationAdvice/0/text",result.path("refs").path(0).asText());
+        assertThrows(IllegalArgumentException.class,()->OpenJiuwenSavedReportExplainer.archivedFallback(
+                HarnessJson.mapper().createObjectNode().put("status","PARTIAL")));
+    }
 }
