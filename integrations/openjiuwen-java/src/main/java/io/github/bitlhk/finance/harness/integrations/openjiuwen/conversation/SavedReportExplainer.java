@@ -36,6 +36,8 @@ public final class SavedReportExplainer {
                         +"客户口述未核验、计算推导、模型建议和人工意见必须区分，不把已保存内容叫实时事实。"
                         +"解释未通过校验时只能说明失败与已保存事实，不能把失败原文作为已验证意见。"
                         +"问题超出当前版本证据时明确说无法从该版本确认，并引用相关现有状态字段；不猜测。"
+                        +"当问题要求沟通话术时，可将已保存的communicationFocus和preparationAdvice改写为待经理复核的话术，"
+                        +"但不得新增客户事实、产品、适当性结论或行动承诺。"
                         +"不展示内部文件路径或原始JSON，引用路径只放refs。不提供新的投资产品建议。")))
                 .build().configureModelClient(model.clientProvider(),model.apiKey(),model.apiBase(),model.modelName(),true);
         config.getModelConfigObj().setTemperature(0.0);
