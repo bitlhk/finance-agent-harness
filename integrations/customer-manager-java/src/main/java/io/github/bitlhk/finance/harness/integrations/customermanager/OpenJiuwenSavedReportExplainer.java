@@ -24,7 +24,7 @@ final class OpenJiuwenSavedReportExplainer {
             return interpreter.explain(question,projection,cancelled);
         } catch(IllegalArgumentException failure) {
             if(!"CONVERSATION_ANSWER_INVALID".equals(failure.getMessage()))throw failure;
-            return archivedFallback(projection);
+            return archivedFallback(question,projection);
         }
     }
     static ObjectNode project(JsonNode report) {
@@ -36,15 +36,24 @@ final class OpenJiuwenSavedReportExplainer {
     static ObjectNode validate(String raw,JsonNode projection) {
         return SavedReportExplainer.validate(raw,projection);
     }
-    static ObjectNode archivedFallback(JsonNode projection) {
+    static ObjectNode archivedFallback(String question,JsonNode projection) {
         JsonNode suggestion=projection.path("modelSuggestion");
+        JsonNode focus=suggestion.path("communicationFocus");
         JsonNode advice=suggestion.path("preparationAdvice");
         JsonNode pending=suggestion.path("pendingItems");
-        if(!advice.isArray()||advice.isEmpty())throw new IllegalArgumentException("CONVERSATION_ANSWER_INVALID");
-        StringBuilder answer=new StringBuilder(advice.path(0).path("text").asText());
+        boolean talkTrack=question!=null&&(question.contains("话术")||question.contains("怎么说")||question.contains("沟通提纲"));
+        JsonNode source=talkTrack?focus:advice;
+        String sourceField=talkTrack?"communicationFocus":"preparationAdvice";
+        if(!source.isArray()||source.isEmpty())throw new IllegalArgumentException("CONVERSATION_ANSWER_INVALID");
+        StringBuilder answer=new StringBuilder(talkTrack?"可按以下提纲与客户沟通：":"");
         ArrayNode refs=HarnessJson.mapper().createArrayNode();
-        refs.add("/modelSuggestion/preparationAdvice/0/text");
-        if(pending.isArray()&&!pending.isEmpty()) {
+        int sourceCount=Math.min(talkTrack?3:1,source.size());
+        for(int index=0;index<sourceCount;index++) {
+            if(answer.length()>0)answer.append("\n");
+            answer.append(talkTrack?(index+1)+". ":"").append(source.path(index).path("text").asText());
+            refs.add("/modelSuggestion/"+sourceField+"/"+index+"/text");
+        }
+        if(!talkTrack&&pending.isArray()&&!pending.isEmpty()) {
             answer.append("\n\n仍需核实：");
             int count=Math.min(3,pending.size());
             for(int index=0;index<count;index++) {

@@ -38,12 +38,17 @@ final class SavedReportExplanationTest {
         suggestion.putArray("preparationAdvice").addObject().put("text","当前没有通过事实条件筛选的候选产品。");
         suggestion.putArray("pendingItems").add("核实产品销售资格。")
                 .add("核实到期资金去向。");
+        suggestion.putArray("communicationFocus").addObject().put("text","先确认到期资金去向。");
         var projection=OpenJiuwenSavedReportExplainer.project(report);
-        var result=OpenJiuwenSavedReportExplainer.archivedFallback(projection);
+        var result=OpenJiuwenSavedReportExplainer.archivedFallback("为什么没有候选？",projection);
         assertTrue(result.path("answer").asText().startsWith("当前没有通过事实条件筛选"));
         assertTrue(result.path("answer").asText().contains("核实产品销售资格"));
         assertEquals("/modelSuggestion/preparationAdvice/0/text",result.path("refs").path(0).asText());
-        assertThrows(IllegalArgumentException.class,()->OpenJiuwenSavedReportExplainer.archivedFallback(
+        var talkTrack=OpenJiuwenSavedReportExplainer.archivedFallback("帮我生成沟通话术",projection);
+        assertTrue(talkTrack.path("answer").asText().startsWith("可按以下提纲"));
+        assertTrue(talkTrack.path("answer").asText().contains("先确认到期资金去向"));
+        assertFalse(talkTrack.path("answer").asText().contains("核实产品销售资格"));
+        assertThrows(IllegalArgumentException.class,()->OpenJiuwenSavedReportExplainer.archivedFallback("为什么",
                 HarnessJson.mapper().createObjectNode().put("status","PARTIAL")));
     }
 }
