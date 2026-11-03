@@ -57,9 +57,15 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 reports, Map.of("capability", "wealth-manager-previsit@0.1.0", "provider", "customer-crm-readonly@0.1.0-SNAPSHOT",
                         "runtime", "openjiuwen-java@0.1.15"), method,
                 io.github.bitlhk.finance.harness.core.evidence.ScenarioEvidence.host(context), knowledge);
+        ProductServiceTask productService = access instanceof KypPreparationAccess kyp
+                ? new ProductServiceTask(kyp::queryProducts,
+                    knowledge == null ? null : knowledge::answerProductQuestion)
+                : null;
+        CustomerServiceTask customerService = new CustomerServiceTask(access, alias -> mapping.get().customers().get(alias));
         var capabilities = ConversationCapabilities.fromLock(HarnessJson.mapper().readTree(
                 Files.readAllBytes(context.artifactRoot().resolve("service-lock.json"))));
         var managed = new Managed(owner, sessionId, task, method, capabilities, context.instanceId(), knowledge,
+                productService, customerService,
                 new OpenJiuwenIntentProposer(model), () -> conversationScopeDigest(mapping.get()),
                 new ScenarioEvidence(reports, ScenarioEvidence.host(context)));
         return knowledge == null ? managed : knowledge.session(managed);
@@ -76,6 +82,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private final ConversationCapabilities capabilities;
         private final String instanceId;
         private final ManagerKnowledgeEvidence knowledge;
+        private final ProductServiceTask productService;
+        private final CustomerServiceTask customerService;
         private final OpenJiuwenIntentProposer intentProposer;
         private final java.util.function.Supplier<String> scopeDigest;
         private final ScenarioEvidence conversationEvidence;
@@ -106,9 +114,19 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 ConversationCapabilities capabilities, String instanceId, ManagerKnowledgeEvidence knowledge,
                 OpenJiuwenIntentProposer intentProposer,
                 java.util.function.Supplier<String> scopeDigest, ScenarioEvidence conversationEvidence) throws Exception {
+            this(owner, sessionId, task, method, capabilities, instanceId, knowledge, null,
+                    null, intentProposer, scopeDigest, conversationEvidence);
+        }
+        Managed(String owner, String sessionId, ServicePreparation task, InstalledPreparationMethod method,
+                ConversationCapabilities capabilities, String instanceId, ManagerKnowledgeEvidence knowledge,
+                ProductServiceTask productService,
+                CustomerServiceTask customerService,
+                OpenJiuwenIntentProposer intentProposer,
+                java.util.function.Supplier<String> scopeDigest, ScenarioEvidence conversationEvidence) throws Exception {
             this.owner=owner; this.sessionId=sessionId; this.task=task; this.method=method;
             this.capabilities=capabilities;
-            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.knowledge=knowledge; this.intentProposer=intentProposer;
+            this.instanceId=required(instanceId,"INSTANCE_REQUIRED"); this.knowledge=knowledge;
+            this.productService=productService; this.customerService=customerService; this.intentProposer=intentProposer;
             this.scopeDigest=Objects.requireNonNull(scopeDigest);
             this.conversationEvidence=Objects.requireNonNull(conversationEvidence);
             var latest=task.latest(owner);
@@ -278,6 +296,16 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             List<String> customers=task.customers(owner);
             if(requested!=null&&!requested.isBlank()&&!customers.contains(requested))
                 throw new SecurityException("CRM_EMPLOYEE_SCOPE_REJECTED");
+            if (confirmedDecision == null && customerService != null && CustomerServiceTask.handles(query)) {
+                String customer = requested != null && !requested.isBlank() ? requested : selectedCustomer;
+                if (customer == null) {
+                    List<String> mentioned = customers.stream().filter(value -> query.contains(value)).toList();
+                    if (mentioned.size() == 1) customer = mentioned.getFirst();
+                }
+                return customerService.run(query, customer, operation.id);
+            }
+            if (confirmedDecision == null && productService != null && ProductServiceTask.handles(query))
+                return productService.run(query, operation.id);
             if (confirmedDecision == null
                     && OpenJiuwenIntentProposer.isDirectKnowledgeQuestion(query, capabilities.actions())) {
                 capabilities.require(ConversationIntent.Kind.KNOWLEDGE_QUERY);
