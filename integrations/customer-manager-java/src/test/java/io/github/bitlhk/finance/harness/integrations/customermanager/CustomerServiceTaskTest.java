@@ -42,6 +42,11 @@ class CustomerServiceTaskTest {
         assertEquals(1,access.calls);
     }
 
+    @Test void explicitPreparationIntentIsNotCapturedByFactsRoute() {
+        assertTrue(CustomerServiceTask.handles("查看周明远的持仓和到期事项"));
+        assertFalse(CustomerServiceTask.handles("为周明远准备回访，核对持仓和到期事项并给出沟通话术"));
+    }
+
     @Test void authorityChangeBlocksRelease() {
         var access=new Access() {
             @Override public CapabilityResultV1 query(String request,String trace,String customer,String capability,Map<String,Object> args) {

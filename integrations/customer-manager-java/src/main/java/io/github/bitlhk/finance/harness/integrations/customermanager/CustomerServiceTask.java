@@ -19,7 +19,8 @@ final class CustomerServiceTask {
     }
 
     static boolean handles(String query) {
-        return query != null && (query.contains("持仓") || query.contains("到期")
+        return query != null && !CustomerManagerDialogue.requestsPreparation(query)
+                && (query.contains("持仓") || query.contains("到期")
                 || query.contains("资产概况") || query.contains("风险测评")
                 || query.contains("客户概览") || query.contains("客户情况"));
     }
