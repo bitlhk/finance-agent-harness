@@ -25,7 +25,8 @@ final class ProductServiceTask {
         boolean explore = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         boolean compare = query.contains("对比") || query.contains("比较") || query.contains("区别");
-        boolean detail = (query.contains("产品") || PRODUCT_CODE.matcher(query).find())
+        boolean detail = (query.contains("产品") || query.contains("理财计划")
+                || query.contains("份额") || PRODUCT_CODE.matcher(query).find())
                 && (query.contains("详情") || query.contains("风险等级") || query.contains("费用")
                 || query.contains("赎回") || query.contains("申购") || query.contains("起购")
                 || query.contains("是什么") || query.contains("怎么样"));
@@ -108,6 +109,8 @@ final class ProductServiceTask {
     private static boolean matchesExplicitShare(String query, JsonNode product) {
         String actual = product.path("businessIdentity").path("shareClass").asText("").strip();
         if (actual.isBlank()) return true;
+        String name = product.path("name").asText("");
+        if (!name.isBlank() && query.contains(name)) return true;
         var requested = new LinkedHashSet<String>();
         var matcher = SHARE_CLASS.matcher(query);
         while (matcher.find()) requested.add(matcher.group(1).toUpperCase(Locale.ROOT));
@@ -117,7 +120,8 @@ final class ProductServiceTask {
     private static boolean matchesName(String query, String name) {
         if (name == null || name.isBlank()) return false;
         if (query.contains(name)) return true;
-        String core = name.replaceFirst("(?:固定收益类|混合类|权益类|商品及金融衍生品类)?理财计划$", "")
+        String core = name.replaceFirst("(?i)[A-Z][A-Z0-9-]{0,15}份额$", "")
+                .replaceFirst("(?:固定收益类|混合类|权益类|商品及金融衍生品类)?理财计划$", "")
                 .replaceFirst("理财产品$", "");
         return core.length() >= 8 && query.contains(core);
     }
