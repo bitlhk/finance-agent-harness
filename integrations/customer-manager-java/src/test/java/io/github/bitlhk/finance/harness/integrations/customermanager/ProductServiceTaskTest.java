@@ -63,6 +63,27 @@ final class ProductServiceTaskTest {
         assertEquals("132112", ((Map<?,?>)result.get("product")).get("productId"));
     }
 
+    @Test void explicitWrongShareCannotBorrowAnotherSharesKnowledge() {
+        var calls = new AtomicInteger();
+        var task = new ProductServiceTask((request, trace, keyword) -> catalog(),
+                (question, run, product) -> { calls.incrementAndGet(); return Map.of("response", "must-not-run"); });
+        var result = task.run("招银理财招睿添利日开21号A份额是什么风险等级", "run-a");
+        assertEquals("NEED_CLARIFICATION", result.get("status"));
+        assertFalse(result.get("response").toString().contains("must-not-run"));
+        assertEquals(0, calls.get());
+
+        result = task.run("132112A 是什么风险等级", "run-b");
+        assertEquals("NEED_CLARIFICATION", result.get("status"));
+        assertEquals(0, calls.get());
+    }
+
+    @Test void explicitCorrectShareStillAllowsComparisonWithUnclassifiedProduct() {
+        var task = new ProductServiceTask((request, trace, keyword) -> catalog(), null);
+        var result = task.run("比较稳健固收增强A和招银理财招睿添利日开21号N份额", "run-a");
+        assertEquals("COMPLETED", result.get("status"));
+        assertEquals(2, ((List<?>) result.get("products")).size());
+    }
+
     @Test void boundedRouterDoesNotCaptureCustomerProductScreening() {
         assertTrue(ProductServiceTask.handles("有哪些产品"));
         assertTrue(ProductServiceTask.handles("132112 是哪个风险等级的产品"));

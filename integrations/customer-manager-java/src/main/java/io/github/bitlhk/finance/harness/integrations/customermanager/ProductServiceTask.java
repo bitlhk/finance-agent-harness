@@ -10,7 +10,8 @@ import java.util.regex.Pattern;
 final class ProductServiceTask {
     interface Access { CapabilityResultV1 query(String requestId, String traceId, String keyword); }
     interface Knowledge { Map<String,Object> answer(String question, String runId, JsonNode product); }
-    private static final Pattern PRODUCT_CODE = Pattern.compile("(?<![A-Za-z0-9-])([0-9]{6,}|[A-Z][A-Z0-9-]{2,63})(?![A-Za-z0-9-])");
+    private static final Pattern PRODUCT_CODE = Pattern.compile("(?<![A-Za-z0-9-])([0-9]{6,}[A-Z0-9-]*|[A-Z][A-Z0-9-]{2,63})(?![A-Za-z0-9-])");
+    private static final Pattern SHARE_CLASS = Pattern.compile("(?i)(?<![A-Za-z0-9-])([A-Z][A-Z0-9-]{0,15})\\s*份额");
     private final Access access;
     private final Knowledge knowledge;
 
@@ -95,10 +96,22 @@ final class ProductServiceTask {
         var ids = new LinkedHashSet<String>();
         var matcher = PRODUCT_CODE.matcher(query);
         while (matcher.find()) ids.add(matcher.group(1));
-        return products.stream().filter(product -> ids.contains(product.path("productId").asText())
+        return products.stream().filter(product -> (ids.contains(product.path("productId").asText())
                 || ids.contains(product.path("businessIdentity").path("managerProductCode").asText())
+                || ids.contains(product.path("businessIdentity").path("registrationCode").asText())
+                || ids.contains(product.path("businessIdentity").path("salesCode").asText())
                 || matchesName(query, product.path("name").asText()))
+                && matchesExplicitShare(query, product))
                 .toList();
+    }
+
+    private static boolean matchesExplicitShare(String query, JsonNode product) {
+        String actual = product.path("businessIdentity").path("shareClass").asText("").strip();
+        if (actual.isBlank()) return true;
+        var requested = new LinkedHashSet<String>();
+        var matcher = SHARE_CLASS.matcher(query);
+        while (matcher.find()) requested.add(matcher.group(1).toUpperCase(Locale.ROOT));
+        return requested.isEmpty() || requested.contains(actual.toUpperCase(Locale.ROOT));
     }
 
     private static boolean matchesName(String query, String name) {
