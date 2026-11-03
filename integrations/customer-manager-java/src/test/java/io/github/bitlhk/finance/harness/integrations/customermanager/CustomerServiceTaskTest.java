@@ -42,11 +42,14 @@ class CustomerServiceTaskTest {
         String response=(String)result.get("response");
         assertTrue(response.contains("稳健组合"));
         assertTrue(response.contains("MATURITY_DUE"));
-        assertTrue(response.contains("private_banking"));
-        assertTrue(response.contains("45_59"));
-        assertTrue(response.contains("3年以上"));
+        assertFalse(response.contains("private_banking"));
+        assertFalse(response.contains("45_59"));
         assertTrue(response.contains("来源快照"));
         assertEquals(1,access.calls);
+        String profile=task.run("查看周明远的客户画像","周明远","run-2").get("response").toString();
+        assertTrue(profile.contains("private_banking"));
+        assertTrue(profile.contains("45_59"));
+        assertTrue(profile.contains("3年以上"));
     }
 
     @Test void explicitPreparationIntentIsNotCapturedByFactsRoute() {
@@ -69,5 +72,16 @@ class CustomerServiceTaskTest {
         var result=new CustomerServiceTask(access,alias -> "CUST-1").run("查看持仓",null,"run-1");
         assertEquals("NEED_CLARIFICATION",result.get("status"));
         assertEquals(0,access.calls);
+    }
+
+    @Test void directQuestionsReturnFocusedViews() {
+        var task=new CustomerServiceTask(new Access(),alias -> "CUST-1");
+        String holdings=task.run("看看持仓","周明远","run-1").get("response").toString();
+        assertTrue(holdings.contains("稳健组合"));
+        assertFalse(holdings.contains("基本画像"));
+        assertFalse(holdings.contains("近期事项"));
+        String maturity=task.run("最近有哪些资金到期","周明远","run-2").get("response").toString();
+        assertTrue(maturity.contains("MATURITY_DUE"));
+        assertFalse(maturity.contains("### 持仓"));
     }
 }

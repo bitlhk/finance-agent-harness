@@ -42,6 +42,7 @@ final class CustomerServiceTask {
         String response = render(alias, context, query);
         releaseGuard.run();
         return Map.of("status", "ANSWERED", "responseScope", "CUSTOMER_FACTS", "response", response,
+                "customerRef", alias, "evidenceRefs", List.of(result.requestId(), result.traceId()),
                 "runId", runId, "toolResults", List.of(Map.of("data", Map.of(
                         "capabilityId", ServicePreparation.CAPABILITY,
                         "resultStatus", result.status().name(), "requestId", result.requestId(),
@@ -50,26 +51,32 @@ final class CustomerServiceTask {
 
     private static String render(String alias, JsonNode context, String query) {
         JsonNode detail = wealthDetail(context.path("profiles"));
-        var out = new StringBuilder("## ").append(alias).append(" · 客户概览\n\n");
+        boolean wantsHoldings = query.contains("持仓");
+        boolean wantsMaturities = query.contains("到期") || query.contains("近期") || query.contains("资金动向");
+        boolean wantsProfile = query.contains("画像") || query.contains("概览") || query.contains("情况")
+                || query.contains("风险测评") || query.contains("资产概况") || (!wantsHoldings && !wantsMaturities);
+        String subject = wantsHoldings && wantsMaturities ? "持仓与到期事项"
+                : wantsHoldings ? "持仓" : wantsMaturities ? "到期事项" : "客户画像";
+        var out = new StringBuilder("## ").append(alias).append(" · ").append(subject).append("\n\n");
         JsonNode risk = detail.path("riskAssessment");
         String tier = text(detail,"customerTier");
-        if (!"待核实".equals(tier)) out.append("- 客户层级：").append(tier).append("\n");
-        if (risk.isObject()) out.append("- 风险测评：").append(text(risk,"riskLevel"))
+        if (wantsProfile && !"待核实".equals(tier)) out.append("- 客户层级：").append(tier).append("\n");
+        if (wantsProfile && risk.isObject()) out.append("- 风险测评：").append(text(risk,"riskLevel"))
                 .append("，有效期至 ").append(text(risk,"validUntil")).append("\n");
         JsonNode demographics = wealthProfile(context.path("profiles")).path("demographics");
-        if (demographics.isObject()) out.append("- 基本画像：年龄段 ").append(text(demographics,"ageBand"))
+        if (wantsProfile && demographics.isObject()) out.append("- 基本画像：年龄段 ").append(text(demographics,"ageBand"))
                 .append("，职业 ").append(text(demographics,"occupationCategory"))
                 .append("，城市 ").append(text(demographics,"city")).append("\n");
         JsonNode preferences = wealthProfile(context.path("profiles")).path("preferences");
-        if (preferences.isObject()) out.append("- 服务偏好：投资期限 ").append(text(preferences,"investmentHorizon"))
+        if (wantsProfile && preferences.isObject()) out.append("- 服务偏好：投资期限 ").append(text(preferences,"investmentHorizon"))
                 .append("，流动性要求 ").append(text(preferences,"liquidityNeeds"))
                 .append("，沟通方式 ").append(text(preferences,"communicationPreference")).append("\n");
         JsonNode portfolio = detail.path("portfolioSummary");
-        if (portfolio.isObject()) out.append("- 资产概况：总资产 ").append(amount(portfolio,"totalAssets"))
+        if ((wantsProfile || wantsHoldings) && portfolio.isObject()) out.append("- 资产概况：总资产 ").append(amount(portfolio,"totalAssets"))
                 .append("，可用资金 ").append(amount(portfolio,"availableCash"))
                 .append("，投资资产 ").append(amount(portfolio,"investedAssets")).append("\n");
         JsonNode holdings = detail.path("holdings");
-        if (holdings.isArray() && !holdings.isEmpty()) {
+        if (wantsHoldings && holdings.isArray() && !holdings.isEmpty()) {
             out.append("\n### 持仓\n\n| 产品 | 余额 | 数据时点 |\n|---|---:|---|\n");
             holdings.forEach(item -> out.append("| ").append(text(item,"productName")).append(" | ")
                     .append(amount(item,"balance")).append(" | ").append(text(item,"dataAsOf")).append(" |\n"));
@@ -77,7 +84,7 @@ final class CustomerServiceTask {
         JsonNode events = detail.path("recentEvents");
         if ((!events.isArray() || events.isEmpty()) && detail.path("maturities").isArray())
             events = detail.path("maturities");
-        if (events.isArray() && !events.isEmpty()) {
+        if (wantsMaturities && events.isArray() && !events.isEmpty()) {
             out.append("\n### 近期事项\n\n");
             events.forEach(item -> out.append("- ").append(event(item)).append("\n"));
         } else if (query.contains("到期")) out.append("\n当前来源未返回可核验的到期事项。\n");

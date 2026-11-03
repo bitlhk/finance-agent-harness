@@ -92,6 +92,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         private long conversationEpoch;
         private PendingConversationTask clarification;
         private final ConversationDialogue dialogue = new ConversationDialogue();
+        private final WealthServiceJourney journey = new WealthServiceJourney();
         private List<Map<String,String>> previousDialogue = List.of();
         private String conversationContext;
         private String priorRequestedObject;
@@ -177,7 +178,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     clarification=null;
                     dialogue.clear();
                     clearPendingProduct();
-                    selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");
+                    selectedCustomer=text(body,"customerAlias");selectedGoal=text(body,"goal");journey.selectCustomer(selectedCustomer);
                     yield Map.of("generation",task.select(owner,selectedCustomer,selectedGoal,context(selectedCustomer)),"status","SELECTED");
                 }
                 case "prepare" -> { exact(body,"generation"); capabilities.require(ConversationIntent.Kind.PREPARE);
@@ -221,10 +222,11 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 String requested = body.has("customerAlias") ? body.path("customerAlias").asText() : null;
                 String context=body.path("conversationContext").textValue();
                 if(!Objects.equals(context,conversationContext)) {
-                    invalidateConfirmation();clarification=null;dialogue.clear();clearPendingProduct();conversationContext=context;
+                    invalidateConfirmation();clarification=null;dialogue.clear();journey.reset();clearPendingProduct();conversationContext=context;
+                    selectedCustomer=null;selectedGoal=null;
                     hasRequestedObject=false;
                 }
-                if(!body.has("conversationContract")) { invalidateConfirmation();clarification=null;dialogue.clear(); }
+                if(!body.has("conversationContract")) { invalidateConfirmation();clarification=null;dialogue.clear();journey.reset(); }
                 if(clarification!=null && clarification.object()!=null && hasRequestedObject
                         && !Objects.equals(requested,priorRequestedObject) && !Objects.equals(requested,clarification.object())) {
                     invalidateConfirmation();clarification=null;clearPendingProduct();
@@ -245,6 +247,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     }
                 }
                 String query = text(body,"query");
+                journey.parameters(productArguments(query));
                 Map<String,Object> result;
                 if (knowledge != null && isKnowledgeHelp(query))
                     result = Map.of("status","ANSWERED","response",knowledge.description(capabilities.description()),
@@ -345,6 +348,13 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 selectedCustomer=customer;selectedGoal=query;long generation=selectOperation(customer,query,taskContext);
                 sink.emit(Map.of("type","CUSTOM","name","finance.progress","value",Map.of("stage","PRODUCT_POLICY_CHECK","label","正在核对产品目录与适当性条件")));
                 JsonNode report=task.prepareProduct(owner,generation,Map.copyOf(pendingProductArguments),listener(sink));
+                journey.selectCustomer(customer);
+                journey.parameters(pendingProductArguments);
+                journey.report(report.path("reportId").asText(), report.path("reportRevision").asInt(),
+                        productRefs(report.path("productReview").path("eligibleProducts")));
+                journey.pending(report.path("missingInputs").isArray()
+                        ? HarnessJson.mapper().convertValue(report.path("missingInputs"), new TypeReference<List<String>>() {})
+                        : List.of());
                 clearPendingProduct();
                 int eligible=report.path("productReview").path("eligibleProducts").size();
                 var result=new LinkedHashMap<String,Object>();result.put("status",report.path("status").asText());
@@ -365,6 +375,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     "stage","AUTHORIZATION_CONFIRMED","label","已核对客户服务范围")));
             long generation=selectOperation(customer,query,taskContext);
             JsonNode report=task.prepare(owner,generation,listener(sink));
+            journey.selectCustomer(customer);
+            journey.report(report.path("reportId").asText(), report.path("reportRevision").asInt(), List.of());
             String status=report.path("status").asText();
             String response="READY_FOR_REVIEW".equals(status)
                     ? "我已依据当前获授权的客户事实和专业方法，为 "+displayName(customer)+" 整理了回访准备建议。请结合事实来源和待核实事项进行复核。"
@@ -456,14 +468,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     "conversation.intent",Map.of("questionDigest",ScenarioEvidence.digest(query),
                             "dialogueDigest",ScenarioEvidence.digest(previousDialogue),
                             "pendingTaskDigest",ScenarioEvidence.digest(pending==null?Map.of():pending.projection()),
-                            "continuityDigest",ScenarioEvidence.digest(dialogue.state())),
+                            "continuityDigest",ScenarioEvidence.digest(continuity())),
                     proposedBinding,"PLATFORM_SESSION_NOT_BUSINESS_GRANT");
             intentProof.check("INTENT_ENTRY",checkIntent,null);
             intentProof.invoked();
             ConversationIntent intent=intentProposer.propose(query,customers,capabilities.actions(),
                     dialogue.object()!=null?dialogue.object():requested==null||requested.isBlank()?null:requested,reportId,reportRevision,
                     pending==null?null:pending.projection(),previousDialogue,
-                    dialogue.state(),this::operationCancelled);
+                    continuity(),this::operationCancelled);
             intentProof.returned();
             intentProof.check("INTENT_RELEASE",checkIntent,intent);
             if(!proposedBinding.equals(conversationBinding())) throw new SecurityException("CRM_AUTHORITY_CHANGED");
@@ -514,6 +526,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
                 case SELECT_OBJECT -> {
                     dialogue.select(intent.objectRef());
+                    journey.selectCustomer(intent.objectRef());
                     yield naturalReply(query,ConversationResponder.Purpose.CLARIFY,List.of("intent"),
                             "已记录本次客户；仅缺目标。请询问需要回访准备还是已装配的其他工作，不要求再次列名单；尚未查询客户事实。",proposedBinding,sink);
                 }
@@ -547,8 +560,10 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 case PREPARE, PRODUCT_REVIEW -> {
                     if(reportId!=null)yield Map.of("status","NEED_CLARIFICATION","response","当前正在查看已保存内容。若需取得新事实，请在新对话提出客户和任务；本轮没有业务查询。","missingInputs",List.of("newConversation"));
                     capabilities.require(intent.kind());
+                    if (intent.objectRef() != null) journey.selectCustomer(intent.objectRef());
                     PendingConversationTask draft=resolving ? continued
                             : PendingConversationTask.start(proposedBinding,intent.kind(),query,intent.objectRef(),Instant.now());
+                    draft = draft.withDefaults(journey.parameters());
                     String executionQuery=draft.query();
                     if(executionQuery.length()>500) yield Map.of("status","NEED_CLARIFICATION",
                             "response","任务与补充内容过长，请合并为500字以内的明确请求；尚未执行。","missingInputs",List.of("query"));
@@ -581,21 +596,60 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                 }
             };
         }
-        private Map<String,Object> directService(String query, String requested, Collection<String> customers) {
+        private Map<String,Object> directService(String query, String requested, Collection<String> customers) throws Exception {
+            if (journey.reportFollowup(query)) {
+                var answer=task.explainSaved(owner,journey.reportRef(),journey.reportRevision(),query,
+                        saved->intentProposer.explainSaved(query,saved,this::operationCancelled),this::operationCancelled);
+                return Map.of("status","ANSWERED","response",answer.path("interpretation").path("answer").asText(),
+                        "savedExplanation",value(answer),"journey",journey.projection());
+            }
             if (customerService != null && CustomerServiceTask.handles(query)) {
                 capabilities.require(ConversationIntent.Kind.PREPARE);
-                String customer = requested != null && !requested.isBlank() ? requested : selectedCustomer;
+                String customer = requested != null && !requested.isBlank() ? requested
+                        : journey.customerRef()!=null ? journey.customerRef() : selectedCustomer;
                 if (customer == null) {
                     List<String> mentioned = customers.stream().filter(value -> query.contains(value)).toList();
                     if (mentioned.size() == 1) customer = mentioned.getFirst();
                 }
-                return customerService.run(query, customer, operation.id);
+                Map<String,Object> result=customerService.run(query, customer, operation.id);
+                if("ANSWERED".equals(result.get("status"))) {
+                    selectedCustomer=customer;
+                    journey.selectCustomer(customer);
+                    journey.evidence(strings(result.get("evidenceRefs")));
+                }
+                return withJourney(result);
             }
-            if (productService != null && ProductServiceTask.handles(query)) {
+            if (productService != null && (ProductServiceTask.handles(query) || journey.productContinuation(query))) {
                 capabilities.require(ConversationIntent.Kind.PRODUCT_REVIEW);
-                return productService.run(query, operation.id);
+                Map<String,Object> result=productService.run(query, operation.id, journey.productRefs());
+                if("ANSWERED".equals(result.get("status"))) {
+                    List<String> refs=strings(result.get("selectedProductRefs"));
+                    journey.selectProducts(refs,refs.size()>1 || query.contains("比较") || query.contains("对比"));
+                    journey.evidence(strings(result.get("evidenceRefs")));
+                }
+                return withJourney(result);
             }
             return null;
+        }
+
+        private Map<String,Object> withJourney(Map<String,Object> result) {
+            var value=new LinkedHashMap<String,Object>(result);value.put("journey",journey.projection());return Map.copyOf(value);
+        }
+
+        private Map<String,Object> continuity() {
+            var value=new LinkedHashMap<String,Object>(dialogue.state());value.put("wealthJourney",journey.projection());
+            return Collections.unmodifiableMap(value);
+        }
+
+        private static List<String> strings(Object value) {
+            if(!(value instanceof Collection<?> values))return List.of();
+            return values.stream().filter(Objects::nonNull).map(Object::toString).filter(text->!text.isBlank()).toList();
+        }
+
+        private static List<String> productRefs(JsonNode products) {
+            var values=new ArrayList<String>();
+            if(products.isArray())products.forEach(product->{String id=product.path("productId").asText();if(!id.isBlank())values.add(id);});
+            return List.copyOf(values);
         }
         private Set<String> liveCustomers() {
             try { return Set.copyOf(task.customers(owner)); }
@@ -620,14 +674,14 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
                     "conversation.response",Map.of("questionDigest",ScenarioEvidence.digest(query),
                             "dialogueDigest",ScenarioEvidence.digest(previousDialogue),
                             "pendingTaskDigest",ScenarioEvidence.digest(clarification==null?Map.of():clarification.projection()),
-                            "continuityDigest",ScenarioEvidence.digest(dialogue.state()),
+                            "continuityDigest",ScenarioEvidence.digest(continuity()),
                             "bindingDigest",ScenarioEvidence.digest(binding),"purpose",purpose.name()),
                     binding.scopeDigest(),"EXISTING_CRM_MAPPING_AND_INSTALLED_LOCK");
             proof.check("RESPONSE_ENTRY",authorize,null);
             int[] sequence={0};
             boolean[] invoked={false};
             String wordingInput=HarnessJson.mapper().writeValueAsString(Map.of("userText",query,
-                    "previousDialogue",previousDialogue,"continuity",dialogue.state(),
+                    "previousDialogue",previousDialogue,"continuity",continuity(),
                     "pendingRequest",clarification==null?Map.of():clarification.projection(),
                     "contextRule","此前文字仅用于理解序号与代词，不是事实、授权或执行确认。continuity只记录此前步骤；已列名单不能称从未列过，已返回报告不能称从未执行。无需让用户反复确认名单，当前访问权限仍由服务端核验。"));
             String answer=intentProposer.respond(wordingInput,new ConversationResponder.Context(purpose,

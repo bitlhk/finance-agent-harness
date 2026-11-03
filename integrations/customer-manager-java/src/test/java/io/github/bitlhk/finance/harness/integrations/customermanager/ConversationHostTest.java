@@ -127,6 +127,48 @@ final class ConversationHostTest {
             assertTrue(model.requests.isEmpty());
         }
     }
+
+    @Test @Timeout(30) void oneConversationCarriesProductSelectionIntoComparisonButNotAnotherConversation() throws Exception {
+        useInstalledReadPolicy=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        var first=Map.<String,Object>of("productId","132112","name","招银理财招睿添利日开21号固定收益类理财计划",
+                "riskLevel",2,"minimumAmount",10000,"termMonths",1,"salesStatus","on_sale","salesTrust","DEMO","channels",List.of("branch"));
+        var second=Map.<String,Object>of("productId","SYN-FI-002","name","稳健固收增强A",
+                "riskLevel",2,"minimumAmount",10000,"termMonths",6,"salesStatus","unknown","salesTrust","DEMO","channels",List.of("branch"));
+        var catalog=new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,"product-request","product-trace",
+                CapabilityResultV1.Status.COMPLETED,"ok",Map.of("products",List.of(first,second)),List.of(),List.of(),
+                "product-provider",java.time.Instant.now(),null,null);
+        var products=new ProductServiceTask((request,trace,keyword)->catalog,null);
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(CAPABILITIES);var session=session(model.proposer(),null,products,null)) {
+            var detail=(Map<?,?>)session.call("chat",body("帮我看看招银理财招睿添利日开21号",null));
+            assertEquals(List.of("132112"),((Map<?,?>)detail.get("journey")).get("productRefs"));
+            var compared=session.call("chat",body("和 SYN-FI-002 比较一下，重点看风险、流动性和费用",null));
+            assertEquals("ANSWERED",compared.get("status"));
+            assertTrue(compared.get("response").toString().contains("132112"));
+            assertTrue(compared.get("response").toString().contains("SYN-FI-002"));
+            var isolated=(com.fasterxml.jackson.databind.node.ObjectNode)body("比较这两款产品",null);
+            isolated.put("conversationContext","another-conversation");
+            var missing=session.call("chat",isolated);
+            assertEquals("NEED_CLARIFICATION",missing.get("status"));
+            assertTrue(missing.get("response").toString().contains("明确两款"));
+            assertTrue(model.requests.isEmpty());
+        }
+    }
+
+    @Test @Timeout(30) void productAdviceFollowupUsesSavedReportWithoutAnotherBusinessQuery() throws Exception {
+        useInstalledReadPolicy=true;providePrevisitFacts=true;
+        installedActions=Set.of(ConversationIntent.Kind.PREPARE,ConversationIntent.Kind.PRODUCT_REVIEW);
+        String product=PROPOSAL.replace("PREPARE","PRODUCT_REVIEW");
+        try(var model=new OpenJiuwenIntentProposerTest.Fixture(product,SAVED_ANSWER);var session=session(model.proposer())) {
+            var prepared=session.call("chat",body("为synthetic-a筛选10万元、6个月、网点办理的产品候选",null));
+            assertTrue(prepared.containsKey("report"));
+            int calls=business.get();
+            var why=session.call("chat",body("为什么推荐这些产品？",null));
+            assertEquals("ANSWERED",why.get("status"));
+            assertEquals(calls,business.get(),"Saved-report explanation must not re-query CRM or product providers");
+            assertTrue(why.containsKey("savedExplanation"));
+        }
+    }
     @Test @Timeout(30) void installedReadExecutesOnceWithoutConfirmationAndRejectsReplay() throws Exception {
         useInstalledReadPolicy=true;
         try(var model=new OpenJiuwenIntentProposerTest.Fixture(PROPOSAL);var session=session(model.proposer())) {

@@ -29,11 +29,15 @@ final class ProductServiceTask {
                 || query.contains("份额") || PRODUCT_CODE.matcher(query).find())
                 && (query.contains("详情") || query.contains("风险等级") || query.contains("费用")
                 || query.contains("赎回") || query.contains("申购") || query.contains("起购")
-                || query.contains("是什么") || query.contains("怎么样"));
+                || query.contains("是什么") || query.contains("怎么样") || query.contains("看看"));
         return explore || compare || detail;
     }
 
     Map<String,Object> run(String query, String runId) {
+        return run(query, runId, List.of());
+    }
+
+    Map<String,Object> run(String query, String runId, Collection<String> priorProductRefs) {
         String requestId = "fh-product-" + UUID.randomUUID();
         String traceId = "fh-product-trace-" + UUID.randomUUID();
         CapabilityResultV1 result = access.query(requestId, traceId, "");
@@ -44,12 +48,14 @@ final class ProductServiceTask {
         data.path("products").forEach(products::add);
         List<JsonNode> selected = select(query, products);
         boolean compare = query.contains("对比") || query.contains("比较") || query.contains("区别");
+        if (compare || continuation(query)) selected = withPrior(selected, products, priorProductRefs);
         boolean list = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         var reply = new LinkedHashMap<String,Object>();
         reply.put("status", "ANSWERED");
         reply.put("responseScope", "PRODUCT_FACTS");
         reply.put("toolResults", List.of(tool(result)));
+        reply.put("evidenceRefs", List.of(result.requestId(), result.traceId()));
         reply.put("runId", runId);
         if (list && selected.isEmpty()) {
             reply.put("response", list(products));
@@ -71,13 +77,29 @@ final class ProductServiceTask {
             return Map.copyOf(reply);
         }
         if (compare) {
-            reply.put("response", comparison(selected));
+            String response = comparison(selected);
+            if (knowledge != null) {
+                var tools = new ArrayList<Object>(); tools.addAll((List<?>) reply.get("toolResults"));
+                var coverage = new StringBuilder("\n### 产品资料覆盖\n\n");
+                for (JsonNode product : selected) {
+                    Map<String,Object> evidence = knowledge.answer(query, runId, product);
+                    String text = Objects.toString(evidence.get("response"), "").strip();
+                    coverage.append("- **").append(product.path("name").asText()).append("**：")
+                            .append(text.isBlank() ? "当前没有可展示的产品手册依据。" : text).append("\n");
+                    if (evidence.get("toolResults") instanceof List<?> values) tools.addAll(values);
+                }
+                response += coverage;
+                reply.put("toolResults", List.copyOf(tools));
+            }
+            reply.put("response", response);
             reply.put("products", selected.stream().map(ProductServiceTask::publicProduct).toList());
+            reply.put("selectedProductRefs", selected.stream().map(ProductServiceTask::id).toList());
             return Map.copyOf(reply);
         }
         JsonNode product = selected.getFirst();
         reply.put("response", detail(product));
         reply.put("product", publicProduct(product));
+        reply.put("selectedProductRefs", List.of(id(product)));
         if (knowledge != null) {
             Map<String,Object> evidence = knowledge.answer(query, runId, product);
             Object knowledgeResponse = evidence.get("response");
@@ -92,6 +114,22 @@ final class ProductServiceTask {
         }
         return Map.copyOf(reply);
     }
+
+    private static boolean continuation(String query) {
+        return query.contains("这款") || query.contains("这个产品") || query.contains("这两款")
+                || query.contains("它们") || query.contains("哪个更");
+    }
+
+    private static List<JsonNode> withPrior(List<JsonNode> selected, List<JsonNode> products,
+            Collection<String> priorProductRefs) {
+        var result = new LinkedHashMap<String,JsonNode>();
+        selected.forEach(product -> result.put(id(product), product));
+        for (String ref : priorProductRefs) products.stream().filter(product -> ref.equals(id(product)))
+                .findFirst().ifPresent(product -> result.putIfAbsent(ref, product));
+        return List.copyOf(result.values());
+    }
+
+    private static String id(JsonNode product) { return product.path("productId").asText(); }
 
     private static List<JsonNode> select(String query, List<JsonNode> products) {
         var ids = new LinkedHashSet<String>();

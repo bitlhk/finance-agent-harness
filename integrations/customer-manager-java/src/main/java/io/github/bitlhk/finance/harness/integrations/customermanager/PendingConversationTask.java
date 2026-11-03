@@ -29,6 +29,14 @@ record PendingConversationTask(ConversationConfirmation.Binding binding, Convers
             arguments.putAll(CustomerManagerScenarioExtension.productArguments(text));
         return new PendingConversationTask(binding,kind,changed?text:query+"\n本轮补充："+text,next,arguments,expiresAt);
     }
+    PendingConversationTask withDefaults(Map<String,Object> defaults) {
+        if (kind != ConversationIntent.Kind.PRODUCT_REVIEW || defaults.isEmpty()) return this;
+        var merged = new LinkedHashMap<String,Object>();
+        for (String key : List.of("amount", "horizonMonths", "channel"))
+            if (defaults.containsKey(key)) merged.put(key, defaults.get(key));
+        merged.putAll(parameters);
+        return new PendingConversationTask(binding, kind, query, object, merged, expiresAt);
+    }
     List<String> missing() {
         var missing=new ArrayList<String>();
         if(object==null) missing.add("customerAlias");

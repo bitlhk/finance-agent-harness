@@ -30,6 +30,15 @@ final class PendingConversationTaskTest {
         assertEquals("客户B",pending.query());assertTrue(pending.parameters().isEmpty());
         assertEquals(List.of("amount","horizonMonths","channel"),pending.missing());
     }
+    @Test void confirmedSessionInputsFillOnlyMissingProductParameters() {
+        var pending=product("帮我分析产品","A").withDefaults(Map.of(
+                "amount",100000.0,"horizonMonths",6,"channel","网点","customerRecord","不应保存"));
+        assertTrue(pending.missing().isEmpty());
+        assertEquals(Map.of("amount",100000.0,"horizonMonths",6,"channel","网点"),pending.parameters());
+        pending=product("改为20万元","A").withDefaults(Map.of(
+                "amount",100000.0,"horizonMonths",6,"channel","网点"));
+        assertEquals(200000.0,pending.parameters().get("amount"));
+    }
     @Test void supplementsDoNotExtendExpiryAndChangedBindingsInvalidate() {
         var pending=product("筛选产品","A").supplement("10万元",null);
         assertTrue(pending.valid(binding,now.plusSeconds(299)));
