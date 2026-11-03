@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "market-risk-capital-original", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-market-risk-capital:0.1.0-SNAPSHOT",
+  "connectionKind": "market-risk-capital-http.v0.1",
+  "configurationFiles": [{
+    "id": "binding-file-sha256", "pathEnvironment": "FH_MARKET_RISK_BINDINGS",
+    "digestEnvironment": "FH_MARKET_RISK_BINDINGS_SHA256", "maxBytes": 262144
+  }],
+  "supports": [{"pack": {"id": "market-risk-capital-readonly", "version": "0.1.0"},
+    "capabilityIds": ["market.risk.capital.query"], "operation": "QUERY"}]
+}

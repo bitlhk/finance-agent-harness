@@ -47,3 +47,17 @@ Java 使用 OpenJiuwen 0.1.15 集成，Python 0.1.18 使用原生模型/工具�
 适配完成、指定版本通过、当前部署可构建是三种状态。Python 观测资格等运行前提见指南第 13.5 节。未接入 Runtime、任意包自动发现执行、跨版本图节点完整隔离、所有企业接口通用适配及非原作者真人独立接入均不能据此宣布完成。
 
 本轮只整理文档，不修观测资格、不扩展 Runtime，也不改历史 Agent 或运行证据。
+
+### 原标准法资本候选（Agent Store 场景工业化 FEAT-001）
+
+新增 `market-risk-capital` 领域、`market-risk-capital-original` Provider 和
+`market-risk-capital-java` 受管扩展，目录版本为 0.2.18 候选。
+Provider 依赖 Core 与有限领域 DTO，Integration 依赖 Provider 与既有 openJiuwen Java 安装器；
+Core、Execution、原 Python 公式和旧资产语义保持原义。独立原工具由 Agent Store Workshop 发布，
+与原 bank-mktrisk-kit / risk-llm-coach 两个消费者绑定，方法明确为派生。
+
+能力包和领域包沿用标准 `pack.yaml` 入口，来源与版本在 Catalog、方法和交付记录中可核对。
+领域包由既有 Catalog 的依赖与 `pack.yaml` 表达，不另造一个公共 Domain Assembly 协议。
+本地组件/Runtime 测试、Builder 独立交付、上游接纳和正式发布分别取证；候选目录不是发布资格。
+详见 [有限只读合同](market-risk-capital-readonly-v1.md) 及
+[原生接线说明](../integrations/market-risk-capital-java/README.md)。

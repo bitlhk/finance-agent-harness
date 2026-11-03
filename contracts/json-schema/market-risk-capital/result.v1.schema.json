@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance-market-risk-capital.v1",
+  "title": "Harness finite capital facts; original HTTP reply is retained separately",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "values", "param_version", "engine_version", "detail", "ir_breakdown", "source", "calculatedAt", "toolReleaseDigest", "upstreamRevision", "parametersDigest", "originalFunction"],
+  "properties": {
+    "schemaVersion": {"const": "finance-market-risk-capital.v1"},
+    "requestId": {"$ref": "#/$defs/text"},
+    "values": {
+      "type": "object", "additionalProperties": false,
+      "required": ["interest_rate", "fx", "equity", "commodity", "total"],
+      "properties": {
+        "interest_rate": {"type": "number", "minimum": 0},
+        "fx": {"type": "number", "minimum": 0},
+        "equity": {"type": "number", "minimum": 0},
+        "commodity": {"type": "number", "minimum": 0},
+        "total": {"type": "number", "minimum": 0}
+      }
+    },
+    "param_version": {"$ref": "#/$defs/text"},
+    "engine_version": {"$ref": "#/$defs/text"},
+    "detail": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["risk_category", "capital", "note"],
+        "properties": {
+          "risk_category": {"enum": ["利率", "汇率", "股票", "商品"]},
+          "capital": {"type": "number", "minimum": 0},
+          "note": {"type": "string", "maxLength": 1000}
+        }
+      }
+    },
+    "ir_breakdown": {
+      "type": "object", "additionalProperties": false, "required": ["zones"],
+      "properties": {
+        "zones": {
+          "type": "array", "maxItems": 3,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["zone", "long", "short", "matched", "residual", "weight", "charge"],
+            "properties": {
+              "zone": {"$ref": "#/$defs/text"},
+              "long": {"type": "number"}, "short": {"type": "number"},
+              "matched": {"type": "number"}, "residual": {"type": "number"},
+              "weight": {"type": "number"}, "charge": {"type": "number"}
+            }
+          }
+        },
+        "diversification": {"type": "number"},
+        "zone_charges": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}
+      },
+      "oneOf": [
+        {"properties": {"zones": {"maxItems": 0}}, "maxProperties": 1},
+        {"properties": {"zones": {"minItems": 3}}, "required": ["diversification", "zone_charges"]}
+      ]
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["principalId", "subjectRef", "taskRef", "sessionRef", "snapshotRef", "snapshotDigest", "asOf", "kind"],
+      "properties": {
+        "principalId": {"$ref": "#/$defs/text"}, "subjectRef": {"$ref": "#/$defs/text"},
+        "taskRef": {"$ref": "#/$defs/text"}, "sessionRef": {"$ref": "#/$defs/text"},
+        "snapshotRef": {"$ref": "#/$defs/text"}, "snapshotDigest": {"$ref": "#/$defs/hash"},
+        "asOf": {"type": ["string", "null"], "format": "date"},
+        "kind": {"const": "CONTROLLED_FIXTURE"}
+      }
+    },
+    "calculatedAt": {"type": "string", "format": "date-time"},
+    "toolReleaseDigest": {"$ref": "#/$defs/hash"},
+    "upstreamRevision": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "parametersDigest": {"$ref": "#/$defs/hash"},
+    "originalFunction": {"const": "mktrisk_engine.standard.compute_standard_capital"}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 200},
+    "hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+  }
+}

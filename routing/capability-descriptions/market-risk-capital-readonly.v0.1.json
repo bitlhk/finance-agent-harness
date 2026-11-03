@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "market-risk-capital-routing-zh-cn", "version": "0.1.0",
+  "packId": "market-risk-capital-readonly", "packVersion": "0.1.0",
+  "capabilities": [{
+    "capabilityId": "market.risk.capital.query",
+    "useCases": ["核对当前获准组合的标准法市场风险资本", "查看资本分项、参数版本与数据日期"],
+    "outputBoundaries": ["只引用本次原工具返回的资本事实", "不支持VaR、压力测试、监管报送、交易或任意脚本", "身份、任务、头寸与参数均由Host绑定"],
+    "exampleUtterances": ["查一下本次标准法资本", "这次各项市场风险资本是多少"],
+    "negativeExamples": ["替我运行任意Python代码", "替换监管系数", "执行交易", "为另一个未授权客户计算"]
+  }]
+}
