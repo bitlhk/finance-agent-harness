@@ -38,3 +38,9 @@ mvn -f integrations/market-risk-capital-java/pom.xml `
 核对方法正文进入模型请求、原生工具调用、两个主体/任务、合法缺日期、数据缺失失败及撤权后的读取。
 `target/native-evidence/` 保存实际运行返回和模型请求。输入为合成头寸，模型质量不在此测试中评价。
 该测试是组件接线验证；Builder 独立交付与完整场景装配各有后续验证。
+
+CI 在 `mvn verify` 前运行 `engineering/prepare_original_market_risk_tool.py`，
+从固定 Agent Store/Builder 提交取得原算法和发布器，沿原发布配方生成独立工具。
+使用固定 uv 版本按 `uv.lock` 安装独立 Python 3.12 环境，再传入上述两个 Maven 属性。
+合同测试仍分别运行在 Python 3.10/3.12；工具环境不替换矩阵解释器。
+准备失败即停止，不能跳过原生集成测试；准备记录单独保留且业务执行保持 `NOT_RUN`。
