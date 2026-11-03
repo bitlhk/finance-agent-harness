@@ -4,18 +4,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
+import { loadPublicPages } from './public-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = fs.readFileSync(path.join(root, 'docs/public/developer-guide.md'), 'utf8');
 const headings = marked.lexer(source).filter(token => token.type === 'heading' && token.depth === 2);
 
+test('every public page renders with the publication link policy', () => {
+  const edition = JSON.parse(fs.readFileSync(path.join(root, 'docs/public/edition.json'), 'utf8'));
+  const pages = loadPublicPages(root, edition);
+  assert.equal(pages.length, 3);
+  assert.ok(pages.every(page => typeof page.html === 'string' && page.html.length > 0));
+});
+
 test('public guide has concrete paths from upload to a newly installed Agent', () => {
   assert.equal(headings.length, 17);
   for (const text of [
-    '0. 从哪条路径开始', '7. 路径 A', '14. 上传一个组件包',
-    '15. 怎样让 Agent 准确使用你的能力', '导入组件包',
-    '运行受控检查', '安装 Lock', '旧 Agent 不自动升级',
-    '目标工作区重新导入', '不支持的 Runtime',
+    '0. ������·����ʼ', '7. ·�� A', '14. �ϴ�һ�������',
+    '15. ������ Agent ׼ȷʹ���������', '���������',
+    '�����ܿؼ��', '��װ Lock', '�� Agent ���Զ�����',
+    'Ŀ�깤�������µ���', '��֧�ֵ� Runtime',
   ]) assert.ok(source.includes(text), text);
   assert.ok(!source.includes('asset-check-tutorial-devkit'));
 });
@@ -39,26 +47,26 @@ test('all repository paths used by the new walkthrough exist on this baseline', 
 });
 
 test('development handoff distinguishes declarations, execution and new test evidence', () => {
-  for (const text of ['16. 从看懂资产到开发一个新特性', '不是完整正文依赖分析',
-    '后续金融新特性统一交付卡', '不允许目标测试缺失被当通过', 'ServiceLoader 发现不等于目录准入',
-    '尚不代表真人已独立完成', 'MR186 及其前置待维护者接纳']) assert.ok(source.includes(text), text);
+  for (const text of ['16. �ӿ����ʲ�������һ��������', '��������������������',
+    '��������������ͳһ������', '������Ŀ�����ȱʧ����ͨ��', 'ServiceLoader ���ֲ�����Ŀ¼׼��',
+    '�в����������Ѷ������', 'MR186 ����ǰ�ô�ά���߽���']) assert.ok(source.includes(text), text);
 });
 
 test('current UI, source rules and support levels replace historical instructions', () => {
-  for (const text of ['组成与依赖／文件与修改／检查与生成', '输入定义位于', '不表示其中每个 Skill',
-    '不是同一输入合同', '跨版本标识规则仍是后续整改项', 'schema_version: 0.9',
-    '已经适配', '指定版本验证通过', '当前环境可以构建', 'FH_OBSERVATION_QUALIFICATION_FILE',
-    '14.4 自己完成一次修改', '已确认事实', '尚缺资料']) assert.ok(source.includes(text), text);
-  for (const stale of ['其余23模块', '0.5请求与0.2', '本轮部署的资产详情提供“组成与文件”']) assert.ok(!source.includes(stale), stale);
+  for (const text of ['������������ļ����޸ģ����������', '���붨��λ��', '����ʾ����ÿ�� Skill',
+    '����ͬһ�����ͬ', '��汾��ʶ�������Ǻ���������', 'schema_version: 0.9',
+    '�Ѿ�����', 'ָ���汾��֤ͨ��', '��ǰ�������Թ���', 'FH_OBSERVATION_QUALIFICATION_FILE',
+    '14.4 �Լ����һ���޸�', '��ȷ����ʵ', '��ȱ����']) assert.ok(source.includes(text), text);
+  for (const stale of ['����23ģ��', '0.5������0.2', '���ֲ�����ʲ������ṩ��������ļ���']) assert.ok(!source.includes(stale), stale);
   const edition = JSON.parse(fs.readFileSync(path.join(root, 'docs/public/edition.json'), 'utf8'));
-  assert.ok(source.includes(`公开开发版 ${edition.version} · 接入套件候选 V0.1 · ${edition.date}`));
+  assert.ok(source.includes(`���������� ${edition.version} �� �����׼���ѡ V0.1 �� ${edition.date}`));
   for (const file of ['docs/current-architecture.md', 'docs/INDEX.md']) assert.ok(fs.statSync(path.join(root, file)).isFile());
 });
 
 test('guide keeps package admission and runtime authorization separate', () => {
   for (const text of [
-    '上传是开始，不是自动授权', '只验证 Java 只读执行要求',
-    'Provider 代码仍需受管安装', '能力声明不会授予客户权限',
-    '不是运行时强制完成检查器', '不能把工具 HTTP 200 当整项任务完成',
+    '�ϴ��ǿ�ʼ�������Զ���Ȩ', 'ֻ��֤ Java ֻ��ִ��Ҫ��',
+    'Provider ���������ܹܰ�װ', '����������������ͻ�Ȩ��',
+    '��������ʱǿ����ɼ����', '���ܰѹ��� HTTP 200 �������������',
   ]) assert.ok(source.includes(text), text);
 });
