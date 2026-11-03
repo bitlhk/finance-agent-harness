@@ -602,7 +602,7 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
         }
         private Map<String,Object> directService(String query, String requested, Collection<String> customers) throws Exception {
             if (journey.reportFollowup(query)) {
-                var answer=task.explainSaved(owner,journey.reportRef(),journey.reportRevision(),query,
+                var answer=task.explainCurrent(owner,journey.reportRef(),journey.reportRevision(),query,
                         saved->intentProposer.explainSaved(query,saved,this::operationCancelled),this::operationCancelled);
                 return Map.of("status","ANSWERED","response",answer.path("interpretation").path("answer").asText(),
                         "savedExplanation",value(answer),"journey",journey.projection());

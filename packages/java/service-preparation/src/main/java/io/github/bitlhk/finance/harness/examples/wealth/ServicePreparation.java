@@ -462,7 +462,7 @@ public final class ServicePreparation implements AutoCloseable {
         releaseSaved(r);
         return r;
     }
-    private void authorizeReport(ObjectNode r) {
+    private void authorizeBusinessReport(ObjectNode r) {
         if (!owner.equals(r.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
         var a = access.authorize(r.path("customerRef").asText());
         Mapping m = mappings.get();
@@ -470,9 +470,19 @@ public final class ServicePreparation implements AutoCloseable {
                 || !r.path("customerRef").asText().equals(m.customers().get(r.path("customerAlias").asText()))
                 || !a.authorityRef().equals(r.path("authorityRef").asText()))
             throw new SecurityException("REPORT_AUTHORITY_CHANGED");
+    }
+    private void authorizeReport(ObjectNode r) {
+        authorizeBusinessReport(r);
         if (r.has("knowledgeExecution")) {
             if (knowledge == null) throw new SecurityException("JOINT_HISTORY_AUTHORIZATION_REQUIRED");
             knowledge.authorizeSaved(r);
+        }
+    }
+    private void authorizeCurrentReport(ObjectNode r) {
+        authorizeBusinessReport(r);
+        if (r.has("knowledgeExecution")) {
+            if (knowledge == null) throw new SecurityException("KNOWLEDGE_RUNTIME_AUTHORIZATION_REQUIRED");
+            knowledge.current();
         }
     }
     private void releaseSaved(ObjectNode r) {
@@ -509,6 +519,49 @@ public final class ServicePreparation implements AutoCloseable {
     }
     @FunctionalInterface public interface SavedExplanation {
         ObjectNode explain(ObjectNode report) throws Exception;
+    }
+    public ObjectNode explainCurrent(String caller,String id,int revision,String question,
+            SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
+        ObjectNode snapshot;
+        synchronized(this) {
+            owner(caller);
+            if(!id.equals(activeRun))throw new SecurityException("CURRENT_REPORT_CHANGED");
+            snapshot=(ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+            if(snapshot.path("reportRevision").asInt()!=revision)throw new SecurityException("CURRENT_REPORT_CHANGED");
+            authorizeCurrentReport(snapshot);
+        }
+        String snapshotDigest=ScenarioEvidence.digest(snapshot);
+        Runnable authorized=()-> {
+            if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())
+                throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            owner(caller);authorizeCurrentReport(snapshot);
+        };
+        var proof=evidence.begin(UUID.randomUUID().toString(),owner,snapshot.path("customerRef").asText(),
+                "EXPLAIN_CURRENT_REPORT","scenario.report.explain",
+                Map.of("reportId",id,"revision",revision,"reportDigest",snapshotDigest,"questionDigest",ScenarioEvidence.digest(question)),
+                access.authorize(snapshot.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        proof.check("MODEL_ENTRY",authorized,Map.of("businessQueries",0,"explanationModelInvocations",0));
+        ObjectNode answer;
+        try { answer=model.explain(snapshot.deepCopy()); }
+        catch(java.util.concurrent.CancellationException cancelledFailure){throw cancelledFailure;}
+        catch(Exception failure) {
+            proof.check("MODEL_FAILED",authorized,Map.of("businessQueries",0,"explanationModelInvocations",1,"resultReleased",false));
+            throw new IllegalStateException("CURRENT_REPORT_EXPLANATION_FAILED");
+        }
+        ObjectNode again;
+        synchronized(this) {
+            again=(ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+            authorizeCurrentReport(again);
+        }
+        if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.set("interpretation",answer);
+        result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
+                .put("customerAlias",snapshot.path("customerAlias").asText());
+        result.put("basis","CURRENT_RUNTIME_REPORT").put("businessQueries",0).put("explanationModelInvocations",1)
+                .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+        proof.check("EXPLANATION_RELEASE",authorized,result);
+        return result;
     }
     public ObjectNode explainSaved(String caller,String id,int revision,String question,
             SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
