@@ -77,6 +77,21 @@ final class ProductServiceTaskTest {
         assertEquals(0, calls.get());
     }
 
+    @Test void productPlanAndShareQuestionsCannotBypassProductIdentityRouting() {
+        assertTrue(ProductServiceTask.handles("招银理财招睿添利日开21号固定收益类理财计划是什么风险等级"));
+        assertTrue(ProductServiceTask.handles("招银理财招睿添利日开21号A份额是什么风险等级"));
+    }
+
+    @Test void baseProductNameResolvesBoundShareWhenNoShareWasClaimed() {
+        var calls = new AtomicInteger();
+        var task = new ProductServiceTask((request, trace, keyword) -> catalog(),
+                (question, run, product) -> { calls.incrementAndGet(); return Map.of("response", "PR2原文依据"); });
+        var result = task.run("招银理财招睿添利日开21号固定收益类理财计划是什么风险等级", "run-a");
+        assertEquals("COMPLETED", result.get("status"));
+        assertTrue(result.get("response").toString().contains("PR2原文依据"));
+        assertEquals(1, calls.get());
+    }
+
     @Test void explicitCorrectShareStillAllowsComparisonWithUnclassifiedProduct() {
         var task = new ProductServiceTask((request, trace, keyword) -> catalog(), null);
         var result = task.run("比较稳健固收增强A和招银理财招睿添利日开21号N份额", "run-a");
