@@ -3,8 +3,27 @@ package io.github.bitlhk.finance.harness.integrations.customermanager;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import io.github.bitlhk.finance.harness.core.FinanceContextV1;
+import io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider;
+import java.time.Instant;
+import java.util.Set;
 
 class ManagerKnowledgeEvidenceTest {
+    @Test void productProviderUsesItsAuthorizedSourceSubjectNotTheCustomer() {
+        var grant = new BoundFinanceProvider.Grant("employee", FinanceContextV1.PrincipalType.EMPLOYEE,
+                Set.of("product-source"), Set.of("WEALTH_PRODUCT_REVIEW"), Set.of("wealth:products:read"),
+                "session", "authority", Instant.now().plusSeconds(60));
+        assertEquals("product-source", ManagerKnowledgeEvidence.productSubject(grant));
+        assertNotEquals("customer-123", ManagerKnowledgeEvidence.productSubject(grant));
+    }
+
+    @Test void productProviderRejectsMissingOrAmbiguousSourceAuthority() {
+        assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productSubject(null));
+        var ambiguous = new BoundFinanceProvider.Grant("employee", FinanceContextV1.PrincipalType.EMPLOYEE,
+                Set.of("source-a", "source-b"), Set.of("WEALTH_PRODUCT_REVIEW"), Set.of("wealth:products:read"),
+                "session", "authority", Instant.now().plusSeconds(60));
+        assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productSubject(ambiguous));
+    }
     @Test void noKnowledgeAndAmbiguousDecisionsRemainValidCapabilityResults() {
         var missing = ManagerKnowledgeEvidence.unavailable("request", "trace", "NO_BOUND_PRODUCT_KNOWLEDGE", false);
         assertEquals(io.github.bitlhk.finance.harness.core.CapabilityResultV1.Status.COMPLETED, missing.status());

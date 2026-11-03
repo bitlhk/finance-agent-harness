@@ -63,8 +63,9 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
                             return scopes; }, true), session));
                 if (business instanceof KypPreparationAccess kyp) {
                     var grant = kyp.productGrant();
+                    String productSubject = productSubject(grant);
                     contexts.put(KypProductFactory.ID, new ProviderInvocation(new InvocationDefaults(
-                            grant.principalId(), customer, grant.principalType(), "finance-harness", "WEALTH_PRODUCT_REVIEW",
+                            grant.principalId(), productSubject, grant.principalType(), "finance-harness", "WEALTH_PRODUCT_REVIEW",
                             snapshot.authenticationLevel(), grant.scopes(), () -> kyp.productGrant().scopes(), true),
                             kyp.productSession()));
                 }
@@ -76,6 +77,14 @@ final class ManagerKnowledgeEvidence implements PreparationKnowledge {
             }
             public void close() { business.close(); }
         };
+    }
+
+    static String productSubject(io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider.Grant grant) {
+        if (grant == null || grant.subjects().size() != 1)
+            throw new SecurityException("KYP_READ_AUTHORITY_REJECTED");
+        String subject = grant.subjects().iterator().next();
+        if (subject == null || subject.isBlank()) throw new SecurityException("KYP_READ_AUTHORITY_REJECTED");
+        return subject;
     }
 
     ManagedScenarioExtensionV01.Session session(ManagedScenarioExtensionV01.Session delegate) {
