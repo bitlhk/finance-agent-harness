@@ -51,4 +51,19 @@ final class SavedReportExplanationTest {
         assertThrows(IllegalArgumentException.class,()->OpenJiuwenSavedReportExplainer.archivedFallback("为什么",
                 HarnessJson.mapper().createObjectNode().put("status","PARTIAL")));
     }
+    @Test void failedReportWithNoEligibleProductsUsesArchivedBusinessBoundary() {
+        var report=HarnessJson.mapper().createObjectNode().put("status","PARTIAL").put("explanationStatus","FAILED");
+        report.putObject("productReview").putArray("eligibleProducts");
+        report.withObject("productReview").putArray("sourceProducts").addObject().put("productId","P001");
+        report.putObject("factAssessment").putArray("missing").addObject()
+                .put("label","产品来源信息或销售资格尚未完整核实");
+        var projection=OpenJiuwenSavedReportExplainer.project(report);
+        assertEquals(0,projection.path("productReviewSummary").path("eligibleProductCount").asInt());
+        var reason=OpenJiuwenSavedReportExplainer.archivedFallback("为什么选这些？",projection);
+        assertTrue(reason.path("answer").asText().contains("没有形成可确认的产品候选"));
+        assertTrue(reason.path("answer").asText().contains("不能据此推荐"));
+        var talkTrack=OpenJiuwenSavedReportExplainer.archivedFallback("生成沟通话术",projection);
+        assertTrue(talkTrack.path("answer").asText().contains("不能生成具体产品推介话术"));
+        assertEquals("/productReviewSummary/eligibleProductCount",reason.path("refs").path(0).asText());
+    }
 }
