@@ -17,6 +17,7 @@ class PreparationKnowledgeTest {
     int businessCalls, knowledgeCalls, modelCalls, closed;
     JsonNode modelFacts;
     String productCitation;
+    List<Map<String,Object>> excludedProducts = List.of();
     final PreparationAccess.Snapshot snapshot = new PreparationAccess.Snapshot("crm-authority", "employee",
             FinanceContextV1.AuthenticationLevel.STRONG);
     PreparationAccess business = new PreparationAccess() {
@@ -31,7 +32,7 @@ class PreparationKnowledgeTest {
                 return result(request, trace, Map.of("status", "partial", "customerRiskLevel", "C3",
                         "assessmentValidUntil", "2027-08-27", "request", args,
                         "policySource", Map.of("ruleVersion", "fixture-v1"),
-                        "eligibleProducts", List.of(), "excludedProducts", List.of()));
+                        "eligibleProducts", List.of(), "excludedProducts", excludedProducts));
             return result(request, trace, Map.of("previsitContext", Map.of("customer", Map.of("customerId", customer),
                     "dataAsOf", "2026-10-31T00:00:00Z", "profiles", List.of(), "readiness", Map.of("status", "READY")),
                     "hostEvidence", Map.of("receiptId", "crm-receipt-a")));
@@ -158,6 +159,22 @@ class PreparationKnowledgeTest {
                     Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch", "productRef", "132112"),
                     ServicePreparation.PreparationListener.NONE);
             assertEquals("132112", report.at("/productReview/request/productRef").asText());
+        }
+    }
+    @Test void productCitationCatalogCoversTheLastBoundedProduct() throws Exception {
+        var products = new ArrayList<Map<String,Object>>();
+        for (int index = 0; index < 50; index++) {
+            products.add(Map.of("productRef", "product-" + index,
+                    "name", "产品" + index,
+                    "reasons", List.of("销售状态待核实")));
+        }
+        excludedProducts = List.copyOf(products);
+        productCitation = "/productReview/excludedProducts/49/reasons/0";
+        try (var service = open()) {
+            var report = service.prepareProduct("owner-a", service.select("owner-a", "合成客户甲", "筛选产品"),
+                    Map.of("amount", 1000, "horizonMonths", 12, "channel", "branch"),
+                    ServicePreparation.PreparationListener.NONE);
+            assertEquals("READY", report.path("explanationStatus").asText(), report.toString());
         }
     }
     @Test void revocationDuringGenerationDiscardsJointContent() throws Exception {

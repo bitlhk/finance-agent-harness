@@ -17,6 +17,7 @@ final class WealthServiceJourneyTest {
         assertEquals(Map.of("amount",100000,"horizonMonths",6),projection.get("parameters"));
         assertFalse(projection.toString().contains("secret"));
         assertTrue(journey.reportFollowup("为什么推荐这些产品"));
+        assertTrue(journey.reportFollowup("生成一份我可以和客户沟通的话术"));
     }
 
     @Test void customerSwitchClearsCustomerSpecificTaskButNotAnotherSession() {

@@ -264,8 +264,11 @@ public final class ServicePreparation implements AutoCloseable {
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
-                        collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 100);
-                        collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 100);
+                        // The bounded product source can return up to 50 products. Every product value
+                        // exposed to the model must also have a valid citation path; truncating this
+                        // catalog makes otherwise valid late-list citations fail closed.
+                        collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 800);
+                        collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 800);
                         report.withArray("events").add("PRODUCT_POLICY_SCREENED");
                     }
                 }
