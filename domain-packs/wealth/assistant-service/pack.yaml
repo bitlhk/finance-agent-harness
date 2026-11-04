@@ -1,0 +1,30 @@
+schemaVersion: finance-domain-pack.v1
+packId: wealth-assistant-service
+version: 0.1.0
+profile: employee-assisted
+capabilities:
+  - wealth.previsit-context.query
+  - wealth.allocation-context.query
+  - wealth.products.query
+capabilityPackRefs:
+  - id: wealth-manager-previsit
+    version: 0.1.0
+  - id: wealth-allocation-context
+    version: 0.1.0
+  - id: wealth-product-facts
+    version: 0.1.0
+skills:
+  - directory: wealth-assistant-service
+    entry: skills/wealth-assistant-service/SKILL.md
+scope:
+  - 获授权客户的画像、持仓、到期事项和访前准备
+  - 产品目录探索、产品事实比较和资料覆盖说明
+  - 基于已取得事实的候选分析、排除理由和待复核沟通话术
+outOfScope:
+  - 通过客户与产品风险等级数字直接推断适当性
+  - 将演示产品资料声明为银行当前在售事实
+  - CRM 写入、消息发送、购买、交易或自动审批
+  - 使用未锁定、身份错配或无权访问的产品知识
+sourceReferences:
+  - finance-harness/customer-manager-service-preparation.v1
+  - finance-solution-builder/wealth-assistant-experience.v1

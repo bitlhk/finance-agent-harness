@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.17",
+  "catalogVersion": "0.2.18",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -149,6 +149,41 @@
     }
   ],
   "domainPacks": [
+    {
+      "id": "wealth-assistant-service",
+      "version": "0.1.0",
+      "displayName": "客户经理财富服务",
+      "profile": "employee-assisted",
+      "source": "repo://domain-packs/wealth/assistant-service",
+      "governanceRef": "finance-harness-core",
+      "requiresCapabilities": [
+        "wealth.previsit-context.query",
+        "wealth.allocation-context.query",
+        "wealth.products.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "wealth-manager-previsit",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "wealth-allocation-context",
+          "version": "0.1.0"
+        },
+        {
+          "kind": "capability-pack",
+          "id": "wealth-product-facts",
+          "version": "0.1.0"
+        }
+      ],
+      "compatibility": {
+        "profiles": [
+          "employee-assisted"
+        ]
+      }
+    },
     {
       "id": "wealth-service-preparation",
       "version": "0.1.0",
@@ -1258,7 +1293,7 @@
       }
     }
   ],
-  "catalogRevision": "2026-10-31.knowledge-host-merge-prep",
+  "catalogRevision": "2026-11-04.wealth-assistant-method",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",
