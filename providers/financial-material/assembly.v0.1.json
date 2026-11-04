@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "financial-material-original",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-financial-material:0.1.0-SNAPSHOT",
+  "connectionKind": "financial-material-http.v0.1",
+  "configurationFiles": [
+    {
+      "id": "binding-file-sha256",
+      "pathEnvironment": "FH_MATERIAL_BINDINGS",
+      "digestEnvironment": "FH_MATERIAL_BINDINGS_SHA256",
+      "maxBytes": 262144
+    }
+  ],
+  "supports": [
+    {
+      "pack": {
+        "id": "financial-material-extraction-readonly",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}

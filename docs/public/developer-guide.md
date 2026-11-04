@@ -827,3 +827,9 @@ mvn -B -ntp -pl providers/non-ai-banking -am -Dtest=CashflowProviderTest,NonAiBa
 
 当前是 0.1.0 / 0.1.0-SNAPSHOT 的本地候选。交付时固定实际源码内容和 JAR 摘要，保留原来源提交；
 不能把未提交的新代码说成原提交已具备，也不能将本地测试说成上游已发布。
+
+### 16.8 原材料处理的接入边界（候选）
+
+使用`financial-material-processing` Profile和固定原工具闭包，经标准方法/能力包安装至openJiuwen Java 0.1.15。Provider的私有绑定文件固定任务、模式和发布摘要；当前文件通过授权上传选中，模型不能提供客户、路径或凭据。仅有页码时不要补画区域，空返回不要当作解析完整；修正采用期望版本并保留原值。
+
+文件和原返回归来源服务，当前身份与结果披露归Host。Builder退出后仍通过已交付原工具和JAR运行。工程固定响应不等于真实视觉质量；目录许可、实际模型传输、生产IAM和负载应分别取得资格。接线细节见候选源码中的 `docs/financial-material-processing-v1.md`。

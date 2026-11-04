@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "finance-capability-descriptions.v0.1",
+  "assetId": "financial-material-routing-zh-cn",
+  "version": "0.1.0",
+  "packId": "financial-material-extraction-readonly",
+  "packVersion": "0.1.0",
+  "capabilities": [
+    {
+      "capabilityId": "financial.material.extract",
+      "useCases": [
+        "处理本任务原材料并回查原文"
+      ],
+      "outputBoundaries": [
+        "只保留本次原工具依据，不补造原值或位置",
+        "不代表材料真实性、审批或真实视觉质量通过"
+      ],
+      "exampleUtterances": [
+        "提取这份材料并保留原文页码"
+      ],
+      "negativeExamples": [
+        "运行任意脚本",
+        "读取其他客户材料"
+      ]
+    },
+    {
+      "capabilityId": "financial.material.locate",
+      "useCases": [
+        "处理本任务原材料并回查原文"
+      ],
+      "outputBoundaries": [
+        "只保留本次原工具依据，不补造原值或位置",
+        "不代表材料真实性、审批或真实视觉质量通过"
+      ],
+      "exampleUtterances": [
+        "提取这份材料并保留原文页码"
+      ],
+      "negativeExamples": [
+        "运行任意脚本",
+        "读取其他客户材料"
+      ]
+    }
+  ]
+}
