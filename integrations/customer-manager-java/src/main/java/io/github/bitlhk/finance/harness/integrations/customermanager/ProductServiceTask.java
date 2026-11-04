@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.github.bitlhk.finance.harness.core.CapabilityResultV1;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import java.util.*;
+import java.text.DecimalFormat;
 import java.util.regex.Pattern;
 
 /** Product exploration is independent from customer suitability and product-knowledge matching. */
@@ -25,15 +26,19 @@ final class ProductServiceTask {
         boolean explore = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         boolean compare = query.contains("对比") || query.contains("比较") || query.contains("区别");
-        boolean detail = (query.contains("产品") || query.contains("理财计划")
+        boolean detail = (query.contains("产品") || query.contains("理财")
                 || query.contains("份额") || PRODUCT_CODE.matcher(query).find())
                 && (query.contains("详情") || query.contains("风险等级") || query.contains("费用")
                 || query.contains("赎回") || query.contains("申购") || query.contains("起购")
-                || query.contains("是什么") || query.contains("怎么样"));
+                || query.contains("是什么") || query.contains("怎么样") || query.contains("看看"));
         return explore || compare || detail;
     }
 
     Map<String,Object> run(String query, String runId) {
+        return run(query, runId, List.of());
+    }
+
+    Map<String,Object> run(String query, String runId, Collection<String> priorProductRefs) {
         String requestId = "fh-product-" + UUID.randomUUID();
         String traceId = "fh-product-trace-" + UUID.randomUUID();
         CapabilityResultV1 result = access.query(requestId, traceId, "");
@@ -44,12 +49,14 @@ final class ProductServiceTask {
         data.path("products").forEach(products::add);
         List<JsonNode> selected = select(query, products);
         boolean compare = query.contains("对比") || query.contains("比较") || query.contains("区别");
+        if (compare || continuation(query)) selected = withPrior(selected, products, priorProductRefs);
         boolean list = query.contains("有哪些产品") || query.contains("有什么产品")
                 || query.contains("产品列表") || query.contains("能看到") && query.contains("产品");
         var reply = new LinkedHashMap<String,Object>();
-        reply.put("status", "COMPLETED");
+        reply.put("status", "ANSWERED");
         reply.put("responseScope", "PRODUCT_FACTS");
         reply.put("toolResults", List.of(tool(result)));
+        reply.put("evidenceRefs", List.of(result.requestId(), result.traceId()));
         reply.put("runId", runId);
         if (list && selected.isEmpty()) {
             reply.put("response", list(products));
@@ -71,13 +78,29 @@ final class ProductServiceTask {
             return Map.copyOf(reply);
         }
         if (compare) {
-            reply.put("response", comparison(selected));
+            String response = comparison(selected);
+            if (knowledge != null) {
+                var tools = new ArrayList<Object>(); tools.addAll((List<?>) reply.get("toolResults"));
+                var coverage = new StringBuilder("\n### 产品资料覆盖\n\n");
+                for (JsonNode product : selected) {
+                    Map<String,Object> evidence = knowledge.answer(query, runId, product);
+                    String text = knowledgeCoverage(evidence);
+                    coverage.append("- **").append(product.path("name").asText()).append("**：")
+                            .append(text.isBlank() ? "当前没有可展示的产品手册依据。" : text).append("\n");
+                    if (evidence.get("toolResults") instanceof List<?> values) tools.addAll(values);
+                }
+                response += coverage;
+                reply.put("toolResults", List.copyOf(tools));
+            }
+            reply.put("response", response);
             reply.put("products", selected.stream().map(ProductServiceTask::publicProduct).toList());
+            reply.put("selectedProductRefs", selected.stream().map(ProductServiceTask::id).toList());
             return Map.copyOf(reply);
         }
         JsonNode product = selected.getFirst();
         reply.put("response", detail(product));
         reply.put("product", publicProduct(product));
+        reply.put("selectedProductRefs", List.of(id(product)));
         if (knowledge != null) {
             Map<String,Object> evidence = knowledge.answer(query, runId, product);
             Object knowledgeResponse = evidence.get("response");
@@ -92,6 +115,30 @@ final class ProductServiceTask {
         }
         return Map.copyOf(reply);
     }
+
+    private static String knowledgeCoverage(Map<String,Object> evidence) {
+        String status = Objects.toString(evidence.get("status"), "");
+        if ("COMPLETED".equals(status))
+            return "已取得与该产品身份一致的固定版本手册依据；完整原文和来源位置可在“查看依据”中展开。";
+        String response = Objects.toString(evidence.get("response"), "").strip();
+        return response.isBlank() ? "当前没有可展示的产品手册依据。" : response;
+    }
+
+    private static boolean continuation(String query) {
+        return query.contains("这款") || query.contains("这个产品") || query.contains("这两款")
+                || query.contains("它们") || query.contains("哪个更");
+    }
+
+    private static List<JsonNode> withPrior(List<JsonNode> selected, List<JsonNode> products,
+            Collection<String> priorProductRefs) {
+        var result = new LinkedHashMap<String,JsonNode>();
+        selected.forEach(product -> result.put(id(product), product));
+        for (String ref : priorProductRefs) products.stream().filter(product -> ref.equals(id(product)))
+                .findFirst().ifPresent(product -> result.putIfAbsent(ref, product));
+        return List.copyOf(result.values());
+    }
+
+    private static String id(JsonNode product) { return product.path("productId").asText(); }
 
     private static List<JsonNode> select(String query, List<JsonNode> products) {
         var ids = new LinkedHashSet<String>();
@@ -134,7 +181,7 @@ final class ProductServiceTask {
         for (JsonNode product : products) out.append("| ").append(product.path("name").asText())
                 .append(" (`").append(product.path("productId").asText()).append("`) | R")
                 .append(product.path("riskLevel").asInt()).append(" | ")
-                .append(product.path("minimumAmount").isNumber() ? product.path("minimumAmount").asText()+" 元" : "待核实")
+                .append(amount(product.path("minimumAmount")))
                 .append(" | ").append(product.path("termMonths").isIntegralNumber() ? product.path("termMonths").asText()+" 个月" : "待核实")
                 .append(" | ").append(join(product.path("channels"))).append(" |\n");
         return out.toString();
@@ -143,7 +190,7 @@ final class ProductServiceTask {
     private static String detail(JsonNode product) {
         return "**" + product.path("name").asText() + "**（`" + product.path("productId").asText() + "`）\n\n"
                 + "- 产品事实风险等级：R" + product.path("riskLevel").asInt() + "\n"
-                + "- 起购金额：" + (product.path("minimumAmount").isNumber() ? product.path("minimumAmount").asText()+" 元" : "待核实") + "\n"
+                + "- 起购金额：" + amount(product.path("minimumAmount")) + "\n"
                 + "- 参考期限：" + (product.path("termMonths").isIntegralNumber() ? product.path("termMonths").asText()+" 个月" : "待核实") + "\n"
                 + "- 可见渠道：" + join(product.path("channels")) + "\n"
                 + "- 销售状态：" + product.path("salesStatus").asText("待核实") + "（来源可信级别："
@@ -156,7 +203,7 @@ final class ProductServiceTask {
                 .append("| 产品 | 风险 | 起购金额 | 参考期限 | 渠道 |\n|---|---:|---:|---:|---|\n");
         for (JsonNode product : products) out.append("| ").append(product.path("name").asText()).append(" (`")
                 .append(product.path("productId").asText()).append("`) | R").append(product.path("riskLevel").asInt())
-                .append(" | ").append(product.path("minimumAmount").asText("待核实")).append(" | ")
+                .append(" | ").append(amount(product.path("minimumAmount"))).append(" | ")
                 .append(product.path("termMonths").asText("待核实")).append(" 个月 | ")
                 .append(join(product.path("channels"))).append(" |\n");
         return out.toString();
@@ -175,5 +222,12 @@ final class ProductServiceTask {
     private static String join(JsonNode values) {
         var result = new ArrayList<String>(); values.forEach(value -> result.add(value.asText()));
         return result.isEmpty() ? "待核实" : String.join("、", result);
+    }
+
+    private static String amount(JsonNode value) {
+        if (!value.isNumber()) return "待核实";
+        var format = new DecimalFormat("#,##0.##");
+        format.setParseBigDecimal(true);
+        return format.format(value.decimalValue()) + " 元";
     }
 }

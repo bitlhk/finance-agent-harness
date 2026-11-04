@@ -31,7 +31,8 @@ final class CustomerManagerDialogue {
             return new Decision(Action.CANCEL_PRODUCT,mentioned.isEmpty()?selected:mentioned.getFirst(),mentioned);
         boolean productIntent = !rejectsProduct && (query.contains("推荐") || query.contains("买什么")
                 || query.contains("理财产品") || query.contains("产品")
-                && (query.contains("匹配") || query.contains("筛选") || query.contains("候选") || query.contains("适合")));
+                && (query.contains("匹配") || query.contains("筛选") || query.contains("候选")
+                    || query.contains("适合") || query.contains("分析") || query.contains("可考虑")));
         if (productIntent)
             return new Decision(Action.PRODUCT_REVIEW,mentioned.isEmpty()?selected:mentioned.getFirst(),mentioned);
         String customer=mentioned.isEmpty()?selected:mentioned.getFirst();

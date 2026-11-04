@@ -251,7 +251,10 @@ public final class ServicePreparation implements AutoCloseable {
                             missing.add("产品来源信息或销售资格尚未完整核实");
                             report.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         }
-                        report.set("productReview",productReview.deepCopy());generationContext.set("productReview",productReview.deepCopy());
+                        report.set("productReview",productReview.deepCopy());
+                        JsonNode generationProductReview=productReview.deepCopy();
+                        if(generationProductReview instanceof ObjectNode object)object.remove("sourceProducts");
+                        generationContext.set("productReview",generationProductReview);
                         generationContext.set("productMissingInputs",HarnessJson.mapper().valueToTree(allocation.missingInputs()));
                         collectFactRefs(generationContext.path("productMissingInputs"), "/productMissingInputs", ids, ids.size() + 80);
                         for (String field : List.of("status", "customerRiskLevel", "assessmentValidUntil",
@@ -261,9 +264,11 @@ public final class ServicePreparation implements AutoCloseable {
                         for(String field:List.of("amount","horizonMonths","channel"))
                             if(productReview.path("request").has(field))
                                 ids.add("/productReview/request/"+field);
-                        collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 100);
-                        collectFactRefs(productReview.path("sourceProducts"), "/productReview/sourceProducts", ids, ids.size() + 100);
-                        collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 100);
+                        // The bounded product source can return up to 50 products. Every product value
+                        // exposed to the model must also have a valid citation path; truncating this
+                        // catalog makes otherwise valid late-list citations fail closed.
+                        collectFactRefs(productReview.path("eligibleProducts"), "/productReview/eligibleProducts", ids, ids.size() + 800);
+                        collectFactRefs(productReview.path("excludedProducts"), "/productReview/excludedProducts", ids, ids.size() + 800);
                         report.withArray("events").add("PRODUCT_POLICY_SCREENED");
                     }
                 }
@@ -460,7 +465,7 @@ public final class ServicePreparation implements AutoCloseable {
         releaseSaved(r);
         return r;
     }
-    private void authorizeReport(ObjectNode r) {
+    private void authorizeBusinessReport(ObjectNode r) {
         if (!owner.equals(r.path("ownerRef").asText())) throw new SecurityException("REPORT_OWNER_REJECTED");
         var a = access.authorize(r.path("customerRef").asText());
         Mapping m = mappings.get();
@@ -468,9 +473,19 @@ public final class ServicePreparation implements AutoCloseable {
                 || !r.path("customerRef").asText().equals(m.customers().get(r.path("customerAlias").asText()))
                 || !a.authorityRef().equals(r.path("authorityRef").asText()))
             throw new SecurityException("REPORT_AUTHORITY_CHANGED");
+    }
+    private void authorizeReport(ObjectNode r) {
+        authorizeBusinessReport(r);
         if (r.has("knowledgeExecution")) {
             if (knowledge == null) throw new SecurityException("JOINT_HISTORY_AUTHORIZATION_REQUIRED");
             knowledge.authorizeSaved(r);
+        }
+    }
+    private void authorizeCurrentReport(ObjectNode r) {
+        authorizeBusinessReport(r);
+        if (r.has("knowledgeExecution")) {
+            if (knowledge == null) throw new SecurityException("KNOWLEDGE_RUNTIME_AUTHORIZATION_REQUIRED");
+            knowledge.current();
         }
     }
     private void releaseSaved(ObjectNode r) {
@@ -508,6 +523,52 @@ public final class ServicePreparation implements AutoCloseable {
     @FunctionalInterface public interface SavedExplanation {
         ObjectNode explain(ObjectNode report) throws Exception;
     }
+    public ObjectNode explainCurrent(String caller,String id,int revision,String question,
+            SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
+        ObjectNode snapshot;
+        synchronized(this) {
+            owner(caller);
+            if(!id.equals(activeRun))throw new SecurityException("CURRENT_REPORT_CHANGED");
+            snapshot=(ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+            if(snapshot.path("reportRevision").asInt()!=revision)throw new SecurityException("CURRENT_REPORT_CHANGED");
+            authorizeCurrentReport(snapshot);
+        }
+        String snapshotDigest=ScenarioEvidence.digest(snapshot);
+        Runnable authorized=()-> {
+            if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())
+                throw new java.util.concurrent.CancellationException("RUN_CANCELLED");
+            owner(caller);authorizeCurrentReport(snapshot);
+        };
+        var proof=evidence.begin(UUID.randomUUID().toString(),owner,snapshot.path("customerRef").asText(),
+                "EXPLAIN_CURRENT_REPORT","scenario.report.explain",
+                Map.of("reportId",id,"revision",revision,"reportDigest",snapshotDigest,"questionDigest",ScenarioEvidence.digest(question)),
+                access.authorize(snapshot.path("customerRef").asText()),"CURRENT_CRM_EMPLOYEE_AUTHORITY");
+        proof.check("MODEL_ENTRY",authorized,Map.of("businessQueries",0,"explanationModelInvocations",0));
+        ObjectNode answer;
+        try { answer=model.explain(snapshot.deepCopy()); }
+        catch(java.util.concurrent.CancellationException cancelledFailure){throw cancelledFailure;}
+        catch(Exception failure) {
+            proof.check("MODEL_FAILED",authorized,Map.of("businessQueries",0,"explanationModelInvocations",1,"resultReleased",false));
+            throw new IllegalStateException("CURRENT_REPORT_EXPLANATION_FAILED");
+        }
+        ObjectNode execution=trustedExplanationExecution(answer);
+        ObjectNode again;
+        synchronized(this) {
+            again=(ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
+            authorizeCurrentReport(again);
+        }
+        if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
+        ObjectNode result=HarnessJson.mapper().createObjectNode();
+        result.set("interpretation",publicExplanation(answer));
+        result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
+                .put("customerAlias",snapshot.path("customerAlias").asText());
+        result.put("basis","CURRENT_RUNTIME_REPORT").put("businessQueries",0).put("explanationModelInvocations",1)
+                .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED")
+                .put("explanationMode",execution.path("mode").asText());
+        if(execution.has("failureCode"))result.put("explanationFailureCode",execution.path("failureCode").asText());
+        proof.check("EXPLANATION_RELEASE",authorized,result);
+        return result;
+    }
     public ObjectNode explainSaved(String caller,String id,int revision,String question,
             SavedExplanation model,java.util.function.BooleanSupplier cancelled) throws Exception {
         ObjectNode snapshot=readVersion(caller,id,revision);
@@ -530,20 +591,41 @@ public final class ServicePreparation implements AutoCloseable {
             throw new IllegalStateException("SAVED_REPORT_EXPLANATION_FAILED");
         }
         try {
+            ObjectNode execution=trustedExplanationExecution(answer);
             ObjectNode again=readVersion(caller,id,revision);
             if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
             ObjectNode result=HarnessJson.mapper().createObjectNode();
-            result.set("interpretation",answer);
+            result.set("interpretation",publicExplanation(answer));
             result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
                     .put("customerAlias",snapshot.path("customerAlias").asText());
             result.put("basis","SAVED_VERSION_ONLY").put("businessQueries",0).put("explanationModelInvocations",1)
-                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED")
+                    .put("explanationMode",execution.path("mode").asText());
+            if(execution.has("failureCode"))result.put("explanationFailureCode",execution.path("failureCode").asText());
             proof.check("EXPLANATION_RELEASE",authorized,result);
             return result;
         }catch(ScenarioEvidence.Unavailable failure) {
             // No business Provider was invoked; the separate model attempt already happened.
             throw new ScenarioEvidence.Unavailable("EXPLANATION_RELEASE_AFTER_MODEL","NOT_INVOKED");
         }
+    }
+    private static ObjectNode trustedExplanationExecution(ObjectNode answer) {
+        JsonNode metadata=answer.path("_trustedExecution");
+        if(!metadata.isObject())return HarnessJson.mapper().createObjectNode().put("mode","MODEL_INTERPRETATION");
+        String mode=metadata.path("mode").asText();
+        if(!Set.of("MODEL_INTERPRETATION","ARCHIVED_RULE_FALLBACK").contains(mode))
+            throw new SecurityException("EXPLANATION_EXECUTION_METADATA_INVALID");
+        ObjectNode value=HarnessJson.mapper().createObjectNode().put("mode",mode);
+        if(metadata.has("failureCode")) {
+            String code=metadata.path("failureCode").asText();
+            if(!Set.of("MODEL_OUTPUT_INVALID","MODEL_INVOCATION_FAILED").contains(code))
+                throw new SecurityException("EXPLANATION_EXECUTION_METADATA_INVALID");
+            value.put("failureCode",code);
+        }
+        return value;
+    }
+    private static ObjectNode publicExplanation(ObjectNode answer) {
+        ObjectNode value=answer.deepCopy();value.remove("_trustedExecution");return value;
     }
     public synchronized List<Integer> versions(String caller, String id) throws Exception {
         read(caller,id);
@@ -993,6 +1075,8 @@ public final class ServicePreparation implements AutoCloseable {
     static List<String> normalizeFactRefs(List<String> refs,List<String> ids) {
         var normalized=new LinkedHashSet<String>();
         for(String ref:refs) {
+            if(ref.matches("/productReview/productMissingInputs/[0-9]+"))
+                ref="/productMissingInputs/"+ref.substring(ref.lastIndexOf('/')+1);
             if(ids.contains(ref)){normalized.add(ref);continue;}
             if(!safeAggregateRef(ref)){normalized.add(ref);continue;}
             String prefix=ref+"/";

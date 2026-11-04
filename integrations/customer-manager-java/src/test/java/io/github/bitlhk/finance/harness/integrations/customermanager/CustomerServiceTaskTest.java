@@ -20,7 +20,10 @@ class CustomerServiceTaskTest {
             calls++;
             return new CapabilityResultV1(CapabilityResultV1.SCHEMA_VERSION,request,trace,
                     CapabilityResultV1.Status.COMPLETED,"fixture",Map.of("previsitContext",Map.of(
-                    "profiles",List.of(Map.of("profileType","wealth","detail",Map.of(
+                    "profiles",List.of(Map.of("profileType","wealth",
+                            "demographics",Map.of("ageBand","45_59","occupationCategory","enterprise_manager","city","上海"),
+                            "preferences",Map.of("investmentHorizon","3年以上","liquidityNeeds","20%高流动性资产","communicationPreference","面谈"),
+                            "detail",Map.of("customerTier","private_banking",
                             "riskAssessment",Map.of("riskLevel","C3","validUntil","2027-01-01"),
                             "portfolioSummary",Map.of("currency","CNY","totalAssets",320000,"availableCash",80000),
                             "holdings",List.of(Map.of("productName","稳健组合","balance",120000,"currency","CNY",
@@ -35,11 +38,20 @@ class CustomerServiceTaskTest {
         var access=new Access();
         var task=new CustomerServiceTask(access,alias -> "周明远".equals(alias)?"CUST-1":null);
         var result=task.run("看看周明远的持仓和到期事项","周明远","run-1");
+        assertEquals("ANSWERED",result.get("status"));
         String response=(String)result.get("response");
         assertTrue(response.contains("稳健组合"));
+        assertTrue(response.contains("120,000 CNY"));
         assertTrue(response.contains("MATURITY_DUE"));
+        assertFalse(response.contains("private_banking"));
+        assertFalse(response.contains("45_59"));
         assertTrue(response.contains("来源快照"));
         assertEquals(1,access.calls);
+        String profile=task.run("查看周明远的客户画像","周明远","run-2").get("response").toString();
+        assertTrue(profile.contains("private_banking"));
+        assertTrue(profile.contains("45_59"));
+        assertTrue(profile.contains("3年以上"));
+        assertTrue(profile.contains("320,000 CNY"));
     }
 
     @Test void explicitPreparationIntentIsNotCapturedByFactsRoute() {
@@ -62,5 +74,16 @@ class CustomerServiceTaskTest {
         var result=new CustomerServiceTask(access,alias -> "CUST-1").run("查看持仓",null,"run-1");
         assertEquals("NEED_CLARIFICATION",result.get("status"));
         assertEquals(0,access.calls);
+    }
+
+    @Test void directQuestionsReturnFocusedViews() {
+        var task=new CustomerServiceTask(new Access(),alias -> "CUST-1");
+        String holdings=task.run("看看持仓","周明远","run-1").get("response").toString();
+        assertTrue(holdings.contains("稳健组合"));
+        assertFalse(holdings.contains("基本画像"));
+        assertFalse(holdings.contains("近期事项"));
+        String maturity=task.run("最近有哪些资金到期","周明远","run-2").get("response").toString();
+        assertTrue(maturity.contains("MATURITY_DUE"));
+        assertFalse(maturity.contains("### 持仓"));
     }
 }

@@ -3,8 +3,27 @@ package io.github.bitlhk.finance.harness.integrations.customermanager;
 import io.github.bitlhk.finance.harness.core.HarnessJson;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import io.github.bitlhk.finance.harness.core.FinanceContextV1;
+import io.github.bitlhk.finance.harness.core.spi.BoundFinanceProvider;
+import java.time.Instant;
+import java.util.Set;
 
 class ManagerKnowledgeEvidenceTest {
+    @Test void productProviderUsesItsAuthorizedSourceSubjectNotTheCustomer() {
+        var grant = new BoundFinanceProvider.Grant("employee", FinanceContextV1.PrincipalType.EMPLOYEE,
+                Set.of("product-source"), Set.of("WEALTH_PRODUCT_REVIEW"), Set.of("wealth:products:read"),
+                "session", "authority", Instant.now().plusSeconds(60));
+        assertEquals("product-source", ManagerKnowledgeEvidence.productSubject(grant));
+        assertNotEquals("customer-123", ManagerKnowledgeEvidence.productSubject(grant));
+    }
+
+    @Test void productProviderRejectsMissingOrAmbiguousSourceAuthority() {
+        assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productSubject(null));
+        var ambiguous = new BoundFinanceProvider.Grant("employee", FinanceContextV1.PrincipalType.EMPLOYEE,
+                Set.of("source-a", "source-b"), Set.of("WEALTH_PRODUCT_REVIEW"), Set.of("wealth:products:read"),
+                "session", "authority", Instant.now().plusSeconds(60));
+        assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productSubject(ambiguous));
+    }
     @Test void noKnowledgeAndAmbiguousDecisionsRemainValidCapabilityResults() {
         var missing = ManagerKnowledgeEvidence.unavailable("request", "trace", "NO_BOUND_PRODUCT_KNOWLEDGE", false);
         assertEquals(io.github.bitlhk.finance.harness.core.CapabilityResultV1.Status.COMPLETED, missing.status());
@@ -62,6 +81,17 @@ class ManagerKnowledgeEvidenceTest {
         assertFalse(question.contains("客户甲"));
         assertThrows(SecurityException.class, () -> ManagerKnowledgeEvidence.productQuestion(
                 HarnessJson.mapper().readTree("{\"name\":\"产品\",\"businessBinding\":{}}")));
+    }
+
+    @Test void riskQuestionLeadsWithGroundedConclusionAndLeavesOriginalEvidenceInToolResult() throws Exception {
+        var data = HarnessJson.mapper().readTree("""
+            {"decision":"EVIDENCE_FOUND","evidence":[{"clause":"产品风险",
+              "quote":"管理人对本产品的风险评级为二级，即PR2（中低风险）。销售服务机构与管理人对本产品风险评级结果不一致时，以销售服务机构最终披露结果为准。"}]}
+            """);
+        String answer = ManagerKnowledgeEvidence.policyAnswer("这款产品是什么风险等级？", data, true);
+        assertTrue(answer.contains("PR2（中低风险）"));
+        assertTrue(answer.contains("授权业务系统核验"));
+        assertFalse(answer.contains("管理人对本产品的风险评级为二级，即PR2"));
     }
 
 }

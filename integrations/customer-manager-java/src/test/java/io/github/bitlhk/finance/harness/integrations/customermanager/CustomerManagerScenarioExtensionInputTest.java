@@ -67,6 +67,12 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertTrue(CustomerManagerScenarioExtension.productArguments("推荐一个产品").isEmpty());
     }
 
+    @Test void commonHalfYearExpressionDoesNotRequireAnotherClarification() {
+        assertEquals(java.util.Map.of("amount",100000.0,"horizonMonths",6,"channel","网点"),
+                CustomerManagerScenarioExtension.productArguments(
+                        "周明远准备配置10万元，期限半年，通过网点办理，希望兼顾流动性"));
+    }
+
     @Test void pendingProductFlowContinuesForParametersButYieldsToExplicitPreparation() {
         assertTrue(CustomerManagerScenarioExtension.shouldUseProductFlow(
                 CustomerManagerDialogue.Action.PREPARE,true,"手机银行"));
@@ -91,5 +97,16 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertTrue(with.description().contains("制度文档"));
         assertTrue(with.description().contains("不读取或发送客户资料"));
         assertTrue(with.actions().contains(ConversationIntent.Kind.KNOWLEDGE_QUERY));
+    }
+
+    @Test void installedWealthAssistantMethodTakesPrecedenceWithoutBreakingLegacyLocks() throws Exception {
+        String assistant="assets/domain-packs/wealth/assistant-service/skills/wealth-assistant-service/SKILL.md";
+        var current=CustomerManagerScenarioExtension.installedMethodAsset(HarnessJson.mapper().readTree(
+                "{\"files\":{\""+assistant+"\":\"digest\"}}"));
+        assertEquals("wealth-assistant-service",current.id());
+        assertEquals(assistant,current.relative());
+        var legacy=CustomerManagerScenarioExtension.installedMethodAsset(HarnessJson.mapper().readTree("{\"files\":{}}"));
+        assertEquals("customer-manager-service-preparation",legacy.id());
+        assertTrue(legacy.relative().contains("service-preparation"));
     }
 }

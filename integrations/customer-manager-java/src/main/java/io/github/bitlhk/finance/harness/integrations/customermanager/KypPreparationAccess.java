@@ -52,8 +52,7 @@ public final class KypPreparationAccess implements PreparationAccess {
         if (keyword == null || keyword.length() > 120 || keyword.chars().anyMatch(Character::isISOControl))
             throw new IllegalArgumentException("KYP_KEYWORD_INVALID");
         var grant = productGrants.get();
-        String subject = grant.subjects().stream().sorted().findFirst()
-                .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
+        String subject = ManagerKnowledgeEvidence.productSubject(grant);
         var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId, traceId,
                 grant.principalId(), grant.principalType(), "finance-harness", "WEALTH_PRODUCT_REVIEW",
                 subject, sessionRef, FinanceContextV1.AuthenticationLevel.UNKNOWN, grant.scopes());
@@ -97,6 +96,7 @@ public final class KypPreparationAccess implements PreparationAccess {
             productRef = value;
         }
         var productGrant = productGrants.get();
+        if (productGrant == null) throw new SecurityException("KYP_READ_AUTHORITY_REJECTED");
         var before = authorize(customer);
         var facts = crm.query(requestId + "-crm", traceId, customer, CustomerCrmProvider.CAPABILITY, Map.of());
         if (facts.status() != CapabilityResultV1.Status.COMPLETED)
@@ -113,9 +113,10 @@ public final class KypPreparationAccess implements PreparationAccess {
         if (!level.matches("C[1-5]") || !current(until))
             throw new IllegalStateException("CUSTOMER_SUITABILITY_CONTEXT_INVALID");
         unchanged(customer, before);
+        String productSubject = ManagerKnowledgeEvidence.productSubject(productGrant);
         var sourceContext = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, requestId + "-kyp", traceId,
-                before.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
-                "WEALTH_PRODUCT_REVIEW", customer, sessionRef, before.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
+                productGrant.principalId(), productGrant.principalType(), "finance-harness",
+                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, before.authenticationLevel(), productGrant.scopes());
         var productRequest = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION,
                 KypProductFactory.CAPABILITY, CapabilityRequestV1.Operation.QUERY, sourceContext,
                 Map.of("keyword", productRef), null, null, Map.of(), null);
@@ -222,9 +223,11 @@ public final class KypPreparationAccess implements PreparationAccess {
         if (initial == null || !grantDigest(initial).equals(result.data().get("productAuthorityBinding")))
             throw new SecurityException("KYP_AUTHORITY_CHANGED");
         var snapshot = authorize(customer);
+        String productSubject = initial.subjects().stream().sorted().findFirst()
+                .orElseThrow(() -> new SecurityException("KYP_READ_AUTHORITY_REJECTED"));
         var context = new FinanceContextV1(FinanceContextV1.SCHEMA_VERSION, result.requestId(), result.traceId(),
-                snapshot.principalRef(), FinanceContextV1.PrincipalType.EMPLOYEE, "finance-harness",
-                "WEALTH_PRODUCT_REVIEW", customer, sessionRef, snapshot.authenticationLevel(), Set.of(KypProductFactory.SCOPE));
+                initial.principalId(), initial.principalType(), "finance-harness",
+                "WEALTH_PRODUCT_REVIEW", productSubject, sessionRef, snapshot.authenticationLevel(), initial.scopes());
         var request = new CapabilityRequestV1(CapabilityRequestV1.SCHEMA_VERSION, KypProductFactory.CAPABILITY,
                 CapabilityRequestV1.Operation.QUERY, context, Map.of(), null, null, Map.of(), null);
         Runnable guard = () -> { customerGuard.run(); productCurrent(request, initial); };

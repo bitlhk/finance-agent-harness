@@ -72,7 +72,7 @@ final class OpenJiuwenReportGenerator implements ServicePreparation.ReportGenera
                 + "productReview.request.horizonMonths表示客户可接受期限，产品termMonths小于或等于该值即满足期限条件；"
                 + "当eligibleProducts非空时，不得声称没有通过事实条件的候选，但必须保留适当性待受权规则核验的边界。"
                 + "当产品结果为partial或productMissingInputs非空时，只能说明尚不能确认可推荐候选；不能断言全市场没有合适产品。"
-                + "sourceProducts是来源返回的待核实事实，不是获准销售或推荐清单；DEMO、未核实或被排除产品均不得升级为推荐。"
+                + "产品来源中的完整待核实列表仅供宿主审计，不作为模型事实；DEMO、未核实或被排除产品均不得升级为推荐。"
                 + "temporalAssessment是宿主按当前业务时间计算的时态结论；当effectiveStatus为PAST_DUE_UNVERIFIED时，"
                 + "只能说明到期日已过且状态待核实，不得写成即将到期、临近到期或快到期。"
                 + "taskContext.facts中source.kind=USER_STATEMENT的值才可称为客户口述；"

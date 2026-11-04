@@ -101,7 +101,7 @@ public record ProductCatalog(List<Product> products, Instant retrievedAt, String
                 Instant factsTime = timestamp(facts, "asOf", now, policy.maximumAge(), issues, "FACTS");
                 Instant salesTime = timestamp(sales, "asOf", now, policy.maximumAge(), issues, "SALES");
                 if (policy.salesTrust() != SalesTrust.VERIFIED) issues.add("BANK_SALES_NOT_VERIFIED");
-                String status = text(sales, "salesStatus");
+                String status = text(summary ? row : sales, "salesStatus");
                 if (!status.equals("on_sale")) issues.add("PRODUCT_NOT_SELLABLE");
                 int risk = risk(text(facts, "riskLevel"));
                 if (risk == 0) issues.add("PRODUCT_RISK_MISSING");

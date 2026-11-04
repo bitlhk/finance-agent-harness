@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.17",
-    "catalogRevision": "2026-10-31.knowledge-host-merge-prep",
+    "catalogVersion": "0.2.18",
+    "catalogRevision": "2026-11-04.wealth-assistant-method",
     "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:fcd2a71a33198cfd6105fa3af8cfe25d80a931753bed3b3eba9056c630c40941"
+    "digest": "sha256:d358959de786cade611f7df641bc4cebed38f269fa20b0ba711ebebbe9fbfecd"
   },
   "target": {
     "kind": "domain-pack",

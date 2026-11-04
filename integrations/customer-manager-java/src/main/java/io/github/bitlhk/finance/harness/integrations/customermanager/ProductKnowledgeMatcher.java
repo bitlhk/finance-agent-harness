@@ -21,7 +21,6 @@ final class ProductKnowledgeMatcher {
         if (!products.isArray()) throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
         if (channel == null || !channel.matches("[A-Z_]{2,32}"))
             throw new SecurityException("PRODUCT_IDENTITY_SOURCE_INVALID");
-        if (products.size() > 1) return Decision.AMBIGUOUS;
         int matches = 0;
         boolean conflict = false;
         for (JsonNode product : products) {
@@ -41,7 +40,8 @@ final class ProductKnowledgeMatcher {
             if (sameCode && sameRegistration && manager && distribution) matches++;
             else conflict = true;
         }
-        if (conflict || matches > 1) throw new SecurityException("KNOWLEDGE_PRODUCT_IDENTITY_MISMATCH");
+        if (conflict) throw new SecurityException("KNOWLEDGE_PRODUCT_IDENTITY_MISMATCH");
+        if (matches > 1) return Decision.AMBIGUOUS;
         return matches == 1 ? Decision.MATCHED : Decision.NO_KNOWLEDGE;
     }
 

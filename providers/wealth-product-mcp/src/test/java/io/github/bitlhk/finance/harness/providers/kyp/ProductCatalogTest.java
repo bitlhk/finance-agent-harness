@@ -79,6 +79,7 @@ class ProductCatalogTest {
         assertEquals(2, product.riskLevel());
         assertEquals(0, new java.math.BigDecimal("5000").compareTo(product.minimumAmount()));
         assertNull(product.factsAsOf()); assertNull(product.salesAsOf());
+        assertEquals("on_sale", product.salesStatus());
         assertTrue(product.issues().contains("PRODUCT_SEARCH_SUMMARY_ONLY"));
         assertTrue(product.issues().contains("BANK_SALES_ELIGIBILITY_MISSING"));
         assertFalse(product.eligibleForScreening());
