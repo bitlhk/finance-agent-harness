@@ -74,7 +74,9 @@ final class WealthServiceJourney {
 
     synchronized boolean reportFollowup(String query) {
         if (!hasReport() || query == null) return false;
-        return query.matches(".*(?:为什么(?:选|推荐)|推荐理由|排除理由|解释.*候选|沟通(?:的)?话术|怎么和客户说|如何介绍).*?");
+        return query.matches(".*(?:为什么(?:选|推荐|这份报告|报告)|推荐理由|排除理由|"
+                + "解释(?:这份|当前|已有|刚才)?报告|报告为什么|(?:没有|未)(?:完整)?完成|"
+                + "沟通(?:的)?话术|怎么和客户说|如何介绍).*?");
     }
 
     synchronized Map<String,Object> projection() {

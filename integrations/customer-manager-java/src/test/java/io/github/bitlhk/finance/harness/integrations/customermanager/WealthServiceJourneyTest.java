@@ -18,6 +18,9 @@ final class WealthServiceJourneyTest {
         assertFalse(projection.toString().contains("secret"));
         assertTrue(journey.reportFollowup("为什么推荐这些产品"));
         assertTrue(journey.reportFollowup("生成一份我可以和客户沟通的话术"));
+        assertTrue(journey.reportFollowup("为什么这份报告没有完整完成？"));
+        assertTrue(journey.reportFollowup("请解释当前报告"));
+        assertFalse(journey.reportFollowup("重新为客户准备一份报告"));
     }
 
     @Test void customerSwitchClearsCustomerSpecificTaskButNotAnotherSession() {

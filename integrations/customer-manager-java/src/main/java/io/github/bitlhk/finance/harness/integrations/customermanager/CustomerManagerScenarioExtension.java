@@ -454,7 +454,8 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             }
             clearPendingProduct();
             String query=text(body,"query");
-            Map<String,Object> direct = directService(query, requested, customers);
+            Map<String,Object> direct = directService(query, requested, customers,
+                    body.has("reportId") || body.has("revision"));
             if (direct != null) {
                 abandonPendingExecution();
                 return direct;
@@ -607,7 +608,12 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
             };
         }
         private Map<String,Object> directService(String query, String requested, Collection<String> customers) throws Exception {
-            if (journey.reportFollowup(query)) {
+            return directService(query,requested,customers,false);
+        }
+
+        private Map<String,Object> directService(String query, String requested, Collection<String> customers,
+                boolean selectedReportVersion) throws Exception {
+            if (!selectedReportVersion && journey.reportFollowup(query)) {
                 var answer=task.explainCurrent(owner,journey.reportRef(),journey.reportRevision(),query,
                         saved->intentProposer.explainSaved(query,saved,this::operationCancelled),this::operationCancelled);
                 return Map.of("status","ANSWERED","response",answer.path("interpretation").path("answer").asText(),
