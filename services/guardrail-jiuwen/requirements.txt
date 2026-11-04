@@ -1,0 +1,40 @@
+# guardrail-jiuwen 核心依赖（去除 LangChain/LangGraph）
+fastapi==0.135.3
+uvicorn[standard]>=0.30.0,<1.0.0
+python-multipart>=0.0.6,<1.0.0
+
+# GuardRails AI 正则匹配（独立包，不依赖 LangChain）
+guardrails-ai==0.10.0
+
+# PII Detection - Microsoft Presidio
+presidio-analyzer==2.2.362
+presidio-anonymizer==2.2.362
+
+# spaCy NLP
+spacy>=3.8.0,<4.0.0
+spacy-pkuseg>=0.0.27,<0.1.0
+numpy==1.26.4
+
+# 数据处理
+pydantic>=2.7.4,<2.13.0
+pydantic-settings>=2.10.1,<3.0.0
+
+# HTTP 客户端
+httpx>=0.25.2,<0.30.0
+
+# 数据库
+sqlalchemy==2.0.49
+aiosqlite==0.22.1
+
+# 热重载文件监听
+watchdog>=4.0.0,<5.0.0
+
+# 测试
+pytest==7.4.4
+pytest-asyncio==0.21.2
+
+# 环境配置
+python-dotenv>=1.0.0,<2.0.0
+
+# Authenticated encryption for content-filter policy
+cryptography==48.0.0

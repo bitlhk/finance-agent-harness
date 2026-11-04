@@ -1,0 +1,27 @@
+{
+  "version": "guardrail-jiuwen-v1",
+  "pii_detection": {
+    "enabled": true,
+    "input_enabled": true,
+    "output_enabled": true,
+    "use_presidio": true,
+    "threshold": 0.0,
+    "anonymize_input": true,
+    "anonymize_output": true,
+    "input_entities": ["cn_pii", "pii"],
+    "output_entities": ["all"],
+    "input_action_mode": "detect",
+    "output_action_mode": "detect"
+  },
+  "entity_options": [
+    {"value": "EMAIL_ADDRESS", "label": "邮箱地址", "category": "标准PII"},
+    {"value": "PHONE_NUMBER", "label": "电话号码（国际）", "category": "标准PII"},
+    {"value": "CREDIT_CARD", "label": "信用卡号", "category": "敏感信息"},
+    {"value": "CN_ID_CARD", "label": "中国身份证号", "category": "中国PII"},
+    {"value": "CN_PHONE", "label": "中国手机号", "category": "中国PII"},
+    {"value": "CN_BANK_CARD", "label": "中国银行卡号", "category": "中国PII"},
+    {"value": "CN_NAME", "label": "中文姓名", "category": "中国PII"},
+    {"value": "CN_ADDRESS", "label": "中国地址", "category": "中国PII"},
+    {"value": "CN_PASSPORT", "label": "中国护照", "category": "中国PII"}
+  ]
+}

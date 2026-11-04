@@ -1,0 +1,17 @@
+*.key
+.env
+__pycache__/
+.pytest_cache/
+
+# Logs
+logs/
+upstream/logs/
+*.log
+
+# Database
+upstream/data/finance_guardrail.db
+upstream/data/*.db
+
+# Test scripts
+upstream/test_*.py
+*.zip

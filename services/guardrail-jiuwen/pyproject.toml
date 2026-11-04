@@ -1,0 +1,9 @@
+[project]
+name = "guardrail-jiuwen"
+version = "0.1.0"
+description = "金融安全护栏服务，对接 JiuwenSwarm 智能体框架"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "adapters/tests"]

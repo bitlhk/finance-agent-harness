@@ -1,0 +1,8 @@
+{
+  "description": "guardrail-jiuwen 安全护栏 Rail - 通过 HTTP 调用 guardrail FastAPI 服务实现输入/输出安全检测",
+  "priority": 90,
+  "env_vars": {
+    "GUARDRAIL_SERVICE_URL": "guardrail FastAPI 服务地址，默认 http://localhost:9876",
+    "GUARDRAIL_TIMEOUT": "HTTP 调用超时秒数，默认 35.0"
+  }
+}
