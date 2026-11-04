@@ -73,11 +73,20 @@ jobs:
           python engineering/prepare_original_market_risk_tool.py
           --workspace "$RUNNER_TEMP/original-market-risk"
           --github-env "$GITHUB_ENV"
+      - name: Prepare pinned original material tool
+        run: >-
+          python engineering/prepare_original_material_tool.py
+          --workspace "$RUNNER_TEMP/original-material"
+          --github-env "$GITHUB_ENV"
       - name: Unit tests and local HTTP fault injection
         run: >-
           mvn -B -ntp
           "-Dfh.originalToolRelease=$FH_ORIGINAL_TOOL_RELEASE"
           "-Dfh.originalToolReleaseDigest=$FH_ORIGINAL_TOOL_RELEASE_DIGEST"
+          "-Dfh.python=$FH_MATERIAL_PYTHON"
+          "-Dfh.materialServiceSource=$FH_MATERIAL_SERVICE_SOURCE"
+          "-Dfh.originalMaterialSource=$FH_ORIGINAL_MATERIAL_SOURCE"
+          "-Dfh.materialEvidence=$FH_MATERIAL_EVIDENCE"
           verify
       - name: Java timestamp compatibility on supported Python versions
         run: python -m unittest discover -s engineering -p 'test_*.py' -v
@@ -96,3 +105,5 @@ jobs:
             examples/solutions/wealth-facts-kit/target/runs/**
             ${{ runner.temp }}/harness-reproducibility/*
             ${{ runner.temp }}/original-market-risk/preparation.json
+            ${{ runner.temp }}/original-material/preparation.json
+            ${{ runner.temp }}/original-material/native-evidence/
