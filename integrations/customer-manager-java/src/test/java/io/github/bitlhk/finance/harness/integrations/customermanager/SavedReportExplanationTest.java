@@ -58,7 +58,10 @@ final class SavedReportExplanationTest {
         report.putObject("factAssessment").putArray("missing").addObject()
                 .put("label","产品来源信息或销售资格尚未完整核实");
         var projection=OpenJiuwenSavedReportExplainer.project(report);
+        assertFalse(projection.has("productReview"));
         assertEquals(0,projection.path("productReviewSummary").path("eligibleProductCount").asInt());
+        assertEquals(1,projection.path("productReviewSummary").path("sourceProductCount").asInt());
+        assertEquals(1,projection.path("productReviewSummary").path("excludedProductCount").asInt());
         var reason=OpenJiuwenSavedReportExplainer.archivedFallback("为什么选这些？",projection);
         assertTrue(reason.path("answer").asText().contains("没有形成可确认的产品候选"));
         assertTrue(reason.path("answer").asText().contains("不能据此推荐"));

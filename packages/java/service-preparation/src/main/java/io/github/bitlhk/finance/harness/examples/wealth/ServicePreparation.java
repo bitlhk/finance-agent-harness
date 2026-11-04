@@ -551,6 +551,7 @@ public final class ServicePreparation implements AutoCloseable {
             proof.check("MODEL_FAILED",authorized,Map.of("businessQueries",0,"explanationModelInvocations",1,"resultReleased",false));
             throw new IllegalStateException("CURRENT_REPORT_EXPLANATION_FAILED");
         }
+        ObjectNode execution=trustedExplanationExecution(answer);
         ObjectNode again;
         synchronized(this) {
             again=(ObjectNode)HarnessJson.mapper().readTree(Files.readAllBytes(latestPath(id)));
@@ -558,11 +559,13 @@ public final class ServicePreparation implements AutoCloseable {
         }
         if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
         ObjectNode result=HarnessJson.mapper().createObjectNode();
-        result.set("interpretation",answer);
+        result.set("interpretation",publicExplanation(answer));
         result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
                 .put("customerAlias",snapshot.path("customerAlias").asText());
         result.put("basis","CURRENT_RUNTIME_REPORT").put("businessQueries",0).put("explanationModelInvocations",1)
-                .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+                .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED")
+                .put("explanationMode",execution.path("mode").asText());
+        if(execution.has("failureCode"))result.put("explanationFailureCode",execution.path("failureCode").asText());
         proof.check("EXPLANATION_RELEASE",authorized,result);
         return result;
     }
@@ -588,20 +591,41 @@ public final class ServicePreparation implements AutoCloseable {
             throw new IllegalStateException("SAVED_REPORT_EXPLANATION_FAILED");
         }
         try {
+            ObjectNode execution=trustedExplanationExecution(answer);
             ObjectNode again=readVersion(caller,id,revision);
             if(!snapshotDigest.equals(ScenarioEvidence.digest(again)))throw new SecurityException("REPORT_VERSION_DIGEST_MISMATCH");
             ObjectNode result=HarnessJson.mapper().createObjectNode();
-            result.set("interpretation",answer);
+            result.set("interpretation",publicExplanation(answer));
             result.putObject("binding").put("reportId",id).put("revision",revision).put("reportDigest",snapshotDigest)
                     .put("customerAlias",snapshot.path("customerAlias").asText());
             result.put("basis","SAVED_VERSION_ONLY").put("businessQueries",0).put("explanationModelInvocations",1)
-                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED");
+                    .put("modelHttpAttempts","NOT_OBSERVED").put("validation","REFERENCES_CHECKED_NOT_FACT_REVERIFIED")
+                    .put("explanationMode",execution.path("mode").asText());
+            if(execution.has("failureCode"))result.put("explanationFailureCode",execution.path("failureCode").asText());
             proof.check("EXPLANATION_RELEASE",authorized,result);
             return result;
         }catch(ScenarioEvidence.Unavailable failure) {
             // No business Provider was invoked; the separate model attempt already happened.
             throw new ScenarioEvidence.Unavailable("EXPLANATION_RELEASE_AFTER_MODEL","NOT_INVOKED");
         }
+    }
+    private static ObjectNode trustedExplanationExecution(ObjectNode answer) {
+        JsonNode metadata=answer.path("_trustedExecution");
+        if(!metadata.isObject())return HarnessJson.mapper().createObjectNode().put("mode","MODEL_INTERPRETATION");
+        String mode=metadata.path("mode").asText();
+        if(!Set.of("MODEL_INTERPRETATION","ARCHIVED_RULE_FALLBACK").contains(mode))
+            throw new SecurityException("EXPLANATION_EXECUTION_METADATA_INVALID");
+        ObjectNode value=HarnessJson.mapper().createObjectNode().put("mode",mode);
+        if(metadata.has("failureCode")) {
+            String code=metadata.path("failureCode").asText();
+            if(!Set.of("MODEL_OUTPUT_INVALID","MODEL_INVOCATION_FAILED").contains(code))
+                throw new SecurityException("EXPLANATION_EXECUTION_METADATA_INVALID");
+            value.put("failureCode",code);
+        }
+        return value;
+    }
+    private static ObjectNode publicExplanation(ObjectNode answer) {
+        ObjectNode value=answer.deepCopy();value.remove("_trustedExecution");return value;
     }
     public synchronized List<Integer> versions(String caller, String id) throws Exception {
         read(caller,id);

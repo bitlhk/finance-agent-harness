@@ -15,7 +15,7 @@ final class OpenJiuwenSavedReportExplainer {
     private final SavedReportExplainer interpreter;
     private static final List<String> FIELDS=List.of("status","explanationStatus","reviewStatus",
             "facts","taskContext","modelSuggestion","missingInputs","failureCode","reviewOpinion",
-            "fallbackSuggestion","factAssessment","productReview",
+            "fallbackSuggestion","factAssessment",
             "startedAt","finishedAt","reviewedAt");
     OpenJiuwenSavedReportExplainer(ManagedScenarioExtensionV01.ModelConnection model) {
         interpreter=new SavedReportExplainer(model);
@@ -23,27 +23,34 @@ final class OpenJiuwenSavedReportExplainer {
     ObjectNode explain(String question,JsonNode report,BooleanSupplier cancelled) throws Exception {
         ObjectNode projection=project(report);
         try {
-            return interpreter.explain(question,projection,cancelled);
+            return execution(interpreter.explain(question,projection,cancelled),"MODEL_INTERPRETATION",null);
         } catch(IllegalArgumentException failure) {
             if(!"CONVERSATION_ANSWER_INVALID".equals(failure.getMessage()))throw failure;
-            return archivedFallback(question,projection);
+            return execution(archivedFallback(question,projection),"ARCHIVED_RULE_FALLBACK","MODEL_OUTPUT_INVALID");
         } catch(CancellationException failure) {
             throw failure;
         } catch(Exception failure) {
-            return archivedFallback(question,projection);
+            return execution(archivedFallback(question,projection),"ARCHIVED_RULE_FALLBACK","MODEL_INVOCATION_FAILED");
         }
     }
     static ObjectNode project(JsonNode report) {
         ObjectNode value=HarnessJson.mapper().createObjectNode();
         for(String field:FIELDS)if(report.has(field))value.set(field,report.get(field).deepCopy());
         if(!"READY".equals(report.path("explanationStatus").asText()))value.remove("modelSuggestion");
-        JsonNode review=value.path("productReview");
+        JsonNode review=report.path("productReview");
         if(review.isObject()) {
             ObjectNode summary=value.putObject("productReviewSummary");
             summary.put("eligibleProductCount",review.path("eligibleProducts").size());
             summary.put("sourceProductCount",review.path("sourceProducts").size());
+            summary.put("excludedProductCount",Math.max(0,
+                    review.path("sourceProducts").size()-review.path("eligibleProducts").size()));
         }
         return value;
+    }
+    private static ObjectNode execution(ObjectNode answer,String mode,String failureCode) {
+        ObjectNode metadata=answer.putObject("_trustedExecution").put("mode",mode);
+        if(failureCode!=null)metadata.put("failureCode",failureCode);
+        return answer;
     }
     static ObjectNode validate(String raw,JsonNode projection) {
         return SavedReportExplainer.validate(raw,projection);

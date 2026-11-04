@@ -119,9 +119,14 @@ class PreparationKnowledgeTest {
             var result=service.explainCurrent("owner-a",id,revision,"为什么",saved->{
                 var answer=HarnessJson.mapper().createObjectNode();
                 answer.put("answer",saved.path("customerAlias").asText()+"的当前报告依据");
+                answer.putObject("_trustedExecution").put("mode","ARCHIVED_RULE_FALLBACK")
+                        .put("failureCode","MODEL_INVOCATION_FAILED");
                 return answer;
             },()->false);
             assertEquals("CURRENT_RUNTIME_REPORT",result.path("basis").asText());
+            assertEquals("ARCHIVED_RULE_FALLBACK",result.path("explanationMode").asText());
+            assertEquals("MODEL_INVOCATION_FAILED",result.path("explanationFailureCode").asText());
+            assertFalse(result.path("interpretation").has("_trustedExecution"));
             assertEquals(0,result.path("businessQueries").asInt());
             assertFalse(historyGranted);
             assertThrows(SecurityException.class,()->service.explainSaved("owner-a",id,revision,"为什么",
