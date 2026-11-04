@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:financial-material:document:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "financial-material-document.v1"
+    },
+    "documentRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "mediaType": {
+      "enum": [
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    "sizeBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10485760
+    },
+    "pageCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "ownerRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "principalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "subjectRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "taskRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "sessionRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "documentRef",
+    "version",
+    "sha256",
+    "mediaType",
+    "sizeBytes",
+    "pageCount",
+    "ownerRef",
+    "principalId",
+    "subjectRef",
+    "taskRef",
+    "sessionRef"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "financial-material-conformance-cases.v1",
+  "upstreamRevision": "0e158eee225c698774aa75671c944624cd36550b",
+  "cases": [
+    {
+      "id": "original-pdf-table",
+      "expectedStatus": "COMPLETED",
+      "originalEntry": "extract_tables_from_pdf"
+    },
+    {
+      "id": "empty-page",
+      "expectedStatus": "PARTIAL"
+    },
+    {
+      "id": "wrong-current-task",
+      "expectedStatus": "FAILED"
+    },
+    {
+      "id": "directory-license",
+      "expectedStatus": "BLOCKED"
+    },
+    {
+      "id": "real-vision-quality",
+      "expectedStatus": "BLOCKED"
+    }
+  ]
+}

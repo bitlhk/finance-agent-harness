@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.18",
+  "catalogVersion": "0.2.19",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -93,6 +93,25 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原材料 Java 接线（候选）",
+      "source": "repo://integrations/financial-material-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-financial-material-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -171,6 +190,13 @@
       "version": "0.1.0",
       "displayName": "原标准法资本只读（候选）",
       "source": "repo://profiles/market-risk-capital-readonly.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "financial-material-processing",
+      "version": "0.1.0",
+      "displayName": "原材料处理（候选）",
+      "source": "repo://profiles/financial-material-processing.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -485,6 +511,36 @@
         ],
         "profiles": [
           "market-risk-capital-readonly"
+        ]
+      }
+    },
+    {
+      "id": "financial-material-processing",
+      "version": "0.1.0",
+      "displayName": "原材料处理与依据方法（派生候选）",
+      "profile": "financial-material-processing",
+      "source": "repo://domain-packs/financial-material-processing",
+      "requiresCapabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "financial-material-extraction-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
         ]
       }
     }
@@ -1016,6 +1072,28 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-extraction-readonly",
+      "version": "0.1.0",
+      "displayName": "原材料提取与定位（候选）",
+      "source": "repo://capability-packs/financial-material-extraction-readonly",
+      "capabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1276,6 +1354,28 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-original",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原材料受管适配（候选）",
+      "source": "repo://providers/financial-material",
+      "capabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -1285,7 +1385,11 @@
       "displayName": "原标准法资本受控合同案例（非模型质量评测）",
       "source": "repo://conformance/market-risk-capital-readonly",
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles": ["market-risk-capital-readonly"]}
+      "compatibility": {
+        "profiles": [
+          "market-risk-capital-readonly"
+        ]
+      }
     },
     {
       "id": "wealth-facts-controlled",
@@ -1361,9 +1465,21 @@
           "internal-control"
         ]
       }
+    },
+    {
+      "id": "financial-material-controlled",
+      "version": "0.1.0",
+      "displayName": "原材料工程与资格案例",
+      "source": "repo://conformance/financial-material-processing",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-11-03.scenario-industrialization-feat001-candidate",
+  "catalogRevision": "2026-11-03.scenario-industrialization-feat002-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

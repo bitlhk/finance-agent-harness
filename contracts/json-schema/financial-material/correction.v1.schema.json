@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:financial-material:correction:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "financial-material-correction.v1"
+    },
+    "correctionRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "runRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "documentRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "fieldId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "principalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "documentVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "originalValue": {},
+    "newValue": {},
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "correctionRef",
+    "runRef",
+    "documentRef",
+    "fieldId",
+    "principalId",
+    "documentVersion",
+    "originalValue",
+    "newValue",
+    "reason",
+    "createdAt",
+    "expectedRevision",
+    "revision"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "finance-domain-pack.v1",
+  "packId": "financial-material-processing",
+  "version": "0.1.0",
+  "profile": "financial-material-processing",
+  "capabilities": [
+    "financial.material.extract",
+    "financial.material.locate"
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "financial-material-extraction-readonly",
+      "version": "0.1.0"
+    }
+  ],
+  "skills": [
+    {
+      "directory": "financial-material-processing",
+      "entry": "skill/SKILL.md"
+    }
+  ],
+  "scope": [
+    "原PDF表格",
+    "原凭证提取和定位",
+    "原文回查与人工附注"
+  ],
+  "outOfScope": [
+    "材料真实性或审批通过",
+    "任意脚本",
+    "未获许可的目录与未授权视觉调用"
+  ],
+  "sourceReferences": [
+    "docs/financial-material-processing-v1.md",
+    "https://gitcode.com/openJiuwen/agent-store/tree/0e158eee225c698774aa75671c944624cd36550b/community/finance/workshop/skills/smart-audit"
+  ]
+}

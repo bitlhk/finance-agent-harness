@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "financial-material-extraction-readonly",
+  "version": "0.1.0",
+  "systemPrompt": "只使用本次获准材料和已安装原工具；不补造原值、币种、页码或坐标；部分结果、缺失和前置阻断必须明确。",
+  "capabilities": [
+    {
+      "capabilityId": "financial.material.extract",
+      "toolName": "financial_material_extract",
+      "name": "提取当前原材料",
+      "description": "仅处理Host当前任务绑定的原材料。保留原值、原页码及未确认状态，不代表业务审核通过。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pages": {
+            "type": "array",
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "fields": {
+            "type": "object",
+            "maxProperties": 64,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "material:read"
+      ]
+    },
+    {
+      "capabilityId": "financial.material.locate",
+      "toolName": "financial_material_locate",
+      "name": "定位原材料字段",
+      "description": "仅处理Host当前任务绑定的原材料。保留原值、原页码及未确认状态，不代表业务审核通过。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pages": {
+            "type": "array",
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "fields": {
+            "type": "object",
+            "maxProperties": 64,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "material:read"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:financial-material:query:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "financial-material-query.v1"
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "documentRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "documentVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "mode": {
+      "enum": [
+        "PDF_TABLES",
+        "PDF_DIRECTORY",
+        "CREDENTIAL",
+        "LOCATE"
+      ]
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "fields": {
+      "type": "object",
+      "maxProperties": 64,
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 2000
+      }
+    },
+    "selectionRevision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "documentRef",
+    "documentVersion",
+    "mode"
+  ],
+  "additionalProperties": false
+}

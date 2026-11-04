@@ -61,3 +61,7 @@ Core、Execution、原 Python 公式和旧资产语义保持原义。独立原�
 本地组件/Runtime 测试、Builder 独立交付、上游接纳和正式发布分别取证；候选目录不是发布资格。
 详见 [有限只读合同](market-risk-capital-readonly-v1.md) 及
 [原生接线说明](../integrations/market-risk-capital-java/README.md)。
+
+## 原材料工程切片（FEAT-002候选）
+
+新增`packages/java/financial-material`、`providers/financial-material`和`integrations/financial-material-java`，分别持有材料合同、有限原服务调用及原生SDK接线。原文件、原返回和修正仍在来源服务；Host选择当前任务文件并复核授权/代次，Builder仅装配。Core/Execution及既有openJiuwen SPI不变，旧JSON/文本领域不自动升级。详见[材料接线](financial-material-processing-v1.md)。目录许可与真实视觉质量仍需独立资格。
