@@ -1,5 +1,6 @@
 """Regression for the CI-to-native-test prerequisite boundary, without real models."""
 from pathlib import Path
+import os
 import re
 import sys
 import tempfile
@@ -41,7 +42,29 @@ class OriginalMaterialCiTest(unittest.TestCase):
             output = root / "env"
             material.export_properties(values, output)
             actual = dict(line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())
-            self.assertEqual(actual, {var: str(values[prop].resolve()) for prop, var in material.PROPERTIES.items()})
+            self.assertEqual(actual, {var: str(values[prop].absolute()) for prop, var in material.PROPERTIES.items()})
+
+    def test_export_does_not_replace_venv_python_with_symlink_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base-python"
+            base.write_text("synthetic interpreter target", encoding="utf-8")
+            python = root / ".venv" / "bin" / "python"
+            python.parent.mkdir(parents=True)
+            try:
+                python.symlink_to(base)
+            except OSError as error:
+                if os.name == "nt" and getattr(error, "winerror", None) == 1314:
+                    self.skipTest("Windows account cannot create symbolic links")
+                raise
+            self.assertNotEqual(python.absolute(), python.resolve())
+            values = {prop: root / prop for prop in material.PROPERTIES}
+            values["fh.python"] = python
+            output = root / "env"
+            material.export_properties(values, output)
+            actual = dict(line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())
+            self.assertEqual(actual["FH_MATERIAL_PYTHON"], str(python.absolute()))
+            self.assertNotEqual(actual["FH_MATERIAL_PYTHON"], str(base.resolve()))
 
     def test_invalid_export_does_not_append_partial_configuration(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -36,7 +36,9 @@ def export_properties(properties, github_env):
         value = os.fspath(properties[prop])
         if not value or any(c in value for c in "\r\n\0"):
             raise ValueError("INVALID_CI_ENVIRONMENT_VALUE")
-        lines.append(variable + "=" + str(Path(value).resolve()) + "\n")
+        # Resolving a POSIX venv's Python symlink selects its base interpreter
+        # instead, losing the sibling pyvenv.cfg and installed dependencies.
+        lines.append(variable + "=" + str(Path(value).absolute()) + "\n")
     with Path(github_env).open("a", encoding="utf-8", newline="\n") as stream:
         stream.write("".join(lines))
 

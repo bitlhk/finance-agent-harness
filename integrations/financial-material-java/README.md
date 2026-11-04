@@ -23,6 +23,7 @@ Agent Store 固定为 `b948d8060c5410cb657c720b6c9bd32d7ab211e8`，原场景固�
 准备脚本使用 `uv sync --frozen --no-dev --group test`，包含原锁文件中生成合成 PDF 所需的 ReportLab 测试依赖。
 验证原表格模块、测试 PDF 生成器及发布闭包后才导出四项路径，失败即停止。
 普通环境不安装 PyMuPDF，不读取模型 Key，不调用真实模型或银行。
+导出解释器时保留 `.venv/bin/python` 路径，不解引用 Linux 软链接；否则会改用系统 Python，丢失材料环境中的依赖。
 
 本地可将四项路径传给同一原生测试，或先运行准备脚本生成独立环境和路径文件；不要直接把输出文件当 shell 脚本执行。
 
