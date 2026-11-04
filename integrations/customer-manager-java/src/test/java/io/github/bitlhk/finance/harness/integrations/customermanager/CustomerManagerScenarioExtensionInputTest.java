@@ -98,4 +98,15 @@ final class CustomerManagerScenarioExtensionInputTest {
         assertTrue(with.description().contains("不读取或发送客户资料"));
         assertTrue(with.actions().contains(ConversationIntent.Kind.KNOWLEDGE_QUERY));
     }
+
+    @Test void installedWealthAssistantMethodTakesPrecedenceWithoutBreakingLegacyLocks() throws Exception {
+        String assistant="assets/domain-packs/wealth/assistant-service/skills/wealth-assistant-service/SKILL.md";
+        var current=CustomerManagerScenarioExtension.installedMethodAsset(HarnessJson.mapper().readTree(
+                "{\"files\":{\""+assistant+"\":\"digest\"}}"));
+        assertEquals("wealth-assistant-service",current.id());
+        assertEquals(assistant,current.relative());
+        var legacy=CustomerManagerScenarioExtension.installedMethodAsset(HarnessJson.mapper().readTree("{\"files\":{}}"));
+        assertEquals("customer-manager-service-preparation",legacy.id());
+        assertTrue(legacy.relative().contains("service-preparation"));
+    }
 }

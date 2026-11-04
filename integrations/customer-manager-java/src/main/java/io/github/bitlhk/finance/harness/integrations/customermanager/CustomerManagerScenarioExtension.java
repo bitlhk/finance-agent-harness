@@ -804,17 +804,22 @@ public final class CustomerManagerScenarioExtension implements ManagedScenarioEx
     private static InstalledPreparationMethod installedMethod(Path root) throws Exception {
         JsonNode lock = HarnessJson.mapper().readTree(Files.readAllBytes(root.resolve("service-lock.json")));
         String lockDigest = "sha256:" + requiredEnv("FH_EXPECTED_LOCK");
-        String id, version, relative;
-        if (lock.has("method")) {
-            id=lock.path("method").path("assetId").asText(); version=lock.path("method").path("version").asText();
-            relative="assets/private-methods/"+id+"/"+version+"/skills/"+id+"/SKILL.md";
-        } else {
-            id="customer-manager-service-preparation"; version="0.1.0";
-            relative="assets/domain-packs/wealth/service-preparation/skills/customer-manager-service-preparation/SKILL.md";
-        }
-        String digest=lock.path("files").path(relative).asText();
+        MethodAsset asset = installedMethodAsset(lock);
+        String digest=lock.path("files").path(asset.relative()).asText();
         if (digest.isBlank()) throw new SecurityException("INSTALLED_METHOD_NOT_LOCKED");
-        return InstalledPreparationMethod.load(id,version,root.resolve(relative),"sha256:"+digest,lockDigest);
+        return InstalledPreparationMethod.load(asset.id(),asset.version(),root.resolve(asset.relative()),"sha256:"+digest,lockDigest);
+    }
+    record MethodAsset(String id,String version,String relative) {}
+    static MethodAsset installedMethodAsset(JsonNode lock) {
+        if (lock.has("method")) {
+            String id=lock.path("method").path("assetId").asText(),version=lock.path("method").path("version").asText();
+            return new MethodAsset(id,version,"assets/private-methods/"+id+"/"+version+"/skills/"+id+"/SKILL.md");
+        }
+        String assistant="assets/domain-packs/wealth/assistant-service/skills/wealth-assistant-service/SKILL.md";
+        if (!lock.path("files").path(assistant).asText().isBlank())
+            return new MethodAsset("wealth-assistant-service","0.1.0",assistant);
+        return new MethodAsset("customer-manager-service-preparation","0.1.0",
+                "assets/domain-packs/wealth/service-preparation/skills/customer-manager-service-preparation/SKILL.md");
     }
     private static Map<String,Object> value(JsonNode node) { return HarnessJson.mapper().convertValue(node,new TypeReference<>(){}); }
     private static Path requiredPath(String name){return Path.of(requiredEnv(name)).toAbsolutePath().normalize();}
