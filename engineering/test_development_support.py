@@ -61,7 +61,9 @@ class DevelopmentSupportTests(unittest.TestCase):
                 self.assertEqual(case_ref["digest"], digest(case.read_bytes()))
 
     def test_targeted_provider_and_contract_commands_and_original_case_formats(self):
-        balance, _, cashflow = self.declarations
+        by_id = {d["subject"]["id"]: d for d in self.declarations}
+        balance = by_id["account-balance-readonly"]
+        cashflow = by_id["cashflow-customer-self-service"]
         self.assertIn("sessionSubjectMismatchDoesNotReadAnyCustomerAccounts", balance["commands"][0]["command"])
         self.assertEqual(balance["caseRefs"][0]["format"], "finance-capability-smoke.v1")
         self.assertIn("-Dtest=CashflowProviderTest", cashflow["commands"][0]["command"])
@@ -91,11 +93,13 @@ class DevelopmentSupportTests(unittest.TestCase):
         ])
         self.assertNotIn("status", declaration)
 
-    def test_actual_three_businesses_have_generic_defaults(self):
-        self.assertEqual({d["subject"]["id"] for d in self.declarations},
-                         {"account-balance-readonly", "wealth-shared-facts", "cashflow-customer-self-service"})
-        self.assertEqual([len(d["methodCases"]) for d in self.declarations], [1, 1, 2])
-        for declaration in self.declarations:
+    def test_legacy_businesses_have_generic_defaults(self):
+        expected_cases = {"account-balance-readonly": 1, "wealth-shared-facts": 1,
+                          "cashflow-customer-self-service": 2}
+        legacy = [d for d in self.declarations if d["subject"]["id"] in expected_cases]
+        self.assertCountEqual([d["subject"]["id"] for d in legacy], expected_cases)
+        self.assertEqual({d["subject"]["id"]: len(d["methodCases"]) for d in legacy}, expected_cases)
+        for declaration in legacy:
             self.assertEqual(set(declaration["scope"]), {"capabilityIds"})
             self.assertTrue(declaration["commands"])
             self.assertNotIn("status", declaration)
