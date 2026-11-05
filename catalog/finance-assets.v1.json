@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.19",
+  "catalogVersion": "0.2.20-integration.1",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -112,6 +112,25 @@
           "original-calculation-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原材料 Java 接线（候选）",
+      "source": "repo://integrations/financial-material-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-financial-material-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -197,6 +216,13 @@
       "version": "0.1.0",
       "displayName": "原算法受管计算（候选）",
       "source": "repo://profiles/original-calculation-readonly.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "financial-material-processing",
+      "version": "0.1.0",
+      "displayName": "原材料处理（候选）",
+      "source": "repo://profiles/financial-material-processing.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -546,6 +572,36 @@
         ],
         "profiles": [
           "original-calculation-readonly"
+        ]
+      }
+    },
+    {
+      "id": "financial-material-processing",
+      "version": "0.1.0",
+      "displayName": "原材料处理与依据方法（派生候选）",
+      "profile": "financial-material-processing",
+      "source": "repo://domain-packs/financial-material-processing",
+      "requiresCapabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "financial-material-extraction-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
         ]
       }
     }
@@ -1104,6 +1160,28 @@
           "original-calculation-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-extraction-readonly",
+      "version": "0.1.0",
+      "displayName": "原材料提取与定位（候选）",
+      "source": "repo://capability-packs/financial-material-extraction-readonly",
+      "capabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1391,6 +1469,28 @@
           "original-calculation-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-original",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原材料受管适配（候选）",
+      "source": "repo://providers/financial-material",
+      "capabilities": [
+        "financial.material.extract",
+        "financial.material.locate"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -1492,9 +1592,21 @@
           "original-calculation-readonly"
         ]
       }
+    },
+    {
+      "id": "financial-material-controlled",
+      "version": "0.1.0",
+      "displayName": "原材料工程与资格案例",
+      "source": "repo://conformance/financial-material-processing",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "financial-material-processing"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-11-04.scenario-industrialization-feat004-candidate",
+  "catalogRevision": "2026-11-05.scenario-industrialization-001-002-004-local-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

@@ -75,3 +75,7 @@ Core、Execution、原 Python 公式和旧资产语义保持原义。独立原�
 取消先关闭结果披露，再终止自有进程组并确认退出；Linux 验证包含抗终止子进程、内存上限和网络/派生进程禁止。正式 worker 不允许自行派生进程。局部审计限制不等于操作系统沙箱，生产仍需部署环境的权限、网络与容量治理。
 
 工程接线、原新数值对照、专业金融有效性、生产部署及上游发布分别取证。两个独立消费者只证明共享能力复用，不代表全部场景完成。参见 [计算合同](calculation-readonly-v1.md)、[Java 接线](../integrations/original-calculation-java/README.md) 和 Agent Store 的固定版本验证记录。
+
+## 原材料工程切片（FEAT-002候选）
+
+新增`packages/java/financial-material`、`providers/financial-material`和`integrations/financial-material-java`，分别持有材料合同、有限原服务调用及原生SDK接线。原文件、原返回和修正仍在来源服务；Host选择当前任务文件并复核授权/代次，Builder仅装配。Core/Execution及既有openJiuwen SPI不变，旧JSON/文本领域不自动升级。详见[材料接线](financial-material-processing-v1.md)。目录许可与真实视觉质量仍需独立资格。

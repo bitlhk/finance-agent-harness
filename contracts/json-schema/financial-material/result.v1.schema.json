@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:financial-material:result:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "financial-material-result.v1"
+    },
+    "runRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "document": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "financial-material-document.v1"
+        },
+        "documentRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "enum": [
+            "application/pdf",
+            "image/png",
+            "image/jpeg"
+          ]
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10485760
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "ownerRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "principalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "subjectRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "taskRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sessionRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "documentRef",
+        "version",
+        "sha256",
+        "mediaType",
+        "sizeBytes",
+        "pageCount",
+        "ownerRef",
+        "principalId",
+        "subjectRef",
+        "taskRef",
+        "sessionRef"
+      ],
+      "additionalProperties": false
+    },
+    "mode": {
+      "enum": [
+        "PDF_TABLES",
+        "PDF_DIRECTORY",
+        "CREDENTIAL",
+        "LOCATE"
+      ]
+    },
+    "status": {
+      "enum": [
+        "REJECTED",
+        "BLOCKED",
+        "COMPLETED",
+        "PARTIAL",
+        "FAILED",
+        "CANCELED"
+      ]
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "originalValue": {},
+          "location": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "PAGE",
+                      "REGION",
+                      "TABLE"
+                    ]
+                  },
+                  "pageIndex": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "endPageIndex": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sourcePageBase": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  },
+                  "unit": {
+                    "enum": [
+                      "PERMILLE",
+                      null
+                    ]
+                  },
+                  "origin": {
+                    "enum": [
+                      "TOP_LEFT",
+                      null
+                    ]
+                  },
+                  "box": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000
+                    },
+                    "maxItems": 4
+                  }
+                },
+                "required": [
+                  "kind",
+                  "pageIndex",
+                  "endPageIndex",
+                  "sourcePageBase"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "fieldId",
+          "originalValue",
+          "location"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tables": {
+      "type": "array"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "enum": [
+              "OBSERVED",
+              "UNCONFIRMED",
+              "FAILED",
+              "MISSING"
+            ]
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "pageIndex",
+          "state",
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "upstreamRevision": {
+          "const": "0e158eee225c698774aa75671c944624cd36550b"
+        },
+        "toolReleaseDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "upstreamRevision",
+        "toolReleaseDigest",
+        "entry"
+      ],
+      "additionalProperties": false
+    },
+    "rawRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warningCodes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runRef",
+    "requestId",
+    "document",
+    "mode",
+    "status",
+    "fields",
+    "tables",
+    "units",
+    "source",
+    "rawRef",
+    "createdAt",
+    "revision",
+    "warningCodes"
+  ],
+  "additionalProperties": false
+}

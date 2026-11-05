@@ -846,3 +846,9 @@ python engineering/verify_original_calculation.py --help
 完整准备命令需要一个新的工作目录、准确的 Python 3.12 路径和固定源副本；原工具准备入口会生成 `execution-inputs.json`。将它作为 `--config` 交给验证入口，后者运行真实 Java SDK、原工具服务与原进程。模型路由由本地固定响应端点提供，不调用银行、行情或真实模型服务。缺少真实工具配置时，资格测试应失败，不能用跳过或仿制算法代替。
 
 业务允许的参数由原入口限制。当前支持 `chat/calculate/result/status/history/cancel`；历史只读不重新执行算法，但要复核当前权限。源目录保留快照和返回，进程重启后的运行索引/会话恢复尚未建设。生产使用前还需要权限体系、操作系统隔离、负载、专业模型与原算法许可等专项确认。详见 `docs/calculation-readonly-v1.md` 与 `integrations/original-calculation-java/README.md`。
+
+### 16.9 原材料处理的接入边界（候选）
+
+使用`financial-material-processing` Profile和固定原工具闭包，经标准方法/能力包安装至openJiuwen Java 0.1.15。Provider的私有绑定文件固定任务、模式和发布摘要；当前文件通过授权上传选中，模型不能提供客户、路径或凭据。仅有页码时不要补画区域，空返回不要当作解析完整；修正采用期望版本并保留原值。
+
+文件和原返回归来源服务，当前身份与结果披露归Host。Builder退出后仍通过已交付原工具和JAR运行。工程固定响应不等于真实视觉质量；目录许可、实际模型传输、生产IAM和负载应分别取得资格。接线细节见候选源码中的 `docs/financial-material-processing-v1.md`。

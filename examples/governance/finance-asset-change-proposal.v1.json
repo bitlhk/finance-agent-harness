@@ -4,11 +4,11 @@
   "status": "proposed",
   "catalog": {
     "schemaVersion": "finance-asset-catalog.v1",
-    "catalogVersion": "0.2.19",
-    "catalogRevision": "2026-11-04.scenario-industrialization-feat004-candidate",
+    "catalogVersion": "0.2.20-integration.1",
+    "catalogRevision": "2026-11-05.scenario-industrialization-001-002-004-local-candidate",
     "harnessRevision": "533a54d786da829c435010fb19ac48eed20bc586",
     "source": "catalog/finance-assets.v1.json",
-    "digest": "sha256:259888c0ee8309b9db31b0e12533139f102a1ac89269dadfa1657f3a42cb45dd"
+    "digest": "sha256:60fdd58f928df12dd80f8fd5c236843cfcaaa0b48d461ebcea47ddc1194fb0b5"
   },
   "target": {
     "kind": "domain-pack",

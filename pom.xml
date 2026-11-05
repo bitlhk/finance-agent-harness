@@ -50,6 +50,9 @@
         <module>packages/java/calculation</module>
         <module>providers/original-calculation</module>
         <module>integrations/original-calculation-java</module>
+        <module>packages/java/financial-material</module>
+        <module>providers/financial-material</module>
+        <module>integrations/financial-material-java</module>
     </modules>
 
     <properties>
