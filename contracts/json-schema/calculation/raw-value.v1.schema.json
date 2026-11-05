@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-value.v1.schema.json",
+  "$ref": "#/$defs/node",
+  "$defs": {
+    "node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "float"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "hex": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "value",
+            "hex"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "integer"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "string"
+            },
+            "value": {
+              "type": "string",
+              "maxLength": 1000000
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "missing"
+            },
+            "marker": {
+              "enum": [
+                "None",
+                "NA",
+                "NaT",
+                "nan",
+                "inf",
+                "-inf"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "marker"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "datetime"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "pythonType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "kind",
+            "value",
+            "pythonType"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "list",
+                "tuple"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/node"
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "mapping"
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "$ref": "#/$defs/node"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/node"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "entries"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "record"
+            },
+            "pythonType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "value": {
+                    "$ref": "#/$defs/node"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "pythonType",
+            "fields"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "dataframe"
+            },
+            "columns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/node"
+              },
+              "maxItems": 10000
+            },
+            "index": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/node"
+              },
+              "maxItems": 10000
+            },
+            "dtypes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 10000
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/node"
+                },
+                "maxItems": 10000
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "columns",
+            "index",
+            "dtypes",
+            "data"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "series"
+            },
+            "name": {
+              "$ref": "#/$defs/node"
+            },
+            "index": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/node"
+              },
+              "maxItems": 10000
+            },
+            "dtype": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/node"
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "index",
+            "dtype",
+            "data"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {},
+    "value": {},
+    "hex": {},
+    "marker": {},
+    "pythonType": {},
+    "items": {},
+    "entries": {},
+    "fields": {},
+    "columns": {},
+    "index": {},
+    "dtypes": {},
+    "data": {},
+    "name": {},
+    "dtype": {}
+  },
+  "required": [
+    "kind"
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "returns": {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 10000
+            },
+            "index": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 10000
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 10000
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "columns",
+            "index",
+            "data"
+          ],
+          "additionalProperties": false
+        },
+        "weights": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 128,
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "returns",
+        "weights"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "returns"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portfolio-input.v1.schema.json"
+}

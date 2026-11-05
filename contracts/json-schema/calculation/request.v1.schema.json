@@ -1,0 +1,735 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-original-calculation-request.v1"
+    },
+    "assetId": {
+      "enum": [
+        "ftp",
+        "liquidity",
+        "market",
+        "operational",
+        "debt",
+        "entity",
+        "portfolio",
+        "factor-backtest"
+      ]
+    },
+    "operationId": {
+      "enum": [
+        "ftp",
+        "liquidity",
+        "market",
+        "operational",
+        "logistic",
+        "portfolio",
+        "factor-backtest"
+      ]
+    },
+    "dataAsOf": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 64
+    },
+    "input": {
+      "type": "object"
+    },
+    "parameters": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "assetId",
+    "operationId",
+    "dataAsOf",
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "ftp"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "ftp"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "deposits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "loans": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "curve": {
+                "type": "object",
+                "properties": {
+                  "tenors": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "maxItems": 10000
+                  },
+                  "rates": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "maxItems": 10000
+                  }
+                },
+                "required": [
+                  "tenors",
+                  "rates"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "deposits",
+              "loans",
+              "curve"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "price"
+              },
+              "method": {
+                "enum": [
+                  "match_maturity",
+                  "cashflow"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "liquidity"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "liquidity"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "assets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "liabilities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "off_balance": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "fx_rates": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 32,
+                "additionalProperties": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            "required": [
+              "assets",
+              "liabilities",
+              "off_balance",
+              "fx_rates"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "lcr",
+                  "nsfr"
+                ]
+              },
+              "currency_scope": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "market"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "market"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "trading_positions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "factor_returns": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "maxItems": 10000
+                  },
+                  "index": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "maxItems": 10000
+                  },
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "maxItems": 10000
+                    },
+                    "maxItems": 10000
+                  }
+                },
+                "required": [
+                  "columns",
+                  "index",
+                  "data"
+                ],
+                "additionalProperties": false
+              },
+              "fx_rates": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 32,
+                "additionalProperties": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            "required": [
+              "trading_positions",
+              "factor_returns",
+              "fx_rates"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "var",
+                  "backtest"
+                ]
+              },
+              "mc_seed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "mc_n_simulations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "action",
+              "mc_seed",
+              "mc_n_simulations"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "operational"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "operational"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "gross_incomes": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 10000
+              },
+              "income_statement": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              },
+              "annual_losses": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 10000
+              }
+            },
+            "required": [
+              "gross_incomes",
+              "income_statement",
+              "annual_losses"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "bia",
+                  "tsa"
+                ]
+              },
+              "alpha": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "logistic"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "debt",
+              "entity"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "x_train": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 10000
+                },
+                "maxItems": 10000
+              },
+              "y_train": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "maxItems": 10000
+              },
+              "feature_names": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "maxItems": 10000
+              },
+              "x_predict": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 10000
+                },
+                "maxItems": 10000
+              }
+            },
+            "required": [
+              "x_train",
+              "y_train",
+              "feature_names",
+              "x_predict"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "fit_predict"
+              },
+              "random_state": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "penalty": {
+                "enum": [
+                  "l1",
+                  "l2"
+                ]
+              },
+              "solver": {
+                "enum": [
+                  "saga",
+                  "lbfgs",
+                  "liblinear"
+                ]
+              },
+              "max_iter": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "action",
+              "random_state"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "portfolio"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "portfolio"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "returns": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "maxItems": 10000
+                  },
+                  "index": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "maxItems": 10000
+                  },
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "maxItems": 10000
+                    },
+                    "maxItems": 10000
+                  }
+                },
+                "required": [
+                  "columns",
+                  "index",
+                  "data"
+                ],
+                "additionalProperties": false
+              },
+              "weights": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 128,
+                "additionalProperties": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": [
+              "returns",
+              "weights"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "returns"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operationId": {
+            "const": "factor-backtest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assetId": {
+            "enum": [
+              "factor-backtest"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "panel": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 128,
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "minItems": 1,
+                "maxItems": 10000
+              }
+            },
+            "required": [
+              "panel"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "backtest"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "request.v1.schema.json"
+}

@@ -1,0 +1,112 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-original-calculation-release.v1"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "adapterDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "sourceEntity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "filesDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "lockDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "python": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "root": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "module": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "importMode": {
+            "enum": [
+              "package",
+              "direct-file"
+            ]
+          }
+        },
+        "required": [
+          "assetId",
+          "operationId",
+          "sourceEntity",
+          "filesDigest",
+          "lockDigest",
+          "python",
+          "root",
+          "module",
+          "importMode"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10000
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "version",
+    "adapterDigest",
+    "sourceCommit",
+    "assets",
+    "files",
+    "schemas"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "source-release.v1.schema.json"
+}

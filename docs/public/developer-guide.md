@@ -827,3 +827,22 @@ mvn -B -ntp -pl providers/non-ai-banking -am -Dtest=CashflowProviderTest,NonAiBa
 
 当前是 0.1.0 / 0.1.0-SNAPSHOT 的本地候选。交付时固定实际源码内容和 JAR 摘要，保留原来源提交；
 不能把未提交的新代码说成原提交已具备，也不能将本地测试说成上游已发布。
+
+### 16.8 复用原算法进行受管计算
+
+`original-calculation-readonly` 将八份固定原资产作为独立依赖，通过七类只读工具接入 openJiuwen Java 0.1.15。先建设共用工具与领域适配，再装配具体场景。Skill 只说明方法，不执行 Python 或重新实现公式；模型只触发当前授权的有限计算。
+
+1. 固定来源：原资产提交 `0e158eee225c698774aa75671c944624cd36550b`，八个独立依赖锁和原比较标准。发布器分别保存原源码、适配器与依赖身份。debt/entity 使用独立环境。
+2. 准备工具：使用 Python 3.12 发布八个环境。控制端可保持 CI 的 Python 3.10/3.12；它不负责运行原算法。跨仓工具提交须先发布后才能由线上 CI 获取；本地验测可传入固定的 Builder 和原源码副本。
+3. 提供私有授权：Source 服务的凭据/客户/任务绑定与 Host 当前授权放在制品外。一次任务只绑定一个原资产。模型、浏览器和 Skill 均不能提供授权或改选模块。
+4. 装配与运行：选择 `original-calculation-readonly` Profile、能力包、派生方法、Provider 与原生扩展。复用现有安装机制，运行时不依赖 Builder 进程。
+5. 核对结果：查看原值、输入与实际参数、单位/缺失说明、数据日期和计算时间。表图引用本次原返回，完整原值可回查。重算保留新旧运行；失败、取消或撤权后关闭披露。
+
+```bash
+python engineering/prepare_original_calculation_tool.py --help
+python engineering/verify_original_calculation.py --help
+```
+
+完整准备命令需要一个新的工作目录、准确的 Python 3.12 路径和固定源副本；原工具准备入口会生成 `execution-inputs.json`。将它作为 `--config` 交给验证入口，后者运行真实 Java SDK、原工具服务与原进程。模型路由由本地固定响应端点提供，不调用银行、行情或真实模型服务。缺少真实工具配置时，资格测试应失败，不能用跳过或仿制算法代替。
+
+业务允许的参数由原入口限制。当前支持 `chat/calculate/result/status/history/cancel`；历史只读不重新执行算法，但要复核当前权限。源目录保留快照和返回，进程重启后的运行索引/会话恢复尚未建设。生产使用前还需要权限体系、操作系统隔离、负载、专业模型与原算法许可等专项确认。详见 `docs/calculation-readonly-v1.md` 与 `integrations/original-calculation-java/README.md`。

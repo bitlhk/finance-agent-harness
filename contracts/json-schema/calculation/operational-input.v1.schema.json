@@ -1,0 +1,75 @@
+{
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "gross_incomes": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 10000
+        },
+        "income_statement": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 128,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        },
+        "annual_losses": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "gross_incomes",
+        "income_statement",
+        "annual_losses"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "bia",
+            "tsa"
+          ]
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "operational-input.v1.schema.json"
+}

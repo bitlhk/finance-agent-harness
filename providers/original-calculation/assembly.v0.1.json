@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {"id": "original-calculation", "version": "0.1.0-SNAPSHOT"},
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-original-calculation:0.1.0-SNAPSHOT",
+  "connectionKind": "original-calculation-http.v0.1",
+  "configurationFiles": [{"id": "binding-file-sha256", "pathEnvironment": "FH_CALCULATION_BINDINGS", "digestEnvironment": "FH_CALCULATION_BINDINGS_SHA256", "maxBytes": 262144}],
+  "supports": [{"pack": {"id": "original-calculation-readonly", "version": "0.1.0"}, "capabilityIds": ["calculation.ftp.query", "calculation.liquidity.query", "calculation.market.query", "calculation.operational.query", "calculation.logistic.query", "calculation.portfolio.query", "calculation.factor-backtest.query"], "operation": "QUERY"}]
+}

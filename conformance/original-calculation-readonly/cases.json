@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "finance-original-calculation-cases.v1",
+  "upstreamRevision": "0e158eee225c698774aa75671c944624cd36550b",
+  "families": [
+    "ftp",
+    "liquidity",
+    "market",
+    "operational",
+    "logistic",
+    "portfolio",
+    "factor-backtest"
+  ],
+  "assetIds": [
+    "ftp",
+    "liquidity",
+    "market",
+    "operational",
+    "debt",
+    "entity",
+    "portfolio",
+    "factor-backtest"
+  ],
+  "operations": [
+    "ftp.price",
+    "liquidity.lcr",
+    "liquidity.nsfr",
+    "market.var",
+    "market.backtest",
+    "operational.bia",
+    "operational.tsa",
+    "debt.fit_predict",
+    "entity.fit_predict",
+    "portfolio.returns",
+    "factor-backtest.backtest"
+  ],
+  "cases": [
+    {
+      "id": "actual-original",
+      "expectedStatus": "SUCCEEDED"
+    },
+    {
+      "id": "missing-source",
+      "expectedStatus": "FAILED"
+    },
+    {
+      "id": "bad-parameter",
+      "expectedStatus": "FAILED"
+    },
+    {
+      "id": "source-503",
+      "expectedStatus": "FAILED"
+    },
+    {
+      "id": "timeout",
+      "expectedStatus": "TIMED_OUT"
+    },
+    {
+      "id": "cancel",
+      "expectedStatus": "CANCELLED"
+    },
+    {
+      "id": "late-after-cancel",
+      "expectedStatus": "CANCELLED"
+    },
+    {
+      "id": "cross-task-read",
+      "expectedStatus": "DENIED"
+    },
+    {
+      "id": "withdrawn-read",
+      "expectedStatus": "DENIED"
+    }
+  ],
+  "numericalCriteria": "Fixed original per-metric assertions and lossless original/transport/projection comparison; no uniform relaxed tolerance.",
+  "qualification": "Engineering, numerical equivalence, business model and production qualification recorded separately; no fabricated engine."
+}

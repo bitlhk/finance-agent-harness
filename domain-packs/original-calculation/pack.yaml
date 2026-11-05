@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "finance-domain-pack.v1",
+  "packId": "original-calculation",
+  "version": "0.1.0",
+  "profile": "original-calculation-readonly",
+  "capabilities": [
+    "calculation.ftp.query",
+    "calculation.liquidity.query",
+    "calculation.market.query",
+    "calculation.operational.query",
+    "calculation.logistic.query",
+    "calculation.portfolio.query",
+    "calculation.factor-backtest.query"
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "original-calculation-readonly",
+      "version": "0.1.0"
+    }
+  ],
+  "skills": [
+    {
+      "directory": "original-calculation",
+      "entry": "skill/SKILL.md"
+    }
+  ],
+  "scope": [
+    "固定原输入、原参数和原函数",
+    "取得受限保真原值",
+    "按当前授权回查和重算"
+  ],
+  "outOfScope": [
+    "任意代码、factor_code、pickle",
+    "行情抓取、模型生成、写库、真实交易",
+    "专业模型或生产资格自动认证"
+  ],
+  "sourceReferences": [
+    "docs/calculation-readonly-v1.md",
+    "https://gitcode.com/openJiuwen/agent-store/tree/0e158eee225c698774aa75671c944624cd36550b/community/finance/scenario"
+  ]
+}

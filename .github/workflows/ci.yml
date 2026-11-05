@@ -36,7 +36,7 @@ jobs:
       matrix:
         python: ['3.10', '3.12']
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -44,6 +44,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - uses: actions/setup-python@v5
+        id: calculation-worker
+        with:
+          python-version: '3.12.14'
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -73,11 +77,22 @@ jobs:
           python engineering/prepare_original_market_risk_tool.py
           --workspace "$RUNNER_TEMP/original-market-risk"
           --github-env "$GITHUB_ENV"
-      - name: Unit tests and local HTTP fault injection
+      - name: Prepare pinned original calculation tools
+        # New calculation tests require the fixed real tool, alongside the existing capital tool.
+        # The source commit must be published before this cross-repository CI can fetch it.
+        run: >-
+          python engineering/prepare_original_calculation_tool.py
+          --workspace "$RUNNER_TEMP/original-calculation"
+          --worker-python "${{ steps.calculation-worker.outputs.python-path }}"
+          --github-env "$GITHUB_ENV"
+      - name: Unit and actual original calculation tests
         run: >-
           mvn -B -ntp
           "-Dfh.originalToolRelease=$FH_ORIGINAL_TOOL_RELEASE"
           "-Dfh.originalToolReleaseDigest=$FH_ORIGINAL_TOOL_RELEASE_DIGEST"
+          "-Dfh.calculationConfig=$FH_CALCULATION_CONFIG"
+          "-Dfh.calculationToolRelease=$FH_CALCULATION_TOOL_RELEASE"
+          "-Dfh.calculationToolReleaseDigest=$FH_CALCULATION_TOOL_RELEASE_DIGEST"
           verify
       - name: Java timestamp compatibility on supported Python versions
         run: python -m unittest discover -s engineering -p 'test_*.py' -v
@@ -96,3 +111,5 @@ jobs:
             examples/solutions/wealth-facts-kit/target/runs/**
             ${{ runner.temp }}/harness-reproducibility/*
             ${{ runner.temp }}/original-market-risk/preparation.json
+            ${{ runner.temp }}/original-calculation/preparation.json
+            ${{ runner.temp }}/original-calculation/evidence/*.json

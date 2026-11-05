@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "capability-pack",
+    "id": "original-calculation-readonly",
+    "version": "0.1.0",
+    "source": "repo://capability-packs/original-calculation-readonly",
+    "digest": "sha256:0a973ad141d68b6a04fc1d73d838c0cc8b06ee095af8fbab0ae5e7b93ed64133"
+  },
+  "scope": {
+    "capabilityIds": [
+      "calculation.ftp.query",
+      "calculation.liquidity.query",
+      "calculation.market.query",
+      "calculation.operational.query",
+      "calculation.logistic.query",
+      "calculation.portfolio.query",
+      "calculation.factor-backtest.query"
+    ]
+  },
+  "methodCases": [
+    {
+      "name": "固定原资产计算与依据核对",
+      "query": "请按当前获准的原算法、固定输入和参数执行计算，说明实际输出及数据时点。",
+      "expectedTerms": []
+    }
+  ],
+  "caseRefs": [
+    {
+      "source": "repo://conformance/original-calculation-readonly/cases.json",
+      "digest": "sha256:00893614b490cd0cda22a6b7d1fd0e747cd71021fa4de06958c9d392c9842ef7",
+      "format": "finance-original-calculation-cases.v1"
+    }
+  ],
+  "commands": []
+}
