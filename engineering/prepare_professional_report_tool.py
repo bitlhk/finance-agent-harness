@@ -10,7 +10,7 @@ import sys
 from prepare_original_market_risk_tool import fixed_checkout, UPSTREAM_URL, UPSTREAM_REVISION, BUILDER_URL
 
 # Exact local candidate. Remote fetch stays unavailable until separately authorized publication.
-BUILDER_REVISION='75e97dc0a64c62ea29b3990feea95ef32a1fa4e5'
+BUILDER_REVISION='a7f38470baff0db1216de386d3e548c65c56941d'
 TOOL_PATH='community/finance/workshop/tools/professional-report-readonly'
 ROOT=Path(__file__).resolve().parents[1]
 
