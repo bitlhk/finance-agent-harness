@@ -92,6 +92,13 @@ jobs:
           --workspace "$RUNNER_TEMP/original-calculation"
           --worker-python "${{ steps.calculation-worker.outputs.python-path }}"
           --github-env "$GITHUB_ENV"
+      - name: Prepare pinned original professional report tools
+        # The exact Agent Store commit must be published before remote CI can fetch it.
+        run: >-
+          python engineering/prepare_professional_report_tool.py
+          --workspace "$RUNNER_TEMP/professional-report"
+          --worker-python "${{ steps.calculation-worker.outputs.python-path }}"
+          --github-env "$GITHUB_ENV"
       - name: Unit and actual original calculation tests
         run: >-
           mvn -B -ntp
@@ -104,6 +111,8 @@ jobs:
           "-Dfh.materialServiceSource=$FH_MATERIAL_SERVICE_SOURCE"
           "-Dfh.originalMaterialSource=$FH_ORIGINAL_MATERIAL_SOURCE"
           "-Dfh.materialEvidence=$FH_MATERIAL_EVIDENCE"
+          "-Dfh.reportConfig=$FH_REPORT_CONFIG"
+          "-Dfh.reportLifecycleEvidence=$FH_REPORT_LIFECYCLE_EVIDENCE"
           verify
       - name: Java timestamp compatibility on supported Python versions
         run: python -m unittest discover -s engineering -p 'test_*.py' -v
@@ -126,3 +135,6 @@ jobs:
             ${{ runner.temp }}/original-calculation/evidence/*.json
             ${{ runner.temp }}/original-material/preparation.json
             ${{ runner.temp }}/original-material/native-evidence/
+            ${{ runner.temp }}/professional-report/preparation.json
+            ${{ runner.temp }}/professional-report/original-qualification.json
+            ${{ runner.temp }}/professional-report/lifecycle.json

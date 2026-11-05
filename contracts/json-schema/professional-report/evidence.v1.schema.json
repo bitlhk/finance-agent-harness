@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:report:evidence:v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "sourceResultId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "pointer": {
+      "type": "string",
+      "pattern": "^(|/.*)$",
+      "maxLength": 2048
+    },
+    "sourceDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "sourceVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "dataAsOf": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "value": {}
+  },
+  "required": [
+    "id",
+    "runId",
+    "sourceResultId",
+    "pointer",
+    "sourceDigest",
+    "sourceVersion",
+    "dataAsOf",
+    "value"
+  ],
+  "additionalProperties": false
+}

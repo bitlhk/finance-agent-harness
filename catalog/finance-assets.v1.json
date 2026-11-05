@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.20-integration.1",
+  "catalogVersion": "0.2.21-feat005.1",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -131,6 +131,26 @@
           "financial-material-processing"
         ]
       }
+    },
+    {
+      "id": "professional-report-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原方法与报告Java接线",
+      "source": "repo://integrations/professional-report-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-professional-report-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "wealth-kyc-report-readonly",
+          "market-risk-report-readonly"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -223,6 +243,20 @@
       "version": "0.1.0",
       "displayName": "原材料处理（候选）",
       "source": "repo://profiles/financial-material-processing.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "wealth-kyc-report-readonly",
+      "version": "0.1.0",
+      "displayName": "原财富客户画像",
+      "source": "repo://profiles/wealth-kyc-report-readonly.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "market-risk-report-readonly",
+      "version": "0.1.0",
+      "displayName": "原完整市场风险报告",
+      "source": "repo://profiles/market-risk-report-readonly.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -602,6 +636,37 @@
         ],
         "profiles": [
           "financial-material-processing"
+        ]
+      }
+    },
+    {
+      "id": "professional-report",
+      "version": "0.1.0",
+      "displayName": "报告证据与历史领域",
+      "profile": "professional-report",
+      "source": "repo://domain-packs/professional-report",
+      "requiresCapabilities": [
+        "professional.report.wealth.query",
+        "professional.report.market.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "professional-report-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "wealth-kyc-report-readonly",
+          "market-risk-report-readonly"
         ]
       }
     }
@@ -1182,6 +1247,29 @@
           "financial-material-processing"
         ]
       }
+    },
+    {
+      "id": "professional-report-readonly",
+      "version": "0.1.0",
+      "displayName": "原方法与报告只读能力",
+      "source": "repo://capability-packs/professional-report-readonly",
+      "capabilities": [
+        "professional.report.wealth.query",
+        "professional.report.market.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "wealth-kyc-report-readonly",
+          "market-risk-report-readonly"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1491,6 +1579,29 @@
           "financial-material-processing"
         ]
       }
+    },
+    {
+      "id": "professional-report-readonly",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原方法与报告源服务",
+      "source": "repo://providers/professional-report-readonly",
+      "capabilities": [
+        "professional.report.wealth.query",
+        "professional.report.market.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "wealth-kyc-report-readonly",
+          "market-risk-report-readonly"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -1604,9 +1715,22 @@
           "financial-material-processing"
         ]
       }
+    },
+    {
+      "id": "professional-report-controlled",
+      "version": "0.1.0",
+      "displayName": "原报告工程与保真核对",
+      "source": "repo://conformance/professional-report-readonly",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "wealth-kyc-report-readonly",
+          "market-risk-report-readonly"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-11-05.scenario-industrialization-001-002-004-local-candidate",
+  "catalogRevision": "2026-11-06.professional-report-local-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

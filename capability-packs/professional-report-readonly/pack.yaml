@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "professional-report-readonly",
+  "version": "0.1.0",
+  "systemPrompt": "只按已安装原方法与本次原工具返回生成报告，保留数据日期和原表图。未知或失败必须说明；不得自行授予客户权限、改用其它专业规则或执行写业务。",
+  "capabilities": [
+    {
+      "capabilityId": "professional.report.wealth.query",
+      "toolName": "professional_report_wealth_query",
+      "name": "原财富客户画像依据",
+      "description": "原财富客户画像依据；资产、客户、任务及授权由Host固定，仅执行原只读操作。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": [
+              "wealth_assistant_context_probe",
+              "wealth_assistant_customer_list",
+              "wealth_assistant_customer_detail"
+            ]
+          },
+          "arguments": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "professional-report:read"
+      ]
+    },
+    {
+      "capabilityId": "professional.report.market.query",
+      "toolName": "professional_report_market_query",
+      "name": "原完整市场风险报告",
+      "description": "原完整市场风险报告；资产、客户、任务及授权由Host固定，仅执行原只读操作。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "professional-report:read"
+      ]
+    }
+  ]
+}

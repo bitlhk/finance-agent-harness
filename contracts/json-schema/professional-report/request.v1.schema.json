@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:report:request:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-professional-report-request.v1"
+    },
+    "assetId": {
+      "enum": [
+        "wealth-kyc",
+        "market-risk-report"
+      ]
+    },
+    "caseId": {
+      "enum": [
+        "normal",
+        "ambiguous",
+        "invalid-risk",
+        "missing",
+        "pipeline-default",
+        "original-e2e"
+      ]
+    },
+    "tool": {
+      "enum": [
+        "wealth_assistant_context_probe",
+        "wealth_assistant_customer_list",
+        "wealth_assistant_customer_detail",
+        "market_risk_report"
+      ]
+    },
+    "arguments": {
+      "type": "object",
+      "maxProperties": 4
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "methodId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "methodVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+          "maxLength": 128
+        },
+        "buildId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "instanceId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "executionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "methodDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "sourceReleaseDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "inputDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "methodKind": {
+          "enum": [
+            "ORIGINAL_SKILL",
+            "DERIVED_PROCEDURE"
+          ]
+        }
+      },
+      "required": [
+        "methodId",
+        "methodVersion",
+        "buildId",
+        "instanceId",
+        "executionId",
+        "methodDigest",
+        "sourceReleaseDigest",
+        "inputDigest",
+        "methodKind"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "assetId",
+    "caseId",
+    "tool",
+    "arguments",
+    "binding"
+  ],
+  "additionalProperties": false
+}

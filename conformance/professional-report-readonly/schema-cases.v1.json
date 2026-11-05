@@ -1,0 +1,136 @@
+{
+  "valid": {
+    "schemaVersion": "finance-professional-report.v1",
+    "reportId": "source1",
+    "runId": "run1",
+    "revision": 1,
+    "scope": {
+      "ownerRef": "ownerRef1",
+      "customerRef": "customerRef1",
+      "taskRef": "taskRef1",
+      "authorityRef": "authorityRef1"
+    },
+    "binding": {
+      "methodId": "methodId1",
+      "methodVersion": "1.0.0",
+      "buildId": "buildId1",
+      "instanceId": "instanceId1",
+      "methodDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sourceReleaseDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "inputDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "methodKind": "ORIGINAL_SKILL",
+      "executionId": "run1"
+    },
+    "status": "SUCCEEDED",
+    "contentState": "COMPLETE",
+    "reviewStatus": "UNREVIEWED",
+    "qualification": {
+      "engineering": "NOT_RUN",
+      "originalEngine": "NOT_RUN",
+      "professional": "BLOCKED",
+      "production": "BLOCKED"
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "title": "原工具结果",
+        "kind": "TEXT",
+        "origin": "SOURCE",
+        "text": "固定合成输入的原返回",
+        "evidenceRefs": [
+          "e1"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "id": "e0",
+        "runId": "run1",
+        "sourceResultId": "source1",
+        "pointer": "",
+        "sourceDigest": "sha256:8124a71076d4fe61b66bec9e4359231804dd828d348235f9884215e44e6ced4f",
+        "sourceVersion": "1.0.0",
+        "dataAsOf": null,
+        "value": {
+          "result": "固定合成输入的原返回",
+          "tinyValue": 1.2345678901234567e-20
+        }
+      },
+      {
+        "id": "e1",
+        "runId": "run1",
+        "sourceResultId": "source1",
+        "pointer": "/result",
+        "sourceDigest": "sha256:8124a71076d4fe61b66bec9e4359231804dd828d348235f9884215e44e6ced4f",
+        "sourceVersion": "1.0.0",
+        "dataAsOf": null,
+        "value": "固定合成输入的原返回"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "a1",
+        "runId": "run1",
+        "sourceResultId": "source1",
+        "name": "source-return.json",
+        "mediaType": "application/json",
+        "bytes": 78,
+        "sha256": "sha256:8124a71076d4fe61b66bec9e4359231804dd828d348235f9884215e44e6ced4f"
+      }
+    ],
+    "notes": [],
+    "errors": [],
+    "metrics": {
+      "elapsedMillis": 1,
+      "toolCalls": 1,
+      "modelCalls": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "cachedInputTokens": null
+    }
+  },
+  "negativePatches": [
+    {
+      "patch": {
+        "extra": "UNSUPPORTED"
+      },
+      "reason": "unknown field"
+    },
+    {
+      "patch": {
+        "status": "FAILED",
+        "contentState": "COMPLETE"
+      },
+      "reason": "failure cannot expose old success"
+    },
+    {
+      "patch": {
+        "status": "PARTIAL",
+        "contentState": "COMPLETE"
+      },
+      "reason": "partial is explicit"
+    },
+    {
+      "patch": {
+        "revision": 0
+      },
+      "reason": "invalid version"
+    },
+    {
+      "patch": {
+        "sections": [
+          {
+            "id": "x",
+            "title": "x",
+            "kind": "HTML",
+            "origin": "SOURCE",
+            "text": "<script>bad</script>",
+            "evidenceRefs": []
+          }
+        ]
+      },
+      "reason": "active content unsupported"
+    }
+  ],
+  "originalDocument": "{\"result\":\"固定合成输入的原返回\",\"tinyValue\":1.2345678901234567e-20}"
+}
