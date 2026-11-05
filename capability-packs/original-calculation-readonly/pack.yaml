@@ -1,0 +1,265 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "original-calculation-readonly",
+  "version": "0.1.0",
+  "systemPrompt": "只使用当前获准原资产对应的工具和真实返回。不得用模型文本代替数值，不编造输入、数据日期、缺失值或原版本；工具失败必须说明未取得结果。",
+  "capabilities": [
+    {
+      "capabilityId": "calculation.ftp.query",
+      "toolName": "calculation_ftp_query",
+      "name": "原FTP定价",
+      "description": "原FTP定价，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "price"
+              },
+              "method": {
+                "enum": [
+                  "match_maturity",
+                  "cashflow"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.liquidity.query",
+      "toolName": "calculation_liquidity_query",
+      "name": "原流动性指标",
+      "description": "原流动性指标，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "lcr",
+                  "nsfr"
+                ]
+              },
+              "currency_scope": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.market.query",
+      "toolName": "calculation_market_query",
+      "name": "原市场风险计量",
+      "description": "原市场风险计量，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "var",
+                  "backtest"
+                ]
+              },
+              "mc_seed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "mc_n_simulations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "action",
+              "mc_seed",
+              "mc_n_simulations"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.operational.query",
+      "toolName": "calculation_operational_query",
+      "name": "原操作风险资本",
+      "description": "原操作风险资本，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "bia",
+                  "tsa"
+                ]
+              },
+              "alpha": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.logistic.query",
+      "toolName": "calculation_logistic_query",
+      "name": "原Logistic拟合与预测",
+      "description": "原Logistic拟合与预测，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "fit_predict"
+              },
+              "random_state": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "penalty": {
+                "enum": [
+                  "l1",
+                  "l2"
+                ]
+              },
+              "solver": {
+                "enum": [
+                  "saga",
+                  "lbfgs",
+                  "liblinear"
+                ]
+              },
+              "max_iter": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "action",
+              "random_state"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.portfolio.query",
+      "toolName": "calculation_portfolio_query",
+      "name": "原组合收益",
+      "description": "原组合收益，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "returns"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    },
+    {
+      "capabilityId": "calculation.factor-backtest.query",
+      "toolName": "calculation_factor_backtest_query",
+      "name": "原固定面板回测",
+      "description": "原固定面板回测，输入和原资产由Host私有快照固定；仅有限参数可调整，不能传模块、脚本、表达式或外部模型对象。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "backtest"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "calculation:read"
+      ]
+    }
+  ]
+}

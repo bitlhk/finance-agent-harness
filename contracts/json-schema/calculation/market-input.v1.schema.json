@@ -1,0 +1,117 @@
+{
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "trading_positions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 128,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        },
+        "factor_returns": {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 10000
+            },
+            "index": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 10000
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 10000
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "columns",
+            "index",
+            "data"
+          ],
+          "additionalProperties": false
+        },
+        "fx_rates": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 32,
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "required": [
+        "trading_positions",
+        "factor_returns",
+        "fx_rates"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "var",
+            "backtest"
+          ]
+        },
+        "mc_seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "mc_n_simulations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "action",
+        "mc_seed",
+        "mc_n_simulations"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "market-input.v1.schema.json"
+}

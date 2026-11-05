@@ -47,6 +47,9 @@
         <module>packages/java/market-risk-capital</module>
         <module>providers/market-risk-capital</module>
         <module>integrations/market-risk-capital-java</module>
+        <module>packages/java/calculation</module>
+        <module>providers/original-calculation</module>
+        <module>integrations/original-calculation-java</module>
     </modules>
 
     <properties>

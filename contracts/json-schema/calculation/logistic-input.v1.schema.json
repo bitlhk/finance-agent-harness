@@ -1,0 +1,102 @@
+{
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "x_train": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 10000
+          },
+          "maxItems": 10000
+        },
+        "y_train": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "maxItems": 10000
+        },
+        "feature_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 10000
+        },
+        "x_predict": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 10000
+          },
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "x_train",
+        "y_train",
+        "feature_names",
+        "x_predict"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "fit_predict"
+        },
+        "random_state": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "penalty": {
+          "enum": [
+            "l1",
+            "l2"
+          ]
+        },
+        "solver": {
+          "enum": [
+            "saga",
+            "lbfgs",
+            "liblinear"
+          ]
+        },
+        "max_iter": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "action",
+        "random_state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "logistic-input.v1.schema.json"
+}

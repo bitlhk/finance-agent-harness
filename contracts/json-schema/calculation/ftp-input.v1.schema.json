@@ -1,0 +1,101 @@
+{
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "deposits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 128,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        },
+        "loans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 128,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        },
+        "curve": {
+          "type": "object",
+          "properties": {
+            "tenors": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 10000
+            },
+            "rates": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "tenors",
+            "rates"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "deposits",
+        "loans",
+        "curve"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "price"
+        },
+        "method": {
+          "enum": [
+            "match_maturity",
+            "cashflow"
+          ]
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "input",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ftp-input.v1.schema.json"
+}

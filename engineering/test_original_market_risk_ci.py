@@ -1,5 +1,6 @@
 """Exercise real fixed Git transport and the non-secret Maven property handoff."""
 from pathlib import Path
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -18,8 +19,11 @@ class OriginalToolCiTest(unittest.TestCase):
         steps = job['steps']
         prepare = next(i for i, step in enumerate(steps)
                        if step.get('name') == 'Prepare pinned original market-risk tool')
-        verify = next(i for i, step in enumerate(steps)
-                      if step.get('name') == 'Unit tests and local HTTP fault injection')
+        verify_steps = [i for i, step in enumerate(steps)
+                        if (tokens := shlex.split(step.get('run', '')))[:1] == ['mvn']
+                        and 'verify' in tokens]
+        self.assertEqual(len(verify_steps), 1, 'Expected one Maven verify step')
+        verify = verify_steps[0]
         self.assertLess(prepare, verify)
         self.assertIn('--github-env "$GITHUB_ENV"', steps[prepare]['run'])
         for prop in ['fh.originalToolRelease', 'fh.originalToolReleaseDigest']:

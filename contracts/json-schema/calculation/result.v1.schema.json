@@ -1,0 +1,190 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-original-calculation-result.v1"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "const": "SUCCEEDED"
+    },
+    "assetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "operationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "parameterDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "entity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "filesDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "repository",
+        "commit",
+        "entity",
+        "filesDigest"
+      ],
+      "additionalProperties": false
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "adapterDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "lockDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "version",
+        "adapterDigest",
+        "lockDigest"
+      ],
+      "additionalProperties": false
+    },
+    "calculatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dataAsOf": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rawValue": {
+      "$ref": "raw-value.v1.schema.json"
+    },
+    "rawDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "projection": {
+      "type": "object",
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 10000
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 10000
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 10000
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "metrics",
+        "tables",
+        "series",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "timings": {
+      "type": "object",
+      "properties": {
+        "elapsedMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "calls": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "elapsedMs",
+        "calls"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runId",
+    "generation",
+    "status",
+    "assetId",
+    "operationId",
+    "inputDigest",
+    "parameterDigest",
+    "source",
+    "tool",
+    "calculatedAt",
+    "dataAsOf",
+    "rawValue",
+    "rawDigest",
+    "projection",
+    "timings"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "result.v1.schema.json"
+}

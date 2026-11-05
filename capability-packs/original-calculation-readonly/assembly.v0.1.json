@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "original-calculation-readonly",
+    "version": "0.1.0"
+  },
+  "requiredFeatures": [
+    "query.v1",
+    "trusted-grants.v1",
+    "observation.v0.1",
+    "original-tool-binding.v1"
+  ],
+  "defaultDomainPacks": [
+    {
+      "id": "original-calculation",
+      "version": "0.1.0"
+    }
+  ]
+}

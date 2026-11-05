@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.18",
+  "catalogVersion": "0.2.19",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -93,6 +93,25 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "original-calculation-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原算法计算Java接线（候选）",
+      "source": "repo://integrations/original-calculation-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-original-calculation-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-calculation-readonly"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -171,6 +190,13 @@
       "version": "0.1.0",
       "displayName": "原标准法资本只读（候选）",
       "source": "repo://profiles/market-risk-capital-readonly.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "original-calculation-readonly",
+      "version": "0.1.0",
+      "displayName": "原算法受管计算（候选）",
+      "source": "repo://profiles/original-calculation-readonly.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -485,6 +511,41 @@
         ],
         "profiles": [
           "market-risk-capital-readonly"
+        ]
+      }
+    },
+    {
+      "id": "original-calculation",
+      "version": "0.1.0",
+      "displayName": "原计算结果核对（派生候选）",
+      "profile": "original-calculation-readonly",
+      "source": "repo://domain-packs/original-calculation",
+      "requiresCapabilities": [
+        "calculation.ftp.query",
+        "calculation.liquidity.query",
+        "calculation.market.query",
+        "calculation.operational.query",
+        "calculation.logistic.query",
+        "calculation.portfolio.query",
+        "calculation.factor-backtest.query"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "original-calculation-readonly",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-calculation-readonly"
         ]
       }
     }
@@ -1016,6 +1077,33 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "original-calculation-readonly",
+      "version": "0.1.0",
+      "displayName": "原算法有限计算（候选）",
+      "source": "repo://capability-packs/original-calculation-readonly",
+      "capabilities": [
+        "calculation.ftp.query",
+        "calculation.liquidity.query",
+        "calculation.market.query",
+        "calculation.operational.query",
+        "calculation.logistic.query",
+        "calculation.portfolio.query",
+        "calculation.factor-backtest.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-calculation-readonly"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1276,6 +1364,33 @@
           "market-risk-capital-readonly"
         ]
       }
+    },
+    {
+      "id": "original-calculation",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原算法源工具适配（候选）",
+      "source": "repo://providers/original-calculation",
+      "capabilities": [
+        "calculation.ftp.query",
+        "calculation.liquidity.query",
+        "calculation.market.query",
+        "calculation.operational.query",
+        "calculation.logistic.query",
+        "calculation.portfolio.query",
+        "calculation.factor-backtest.query"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-calculation-readonly"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -1285,7 +1400,11 @@
       "displayName": "原标准法资本受控合同案例（非模型质量评测）",
       "source": "repo://conformance/market-risk-capital-readonly",
       "governanceRef": "finance-harness-core",
-      "compatibility": {"profiles": ["market-risk-capital-readonly"]}
+      "compatibility": {
+        "profiles": [
+          "market-risk-capital-readonly"
+        ]
+      }
     },
     {
       "id": "wealth-facts-controlled",
@@ -1361,9 +1480,21 @@
           "internal-control"
         ]
       }
+    },
+    {
+      "id": "original-calculation-controlled",
+      "version": "0.1.0",
+      "displayName": "原值与受控计算核对（非专业模型验证）",
+      "source": "repo://conformance/original-calculation-readonly",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "original-calculation-readonly"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-11-03.scenario-industrialization-feat001-candidate",
+  "catalogRevision": "2026-11-04.scenario-industrialization-feat004-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

@@ -61,3 +61,17 @@ Core、Execution、原 Python 公式和旧资产语义保持原义。独立原�
 本地组件/Runtime 测试、Builder 独立交付、上游接纳和正式发布分别取证；候选目录不是发布资格。
 详见 [有限只读合同](market-risk-capital-readonly-v1.md) 及
 [原生接线说明](../integrations/market-risk-capital-java/README.md)。
+
+### 原算法受管计算候选（Agent Store 场景工业化 FEAT-004）
+
+`original-calculation-readonly` 通过七个有限 QUERY 接入八份原资产：FTP、流动性、市场风险、操作风险、debt/entity 两类 Logistic、组合收益与固定面板回测。LCR/NSFR、VaR/回测、BIA/原命名 TSA 是显式变体。目录增量为 0.2.19 候选，旧资本入口独立保留。
+
+依赖方向：Agent Store Workshop 原工具服务拥有输入快照、独立 Python 3.12 环境、原函数和原值；`calculation` 领域只定义保真结果；`original-calculation` Provider 依赖 Core 与领域包；`original-calculation-java` 复用现有 openJiuwen Java 0.1.15 安装器。Builder 复用既有构建、安装与授权机制装配独立 Host 和结果视图。不修改 Base、Core、Execution、通用 RuntimeBuilder 或原金融公式。
+
+公共能力包可安装七类定义，但每项私有任务只绑定一个选中资产。模型不能选择源码、输入文件、凭据或其他资产，不能提交代码、pickle、表达式、行情或写库请求。源码、适配器、依赖锁、输入、参数、运行与原返回各有独立身份；数值不来自模型摘要。
+
+原值按受限类型保存，未舍入数字、行列顺序、缺失与非有限标记保留；表图是带原值位置的展示投影。`calculatedAt` 是计算时间，`dataAsOf` 缺失时保持缺失。改参产生新运行，当前失败/取消不展示旧成功值；显式历史回查仍复核当前授权。源目录保留原快照/返回，运行索引及 Host 会话历史目前是进程内状态，重启恢复不在本候选范围。
+
+取消先关闭结果披露，再终止自有进程组并确认退出；Linux 验证包含抗终止子进程、内存上限和网络/派生进程禁止。正式 worker 不允许自行派生进程。局部审计限制不等于操作系统沙箱，生产仍需部署环境的权限、网络与容量治理。
+
+工程接线、原新数值对照、专业金融有效性、生产部署及上游发布分别取证。两个独立消费者只证明共享能力复用，不代表全部场景完成。参见 [计算合同](calculation-readonly-v1.md)、[Java 接线](../integrations/original-calculation-java/README.md) 和 Agent Store 的固定版本验证记录。
