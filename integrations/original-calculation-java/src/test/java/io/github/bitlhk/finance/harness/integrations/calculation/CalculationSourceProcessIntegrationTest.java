@@ -38,7 +38,10 @@ class CalculationSourceProcessIntegrationTest {
             "context",context(row.path("caseId").asText()),"assetIds",List.of(row.path("assetId").asText())));
         Path sourceConfig=temp.resolve("source-bindings.json");Files.write(sourceConfig,JSON.writeValueAsBytes(Map.of("bindings",sourceBindings)));
         Path sourceState=temp.resolve("source-private");
-        var processBuilder=new ProcessBuilder(config.path("workerPython").asText(),"-B",release.resolve("adapter/server.py").toString(),
+        Path timeoutMarker=temp.resolve("hold-timeout-worker");
+        Path workerGate=workerGate(temp),sourceEntry=sourceEntry(temp);
+        var processBuilder=new ProcessBuilder(config.path("workerPython").asText(),"-B",sourceEntry.toString(),
+            release.resolve("adapter/server.py").toString(),timeoutMarker.toString(),workerGate.toString(),
             "--release",release.toString(),"--digest",config.path("toolReleaseDigest").asText(),"--private-root",sourceState.toString(),"--bindings",sourceConfig.toString());
         var environment=processBuilder.environment();environment.keySet().removeIf(k->k.startsWith("FH_")||k.startsWith("OPENAI_")||k.startsWith("DEEPSEEK_")||k.startsWith("DASHSCOPE_")||k.endsWith("_API_KEY")||k.equals("PYTHONPATH")||k.equals("PYTHONHOME"));
         environment.put("PYTHONUTF8","1");environment.put("PYTHONDONTWRITEBYTECODE","1");
@@ -102,20 +105,40 @@ class CalculationSourceProcessIntegrationTest {
                         assertThrows(IllegalStateException.class,()->session.call("result",JSON.createObjectNode()));
                         ObjectNode revoked=(ObjectNode)JSON.valueToTree(authority);revoked.set("leases",JSON.createArrayNode());Files.write(authorityFile,JSON.writeValueAsBytes(revoked));
                         assertThrows(SecurityException.class,()->session.call("result",JSON.valueToTree(Map.of("runId",first))));
-                        // A separate bounded session expires while the real original Python process is running.
+                        // Only this execution is held at the actual worker's initialization.
+                        // Normal operations below still execute the unmodified original algorithms.
                         Path timeoutState=temp.resolve("ftp-timeout-private");Files.createDirectories(timeoutState);
-                        // The immutable release is revalidated before process admission. Leave
-                        // enough time for that I/O, while the real worker is still importing.
-                        ObjectNode shortAuthority=(ObjectNode)JSON.valueToTree(authority);shortAuthority.put("timeoutMs",6000);
+                        ObjectNode shortAuthority=(ObjectNode)JSON.valueToTree(authority);shortAuthority.put("timeoutMs",15000);
                         Files.write(timeoutState.resolve("calculation-authority.json"),JSON.writeValueAsBytes(shortAuthority));
                         var timeoutContext=new ManagedScenarioExtensionV01.Context(artifact,timeoutState,"native-ftp-timeout","timeout-instance","qualification",sessionContext.model());
+                        ProcessHandle heldWorker=null;
+                        Files.writeString(timeoutMarker,"hold only the designated timeout execution",StandardCharsets.UTF_8);
                         try(var timedSession=new CalculationSession(timeoutContext)){
                             Set<String> earlier;try(var runs=Files.list(sourceState.resolve("runs"))){earlier=new HashSet<>(runs.map(p->p.getFileName().toString()).toList());}
-                            var timed=timedSession.call("calculate",JSON.readTree("{\"query\":\"原算法计算超时后不得披露旧结果\"}"));
-                            assertEquals("TIMED_OUT",timed.get("status"),JSON.writeValueAsString(timed));
+                            var timedPending=CompletableFuture.supplyAsync(()->{try{return timedSession.call("calculate",JSON.readTree("{\"query\":\"原算法计算超时后不得披露旧结果\"}"));}catch(Exception e){throw new CompletionException(e);}});
+                            Path gateProof=null;long admissionDeadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(12);
+                            while(System.nanoTime()<admissionDeadline && gateProof==null){
+                                try(var runs=Files.list(sourceState.resolve("runs"))){
+                                    gateProof=runs.filter(p->!earlier.contains(p.getFileName().toString()))
+                                        .map(p->p.resolve("qualification-worker-gate.json")).filter(Files::isRegularFile).findFirst().orElse(null);
+                                }
+                                if(gateProof==null){if(timedPending.isDone())break;Thread.sleep(10);}
+                            }
+                            assertNotNull(gateProof,"Actual worker initialization gate was not reached before the deadline");
+                            JsonNode gate=JSON.readTree(gateProof.toFile());long workerPid=gate.path("pid").asLong();
+                            assertEquals("worker.run entered",gate.path("phase").asText());
+                            assertEquals(release.resolve("adapter/worker.py").toRealPath(),Path.of(gate.path("worker").asText()).toRealPath());
+                            assertEquals(CalculationNativeIntegrationTest.hash(Files.readAllBytes(release.resolve("adapter/worker.py"))),gate.path("workerSha256").asText());
+                            assertTrue(source.descendants().anyMatch(p->p.pid()==workerPid),"Gate PID must be owned by this source service");
+                            heldWorker=ProcessHandle.of(workerPid).orElseThrow();assertTrue(heldWorker.isAlive());
+                            assertFalse(timedPending.isDone(),"Held worker must not have completed naturally");
+                            var timed=timedPending.get(30,TimeUnit.SECONDS);
+                            assertEquals("TIMED_OUT",timed.get("status"),"Held original worker must time out");
                             assertEquals("ORIGINAL_CALCULATION_TIMEOUT",timed.get("errorCode"));
+                            assertFalse(heldWorker.isAlive(),"The actual gated worker must exit after timeout");
                             List<String> created;try(var runs=Files.list(sourceState.resolve("runs"))){created=runs.map(p->p.getFileName().toString()).filter(x->!earlier.contains(x)).toList();}
                             assertEquals(1,created.size(),"The real source run must exist before timeout cleanup is asserted");
+                            assertEquals(sourceState.resolve("runs").resolve(created.getFirst()).resolve("request.json").toRealPath(),Path.of(gate.path("request").asText()).toRealPath());
                             var requestStatus=java.net.http.HttpRequest.newBuilder(URI.create(endpoint+"/v1/calculations/status"))
                                 .header("Authorization","Bearer "+token(caseId)).header("Content-Type","application/json")
                                 .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(JSON.writeValueAsBytes(Map.of("context",context(caseId),"runId",created.getFirst())))).build();
@@ -126,7 +149,13 @@ class CalculationSourceProcessIntegrationTest {
                             Thread.sleep(300);assertEquals("TIMED_OUT",timedSession.status().get("status"));
                             assertThrows(IllegalStateException.class,()->timedSession.call("result",JSON.createObjectNode()));
                             Path proof=Path.of(config.path("evidenceRoot").asText());
-                            Files.write(proof.resolve("native-timeout-session.json"),JSON.writeValueAsBytes(Map.of("session",timed,"sourceStatus",actualStatus)));
+                            Files.write(proof.resolve("native-timeout-session.json"),JSON.writeValueAsBytes(Map.of("session",timed,"sourceStatus",actualStatus,
+                                "workerGate",gate,"workerPidExited",!heldWorker.isAlive(),"faultInjection","TEST_ONLY_WORKER_INITIALIZATION_GATE")));
+                        }finally{
+                            Files.deleteIfExists(timeoutMarker);
+                            if(heldWorker!=null && heldWorker.isAlive()){
+                                heldWorker.destroyForcibly();heldWorker.onExit().get(10,TimeUnit.SECONDS);
+                            }
                         }
                     }
                     evidence.add(Map.of("caseId",caseId,"assetId",assetId,"status","PASS","sourceRunId",first,
@@ -139,9 +168,62 @@ class CalculationSourceProcessIntegrationTest {
                 "sourceProcessId",source.pid(),"releaseDigest",config.path("toolReleaseDigest").asText(),"realModelCalls",0,
                 "historyRecalculationBadParametersCancellationAndRevocation","PASS","timeoutAndCleanup","PASS","numericalQualification","SEPARATE_REQUIRED_CHECK")));
         } finally {
+            Files.deleteIfExists(timeoutMarker);
+            source.descendants().forEach(ProcessHandle::destroyForcibly);
             model.stop(0);source.destroy();
             if(!source.waitFor(15,TimeUnit.SECONDS)){source.destroyForcibly();assertTrue(source.waitFor(5,TimeUnit.SECONDS));}
         }
+    }
+    private static Path sourceEntry(Path root)throws IOException{
+        Path script=root.resolve("source-with-test-gate.py");
+        Files.writeString(script,"""
+            import runpy
+            import sys
+            from pathlib import Path
+            server, marker, gate = sys.argv[1:4]
+            arguments = sys.argv[4:]
+            sys.path.insert(0, str(Path(server).resolve().parent))
+            from execution import Run
+            original_init = Run.__init__
+            def controlled_init(self, command, cwd, env, deadline=60, run_id=None):
+                if Path(marker).is_file():
+                    command = [command[0], '-I', gate, *command[2:]]
+                original_init(self, command, cwd, env, deadline, run_id)
+            Run.__init__ = controlled_init
+            sys.argv = [server, *arguments]
+            runpy.run_path(server, run_name='__main__')
+            """,StandardCharsets.UTF_8);
+        return script;
+    }
+    private static Path workerGate(Path root)throws IOException{
+        Path script=root.resolve("worker-initialization-gate.py");
+        Files.writeString(script,"""
+            import hashlib
+            import json
+            import os
+            import runpy
+            import sys
+            import time
+            from pathlib import Path
+            worker = Path(sys.argv[1]).resolve()
+            arguments = sys.argv[2:]
+            request = Path(arguments[arguments.index('--request') + 1]).resolve()
+            def hold(frame, event, arg):
+                if event != 'call' or frame.f_code.co_name != 'run' or Path(frame.f_code.co_filename).resolve() != worker:
+                    return None
+                sys.settrace(None)
+                proof = request.parent / 'qualification-worker-gate.json'
+                pending = proof.with_suffix('.pending')
+                pending.write_text(json.dumps(dict(pid=os.getpid(), worker=str(worker), request=str(request),
+                    phase='worker.run entered', workerSha256=hashlib.sha256(worker.read_bytes()).hexdigest())), encoding='utf-8')
+                os.replace(pending, proof)
+                time.sleep(60)
+                raise RuntimeError('QUALIFICATION_GATE_UNEXPECTEDLY_RELEASED')
+            sys.argv = [str(worker), *arguments]
+            sys.settrace(hold)
+            runpy.run_path(str(worker), run_name='__main__')
+            """,StandardCharsets.UTF_8);
+        return script;
     }
     private static Map<String,String> context(String id){return Map.of("subjectRef","qualification","customerRef","synthetic","taskRef",id);}
     private static String token(String id){return "controlled-source-token-"+id+"-00000000000000000000000000000000";}
