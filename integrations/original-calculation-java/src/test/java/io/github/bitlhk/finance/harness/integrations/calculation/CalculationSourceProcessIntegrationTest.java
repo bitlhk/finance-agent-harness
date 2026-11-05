@@ -149,6 +149,7 @@ class CalculationSourceProcessIntegrationTest {
                             Thread.sleep(300);assertEquals("TIMED_OUT",timedSession.status().get("status"));
                             assertThrows(IllegalStateException.class,()->timedSession.call("result",JSON.createObjectNode()));
                             Path proof=Path.of(config.path("evidenceRoot").asText());
+                            Files.createDirectories(proof);
                             Files.write(proof.resolve("native-timeout-session.json"),JSON.writeValueAsBytes(Map.of("session",timed,"sourceStatus",actualStatus,
                                 "workerGate",gate,"workerPidExited",!heldWorker.isAlive(),"faultInjection","TEST_ONLY_WORKER_INITIALIZATION_GATE")));
                         }finally{
