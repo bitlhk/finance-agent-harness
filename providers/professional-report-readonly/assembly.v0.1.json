@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "provider",
+  "owner": {
+    "id": "professional-report-readonly",
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "artifactRef": "maven://io.github.bitlhk.finance:finance-provider-professional-report-readonly:0.1.0-SNAPSHOT",
+  "connectionKind": "professional-report-http.v0.1",
+  "configurationFiles": [
+    {
+      "id": "binding-file-sha256",
+      "pathEnvironment": "FH_REPORT_BINDINGS",
+      "digestEnvironment": "FH_REPORT_BINDINGS_SHA256",
+      "maxBytes": 262144
+    }
+  ],
+  "supports": [
+    {
+      "pack": {
+        "id": "professional-report-readonly",
+        "version": "0.1.0"
+      },
+      "capabilityIds": [
+        "professional.report.wealth.query",
+        "professional.report.market.query"
+      ],
+      "operation": "QUERY"
+    }
+  ]
+}

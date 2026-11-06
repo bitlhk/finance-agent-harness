@@ -20,6 +20,10 @@
     {
       "source": "repo://metadata/development-support/original-calculation-readonly/0.1.0.json",
       "digest": "sha256:4ed4a786f8836fc3e50e18f484d901122f6ea5c172b5be55c6d43b2a11d0f840"
+    },
+    {
+      "source": "repo://metadata/development-support/professional-report-readonly/0.1.0.json",
+      "digest": "sha256:52a1dc0433478f183d66d40b4827915607f7f8e2040cc2b6e016342fbdb5a7fd"
     }
   ]
 }

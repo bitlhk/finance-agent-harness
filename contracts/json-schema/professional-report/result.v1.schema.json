@@ -1,0 +1,545 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:finance:report:result:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-professional-report.v1"
+    },
+    "reportId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "ownerRef": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "customerRef": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "taskRef": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "authorityRef": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        }
+      },
+      "required": [
+        "ownerRef",
+        "customerRef",
+        "taskRef",
+        "authorityRef"
+      ],
+      "additionalProperties": false
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "methodId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "methodVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+          "maxLength": 128
+        },
+        "buildId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "instanceId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "executionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "methodDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "sourceReleaseDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "inputDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "methodKind": {
+          "enum": [
+            "ORIGINAL_SKILL",
+            "DERIVED_PROCEDURE"
+          ]
+        }
+      },
+      "required": [
+        "methodId",
+        "methodVersion",
+        "buildId",
+        "instanceId",
+        "executionId",
+        "methodDigest",
+        "sourceReleaseDigest",
+        "inputDigest",
+        "methodKind"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "enum": [
+        "RUNNING",
+        "SUCCEEDED",
+        "PARTIAL",
+        "FAILED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ]
+    },
+    "contentState": {
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "UNAVAILABLE"
+      ]
+    },
+    "reviewStatus": {
+      "enum": [
+        "UNREVIEWED",
+        "REVIEWED"
+      ]
+    },
+    "qualification": {
+      "type": "object",
+      "properties": {
+        "engineering": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN",
+            "BLOCKED"
+          ]
+        },
+        "originalEngine": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN",
+            "BLOCKED"
+          ]
+        },
+        "professional": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN",
+            "BLOCKED"
+          ]
+        },
+        "production": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN",
+            "BLOCKED"
+          ]
+        }
+      },
+      "required": [
+        "engineering",
+        "originalEngine",
+        "professional",
+        "production"
+      ],
+      "additionalProperties": false
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}$"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "kind": {
+                "const": "TEXT"
+              },
+              "origin": {
+                "enum": [
+                  "SOURCE",
+                  "MODEL_EXPLANATION"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 1048576
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                },
+                "maxItems": 128,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "kind",
+              "origin",
+              "text",
+              "evidenceRefs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}$"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "kind": {
+                "const": "TABLE"
+              },
+              "origin": {
+                "const": "SOURCE"
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "maxItems": 128
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "maxItems": 2000
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "totalRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                },
+                "maxItems": 128,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "kind",
+              "origin",
+              "columns",
+              "rows",
+              "truncated",
+              "totalRows",
+              "evidenceRefs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}$"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "kind": {
+                "const": "IMAGE"
+              },
+              "origin": {
+                "const": "SOURCE"
+              },
+              "artifactRef": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}$"
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                },
+                "maxItems": 128,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "kind",
+              "origin",
+              "artifactRef",
+              "evidenceRefs"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 128
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:finance:report:evidence:v1"
+      },
+      "maxItems": 2048
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:finance:report:artifact:v1"
+      },
+      "maxItems": 64
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "actorRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "actorRef",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 128
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          }
+        },
+        "required": [
+          "stage",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "elapsedMillis": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modelCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inputTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "outputTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cachedInputTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "elapsedMillis",
+        "toolCalls",
+        "modelCalls",
+        "inputTokens",
+        "outputTokens",
+        "cachedInputTokens"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "reportId",
+    "runId",
+    "revision",
+    "scope",
+    "binding",
+    "status",
+    "contentState",
+    "reviewStatus",
+    "qualification",
+    "sections",
+    "evidence",
+    "artifacts",
+    "notes",
+    "errors",
+    "metrics"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "FAILED",
+              "CANCELLED",
+              "TIMED_OUT"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "contentState": {
+            "const": "UNAVAILABLE"
+          },
+          "sections": {
+            "maxItems": 0
+          },
+          "artifacts": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "contentState": {
+            "const": "PARTIAL"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUCCEEDED"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "contentState": {
+            "const": "COMPLETE"
+          },
+          "sections": {
+            "minItems": 1
+          },
+          "evidence": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

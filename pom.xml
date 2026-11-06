@@ -53,6 +53,9 @@
         <module>packages/java/financial-material</module>
         <module>providers/financial-material</module>
         <module>integrations/financial-material-java</module>
+        <module>packages/java/professional-report</module>
+        <module>providers/professional-report-readonly</module>
+        <module>integrations/professional-report-java</module>
     </modules>
 
     <properties>

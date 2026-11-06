@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "finance-domain-pack.v1",
+  "packId": "professional-report",
+  "version": "0.1.0",
+  "profile": "professional-report",
+  "capabilities": [
+    "professional.report.wealth.query",
+    "professional.report.market.query"
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "professional-report-readonly",
+      "version": "0.1.0"
+    }
+  ],
+  "skills": [],
+  "scope": [
+    "原方法由Builder按明确Profile独立装入，不以本领域包替换原Skill",
+    "原报告依据、原表图和附件回查",
+    "人工备注与原事实分开保留"
+  ],
+  "outOfScope": [
+    "自行授予权限",
+    "原公式替换",
+    "专业或生产资格自动通过"
+  ],
+  "sourceReferences": [
+    "docs/professional-report-readonly-v1.md"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "capability-pack",
+    "id": "professional-report-readonly",
+    "version": "0.1.0",
+    "source": "repo://capability-packs/professional-report-readonly",
+    "digest": "sha256:dbada61595f64db07cba6378303774c3e331ea1f8f09d8476188b1f2972728b3"
+  },
+  "scope": {
+    "capabilityIds": []
+  },
+  "methodCases": [
+    {
+      "name": "按已安装原方法生成报告并回查依据",
+      "query": "使用当前已安装方法与已授权原工具生成本次报告，保留原数据时点、表图和依据；缺项明确说明。",
+      "expectedTerms": []
+    }
+  ],
+  "caseRefs": [
+    {
+      "source": "repo://conformance/professional-report-readonly/cases.json",
+      "digest": "sha256:dd99c4026a7f1b8fbd41ff920ecb2470c0f45c77a33538776ee39ecea96b7787",
+      "format": "finance-professional-report-cases.v1"
+    }
+  ],
+  "commands": []
+}

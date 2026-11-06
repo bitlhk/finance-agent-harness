@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "finance-component-assembly.v0.1",
+  "kind": "capability-pack",
+  "owner": {
+    "id": "professional-report-readonly",
+    "version": "0.1.0"
+  },
+  "requiredFeatures": [
+    "query.v1",
+    "trusted-grants.v1",
+    "observation.v0.1",
+    "professional-report-evidence.v1"
+  ],
+  "defaultDomainPacks": []
+}

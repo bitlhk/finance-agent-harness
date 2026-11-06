@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "finance-professional-report-cases.v1",
+  "sourceCommit": "0e158eee225c698774aa75671c944624cd36550b",
+  "cases": [
+    {
+      "id": "wealth-kyc",
+      "profile": "wealth-kyc-report-readonly",
+      "assetId": "wealth-kyc",
+      "qualification": "ORIGINAL_ENGINE_SEPARATE"
+    },
+    {
+      "id": "market-risk-report",
+      "profile": "market-risk-report-readonly",
+      "assetId": "market-risk-report",
+      "qualification": "ORIGINAL_ENGINE_SEPARATE"
+    }
+  ],
+  "professionalQualification": "BLOCKED",
+  "productionQualification": "BLOCKED"
+}

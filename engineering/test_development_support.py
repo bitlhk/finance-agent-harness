@@ -30,6 +30,17 @@ def tree_digest(root):
 
 
 class DevelopmentSupportTests(unittest.TestCase):
+    def test_report_declaration_is_generic_original_method_guidance(self):
+        declaration = json.loads((ROOT / "metadata/development-support/professional-report-readonly/0.1.0.json").read_bytes())
+        self.assertEqual(declaration["subject"]["id"], "professional-report-readonly")
+        self.assertEqual(declaration["scope"], {"capabilityIds": []})
+        self.assertTrue(declaration["methodCases"])
+        self.assertEqual(declaration["commands"], [])
+        self.assertNotIn("status", declaration)
+        cases = json.loads((ROOT / declaration["caseRefs"][0]["source"].removeprefix("repo://")).read_bytes())
+        self.assertEqual({c["profile"] for c in cases["cases"]}, {"wealth-kyc-report-readonly", "market-risk-report-readonly"})
+        self.assertEqual(cases["professionalQualification"], "BLOCKED")
+
     def setUp(self):
         self.schema = json.loads((SCHEMAS / "finance-component-development-support.v0.1.schema.json").read_text())
         self.index_schema = json.loads((SCHEMAS / "finance-development-support-index.v0.1.schema.json").read_text())

@@ -79,3 +79,9 @@ Core、Execution、原 Python 公式和旧资产语义保持原义。独立原�
 ## 原材料工程切片（FEAT-002候选）
 
 新增`packages/java/financial-material`、`providers/financial-material`和`integrations/financial-material-java`，分别持有材料合同、有限原服务调用及原生SDK接线。原文件、原返回和修正仍在来源服务；Host选择当前任务文件并复核授权/代次，Builder仅装配。Core/Execution及既有openJiuwen SPI不变，旧JSON/文本领域不自动升级。详见[材料接线](financial-material-processing-v1.md)。目录许可与真实视觉质量仍需独立资格。
+
+## 原方法与报告工程切片（FEAT-005候选）
+
+`packages/java/professional-report` 保存报告、依据引用、受控制品与不可变版本语义；`providers/professional-report-readonly` 对接独立原服务，`integrations/professional-report-java` 通过既有 SPI 加载原生 ReActAgent 与安装方法。原 Skill、原财富 MCP 和完整市场风险引擎在固定来源发布物中保留，公式及 Core/Execution 公共接口不改。
+
+原服务按资产使用独立且精确锁定的 Python 环境，保存实际输入、原返回和文件，控制真实进程停止。报告页区分原工具内容、模型说明和人工备注；每次读取历史、图表和导出均重新授权并核对摘要。工程、原引擎保真、专业质量和生产资格分别记录，不能因固定模型接线成功而自动通过银行验收。见[报告接线](professional-report-readonly-v1.md)。
