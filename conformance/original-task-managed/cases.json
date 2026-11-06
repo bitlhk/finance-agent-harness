@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "finance-original-task-cases.v1",
+  "cases": [
+    {
+      "name": "原任务进展",
+      "query": "查询当前原托管任务，说明等待项与资料版本。",
+      "expectedTerms": []
+    },
+    {
+      "name": "人工复核和执行分开",
+      "query": "展示本次材料及复核决定，执行前单独确认。",
+      "expectedTerms": []
+    }
+  ],
+  "engineeringQualification": "NOT_RUN",
+  "professionalQualification": "BLOCKED",
+  "productionQualification": "BLOCKED",
+  "boundary": "exclusive-single-host"
+}

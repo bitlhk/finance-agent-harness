@@ -85,3 +85,8 @@ Core、Execution、原 Python 公式和旧资产语义保持原义。独立原�
 `packages/java/professional-report` 保存报告、依据引用、受控制品与不可变版本语义；`providers/professional-report-readonly` 对接独立原服务，`integrations/professional-report-java` 通过既有 SPI 加载原生 ReActAgent 与安装方法。原 Skill、原财富 MCP 和完整市场风险引擎在固定来源发布物中保留，公式及 Core/Execution 公共接口不改。
 
 原服务按资产使用独立且精确锁定的 Python 环境，保存实际输入、原返回和文件，控制真实进程停止。报告页区分原工具内容、模型说明和人工备注；每次读取历史、图表和导出均重新授权并核对摘要。工程、原引擎保真、专业质量和生产资格分别记录，不能因固定模型接线成功而自动通过银行验收。见[报告接线](professional-report-readonly-v1.md)。
+
+
+### 原托管任务交互候选（Agent Store 场景工业化 FEAT-006）
+
+新增可选 task-interaction 领域模块、original-task-managed Provider 与 task-interaction-java 接线；Core、Execution 和原业务规则不改。原服务持有指令/资料/业务状态与原操作回执，Host 复用 TaskCoordination/Journal 和一次性确认。模型只有查询工具，人工复核通过和执行确认分开。默认关闭，首批限定单宿主受管入口及合成原演示服务；外部并发、真实银行事务、专业及生产资格分别验收。详见[接线与支持边界](original-task-interaction.md)。

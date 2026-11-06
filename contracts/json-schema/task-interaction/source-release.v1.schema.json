@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.local/task-interaction/source-release.v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-task-release.v1"
+    },
+    "sourceCommit": {
+      "const": "0e158eee225c698774aa75671c944624cd36550b"
+    },
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "finance-task-source.v1"
+        },
+        "sourceRepository": {
+          "const": "https://gitcode.com/openJiuwen/agent-store"
+        },
+        "sourceCommit": {
+          "const": "0e158eee225c698774aa75671c944624cd36550b"
+        },
+        "assetId": {
+          "const": "custody-instructions"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "sourceRepository",
+        "sourceCommit",
+        "assetId",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sourceCommit",
+    "manifest",
+    "files"
+  ],
+  "additionalProperties": false
+}

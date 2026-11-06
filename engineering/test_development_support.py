@@ -30,6 +30,14 @@ def tree_digest(root):
 
 
 class DevelopmentSupportTests(unittest.TestCase):
+    def test_task_declaration_does_not_grant_roles_or_claim_verification(self):
+        declaration=json.loads((ROOT/'metadata/development-support/original-task-managed/0.1.0.json').read_bytes())
+        self.assertEqual(declaration['subject']['id'],'original-task-managed')
+        self.assertEqual(declaration['scope'],{'capabilityIds':[]})
+        self.assertEqual(declaration['commands'],[])
+        self.assertNotIn('status',declaration)
+        self.assertNotIn('grantedScopes',declaration)
+
     def test_report_declaration_is_generic_original_method_guidance(self):
         declaration = json.loads((ROOT / "metadata/development-support/professional-report-readonly/0.1.0.json").read_bytes())
         self.assertEqual(declaration["subject"]["id"], "professional-report-readonly")

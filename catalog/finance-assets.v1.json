@@ -1,6 +1,6 @@
 {
   "schemaVersion": "finance-asset-catalog.v1",
-  "catalogVersion": "0.2.21-feat005.1",
+  "catalogVersion": "0.2.22-feat006.1",
   "runtimeIntegrations": [
     {
       "id": "openjiuwen-java",
@@ -151,6 +151,25 @@
           "market-risk-report-readonly"
         ]
       }
+    },
+    {
+      "id": "task-interaction-java",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "原任务人工交互Java接线",
+      "source": "repo://integrations/task-interaction-java",
+      "artifactRef": "maven://io.github.bitlhk.finance:finance-integration-task-interaction-java:0.1.0-SNAPSHOT",
+      "governanceRef": "finance-harness-integration",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-task-review-managed"
+        ]
+      }
     }
   ],
   "profiles": [
@@ -257,6 +276,13 @@
       "version": "0.1.0",
       "displayName": "原完整市场风险报告",
       "source": "repo://profiles/market-risk-report-readonly.md",
+      "governanceRef": "finance-harness-core"
+    },
+    {
+      "id": "original-task-review-managed",
+      "version": "0.1.0",
+      "displayName": "原托管任务与人工复核",
+      "source": "repo://profiles/original-task-review-managed.md",
       "governanceRef": "finance-harness-core"
     }
   ],
@@ -667,6 +693,36 @@
         "profiles": [
           "wealth-kyc-report-readonly",
           "market-risk-report-readonly"
+        ]
+      }
+    },
+    {
+      "id": "task-interaction",
+      "version": "0.1.0",
+      "displayName": "原任务与材料版本领域",
+      "profile": "task-interaction",
+      "source": "repo://domain-packs/task-interaction",
+      "requiresCapabilities": [
+        "custody.task.query",
+        "custody.task.action"
+      ],
+      "dependencies": [
+        {
+          "kind": "capability-pack",
+          "id": "original-task-managed",
+          "version": "0.1.0"
+        }
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-task-review-managed"
         ]
       }
     }
@@ -1270,6 +1326,28 @@
           "market-risk-report-readonly"
         ]
       }
+    },
+    {
+      "id": "original-task-managed",
+      "version": "0.1.0",
+      "displayName": "原托管任务有限能力",
+      "source": "repo://capability-packs/original-task-managed",
+      "capabilities": [
+        "custody.task.query",
+        "custody.task.action"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-task-review-managed"
+        ]
+      }
     }
   ],
   "providers": [
@@ -1602,6 +1680,28 @@
           "market-risk-report-readonly"
         ]
       }
+    },
+    {
+      "id": "original-task-managed",
+      "version": "0.1.0-SNAPSHOT",
+      "displayName": "受管原托管服务",
+      "source": "repo://providers/original-task-managed",
+      "capabilities": [
+        "custody.task.query",
+        "custody.task.action"
+      ],
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "runtimeFamilies": [
+          "openjiuwen"
+        ],
+        "runtimeLanguages": [
+          "java"
+        ],
+        "profiles": [
+          "original-task-review-managed"
+        ]
+      }
     }
   ],
   "evalPacks": [
@@ -1728,9 +1828,21 @@
           "market-risk-report-readonly"
         ]
       }
+    },
+    {
+      "id": "original-task-controlled",
+      "version": "0.1.0",
+      "displayName": "原任务工程与行为保真核对",
+      "source": "repo://conformance/original-task-managed",
+      "governanceRef": "finance-harness-core",
+      "compatibility": {
+        "profiles": [
+          "original-task-review-managed"
+        ]
+      }
     }
   ],
-  "catalogRevision": "2026-11-06.professional-report-local-candidate",
+  "catalogRevision": "2026-11-06.original-task-local-candidate",
   "governancePolicies": {
     "finance-harness-core": {
       "owner": "finance-harness-maintainers",

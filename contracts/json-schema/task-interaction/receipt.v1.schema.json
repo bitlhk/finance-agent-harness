@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.local/task-interaction/receipt.v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-task-receipt.v1"
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "taskRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "claim",
+        "supplement",
+        "submit",
+        "approve",
+        "reject",
+        "execute",
+        "cancel"
+      ]
+    },
+    "beforeVersion": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "materialVersion": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "SUCCEEDED",
+        "REJECTED",
+        "UNKNOWN"
+      ]
+    },
+    "originalHttpStatus": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "originalWriteCalls": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "rawResult": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "afterVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "actorRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "taskRef",
+    "action",
+    "beforeVersion",
+    "materialVersion",
+    "status",
+    "originalHttpStatus",
+    "originalWriteCalls",
+    "message",
+    "rawResult",
+    "afterVersion",
+    "actorRef",
+    "recordedAt"
+  ],
+  "additionalProperties": false
+}
