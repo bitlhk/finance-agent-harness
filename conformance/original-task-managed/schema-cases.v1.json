@@ -1,0 +1,116 @@
+{
+  "positive": [
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "claim",
+      "parameters": {},
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "execute",
+      "parameters": {},
+      "executionConfirmed": true
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "supplement",
+      "parameters": {
+        "commissionFee": 12,
+        "attachmentRef": "synthetic_invoice"
+      },
+      "executionConfirmed": false
+    }
+  ],
+  "negative": [
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "claim",
+      "parameters": {},
+      "executionConfirmed": false,
+      "actorRef": "forged"
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "execute",
+      "parameters": {},
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "shell",
+      "parameters": {},
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "latest",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "claim",
+      "parameters": {},
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "supplement",
+      "parameters": {
+        "attachmentRef": "../../secret"
+      },
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "claim",
+      "parameters": {
+        "commissionFee": 10
+      },
+      "executionConfirmed": false
+    },
+    {
+      "schemaVersion": "finance-task-action.v1",
+      "taskRef": "task_1",
+      "requestId": "req_1",
+      "expectedVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "materialVersion": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "action": "claim",
+      "parameters": {
+        "endpoint": "https://example.com"
+      },
+      "executionConfirmed": false
+    }
+  ]
+}

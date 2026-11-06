@@ -99,6 +99,20 @@ jobs:
           --workspace "$RUNNER_TEMP/professional-report"
           --worker-python "${{ steps.calculation-worker.outputs.python-path }}"
           --github-env "$GITHUB_ENV"
+      - name: Original custody task schema and assembly checks
+        run: python -m pytest engineering/test_task_interaction_schemas.py engineering/test_task_interaction_assets.py engineering/test_development_support.py -q -p no:cacheprovider
+      - name: Prepare pinned original custody task tool
+        # The exact local Agent Store source commit must be published before remote CI can fetch it.
+        run: >-
+          python engineering/prepare_original_task_tool.py
+          --workspace "$RUNNER_TEMP/original-task"
+          --worker-python "${{ steps.calculation-worker.outputs.python-path }}"
+          --github-env "$GITHUB_ENV"
+      - name: Original custody task source qualification
+        run: >-
+          python engineering/run_task_interaction_checks.py
+          --inputs "$FH_TASK_CONFIG"
+          --report "$RUNNER_TEMP/original-task/source-checks.json"
       - name: Unit and actual original calculation tests
         run: >-
           mvn -B -ntp
@@ -138,3 +152,6 @@ jobs:
             ${{ runner.temp }}/professional-report/preparation.json
             ${{ runner.temp }}/professional-report/original-qualification.json
             ${{ runner.temp }}/professional-report/lifecycle.json
+            ${{ runner.temp }}/original-task/preparation.json
+            ${{ runner.temp }}/original-task/original-qualification.json
+            ${{ runner.temp }}/original-task/source-checks.json

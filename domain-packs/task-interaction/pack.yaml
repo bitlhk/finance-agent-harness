@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "finance-domain-pack.v1",
+  "packId": "task-interaction",
+  "version": "0.1.0",
+  "profile": "task-interaction",
+  "capabilities": [
+    "custody.task.query",
+    "custody.task.action"
+  ],
+  "capabilityPackRefs": [
+    {
+      "id": "original-task-managed",
+      "version": "0.1.0"
+    }
+  ],
+  "skills": [],
+  "scope": [
+    "原任务现状、资料版本、复核和动作回执",
+    "具体方法由Builder固定安装；不替换原业务规则"
+  ],
+  "outOfScope": [
+    "多副本或外部并发写入保证",
+    "真实银行或生产资格",
+    "新中央任务平台"
+  ],
+  "sourceReferences": [
+    "docs/original-task-interaction.md"
+  ]
+}

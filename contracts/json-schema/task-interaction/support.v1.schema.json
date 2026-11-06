@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finance-agent-harness.local/task-interaction/support.v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "finance-task-support.v1"
+    },
+    "runtime": {
+      "const": "openjiuwen-java"
+    },
+    "runtimeVersion": {
+      "const": "0.1.15"
+    },
+    "hostVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "providerVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceCommit": {
+      "const": "0e158eee225c698774aa75671c944624cd36550b"
+    },
+    "sourceRelease": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "boundary": {
+      "const": "exclusive-single-host"
+    },
+    "supported": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "query",
+          "start",
+          "supplement",
+          "review",
+          "confirm",
+          "business-cancel",
+          "reconnect-query",
+          "restart-query"
+        ]
+      }
+    },
+    "executionRecovery": {
+      "const": false
+    },
+    "externalWritersSupported": {
+      "const": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runtime",
+    "runtimeVersion",
+    "hostVersion",
+    "providerVersion",
+    "sourceCommit",
+    "sourceRelease",
+    "boundary",
+    "supported",
+    "executionRecovery",
+    "externalWritersSupported"
+  ],
+  "additionalProperties": false
+}

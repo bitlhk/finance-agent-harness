@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "finance-component-development-support.v0.1",
+  "subject": {
+    "kind": "capability-pack",
+    "id": "original-task-managed",
+    "version": "0.1.0",
+    "source": "repo://capability-packs/original-task-managed",
+    "digest": "sha256:7f724361988d03a228512389eaeb9e6f4fed227e643e174d6152460b41560f15"
+  },
+  "scope": {
+    "capabilityIds": []
+  },
+  "methodCases": [
+    {
+      "name": "原托管任务查询与人工复核",
+      "query": "先查询当前任务和材料，复核通过与执行确认分开。",
+      "expectedTerms": []
+    }
+  ],
+  "caseRefs": [
+    {
+      "source": "repo://conformance/original-task-managed/cases.json",
+      "digest": "sha256:f2f8fdccfa968c5ccacbc6de0b352347a00ee523ffb192f1564769b021ce5c6e",
+      "format": "finance-original-task-cases.v1"
+    }
+  ],
+  "commands": []
+}

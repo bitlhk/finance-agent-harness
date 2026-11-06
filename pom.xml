@@ -13,6 +13,9 @@
     <description>Runtime-neutral contracts for connecting financial agents to bank capabilities.</description>
 
     <modules>
+        <module>packages/java/task-interaction</module>
+        <module>providers/original-task-managed</module>
+        <module>integrations/task-interaction-java</module>
         <module>providers/knowledge-service</module>
         <module>packages/java/quotation</module>
         <module>providers/quotation-reference</module>

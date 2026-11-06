@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "finance-capability-pack.v1",
+  "packId": "original-task-managed",
+  "version": "0.1.0",
+  "systemPrompt": "解释原托管任务现状，不把复核通过说成执行成功。人工操作由受信Host逐次确认，模型不能发放角色或选择客户/任务。原结果未知时仅查证，禁止自动重做。",
+  "capabilities": [
+    {
+      "capabilityId": "custody.task.query",
+      "toolName": "custody_task_query",
+      "name": "查询原托管任务",
+      "description": "只读查看当前任务和等待事项；对象由Host固定。",
+      "operation": "QUERY",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "custody-task:read"
+      ]
+    },
+    {
+      "capabilityId": "custody.task.action",
+      "toolName": "custody_task_action",
+      "name": "受管托管任务人工操作",
+      "description": "Host人工操作入口；复核、执行确认和当前资料绑定；不作为自主模型写入工具。",
+      "operation": "TASK",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "claim",
+              "supplement",
+              "submit",
+              "approve",
+              "reject",
+              "execute",
+              "cancel"
+            ]
+          },
+          "expectedVersion": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "materialVersion": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "commissionFee": {
+                "type": "number",
+                "minimum": 0
+              },
+              "attachmentRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "action",
+          "expectedVersion",
+          "materialVersion",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      "requiredScopes": [
+        "custody-task:operate"
+      ]
+    }
+  ]
+}
