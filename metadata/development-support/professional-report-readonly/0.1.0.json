@@ -5,7 +5,7 @@
     "id": "professional-report-readonly",
     "version": "0.1.0",
     "source": "repo://capability-packs/professional-report-readonly",
-    "digest": "sha256:c18a1e7020700ac188ec5289b126a4b522bd1f6b3c9d168d1ba4fa227814a62a"
+    "digest": "sha256:dbada61595f64db07cba6378303774c3e331ea1f8f09d8476188b1f2972728b3"
   },
   "scope": {
     "capabilityIds": []
@@ -20,7 +20,7 @@
   "caseRefs": [
     {
       "source": "repo://conformance/professional-report-readonly/cases.json",
-      "digest": "sha256:2b8d42dae7ebd7679086c68aef27c0f66b07c5482b516bec36b825d52a4cf79a",
+      "digest": "sha256:dd99c4026a7f1b8fbd41ff920ecb2470c0f45c77a33538776ee39ecea96b7787",
       "format": "finance-professional-report-cases.v1"
     }
   ],

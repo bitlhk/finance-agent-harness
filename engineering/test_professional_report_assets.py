@@ -58,3 +58,18 @@ def test_registry_and_governance_example_bind_the_actual_current_catalog():
     assert proposal['catalog']['catalogVersion']==catalog['catalogVersion']
     assert proposal['catalog']['catalogRevision']==catalog['catalogRevision']
     assert proposal['catalog']['digest']=='sha256:'+hashlib.sha256((ROOT/'catalog/finance-assets.v1.json').read_bytes()).hexdigest()
+
+
+def test_report_digest_inputs_keep_published_lf_bytes():
+    # These files form the raw-byte digest chain. A CRLF working tree can pass
+    # self-consistent local hashes yet publish different LF bytes through Git.
+    paths=[
+        'capability-packs/professional-report-readonly/assembly.v0.1.json',
+        'capability-packs/professional-report-readonly/pack.yaml',
+        'conformance/professional-report-readonly/cases.json',
+        'metadata/development-support/professional-report-readonly/0.1.0.json',
+        'metadata/development-support/index.v0.1.json',
+    ]
+    for relative in paths:
+        raw=(ROOT/relative).read_bytes()
+        assert b'\r\n' not in raw, f'{relative}: digest input must retain published LF bytes'
